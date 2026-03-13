@@ -1,0 +1,14 @@
+{
+  "name": "lifexlab-game-sandbox",
+  "version": "2.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "python3 -m http.server 8080",
+    "debug:ui": "node tools/debug-ui.mjs",
+    "test": "node tools/run-all-tests.mjs",
+    "test:quick": "node tests/test-ui-contract.mjs && node tests/test-smoke.mjs",
+    "test:redteam": "node tools/redteam-stress-master.mjs",
+    "test:full": "node tools/run-all-tests.mjs"
+  }
+}
