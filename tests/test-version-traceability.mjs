@@ -34,9 +34,9 @@ if (packageJson.scripts?.["test:full"] !== "node tools/run-all-tests.mjs") {
   fail("package.json scripts.test:full must point to tools/run-all-tests.mjs");
 }
 
-assertContains("README.md", `# LifexLab v${APP_VERSION}`, "README version heading");
-assertContains("index.html", `<title>LifexLab v${APP_VERSION}</title>`, "index title version");
-assertContains("index.html", `LifexLab v${APP_VERSION} —`, "index description version");
+assertContains("README.md", `# LifeGameLab v${APP_VERSION}`, "README version heading");
+assertContains("index.html", `<title>LifeGameLab v${APP_VERSION}</title>`, "index title version");
+assertContains("index.html", `LifeGameLab v${APP_VERSION} —`, "index description version");
 assertContains("docs/BUGFIX_LOG.md", `# BUGFIX LOG — v${APP_VERSION}`, "BUGFIX_LOG version header");
 assertContains("docs/MASTER_CHANGE_LOG.md", `v${APP_VERSION}`, "MASTER_CHANGE_LOG release version");
 assertContains("docs/MASTER_CHANGE_LOG.md", "append-only", "MASTER_CHANGE_LOG append-only policy");

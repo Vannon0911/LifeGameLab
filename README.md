@@ -1,42 +1,55 @@
-# LifexLab v2.3.0
+# LifeGameLab v2.3.0
 
-Deterministisches Sandbox-Kolonie-Spiel mit CPU-Gegenspieler, DNA-Ressource, Evolution und Zonendesign.
+Deterministisches Strategie-Sandbox-Spiel über wachsende Zellkolonien, Evolution, Ressourcenfluss und territoriale Kontrolle.
 
-Die Codebasis verwendet nur noch die kanonische Struktur. Aktive Dokumentation, Audit-Notizen und Handoff liegen gesammelt unter `docs/`.
+![LifeGameLab Gameplay](docs/assets/lifegamelab-home.png)
 
-## Starten
+## Spielidee
+
+In `LifeGameLab` steuerst du keine einzelne Figur, sondern eine lebende Kolonie. Du setzt Zellen, formst Zonen, steuerst die Energiebilanz und entwickelst Archetypen, während eine CPU-Fraktion parallel um Raum und Ressourcen kämpft.
+
+## Produktkern
+
+- Echtzeit-Sandbox auf Canvas mit sofort spielbarer Simulation
+- deterministische Simulationslogik für reproduzierbare Läufe und Balancing
+- DNA-/Energie-Ökonomie mit Stage-Fortschritt und Siegpfaden
+- Zonen, Evolution, Weltparameter und Debug-Werkzeuge direkt in der UI
+- Worker-basiertes Rendering und umfangreiche Test-Suite
+
+## Lokal starten
 
 ```bash
 npm test
-npm run serve
+py -m http.server 8080
 ```
 
-Danach `http://localhost:8080/` öffnen.
+Dann im Browser `http://127.0.0.1:8080/` öffnen.
 
-## Kanonische Struktur
+Wenn `python3` sauber auf deinem System liegt, funktioniert auch `npm run serve`.
 
-- `src/app/` Browser-Entry
-- `src/core/kernel/` deterministischer Kernel
-- `src/core/runtime/` Runtime-Helfer
-- `src/game/sim/` Simulation und Reducer
-- `src/game/render/` Renderer
-- `src/game/ui/` UI
-- `src/project/` stabile projektseitige Entry-Punkte
-- `tests/` Test-Suite
-- `tools/` Hilfsprogramme und Redteam
-- `docs/` operative Audit-, Governance- und Handoff-Dokumente
+## Steuerung
 
-## Architekturregeln
+- `Leertaste`: Start/Pause
+- `N`: neue Welt
+- `S`: Status öffnen
+- `E`: Evolution öffnen
+- Maus oder Touch: Zellen und Zonen direkt im Spielfeld platzieren
 
-- State schreibt nur über `dispatch()` und Patch-Anwendung.
-- Renderer und UI schreiben keinen Gameplay-State direkt.
-- Deterministische Quellen nur über Kernel-RNG, nie über `Math.random()` oder Zeitquellen.
-- Neue Features laufen manifest-first über `src/project/project.manifest.js`.
+## Repo-Struktur
 
-## Verifikation
+- `src/app/`: Bootstrap und Game Loop
+- `src/core/`: deterministischer Kernel und Runtime-Helfer
+- `src/game/`: Simulation, Renderer und UI
+- `src/project/`: projektseitige Entry-Points und Manifest
+- `tests/`: Regressionen, Determinismus und Smoke-Checks
+- `tools/`: Profiling, Debugging und Redteam-Skripte
+- `docs/`: Architektur-, Governance- und Handoff-Dokumente
 
-- `npm test` führt 21 Testdateien plus Redteam aus.
-- `tests/test-version-traceability.mjs` prüft Versionskonsistenz.
-- `tests/test-path-hygiene.mjs` blockiert alte Wrapper-Pfade in aktivem Code und operativer Doku.
+## Qualität
+
+- `npm test` fährt die komplette Suite
+- `npm run test:quick` deckt UI-Vertrag und Smoke-Test ab
+- keine Zufallsquellen außerhalb des Kernel-RNG
+- State-Änderungen nur über `dispatch()` und Patch-Anwendung
 
 Details: `docs/PROJECT_STRUCTURE.md`
