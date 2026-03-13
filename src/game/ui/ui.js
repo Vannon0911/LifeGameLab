@@ -130,7 +130,7 @@ export class UI {
     const center = el("div", "nx-top-center");
     const right = el("div", "nx-top-right");
 
-    this._brand   = el("div", "nx-brand", "Kolonie");
+    this._brand   = el("div", "nx-brand", "LifeGameLab");
     this._btnPlay = el("button", "nx-btn nx-btn-primary", "▶ Spielen");
     this._btnPlay.setAttribute("aria-label", "Simulation starten oder pausieren");
     this._btnNew  = el("button", "nx-btn", "Neue Welt");
