@@ -733,4 +733,4 @@ function loop(ts) {
 store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
 requestAnimationFrame(loop);
 
-console.log(`LifexLab v${APP_VERSION} gestartet (Schema v${manifest.SCHEMA_VERSION}). store und __devBalance sind verfuegbar.`);
+console.log(`LifeGameLab v${APP_VERSION} gestartet (Schema v${manifest.SCHEMA_VERSION}). store und __devBalance sind verfuegbar.`);
