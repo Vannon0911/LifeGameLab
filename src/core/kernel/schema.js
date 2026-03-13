@@ -1,0 +1,109 @@
+export function sanitizeBySchema(value, schema) {
+  return _sanitize(value, schema, null);
+}
+
+const MAX_SAFE_LENGTH = 50 * 1024 * 1024;
+
+const TYPED_ARRAY_CTORS = {
+  Int8Array,
+  Uint8Array,
+  Uint8ClampedArray,
+  Int16Array,
+  Uint16Array,
+  Int32Array,
+  Uint32Array,
+  Float32Array,
+  Float64Array,
+  BigInt64Array: typeof BigInt64Array !== "undefined" ? BigInt64Array : undefined,
+  BigUint64Array: typeof BigUint64Array !== "undefined" ? BigUint64Array : undefined,
+};
+
+function resolveTypedLength(lenSpec, ctx) {
+  if (typeof lenSpec === "number" && Number.isFinite(lenSpec)) return Math.max(0, lenSpec | 0);
+  if (typeof lenSpec !== "string") return null;
+  const N = Math.max(0, Number(ctx?.N || 0) | 0);
+  const TRAIT_COUNT = Math.max(1, Number(ctx?.TRAIT_COUNT || 7) | 0);
+  if (lenSpec === "N") return N;
+  if (lenSpec === "N*TRAIT_COUNT") return N * TRAIT_COUNT;
+  if (/^\d+$/.test(lenSpec)) return Number(lenSpec) | 0;
+  return null;
+}
+
+function coerceTypedArray(v, ctorName, targetLen) {
+  const Ctor = TYPED_ARRAY_CTORS[ctorName];
+  if (typeof Ctor !== "function") throw new Error(`Unknown TypedArray ctor '${ctorName}'`);
+
+  if (ArrayBuffer.isView(v) && v.constructor === Ctor) {
+    if (targetLen == null || v.length === targetLen) return new Ctor(v);
+    const out = new Ctor(targetLen);
+    out.set(v.subarray(0, Math.min(v.length, targetLen)));
+    return out;
+  }
+
+  const src = ArrayBuffer.isView(v)
+    ? Array.from(v)
+    : Array.isArray(v)
+      ? v
+      : [];
+
+  const safeLen = targetLen == null ? Math.min(src.length, MAX_SAFE_LENGTH) : Math.min(targetLen, MAX_SAFE_LENGTH);
+  const out = new Ctor(safeLen);
+  if (src.length) out.set(src.slice(0, safeLen));
+  return out;
+}
+
+function _sanitize(v, s, ctx) {
+  if (!s) return v;
+  switch (s.type) {
+    case "string": {
+      const out = typeof v === "string" ? v : (s.default ?? "");
+      if (typeof s.maxLen === "number") return out.slice(0, s.maxLen);
+      return out.slice(0, 1024 * 1024);
+    }
+    case "number": {
+      let out = (typeof v === "number" && Number.isFinite(v)) ? v : (s.default ?? 0);
+      if (typeof s.min === "number") out = Math.max(s.min, out);
+      if (typeof s.max === "number") out = Math.min(s.max, out);
+      if (s.int) out = Math.trunc(out);
+      return out;
+    }
+    case "boolean":
+      return typeof v === "boolean" ? v : (s.default ?? false);
+    case "enum": {
+      const allowed = Array.isArray(s.values) ? s.values : [];
+      if (allowed.includes(v)) return v;
+      return s.default ?? (allowed[0] ?? null);
+    }
+    case "array": {
+      const isTyped = v && v.buffer instanceof ArrayBuffer && v.byteLength !== undefined;
+      const arr = (Array.isArray(v) || isTyped) ? v : (Array.isArray(s.default) ? s.default : []);
+      if (arr.length > MAX_SAFE_LENGTH) throw new Error(`Array length exceeds safety limit (${MAX_SAFE_LENGTH})`);
+      const maxLen = typeof s.maxLen === "number" ? s.maxLen : Infinity;
+      const effectiveLen = Math.min(maxLen, MAX_SAFE_LENGTH);
+      return Array.from(arr.slice(0, effectiveLen), (x) => _sanitize(x, s.items, ctx));
+    }
+    case "ta": {
+      const nextCtx = ctx || {};
+      const targetLen = resolveTypedLength(s.len, nextCtx);
+      return coerceTypedArray(v, s.ctor, targetLen);
+    }
+    case "object": {
+      const shape = s.shape;
+      const src = (v && typeof v === "object" && !Array.isArray(v)) ? v : (s.default ?? {});
+      if (s.allowUnknown === true) return src;
+      if (!shape) return {};
+
+      const nextCtx = { ...(ctx || {}) };
+      const out = {};
+      for (const key of Object.keys(shape)) {
+        out[key] = _sanitize(src[key], shape[key], nextCtx);
+        if (key === "w") nextCtx.W = Number(out[key]) | 0;
+        if (key === "h") nextCtx.H = Number(out[key]) | 0;
+        if (key === "w" || key === "h") nextCtx.N = Math.max(0, (Number(nextCtx.W) | 0) * (Number(nextCtx.H) | 0));
+      }
+      return out;
+    }
+    default:
+      return s.default ?? null;
+  }
+}
