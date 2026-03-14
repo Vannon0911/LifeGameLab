@@ -57,6 +57,12 @@ export const WORLD_PRESET_OPTIONS = [
   { id: "wet_meadow", label: "Wet Meadow", desc: "Gleichmaessige Feuchte und weichere Fruehphase." },
 ];
 
+export const RENDER_DETAIL_MODE_OPTIONS = [
+  { id: "auto", label: "Automatisch", desc: "System steuert Details adaptiv ueber Performance." },
+  { id: "focused", label: "Fokussiert", desc: "Mehr sichtbare Details, auch bei dichterem Raster." },
+  { id: "minimal", label: "Minimal", desc: "Weniger Layer und Rasterlinien fuer klare Lesbarkeit." },
+];
+
 export const TECH_LANE_LABELS = {
   metabolism: "Metabolismus",
   survival: "Überleben",

@@ -25,6 +25,7 @@ import {
   STAGE_THRESHOLDS,
   STATUS_GROUPS,
   TECH_LANE_LABELS,
+  RENDER_DETAIL_MODE_OPTIONS,
   WORLD_PRESET_OPTIONS,
   ZONE_TYPES,
 } from "./ui.constants.js";
@@ -1331,6 +1332,27 @@ export class UI {
       });
       offRow.append(el("span", "nx-label", "Offscreen-Rendering"), offToggle);
       accCard.appendChild(offRow);
+
+      const detailMode = String(meta.ui?.renderDetailMode || "auto");
+      const detailRow = el("div", "nx-stack");
+      detailRow.append(el("span", "nx-label", "Detailsteuerung"));
+      const detailSel = document.createElement("select");
+      detailSel.className = "nx-select";
+      detailSel.setAttribute("aria-label", "Darstellungsdetails steuern");
+      for (const entry of RENDER_DETAIL_MODE_OPTIONS) {
+        const option = document.createElement("option");
+        option.value = entry.id;
+        option.textContent = entry.label;
+        if (entry.id === detailMode) option.selected = true;
+        detailSel.appendChild(option);
+      }
+      detailSel.addEventListener("change", () => {
+        this._dispatch({ type: "SET_UI", payload: { renderDetailMode: String(detailSel.value || "auto") } });
+        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+      });
+      const detailDef = RENDER_DETAIL_MODE_OPTIONS.find((entry) => entry.id === detailMode);
+      detailRow.append(detailSel, el("div", "nx-note", detailDef?.desc || ""));
+      accCard.appendChild(detailRow);
 
       const benchState = this._getBenchmarkState();
       const benchCard = el("section", "nx-card nx-card-lab");
