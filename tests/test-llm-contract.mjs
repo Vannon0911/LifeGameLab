@@ -1,5 +1,8 @@
 import { startEvidenceCase } from "./support/liveTestKit.mjs";
 startEvidenceCase("test-llm-contract.mjs");
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { assertLlmGateSync } from "../src/project/llm/gateSync.js";
 import { createLlmCommandAdapter, ACTION_ENVELOPE } from "../src/project/llm/commandAdapter.js";
 import { buildLlmReadModel } from "../src/project/llm/readModel.js";
@@ -9,6 +12,12 @@ import { WIN_MODE } from "../src/game/contracts/ids.js";
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, "..");
+const suiteRunner = fs.readFileSync(path.join(root, "tools", "run-test-suite.mjs"), "utf8");
+assert(suiteRunner.includes("llm-preflight.mjs"), "suite preflight wiring missing");
+assert(suiteRunner.includes('"check"') || suiteRunner.includes("'check'"), "suite preflight check mode missing");
 
 const sync = assertLlmGateSync(manifest);
 assert(sync.policySource === "docs/LLM_ENTRY.md", "LLM policy source drift");
