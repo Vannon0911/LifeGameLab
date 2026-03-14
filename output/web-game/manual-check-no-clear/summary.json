@@ -1,0 +1,12 @@
+[
+  {
+    "iteration": 1,
+    "started": true,
+    "appliedSpeed": 24,
+    "tick": 54,
+    "running": true,
+    "playerAlive": 63,
+    "rasterPanels": 5,
+    "consoleErrors": 0
+  }
+]

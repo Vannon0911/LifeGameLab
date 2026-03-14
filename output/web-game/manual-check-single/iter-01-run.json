@@ -1,0 +1,92 @@
+{
+  "text": {
+    "tick": 53,
+    "running": true,
+    "tool": "observe",
+    "stage": 2,
+    "dna": 0,
+    "playerAlive": 62,
+    "cpuAlive": 47,
+    "energyNet": 0.12703913216818918,
+    "clusterRatio": 0.9816513761467891,
+    "networkRatio": 0.21100917431192662,
+    "techs": [],
+    "synergies": [],
+    "runIdentity": {
+      "winMode": "supremacy",
+      "doctrine": "equilibrium",
+      "doctrineTradeoff": "Ausgleich zwischen Tempo und Stabilitaet."
+    },
+    "status": {
+      "risk": "unstable",
+      "goal": "harvest_secure",
+      "structure": "colony_core",
+      "commandScore": 0.7001834862385322,
+      "splitReady": false,
+      "expansionWork": 42.64803044403636,
+      "nextExpandCost": 200
+    },
+    "advisor": {
+      "bottleneckPrimary": "win_push",
+      "reasonCodes": [
+        "maintain_advantage",
+        "win_progress_live"
+      ],
+      "nextAction": "push_win_mode",
+      "nextLever": "win_path",
+      "recommendedZone": "none",
+      "recommendedOverlay": "energy"
+    },
+    "winProgress": {
+      "mode": "supremacy",
+      "progress": 53,
+      "target": 200,
+      "blockerCode": "maintain_advantage",
+      "blockerDetail": "Vorsprung halten, bis der Zaehler voll ist."
+    },
+    "benchmark": {
+      "isRunning": false,
+      "phase": "idle",
+      "frames": 0,
+      "targetFrames": 360,
+      "lastReport": null
+    },
+    "risk": "unstable",
+    "mission": "harvest_secure",
+    "structure": "colony_core",
+    "doctrine": "equilibrium"
+  },
+  "perf": {
+    "fpsEma": 17.02,
+    "frameMsEma": 58.74,
+    "renderMsEma": 23.66,
+    "quality": 1,
+    "renderEvery": 1,
+    "dprCap": 1.25,
+    "maxSimStepsPerFrame": 3,
+    "maxSimFrameBudgetMs": 7.5,
+    "maxCatchupMs": 130,
+    "stepBufferSize": 0,
+    "offscreenMode": "main",
+    "offscreenAuto": false,
+    "tick": 53,
+    "grid": "32x32",
+    "cells": 1024
+  },
+  "loop": {
+    "requestedSpeed": 24,
+    "appliedSpeed": 24,
+    "started": true,
+    "advanced": {
+      "steps": 48,
+      "tick": 48
+    },
+    "panelRaster": [
+      "output\\web-game\\manual-check-single\\iter-01-panel-lage.png",
+      "output\\web-game\\manual-check-single\\iter-01-panel-eingriffe.png",
+      "output\\web-game\\manual-check-single\\iter-01-panel-evolution.png",
+      "output\\web-game\\manual-check-single\\iter-01-panel-welt.png",
+      "output\\web-game\\manual-check-single\\iter-01-panel-labor.png"
+    ]
+  }
+}
