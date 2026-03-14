@@ -4,21 +4,90 @@
 ![Tests](https://img.shields.io/badge/tests-npm%20test-green)
 ![Determinismus](https://img.shields.io/badge/sim-deterministisch-22c55e)
 
-Deterministisches Zell-Strategieprodukt: autonome Kolonieentwicklung, fokussierte Eingriffe, klare Missionsführung statt Klick-Spam.
+Deterministisches Zell-Strategieprojekt ueber Kolonieaufbau, Kontrolle, Rework und die langsame Verwandlung eines Sandbox-Prototyps in ein echtes Spiel.
 
 ![LifeGameLab Gameplay](docs/assets/lifegamelab-home.png)
 
-## Was es ist
+## Die Geschichte dieses Projekts
 
-`LifeGameLab` ist kein klassisches RTS. Du steuerst eine lebende Linie über Prioritäten, Evolution, Split-Seeds und Zonen. Die Kolonie wächst primär selbst. Dein Job ist Lesen, Lenken, Stabilisieren.
+`LifeGameLab` hat nicht als sauberes Produkt angefangen. Der Kern war zuerst eine experimentelle Zell-Simulation mit vielen direkten Tools, Laborpfaden, Roh-Brushes und Legacy-Aktionen. Das war gut fuer schnelles Ausprobieren, aber schlecht fuer ein echtes Spiel: zu viele Parallelpfade, zu wenig klare Progression, zu viel implizite Logik.
 
-## Produkt-Highlights
+Das aktuelle Projekt ist deshalb ein laufendes Rework mit harter Richtung: weg von der offenen Sandbox, hin zu einem deterministischen Main-Run mit klaren Gates, klaren Phasen und einer vertraglich abgesicherten Architektur. Der Spieler soll nicht hundert Einzelfunktionen spam-klicken, sondern eine Kolonie lesen, stabilisieren und ueber bewusst freigeschaltete Schritte ausbauen.
 
-- Mobile-first Shell (Bottom-Dock + Sheet), Desktop als Mission-Control
+Kurz gesagt: `LifeGameLab` ist heute nicht nur "ein Zellspiel", sondern die dokumentierte Umstellung eines chaotisch gewachsenen Sim-Prototyps auf ein kontrolliertes, testbares Strategieprodukt.
+
+## Was das Spiel heute sein will
+
+`LifeGameLab` ist kein klassisches RTS. Es geht nicht darum, permanent Einheiten zu micro-managen. Die Kolonie handelt in grossen Teilen selbst. Der Spieler arbeitet eher wie ein Operator:
+
+- erst Gruendung
+- dann Energiekern
+- dann DNA-Zone
+- danach Infrastruktur, Sicht, Muster, Progression und spaetere Release-Haertung
+
+Die Leitidee ist: beobachten, verstehen, eingreifen, entblocken. Jeder neue Fortschrittsschritt soll sich wie ein echter Systemwechsel anfuehlen, nicht wie ein weiterer Brush im selben Werkzeugkasten.
+
+## Warum das Rework noetig war
+
+Vor dem Rework hatte das Projekt mehrere Probleme gleichzeitig:
+
+- Main-Run und Labor-Logik waren zu eng vermischt
+- Fortschritt hing zu stark an Altaktionen wie `HARVEST_CELL`
+- Doku, UI und eigentliche Sim-Logik drifteten auseinander
+- neue Zustandsfelder und Actions konnten zu leicht ohne saubere Contract-Kette wachsen
+- viele Systeme waren da, aber die Produktlogik war nicht klar genug
+
+Deshalb wurde das Projekt auf contract-first umgebaut. Neue Actions und State-Felder muessen erst durch Manifest, Schemas, Mutation-Matrix, Sim-Gate und Dataflow, bevor sie als "echtes Feature" gelten. Das klingt trocken, ist aber der Grund, warum das Rework ueberhaupt beherrschbar bleibt.
+
+## Was heute real schon da ist
+
+Der aktuelle Head ist nicht mehr nur Konzept. Ein erheblicher Teil des neuen Spiels lebt bereits im Code:
+
+- deterministischer Kernel mit harten Manifest-/Schema-/Mutation-Gates
+- preset-gebundene Worldgen mit `river_delta`, `dry_basin`, `wet_meadow`
+- klare Main-Run-Raeume `lage`, `eingriffe`, `evolution`, `welt`, `labor`
+- Genesis-Start ohne Auto-Founder im Standardmodus
+- Founder-Phase mit explizitem Confirm
+- zweite Confirm-Stufe fuer den Energiekern
+- DNA-Unlock-Meter, DNA-Setup, DNA-Commit und deterministische DNA-Erzeugung
+- Advisor-/Read-Model als gemeinsame Truth fuer HUD, Textdiagnose und Status
+- Quick-/Truth-/Stress-Suiten statt einem unsortierten Testhaufen
+
+Das Projekt steht also nicht an Punkt null. Es hat bereits einen echten spielbaren Run-Kern, aber noch nicht den gesamten geplanten Produktbogen.
+
+## Wie die Entwicklungsphasen erzaehlt werden koennen
+
+Die momentane Entwicklung laesst sich als Abfolge von Emanzipationsschritten lesen:
+
+### Phase A
+
+Aus der freien Sandbox wird ein echter Genesis-Start. Keine Auto-Founder mehr, kein heimlicher Sim-Fortschritt, sondern ein bewusster Run-Beginn.
+
+### Phase B
+
+Die Gruendung allein reicht nicht mehr. Der Energiekern wird zum ersten echten Commitment. Erst danach beginnt der aktive Lauf und die CPU bekommt ihren kontrollierten Bootstrap.
+
+### Phase C
+
+Die Kolonie ist nicht mehr nur "lebendig", sondern beginnt sich als zweite eigene Zone zu organisieren. Die DNA-Zone ist der erste echte Ausbau jenseits des Kerns.
+
+### Phase D bis G
+
+Hier liegt die eigentliche Zukunft des Projekts:
+
+- `Phase D`: Infrastruktur, aktive Sicht und Fog
+- `Phase E`: kanonisches Zonensystem und Pattern-Engine
+- `Phase F`: Tech-Tree, Progression, Objectives
+- `Phase G`: Cleanup, Balancing, RC-Haertung
+
+Diese Phasen sind nicht nur Ideen, sondern als Ticket- und Gate-Doku bereits vorbereitet.
+
+## Produkt-Highlights Im Aktuellen Zustand
+
+- Mobile-first Shell mit Bottom-Dock + Sheet, Desktop als Mission-Control
 - Klare Top-Signale: `Kolonie`, `DNA`, `Risiko`, `Run-Pfad`, `Engpass`
-- Deterministischer Advisor fuer `Run-Pfad`, Engpass, Blocker und naechsten Ausbauhebel
-- Sichtbare Strukturreife: Einzelzellen -> 2x2-Biomodule -> Koloniekerne
-- Deterministischer Kernel mit harten Manifest-/Schema-/Mutation-Gates
+- Deterministischer Advisor fuer Run-Pfad, Blocker und naechsten Ausbauhebel
+- Sichtbare Strukturreife von Einzelzellen ueber Gruendung bis zu Kern- und DNA-Zone
 - Echte Diagnose-Scanner fuer `energy`, `toxin`, `nutrient`, `territory`, `conflict`
 - Browser-Hooks fuer QA/Automation: `window.render_game_to_text`, `window.advanceTime`
 
@@ -105,39 +174,38 @@ npm run test:stress
 
 ## Aktueller Engineering-Status (ehrlich)
 
-- Contract-/Gate-Härtung ist umgesetzt und testgrün.
-- Main-Run ist jetzt staerker auf `ernten -> investieren -> ausbauen -> Engpaesse loesen` verdrahtet.
-- Win-Mode-Lock, Placement-Cost-Default und Global-Learning-Default stuetzen jetzt den Main Run statt den Sandbox-Fall.
-- Performance-Ziel aus dem letzten Implementierungsplan (`>=10%` je Profilfall) ist noch offen.
+- Contract-/Gate-Haertung ist umgesetzt und testgruen.
+- `Phase A-C` leben auf Codebasis: `Foundation -> Core -> DNA -> Run`.
+- `Phase D` ist gestartet; Contract-/State-Basis und semantischer Infrastruktur-Staging-Pfad sind angelegt.
+- Sicht/Fog, CPU-Informationsgating, kanonisches Zonensystem, Pattern-Engine, Tech-Rework und RC-Haertung sind noch nicht fertig.
+- Performance-Ziel aus dem letzten groesseren Implementierungsplan ist weiter offen.
 
-Details: `docs/PROJECT_STRUCTURE.md`, `docs/PROJECT_CONTRACT_SNAPSHOT.md`, `docs/SESSION_HANDOFF.md`
+## Was noch fehlt
 
-## Konzept Ab Aktuellem Head
+Das Projekt ist noch kein "fertiges Release-Spiel". Es ist ein fortgeschrittenes Rework mit klarem Kurs. Die grossen offenen Bloecke sind:
 
-Das hier ist der reale Rework-Plan, nicht Wunschdenken. `Phase A-C` sind auf Codebasis bereits umgesetzt: Genesis-Start, Energiekern, DNA-Zone und die zugehoerigen Contract-/Gate-/Smoke-Pfade existieren. Der naechste echte Produktblock ist `Phase D`.
+- Infrastruktur + Sicht/Fog als echter Spielerloop
+- Ueberfuehrung der Spezialmasken in ein kanonisches Zonensystem
+- Pattern-Engine als echte Aufbau- und Effektlogik
+- spaetere Neuverdrahtung von Tech-Tree, Objectives und Endgame
+- finale Härtung, Balancing und Release-Qualitaet
 
-### Bereits umgesetzt
+## Wenn du das Repo lesen willst
 
-- `Foundation -> Core -> DNA -> Run` ist als deterministischer Main-Run-Pfad vorhanden.
-- `coreZoneMask` und `dnaZoneMask` sind die aktuelle Zwischenwahrheit fuer Progression.
-- DNA-Unlock, DNA-Placement und DNA-Erzeugung laufen produktiv und sind testabgesichert.
+Die beste Lesart ist nicht "welche Datei macht was?", sondern:
 
-### Geplantes Konzept fuer die Restphasen
+1. Was war frueher Sandbox/Legacy?
+2. Was ist heute kanonischer Main-Run?
+3. Welche Phase ist abgeschlossen?
+4. Welche Phase ist nur vorbereitet?
+5. Welche Wahrheit ist Contract, welche nur Altlast?
 
-- `Phase D`: Infrastruktur wird als echter Netz-/Pfad-Schritt gebaut. `world.link` bleibt der kanonische Infrastrukturtraeger. Sicht/Fog wird aktiv aus Kern, DNA und Infrastruktur abgeleitet.
-- `Phase E`: Spezialmasken werden in ein kanonisches Zonensystem ueberfuehrt. Darauf sitzt eine deterministische Pattern-Engine statt losem Sonderfall-Code.
-- `Phase F`: Tech-Tree, Progression und Objectives werden auf DNA, Infrastruktur und Pattern neu ausgerichtet.
-- `Phase G`: Cleanup, Balancing, Vollsuite und RC-Haertung. Keine neuen Kernfeatures mehr, nur Stabilisierung und Release-Reife.
+Die wichtigsten Anker dafuer sind:
 
-### Bewusst noch nicht drin
-
-- kein finales Zonensystem
-- kein produktives Pattern-System
-- kein aktives Fog-/Visibility-Gameplay
-- kein Rework von Tech-Tree, Objectives oder Endgame
-
-Die kanonische Arbeitssteuerung dafuer lebt in:
-
+- `progress.md`
+- `docs/SESSION_HANDOFF.md`
+- `docs/PROJECT_STRUCTURE.md`
+- `docs/PROJECT_CONTRACT_SNAPSHOT.md`
 - `docs/PHASE_D_TODO.md`
 - `docs/PHASE_E_TODO.md`
 - `docs/PHASE_F_TODO.md`
