@@ -1535,6 +1535,7 @@ export class UI {
       container.append(modeCard, progCard);
       return;
     }
+  }
 
     // ── GAME OVER OVERLAY ───────────────────────────────────
 
