@@ -10,8 +10,32 @@ export function clamp(v, lo, hi) {
   return v < lo ? lo : v > hi ? hi : v;
 }
 
+export function cloneTypedArray(ta) {
+  return (ta && ArrayBuffer.isView(ta)) ? new ta.constructor(ta) : ta;
+}
+
 export function wrapHue(v) {
   return ((v % 360) + 360) % 360;
+}
+
+export function paintCircle({ w, h, x, y, radius, cb }) {
+  const r = Math.max(1, radius | 0);
+  const r2 = r * r;
+  const minX = Math.max(0, x - r);
+  const maxX = Math.min(w - 1, x + r);
+  const minY = Math.max(0, y - r);
+  const maxY = Math.min(h - 1, y + r);
+  for (let yy = minY; yy <= maxY; yy++) {
+    const dy = yy - y;
+    for (let xx = minX; xx <= maxX; xx++) {
+      const dx = xx - x;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > r2) continue;
+      const t = 1 - (d2 / Math.max(1, r2));
+      const falloff = t * t;
+      cb(yy * w + xx, falloff);
+    }
+  }
 }
 
 export function softClamp(v, lo, hi, edge = 0.18) {

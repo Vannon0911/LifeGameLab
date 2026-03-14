@@ -9,26 +9,21 @@ import { hashString, rng01 } from "../../core/kernel/rng.js";
 import { TRAIT_COUNT, TRAIT_DEFAULT } from "./life.data.js";
 import { manifest } from "../../project/project.manifest.js";
 import { assertSimPatchesAllowed } from "./gate.js";
-import { clamp, wrapHue, renormTraits, defaultLineageMemory } from "./shared.js";
+import { clamp, cloneTypedArray, defaultLineageMemory, paintCircle, renormTraits, wrapHue } from "./shared.js";
 import {
-  DOCTRINE_BY_ID,
-  TECH_BY_ID,
-  SYNERGY_BY_ID,
-  normalizeTechArray,
-  hasRequiredTechs,
-  deriveCommandScore,
-  computeUnlockedSynergies,
-} from "../techTree.js";
+  handleBuyEvolution,
+  handleHarvestCell,
+  handlePlaceCell,
+  handlePlaceSplitCluster,
+  handleSetPlayerDoctrine,
+  handleSetZone,
+} from "./playerActions.js";
 
 function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
-}
-
-function cloneTypedArray(ta) {
-  return (ta && ArrayBuffer.isView(ta)) ? new ta.constructor(ta) : ta;
 }
 
 const WORLD_KEYS = [
@@ -93,130 +88,6 @@ function pushKeysPatches(patches, obj, keys, prefix) {
   const src = obj && typeof obj === "object" ? obj : {};
   for (const k of keys) {
     if (src[k] !== undefined) patches.push({ op: "set", path: `${prefix}/${k}`, value: src[k] });
-  }
-}
-
-function paintCircle({ w, h, x, y, radius, cb }) {
-  const r = Math.max(1, radius | 0);
-  const r2 = r * r;
-  const minX = Math.max(0, x - r);
-  const maxX = Math.min(w - 1, x + r);
-  const minY = Math.max(0, y - r);
-  const maxY = Math.min(h - 1, y + r);
-  for (let yy = minY; yy <= maxY; yy++) {
-    const dy = yy - y;
-    for (let xx = minX; xx <= maxX; xx++) {
-      const dx = xx - x;
-      const d2 = dx * dx + dy * dy;
-      if (d2 > r2) continue;
-      // Smooth falloff, deterministic.
-      const t = 1 - (d2 / Math.max(1, r2));
-      const falloff = t * t;
-      cb(yy * w + xx, falloff);
-    }
-  }
-}
-
-function findPlayerTraitSource({ alive, lineageId, playerLineageId, idx, w, h }) {
-  const x = idx % w;
-  const y = (idx / w) | 0;
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      if (dx === 0 && dy === 0) continue;
-      const xx = x + dx;
-      const yy = y + dy;
-      if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-      const j = yy * w + xx;
-      if (alive[j] === 1 && (Number(lineageId[j]) | 0) === playerLineageId) return j;
-    }
-  }
-  return -1;
-}
-
-function populatePlayerCell({
-  idx,
-  tick,
-  playerLineageId,
-  alive,
-  E,
-  reserve,
-  link,
-  lineageId,
-  hue,
-  trait,
-  age,
-  born,
-  died,
-  W,
-  w,
-  h,
-}) {
-  if (alive[idx] === 1) return false;
-
-  alive[idx] = 1;
-  if (born) born[idx] = 1;
-  if (died) died[idx] = 0;
-  if (age) age[idx] = 0;
-  if (E) E[idx] = 0.40;
-  if (reserve) reserve[idx] = 0.10;
-  if (link) link[idx] = 0;
-  if (W) W[idx] = Math.max(0, Math.min(1, Number(W[idx] || 0) * 0.5));
-
-  lineageId[idx] = playerLineageId >>> 0;
-
-  const sourceIdx = findPlayerTraitSource({ alive, lineageId, playerLineageId, idx, w, h });
-  if (trait) {
-    const dst = idx * TRAIT_COUNT;
-    if (sourceIdx >= 0) {
-      const src = sourceIdx * TRAIT_COUNT;
-      for (let t = 0; t < TRAIT_COUNT; t++) trait[dst + t] = Number(trait[src + t] ?? TRAIT_DEFAULT[t]);
-    } else {
-      for (let t = 0; t < TRAIT_COUNT; t++) trait[dst + t] = TRAIT_DEFAULT[t];
-    }
-  }
-
-  if (hue) {
-    if (sourceIdx >= 0) hue[idx] = wrapHue(Number(hue[sourceIdx] || 0));
-    else hue[idx] = wrapHue((playerLineageId % 360) + (rng01(playerLineageId, (idx ^ tick) | 0) - 0.5) * 8);
-  }
-
-  return true;
-}
-
-function applyLineageTraitDelta({
-  alive,
-  lineageId,
-  targetLineageId,
-  trait,
-  hue,
-  vec = [],
-  hueDelta = 0,
-  intensity = 1,
-}) {
-  const scaled = Number(intensity || 0);
-  if (!scaled) return false;
-  let changed = false;
-  for (let i = 0; i < alive.length; i++) {
-    if (alive[i] !== 1) continue;
-    if ((Number(lineageId[i]) | 0) !== (targetLineageId | 0)) continue;
-    const o = i * TRAIT_COUNT;
-    for (let k = 0; k < TRAIT_COUNT; k++) {
-      trait[o + k] = Number(trait[o + k] || TRAIT_DEFAULT[k]) + Number(vec[k] || 0) * scaled;
-    }
-    renormTraits(trait, o);
-    if (hue) hue[i] = wrapHue(Number(hue[i] || 0) + Number(hueDelta || 0) * scaled);
-    changed = true;
-  }
-  return changed;
-}
-
-function applyMemoryDelta(target, delta, intensity = 1) {
-  if (!delta || typeof delta !== "object") return;
-  const scale = Number(intensity || 0);
-  for (const key of Object.keys(delta)) {
-    const next = Number(delta[key]);
-    if (!Number.isFinite(next)) continue;
-    target[key] = clamp(Number(target[key] ?? 0) + next * scale, 0, 1);
   }
 }
 
@@ -845,179 +716,11 @@ export function reducer(state, action, { rng }) {
     }
 
     case "PLACE_CELL": {
-      const world = state.world;
-      if (!world) return [];
-      const w = Number(world.w || state.meta.gridW || 0) | 0;
-      const h = Number(world.h || state.meta.gridH || 0) | 0;
-      const x = Number(action.payload?.x) | 0;
-      const y = Number(action.payload?.y) | 0;
-      if (x < 0 || y < 0 || x >= w || y >= h) return [];
-      const idx = y * w + x;
-      const remove = !!action.payload?.remove;
-
-      const alive = cloneTypedArray(world.alive);
-      const E = cloneTypedArray(world.E);
-      const reserve = cloneTypedArray(world.reserve);
-      const link = cloneTypedArray(world.link);
-      const lineageId = cloneTypedArray(world.lineageId);
-      const hue = cloneTypedArray(world.hue);
-      const trait = cloneTypedArray(world.trait);
-      const age = cloneTypedArray(world.age);
-      const born = cloneTypedArray(world.born);
-      const died = cloneTypedArray(world.died);
-      const W = world.W ? cloneTypedArray(world.W) : null;
-      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-      const currentLineage = Number(lineageId[idx] || 0) | 0;
-      const playerDNA = Number(state.sim.playerDNA || 0);
-      const cost = 0.5;
-      const costEnabled = !!state.meta.placementCostEnabled;
-
-      if (remove) {
-        // Player actions may only delete player-owned living cells.
-        if (alive[idx] !== 1 || currentLineage !== playerLineageId) return [];
-        alive[idx] = 0;
-        if (born) born[idx] = 0;
-        if (died) died[idx] = 1;
-        if (E) E[idx] = 0;
-        if (reserve) reserve[idx] = 0;
-        if (link) link[idx] = 0;
-        if (lineageId) lineageId[idx] = 0;
-        if (hue) hue[idx] = 0;
-        if (age) age[idx] = 0;
-        if (trait) {
-          const o = idx * TRAIT_COUNT;
-          for (let t = 0; t < TRAIT_COUNT; t++) trait[o + t] = TRAIT_DEFAULT[t];
-        }
-      } else {
-        // Placement may only fill empty tiles and always belongs to the player.
-        if (alive[idx] === 1) return [];
-        if (costEnabled && playerDNA < cost) return [];
-        if (!populatePlayerCell({
-          idx,
-          tick: state.sim.tick,
-          playerLineageId,
-          alive,
-          E,
-          reserve,
-          link,
-          lineageId,
-          hue,
-          trait,
-          age,
-          born,
-          died,
-          W,
-          w,
-          h,
-        })) return [];
-      }
-
-      const patches = [
-        { op: "set", path: "/world/alive", value: alive },
-        { op: "set", path: "/world/E", value: E },
-        { op: "set", path: "/world/reserve", value: reserve },
-        { op: "set", path: "/world/link", value: link },
-        { op: "set", path: "/world/lineageId", value: lineageId },
-        { op: "set", path: "/world/hue", value: hue },
-        { op: "set", path: "/world/trait", value: trait },
-        { op: "set", path: "/world/age", value: age },
-        { op: "set", path: "/world/born", value: born },
-        { op: "set", path: "/world/died", value: died },
-      ];
-      if (W) patches.push({ op: "set", path: "/world/W", value: W });
-      if (!remove && costEnabled) {
-        patches.push({ op: "set", path: "/sim/playerDNA", value: playerDNA - cost });
-      }
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
-      return patches;
+      return handlePlaceCell(state, action);
     }
 
     case "PLACE_SPLIT_CLUSTER": {
-      const world = state.world;
-      if (!world) return [];
-      const w = Number(world.w || state.meta.gridW || 0) | 0;
-      const h = Number(world.h || state.meta.gridH || 0) | 0;
-      const x = Number(action.payload?.x) | 0;
-      const y = Number(action.payload?.y) | 0;
-      if (x < 0 || y < 0 || x >= w || y >= h) return [];
-      if (w < 4 || h < 4) return [];
-
-      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-      const playerDNA = Number(state.sim.playerDNA || 0);
-      const costPerCell = 0.5;
-      const costEnabled = !!state.meta.placementCostEnabled;
-      const splitMemory = world.lineageMemory?.[playerLineageId];
-      if (Number(splitMemory?.splitUnlock || 0) < 1) return [];
-      const unlockedTechs = new Set(normalizeTechArray(splitMemory?.techs));
-      if (!unlockedTechs.has("cluster_split")) return [];
-      if (deriveCommandScore(state.sim) + 1e-9 < Number(TECH_BY_ID.cluster_split?.commandReq || 0)) return [];
-
-      const alive = cloneTypedArray(world.alive);
-      const E = cloneTypedArray(world.E);
-      const reserve = cloneTypedArray(world.reserve);
-      const link = cloneTypedArray(world.link);
-      const lineageId = cloneTypedArray(world.lineageId);
-      const hue = cloneTypedArray(world.hue);
-      const trait = cloneTypedArray(world.trait);
-      const age = cloneTypedArray(world.age);
-      const born = cloneTypedArray(world.born);
-      const died = cloneTypedArray(world.died);
-      const W = world.W ? cloneTypedArray(world.W) : null;
-
-      const startX = Math.max(0, Math.min(w - 4, x - 1));
-      const startY = Math.max(0, Math.min(h - 4, y - 1));
-      const cells = [];
-      for (let yy = startY; yy < startY + 4; yy++) {
-        for (let xx = startX; xx < startX + 4; xx++) {
-          const idx = yy * w + xx;
-          if (alive[idx] === 1) continue;
-          cells.push(idx);
-        }
-      }
-      if (!cells.length) return [];
-
-      const totalCost = cells.length * costPerCell;
-      if (costEnabled && playerDNA < totalCost) return [];
-
-      let placed = 0;
-      for (const idx of cells) {
-        if (populatePlayerCell({
-          idx,
-          tick: state.sim.tick,
-          playerLineageId,
-          alive,
-          E,
-          reserve,
-          link,
-          lineageId,
-          hue,
-          trait,
-          age,
-          born,
-          died,
-          W,
-          w,
-          h,
-        })) placed++;
-      }
-      if (!placed) return [];
-
-      const patches = [
-        { op: "set", path: "/world/alive", value: alive },
-        { op: "set", path: "/world/E", value: E },
-        { op: "set", path: "/world/reserve", value: reserve },
-        { op: "set", path: "/world/link", value: link },
-        { op: "set", path: "/world/lineageId", value: lineageId },
-        { op: "set", path: "/world/hue", value: hue },
-        { op: "set", path: "/world/trait", value: trait },
-        { op: "set", path: "/world/age", value: age },
-        { op: "set", path: "/world/born", value: born },
-        { op: "set", path: "/world/died", value: died },
-      ];
-      if (W) patches.push({ op: "set", path: "/world/W", value: W });
-      if (costEnabled) patches.push({ op: "set", path: "/sim/playerDNA", value: playerDNA - totalCost });
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
-      return patches;
+      return handlePlaceSplitCluster(state, action);
     }
 
     case "DEV_BALANCE_RUN_AI": {
@@ -1138,199 +841,19 @@ export function reducer(state, action, { rng }) {
     }
 
     case "HARVEST_CELL": {
-      if (!state.world) return [];
-      const world = state.world;
-      const w = Number(world.w || state.meta.gridW || 0) | 0;
-      const h = Number(world.h || state.meta.gridH || 0) | 0;
-
-      // Guard: mindestens 5 eigene lebende Zellen müssen vorhanden sein
-      const alive = world.alive;
-      const lineageId = world.lineageId;
-      if (!alive || !lineageId) return [];
-      const playerLineageId = state.meta.playerLineageId | 0;
-      let playerAliveCount = 0;
-      for (let i = 0; i < alive.length; i++) {
-        if (alive[i] === 1 && (Number(lineageId[i]) | 0) === playerLineageId) {
-          playerAliveCount++;
-          if (playerAliveCount >= 5) break;
-        }
-      }
-      if (playerAliveCount < 5) return [];
-
-      const x = Number(action.payload?.x) | 0;
-      const y = Number(action.payload?.y) | 0;
-      if (x < 0 || y < 0 || x >= w || y >= h) return [];
-      const idx = y * w + x;
-
-      // Guard: nur eigene lebende Zelle erntbar
-      if (alive[idx] !== 1 || (Number(lineageId[idx]) | 0) !== playerLineageId) return [];
-
-      const age = world.age;
-      const playerStage = Number(state.sim.playerStage) || 1;
-      const ageVal = age ? Number(age[idx]) : 0;
-      // HARVEST-Zone (zoneType 1): +50% DNA-Yield
-      const harvestZoneBonus = (world.zoneMap && (world.zoneMap[idx] | 0) === 1) ? 1.5 : 1.0;
-      const dnaYield = Math.max(1.0, Math.min(5.0,
-        1.0 + (ageVal / 500) * 1.5 + (playerStage - 1) * 1.0
-      )) * harvestZoneBonus;
-
-      const alive_next = cloneTypedArray(alive);
-      alive_next[idx] = 0;
-      const E_next = cloneTypedArray(world.E);
-      E_next[idx] = 0;
-
-      const newTotalHarvested = Number(state.sim.totalHarvested || 0) + 1;
-
-      // playerStage progression — thresholds: 5 / 15 / 30 / 60 harvests → stage 2/3/4/5
-      const STAGE_THRESHOLDS = [0, 5, 15, 30, 60];
-      let newStage = playerStage;
-      for (let s = 2; s <= 5; s++) {
-        if (newTotalHarvested >= STAGE_THRESHOLDS[s - 1] && s > newStage) newStage = s;
-      }
-
-      const patches = [
-        { op: "set", path: "/sim/playerDNA",       value: Number(state.sim.playerDNA || 0) + dnaYield },
-        { op: "set", path: "/sim/totalHarvested",  value: newTotalHarvested },
-        { op: "set", path: "/world/alive",         value: alive_next },
-        { op: "set", path: "/world/E",             value: E_next },
-      ];
-      if (newStage !== playerStage) {
-        patches.push({ op: "set", path: "/sim/playerStage", value: newStage });
-      }
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
-      return patches;
+      return handleHarvestCell(state, action);
     }
 
     case "SET_ZONE": {
-      if (!state.world) return [];
-      const world = state.world;
-      const w = Number(world.w || state.meta.gridW || 0) | 0;
-      const h = Number(world.h || state.meta.gridH || 0) | 0;
-      if (!world.zoneMap || !ArrayBuffer.isView(world.zoneMap)) return [];
-
-      const x        = Number(action.payload?.x)        | 0;
-      const y        = Number(action.payload?.y)        | 0;
-      const radius   = Math.max(1, Math.min(64, Number(action.payload?.radius) | 0));
-      const zoneType = Math.max(0, Math.min(5, Number(action.payload?.zoneType) | 0));
-
-      if (x < 0 || y < 0 || x >= w || y >= h) return [];
-
-      // zoneMap klonen — nie in-place mutieren
-      const zoneMap = cloneTypedArray(world.zoneMap);
-      // paintCircle-Muster analog zu PAINT_BRUSH
-      paintCircle({
-        w, h, x, y, radius,
-        cb: (idx) => { zoneMap[idx] = zoneType; },
-      });
-
-      const patches = [{ op: "set", path: "/world/zoneMap", value: zoneMap }];
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
-      return patches;
+      return handleSetZone(state, action);
     }
 
     case "SET_PLAYER_DOCTRINE": {
-      if (!state.world) return [];
-      const doctrineId = String(action.payload?.doctrineId || "");
-      const doctrine = DOCTRINE_BY_ID[doctrineId];
-      if (!doctrine) return [];
-      const playerStage = Number(state.sim.playerStage || 1);
-      if (playerStage < Number(doctrine.unlockStage || 1)) return [];
-      const playerLineageId = Number(state.meta.playerLineageId || 0) | 0;
-      if (!playerLineageId) return [];
-      const nextLineageMemory = cloneJson(state.world.lineageMemory || {});
-      const current = { ...defaultLineageMemory(), ...(nextLineageMemory[playerLineageId] || {}) };
-      current.doctrine = doctrineId;
-      current.stage = Math.max(Number(current.stage || 1), playerStage);
-      nextLineageMemory[playerLineageId] = current;
-      const patches = [{ op: "set", path: "/world/lineageMemory", value: nextLineageMemory }];
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
-      return patches;
+      return handleSetPlayerDoctrine(state, action);
     }
 
     case "BUY_EVOLUTION": {
-      if (!state.world) return [];
-      const archetypeId = typeof action.payload?.archetypeId === "string"
-        ? action.payload.archetypeId : "";
-      const tech = TECH_BY_ID[archetypeId];
-      if (!tech) return [];
-
-      const playerLineageId = state.meta.playerLineageId | 0;
-      const playerStage     = Number(state.sim.playerStage) || 1;
-      const playerDNA       = Number(state.sim.playerDNA)   || 0;
-      const dnaCost = 5 * playerStage;
-      if (playerDNA < dnaCost) return [];
-      if (playerStage < Number(tech.stage || 1)) return [];
-      const commandScore = deriveCommandScore(state.sim);
-
-      const world       = state.world;
-      const alive       = world.alive;
-      const lineageId   = world.lineageId;
-      if (!alive || !lineageId || !world.trait) return [];
-
-      const nextTrait         = cloneTypedArray(world.trait);
-      const nextHue           = world.hue ? cloneTypedArray(world.hue) : null;
-      const nextLineageMemory = cloneJson(world.lineageMemory || {});
-      const currentMemory = { ...defaultLineageMemory(), ...(nextLineageMemory[playerLineageId] || {}) };
-      const unlocked = new Set(normalizeTechArray(currentMemory.techs));
-      if (unlocked.has(archetypeId)) return [];
-      if (!hasRequiredTechs(unlocked, tech.requires)) return [];
-      if (commandScore + 1e-9 < Number(tech.commandReq || 0)) return [];
-
-      unlocked.add(archetypeId);
-      currentMemory.techs = [...unlocked].sort();
-      currentMemory.stage = Math.max(Number(currentMemory.stage || 1), playerStage);
-      if (archetypeId === "cluster_split") currentMemory.splitUnlock = 1;
-
-      const effectQueue = [];
-      const buffId = DEV_MUTATION_CATALOG.buffAlias[archetypeId];
-      const buff = buffId ? DEV_MUTATION_CATALOG.buffs.find((entry) => entry.id === buffId) : null;
-      if (buff) {
-        effectQueue.push({
-          trait: Array.isArray(buff.trait) ? buff.trait : [],
-          hue: Number(buff.hue || 0),
-          mem: buff.mem || null,
-          intensity: 0.05,
-        });
-      }
-
-      const previousSynergies = new Set(normalizeTechArray(currentMemory.synergies));
-      const nextSynergies = computeUnlockedSynergies(unlocked);
-      for (const synergyId of nextSynergies) {
-        if (previousSynergies.has(synergyId)) continue;
-        const synergy = SYNERGY_BY_ID[synergyId];
-        if (!synergy) continue;
-        effectQueue.push({
-          trait: Array.isArray(synergy.trait) ? synergy.trait : [],
-          hue: Number(synergy.hue || 0),
-          mem: synergy.mem || null,
-          intensity: 1,
-        });
-      }
-      currentMemory.synergies = nextSynergies;
-
-      for (const effect of effectQueue) {
-        applyLineageTraitDelta({
-          alive,
-          lineageId,
-          targetLineageId: playerLineageId,
-          trait: nextTrait,
-          hue: nextHue,
-          vec: effect.trait,
-          hueDelta: effect.hue,
-          intensity: effect.intensity,
-        });
-        applyMemoryDelta(currentMemory, effect.mem, effect.intensity);
-      }
-      nextLineageMemory[playerLineageId] = currentMemory;
-
-      const patches = [
-        { op: "set", path: "/sim/playerDNA",         value: playerDNA - dnaCost },
-        { op: "set", path: "/world/lineageMemory",    value: nextLineageMemory },
-        { op: "set", path: "/world/trait",            value: nextTrait },
-      ];
-      if (nextHue) patches.push({ op: "set", path: "/world/hue", value: nextHue });
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
-      return patches;
+      return handleBuyEvolution(state, action, DEV_MUTATION_CATALOG);
     }
 
     case "SET_WIN_MODE": {
