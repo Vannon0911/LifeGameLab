@@ -4,6 +4,7 @@ import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
 import { createSignatureSnapshot, explainHashMismatch, sha256Hex } from "./support/determinismDiff.mjs";
+import { closeDanglingHandles } from "./support/handleCleanup.mjs";
 
 function buildScenario(seed) {
   // Deterministic scenario: same actions at the same ticks.
@@ -57,40 +58,43 @@ function runScenario(scn) {
   return { hashes, traceDigest };
 }
 
-const seeds = ["uxdet-1", "uxdet-2"];
-let pass = 0;
-for (const seed of seeds) {
-  const scn = buildScenario(seed);
-  const a = runScenario(scn);
-  const b = runScenario(scn);
+try {
+  const seeds = ["uxdet-1", "uxdet-2"];
+  let pass = 0;
+  for (const seed of seeds) {
+    const scn = buildScenario(seed);
+    const a = runScenario(scn);
+    const b = runScenario(scn);
 
-  let ok = true;
-  const n = Math.min(a.hashes.length, b.hashes.length);
-  for (let k = 0; k < n; k++) {
-    if (a.hashes[k].sha256 !== b.hashes[k].sha256) {
-      const ha = a.hashes[k];
-      const hb = b.hashes[k];
-      for (const line of explainHashMismatch({
-        suite: "determinism-interactions",
-        seed,
-        pointLabel: `step ${k}`,
-        action: ha.action,
-        left: ha,
-        right: hb,
-      })) console.error(line);
-      ok = false;
-      break;
+    let ok = true;
+    const n = Math.min(a.hashes.length, b.hashes.length);
+    for (let k = 0; k < n; k++) {
+      if (a.hashes[k].sha256 !== b.hashes[k].sha256) {
+        const ha = a.hashes[k];
+        const hb = b.hashes[k];
+        for (const line of explainHashMismatch({
+          suite: "determinism-interactions",
+          seed,
+          pointLabel: `step ${k}`,
+          action: ha.action,
+          left: ha,
+          right: hb,
+        })) console.error(line);
+        ok = false;
+        break;
+      }
     }
-  }
 
-  if (!ok) continue;
-  if (a.hashes.length !== b.hashes.length) {
-    console.error(`[determinism-interactions] ${seed}: FAIL different trace lengths`);
-    continue;
+    if (!ok) continue;
+    if (a.hashes.length !== b.hashes.length) {
+      console.error(`[determinism-interactions] ${seed}: FAIL different trace lengths`);
+      continue;
+    }
+    console.log(`[determinism-interactions] ${seed}: OK steps=${a.hashes.length - 1} traceDigest=${a.traceDigest}`);
+    pass++;
   }
-  console.log(`[determinism-interactions] ${seed}: OK steps=${a.hashes.length - 1} traceDigest=${a.traceDigest}`);
-  pass++;
+  console.log(`Determinism with interactions results: ${pass}/${seeds.length}`);
+  if (pass < seeds.length) process.exit(1);
+} finally {
+  await closeDanglingHandles();
 }
-
-console.log(`Determinism with interactions results: ${pass}/${seeds.length}`);
-if (pass < seeds.length) process.exit(1);

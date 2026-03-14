@@ -4,6 +4,7 @@ import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
 import { createSignatureSnapshot, explainHashMismatch, sha256Hex } from "./support/determinismDiff.mjs";
+import { closeDanglingHandles } from "./support/handleCleanup.mjs";
 
 const SEEDS = ["det-1", "det-2", "det-3"];
 const TICKS = 300;
@@ -26,31 +27,34 @@ function runTrace(seed, ticks) {
   return { hashes, traceDigest };
 }
 
-let pass = 0;
-for (const seed of SEEDS) {
-  const a = runTrace(seed, TICKS);
-  const b = runTrace(seed, TICKS);
+try {
+  let pass = 0;
+  for (const seed of SEEDS) {
+    const a = runTrace(seed, TICKS);
+    const b = runTrace(seed, TICKS);
 
-  let ok = true;
-  for (let t = 0; t <= TICKS; t++) {
-    if (a.hashes[t].sha256 !== b.hashes[t].sha256) {
-      for (const line of explainHashMismatch({
-        suite: "determinism-per-tick",
-        seed,
-        pointLabel: `tick ${t}`,
-        left: a.hashes[t],
-        right: b.hashes[t],
-      })) console.error(line);
-      ok = false;
-      break;
+    let ok = true;
+    for (let t = 0; t <= TICKS; t++) {
+      if (a.hashes[t].sha256 !== b.hashes[t].sha256) {
+        for (const line of explainHashMismatch({
+          suite: "determinism-per-tick",
+          seed,
+          pointLabel: `tick ${t}`,
+          left: a.hashes[t],
+          right: b.hashes[t],
+        })) console.error(line);
+        ok = false;
+        break;
+      }
+    }
+
+    if (ok) {
+      console.log(`[determinism-per-tick] ${seed}: OK (0..${TICKS}) traceDigest=${a.traceDigest}`);
+      pass++;
     }
   }
-
-  if (ok) {
-    console.log(`[determinism-per-tick] ${seed}: OK (0..${TICKS}) traceDigest=${a.traceDigest}`);
-    pass++;
-  }
+  console.log(`Determinism per-tick results: ${pass}/${SEEDS.length}`);
+  if (pass < SEEDS.length) process.exit(1);
+} finally {
+  await closeDanglingHandles();
 }
-
-console.log(`Determinism per-tick results: ${pass}/${SEEDS.length}`);
-if (pass < SEEDS.length) process.exit(1);

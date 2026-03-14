@@ -1,4 +1,4 @@
-# BUGFIX_LOG
+# BUGFIX LOG — v2.3.0
 
 ## Format
 - Datum

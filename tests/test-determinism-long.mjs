@@ -4,6 +4,7 @@ import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
 import { createSignatureSnapshot, explainHashMismatch, sha256Hex } from "./support/determinismDiff.mjs";
+import { closeDanglingHandles } from "./support/handleCleanup.mjs";
 
 const SEEDS = ["det-1", "det-2", "det-3"];
 const CHECKPOINTS = [100, 200, 300];
@@ -22,40 +23,43 @@ function run(seed, ticks) {
   return { finalSig: createSignatureSnapshot(store.getSignatureMaterial()), sigAt };
 }
 
-let pass = 0;
-for (const seed of SEEDS) {
-  const a = run(seed, Math.max(...CHECKPOINTS));
-  const b = run(seed, Math.max(...CHECKPOINTS));
+try {
+  let pass = 0;
+  for (const seed of SEEDS) {
+    const a = run(seed, Math.max(...CHECKPOINTS));
+    const b = run(seed, Math.max(...CHECKPOINTS));
 
-  let ok = true;
-  for (const c of CHECKPOINTS) {
-    const left = a.sigAt.get(c);
-    const right = b.sigAt.get(c);
-    if (left.sha256 !== right.sha256) {
+    let ok = true;
+    for (const c of CHECKPOINTS) {
+      const left = a.sigAt.get(c);
+      const right = b.sigAt.get(c);
+      if (left.sha256 !== right.sha256) {
+        for (const line of explainHashMismatch({
+          suite: "determinism",
+          seed,
+          pointLabel: `tick ${c}`,
+          left,
+          right,
+        })) console.error(line);
+        ok = false;
+        break;
+      }
+    }
+    if (ok && a.finalSig.sha256 === b.finalSig.sha256) {
+      console.log(`[determinism] ${seed}: OK (100/200/300) finalTrace=${sha256Hex(CHECKPOINTS.map((c) => a.sigAt.get(c).sha256).join("\n"))}`);
+      pass++;
+    } else if (ok) {
       for (const line of explainHashMismatch({
         suite: "determinism",
         seed,
-        pointLabel: `tick ${c}`,
-        left,
-        right,
+        pointLabel: "final signature",
+        left: a.finalSig,
+        right: b.finalSig,
       })) console.error(line);
-      ok = false;
-      break;
     }
   }
-  if (ok && a.finalSig.sha256 === b.finalSig.sha256) {
-    console.log(`[determinism] ${seed}: OK (100/200/300) finalTrace=${sha256Hex(CHECKPOINTS.map((c) => a.sigAt.get(c).sha256).join("\n"))}`);
-    pass++;
-  } else if (ok) {
-    for (const line of explainHashMismatch({
-      suite: "determinism",
-      seed,
-      pointLabel: "final signature",
-      left: a.finalSig,
-      right: b.finalSig,
-    })) console.error(line);
-  }
+  console.log(`Determinism long results: ${pass}/${SEEDS.length}`);
+  if (pass < SEEDS.length) process.exit(1);
+} finally {
+  await closeDanglingHandles();
 }
-
-console.log(`Determinism long results: ${pass}/${SEEDS.length}`);
-if (pass < SEEDS.length) process.exit(1);

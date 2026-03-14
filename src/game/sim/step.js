@@ -4,17 +4,13 @@
 
 import { TRAIT_DEFAULT } from "./life.data.js";
 import { clamp } from "./shared.js";
-import { TRAITS, PLANT_ACTIVE_THRESHOLD } from "./constants.js";
-import { diffuse, applySeasonalLightAnchor } from "./fields.js";
-import { applyPlantLifecycle, enforcePlantTileCap } from "./plants.js";
-import { enforceNutrientCap, enforceCellOnlyEnergy, applyCorpseRelease } from "./resources.js";
-import { applyWorldAi } from "./worldAi.js";
-import { applyDynamicDamping } from "./damping.js";
-import { computeClusterAndLinks } from "./network.js";
+import { TRAITS } from "./constants.js";
+import { applyCorpseRelease } from "./resources.js";
 import { runRemoteClusterAttacks } from "./conflict.js";
 import { updateLineageMemory, pruneLineageMemory, mutateNewbornByEnvironment } from "./lineage.js";
 import { prepareStepBuffers } from "./buffers.js";
 import { forNeighbours8 } from "./neighbors.js";
+import { runFieldPhase, runFinalizePopulationPhase, runWorldSystemsPhase } from "./stepPhases.js";
 import { DOCTRINE_BY_ID } from "../techTree.js";
 
 const tH = (tr, i) => Number(tr[i * TRAITS + 0]) || TRAIT_DEFAULT[0];
@@ -80,7 +76,6 @@ export function simStep(world, phy, tick) {
   let diversitySampled = 0;
   const diversitySampleLimit = 256;
   const diversityLineages = [];
-  let maxLidSeen = 0;
 
   // P1-04: Player/CPU-Metriken — Akkumulatoren
   const playerLid = (phy.playerLineageId | 0) || 0;
@@ -91,51 +86,17 @@ export function simStep(world, phy, tick) {
   let sumTotalEIn  = 0;
   let sumPlayerR   = 0, sumTotalR = 0;
 
-  diffuse(L, w, h, phy.L_diffusion);
-  applySeasonalLightAnchor(world, phy, tick);
+  const fieldPhase = runFieldPhase(world, phy, tick, tH);
+  sumR = fieldPhase.sumR;
+  sumW = fieldPhase.sumW;
+  sumSat = fieldPhase.sumSat;
+  sumP = fieldPhase.sumP;
+  sumB = fieldPhase.sumB;
+  plantTiles = fieldPhase.plantTiles;
+  const nutrientCappedTilesLastStep = fieldPhase.nutrientCappedTilesLastStep;
 
-  for (let i = 0; i < N; i++) if (P[i] > 0.01) R[i] = Math.min(1.0, R[i] + P[i] * phy.R_gen);
-  diffuse(R, w, h, phy.R_diff);
-  diffuse(W, w, h, phy.W_diff);
-
-  const B_decay = clamp(Number(phy.B_decay ?? 0.045), 0, 1);
-  for (let i = 0; i < N; i++) {
-    const p = clamp(P[i], 0, 1);
-    const live = alive[i] === 1 ? 1 : 0;
-    const gen = p * 0.006 + live * clamp(L[i], 0, 1) * 0.003 * clamp(tH(trait, i), 0.22, 3.2);
-    B[i] = clamp(B[i] * (1 - B_decay) + gen, 0, 1);
-  }
-  diffuse(B, w, h, clamp(Number(phy.B_diff ?? 0.04), 0, 1));
-  diffuse(P, w, h, 0.01);
-
-  const nutrientCappedTilesLastStep = enforceNutrientCap(world);
-  for (let i = 0; i < N; i++) {
-    R[i] = Math.max(0, R[i] * (1 - phy.R_decay) - (alive[i] === 1 ? 0.0038 : 0.0009));
-    W[i] = Math.max(0, W[i] * (1 - phy.W_decay));
-    Sat[i] = clamp(Sat[i] + (world.baseSat[i] - Sat[i]) * 0.035 + P[i] * 0.0045 - L[i] * 0.0065, 0, 1);
-
-    const pv = P[i];
-    sumR += R[i];
-    sumW += W[i];
-    sumSat += Sat[i];
-    sumP += pv;
-    sumB += B[i];
-    if (pv >= PLANT_ACTIVE_THRESHOLD) plantTiles++;
-    const lid = Number(lineageId?.[i] || 0) >>> 0;
-    if (lid > maxLidSeen) maxLidSeen = lid;
-  }
-
-  if (!Number.isFinite(Number(world.nextLineageId)) || (Number(world.nextLineageId) | 0) <= 0) {
-    world.nextLineageId = ((maxLidSeen + 1) >>> 0) || 1;
-  } else if ((Number(world.nextLineageId) >>> 0) <= maxLidSeen) {
-    world.nextLineageId = (maxLidSeen + 1) >>> 0;
-  }
-
-  applyPlantLifecycle(world, phy, tick);
-  const plantsPrunedLastStep = enforcePlantTileCap(world);
-  applyWorldAi(world, tick);
-  applyDynamicDamping(world);
-  computeClusterAndLinks(world, phy);
+  const worldPhase = runWorldSystemsPhase(world, phy, tick);
+  const plantsPrunedLastStep = worldPhase.plantsPrunedLastStep;
 
   let totalBirths = 0, totalDeaths = 0, totalMutations = 0;
   const remote = runRemoteClusterAttacks(world, phy, tick, actionMap) || { attacks: 0, kills: 0, stolen: 0, defAct: 0 };
@@ -300,21 +261,11 @@ W[i] = clamp(W[i] + wTarget * wTransfer, 0, 1);
     dominantHueRatio = maxBin / hueLive;
   }
 
-  const energyClearedTilesLastStep = enforceCellOnlyEnergy(world);
-
-  let actualAliveCount = 0;
-  let actualPlayerAliveCount = 0;
-  let actualCpuAliveCount = 0;
-  for (let i = 0; i < N; i++) {
-    if (alive[i] !== 1) continue;
-    actualAliveCount++;
-    const lid = Number(lineageId[i]) | 0;
-    if (playerLid && lid === playerLid) actualPlayerAliveCount++;
-    if (cpuLid && lid === cpuLid) actualCpuAliveCount++;
-  }
-  aliveCount = actualAliveCount;
-  playerAliveCount = actualPlayerAliveCount;
-  cpuAliveCount = actualCpuAliveCount;
+  const finalizePhase = runFinalizePopulationPhase(world, phy);
+  const energyClearedTilesLastStep = finalizePhase.energyClearedTilesLastStep;
+  aliveCount = finalizePhase.aliveCount;
+  playerAliveCount = finalizePhase.playerAliveCount;
+  cpuAliveCount = finalizePhase.cpuAliveCount;
 
   const invN = 1 / Math.max(1, N);
   const invAlive = 1 / Math.max(1, aliveCount);
