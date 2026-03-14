@@ -425,9 +425,14 @@ function drawActionOverlay(ctx, world, meta, offX, offY, tilePx) {
       const px = offX + x * tilePx;
       const py = offY + y * tilePx;
       const hue = isRemote ? 342 : isDefense ? 205 : (24 + a * 44);
-      const alpha = 0.05 + a * 0.30;
+      const alpha = 0.08 + a * 0.38;
       ctx.fillStyle = `hsla(${hue}, 90%, 62%, ${alpha})`;
       ctx.fillRect(px, py, tilePx * every, tilePx * every);
+      if (tilePx >= 5) {
+        ctx.strokeStyle = `hsla(${hue}, 96%, 74%, ${Math.min(0.62, alpha + 0.2)})`;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px + 0.5, py + 0.5, tilePx * every - 1, tilePx * every - 1);
+      }
     }
   }
   ctx.restore();
@@ -464,7 +469,7 @@ function drawLightShadowOverlay(ctx, world, meta, offX, offY, tilePx) {
 
 // Draw birth/death event markers on top
 function drawEvents(ctx, world, offX, offY, tilePx) {
-  if (tilePx < 4) return;
+  if (tilePx < 3) return;
   const { w, h, born, died } = world;
   const N = w * h;
   ctx.save();
@@ -472,17 +477,23 @@ function drawEvents(ctx, world, offX, offY, tilePx) {
     if (!born[i] && !died[i]) continue;
     const x  = offX + (i % w) * tilePx + tilePx * 0.5;
     const y  = offY + ((i / w) | 0) * tilePx + tilePx * 0.5;
-    const r  = Math.max(2, tilePx * 0.35);
+    const r  = Math.max(1.2, tilePx * 0.34);
     if (born[i]) {
-      ctx.strokeStyle = "rgba(80,255,160,0.75)";
-      ctx.lineWidth   = Math.max(1, tilePx * 0.08);
+      ctx.strokeStyle = "rgba(80,255,160,0.90)";
+      ctx.lineWidth   = Math.max(1, tilePx * 0.10);
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.stroke();
+      if (tilePx >= 5) {
+        ctx.fillStyle = "rgba(190,255,220,0.42)";
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(0.8, r * 0.45), 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     if (died[i]) {
-      ctx.strokeStyle = "rgba(255,100,80,0.65)";
-      ctx.lineWidth   = Math.max(1, tilePx * 0.08);
+      ctx.strokeStyle = "rgba(255,100,80,0.88)";
+      ctx.lineWidth   = Math.max(1, tilePx * 0.10);
       const s = r * 0.7;
       ctx.beginPath();
       ctx.moveTo(x-s, y-s); ctx.lineTo(x+s, y+s);
@@ -607,6 +618,11 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) 
         const side = Math.max(1.4, tilePx * 0.68);
         ctx.fillStyle = `rgba(${Math.round(core[0])}, ${Math.round(core[1])}, ${Math.round(core[2])}, 0.96)`;
         ctx.fillRect(cx - side * 0.5, cy - side * 0.5, side, side);
+        if (quality >= 1 && tilePx >= 2) {
+          ctx.strokeStyle = "rgba(10,16,22,0.55)";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(cx - side * 0.5 + 0.5, cy - side * 0.5 + 0.5, Math.max(1, side - 1), Math.max(1, side - 1));
+        }
       } else {
         const g = ctx.createRadialGradient(cx - radius * 0.28, cy - radius * 0.28, radius * 0.08, cx, cy, radius);
         g.addColorStop(0, `rgba(${Math.round(core[0])}, ${Math.round(core[1])}, ${Math.round(core[2])}, 0.96)`);
@@ -616,6 +632,13 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) 
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.fill();
+        if (quality >= 1 && tilePx >= 3) {
+          ctx.strokeStyle = "rgba(8,14,20,0.52)";
+          ctx.lineWidth = Math.max(0.8, radius * 0.13);
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius * 0.98, 0, Math.PI * 2);
+          ctx.stroke();
+        }
       }
 
       if (!isHeavyGrid && quality >= 2 && cv > 0.5) {
@@ -651,7 +674,7 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) 
   ctx.restore();
 }
 
-// Draw subtle grid lines when zoomed in
+// Draw tactical grid lines so tile boundaries stay legible on mobile + dense maps.
 function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0) {
   if (lodLevel > 0) return;
   // On dense grids show a lightweight macro-grid, so raster remains readable.
@@ -661,7 +684,7 @@ function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0) {
     const minorEvery = tilePx >= 10 ? 1 : 2;
     const majorEvery = tilePx >= 8 ? 8 : 12;
     ctx.lineWidth = 1;
-    ctx.strokeStyle = tilePx >= 10 ? "rgba(188,238,230,0.12)" : "rgba(188,238,230,0.08)";
+    ctx.strokeStyle = tilePx >= 10 ? "rgba(198,224,255,0.26)" : "rgba(198,224,255,0.18)";
     for (let x = offX, c = 0; x <= offX + imageW; x += tilePx, c++) {
       if (c % minorEvery !== 0) continue;
       ctx.beginPath();
@@ -676,7 +699,7 @@ function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0) {
       ctx.lineTo(offX + imageW, y + 0.5);
       ctx.stroke();
     }
-    ctx.strokeStyle = "rgba(208,252,242,0.18)";
+    ctx.strokeStyle = "rgba(255,205,132,0.34)";
     for (let x = offX, c = 0; x <= offX + imageW; x += tilePx, c++) {
       if (c % majorEvery !== 0) continue;
       ctx.beginPath();
@@ -697,7 +720,7 @@ function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0) {
   ctx.save();
   const small = tilePx < 22;
   const minorStep = 1;
-  const minorAlpha = small ? 0.025 : 0.04;
+  const minorAlpha = small ? 0.04 : 0.06;
   const majorEvery = 10;
   ctx.strokeStyle = `rgba(188,255,231,${minorAlpha})`;
   ctx.lineWidth = 1;
@@ -708,7 +731,7 @@ function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0) {
     ctx.beginPath(); ctx.moveTo(offX, y+0.5); ctx.lineTo(offX+imageW, y+0.5); ctx.stroke();
   }
   if (tilePx >= 3 && lodLevel <= 2) {
-    ctx.strokeStyle = "rgba(205,255,232,0.12)";
+    ctx.strokeStyle = "rgba(255,205,132,0.20)";
     ctx.lineWidth = 1;
     for (let x = offX, c = 0; x <= offX + imageW; x += tilePx, c++) {
       if (c % majorEvery !== 0) continue;
@@ -1034,7 +1057,7 @@ export function drawFrame(ctx, state, perf = {}) {
   ctx.fillRect(0, 0, CW, CH);
   
   // Always use full surface render to keep visible macro-patterns and avoid pixel-brei.
-  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingEnabled = false;
   drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality);
 
   // Overlays
@@ -1053,7 +1076,7 @@ export function drawFrame(ctx, state, perf = {}) {
   if (!tactical && quality >= 1 && !isHugeGrid) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawZoneOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level);
-  if (!balanced && quality >= 2 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);
+  if (quality >= 1 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);
 
   return { tilePx, offX, offY, dpr: perf.dpr, quality, lod };
 }
