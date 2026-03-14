@@ -45,6 +45,13 @@ export const WORLD_PRESETS = Object.freeze({
       dnaZoneAdjacencyRule: "touch_core_or_owned",
       dnaYieldScale: 1.0,
     },
+    phaseD: {
+      infraBuildCostEnergy: 10,
+      infraBuildCostDNA: 8,
+      visionRadiusCore: 2,
+      visionRadiusDNA: 2,
+      visionRadiusInfra: 1,
+    },
     startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 1.02,
@@ -72,6 +79,13 @@ export const WORLD_PRESETS = Object.freeze({
       dnaZoneAdjacencyRule: "touch_core_or_owned",
       dnaYieldScale: 1.0,
     },
+    phaseD: {
+      infraBuildCostEnergy: 10,
+      infraBuildCostDNA: 8,
+      visionRadiusCore: 2,
+      visionRadiusDNA: 2,
+      visionRadiusInfra: 1,
+    },
     startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 1.16,
@@ -97,6 +111,13 @@ export const WORLD_PRESETS = Object.freeze({
       nextInfraUnlockCostDNA: 30,
       dnaZoneAdjacencyRule: "touch_core_or_owned",
       dnaYieldScale: 1.0,
+    },
+    phaseD: {
+      infraBuildCostEnergy: 10,
+      infraBuildCostDNA: 8,
+      visionRadiusCore: 2,
+      visionRadiusDNA: 2,
+      visionRadiusInfra: 1,
     },
     startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
