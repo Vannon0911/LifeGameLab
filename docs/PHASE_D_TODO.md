@@ -4,8 +4,9 @@ Zweck: Infrastruktur und aktive Sicht/Fog-Regeln nach stabiler DNA-Zone.
 
 ## Status
 
-- Phase D ist aktiv; D1 und D2 sind abgeschlossen.
-- D3-D6 sind abgeschlossen; D7-D8 bleiben offen.
+- Phase D ist abgeschlossen.
+- D1-D8 sind auf Codebasis, Doku und Gates nachgezogen.
+- Phase E ist der naechste produktive Block.
 - Nicht in D2 enthalten:
   - kein aktives Fog-Produktivcode
   - keine CPU-Informationsumschaltung
@@ -108,21 +109,37 @@ Zweck: Infrastruktur und aktive Sicht/Fog-Regeln nach stabiler DNA-Zone.
   - `node tests/test-ui-contract.mjs`
   - `node tests/test-ui-strategy-contract.mjs`
   - manuelle Gegenproben:
-    - leerer Infra-Confirm bleibt expliziter Exit statt stiller No-Op
-    - Canvas-Klicks ausserhalb `infraBuildMode` bleiben auf bestehende Brush-Logik begrenzt
-    - Welt-Panel zeigt Fog-Legende, ohne Labor-Overlay in den Main-Run zu ziehen
+    - leerer Infra-Confirm bleibt expliziter Exit statt stiller No-Op (`infraBuildMode=""`, `running=true`, Abort-Text sichtbar)
+    - Canvas-Klicks ausserhalb `infraBuildMode` bleiben auf bestehende Brush-Logik begrenzt (`staged: 0 -> 0`)
+    - Welt-Panel zeigt Fog-Legende, ohne Labor-Overlay in den Main-Run zu ziehen (`Sichtbar: 22`, `Erkundet: 4`, `Unbesucht: 230`)
 
 ### D7 Caller/Smokes
-- [ ] Standard-Smokes um Infrastruktur-/Sicht-Schritt ergaenzen
-- [ ] `DNA -> Infra`-Flow absichern
-- [ ] Lab-/Recovery-/Benchmark-Pfade gegen Regression pruefen
-- [ ] Tests + Doku aktualisieren
+- [x] Standard-Smokes um Infrastruktur-/Sicht-Schritt ergaenzen
+- [x] `DNA -> Infra`-Flow absichern
+- [x] Lab-/Recovery-/Benchmark-Pfade gegen Regression pruefen
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-standard-infra-flow.mjs`
+  - `node tests/test-smoke.mjs`
+  - `node tests/test-main-runtime-callers.mjs`
+  - manuelle Gegenproben:
+    - Browser-Laborpfad startet Benchmark weiter ohne Fog-/UI-Absturz (`Benchmark start` geloggt, keine `console.error`)
+    - Standard-Infra-Probe vergroessert Sicht und behaelt `explored` nach Leitungsverlust
 
 ### D8 Finalisierung
-- [ ] technische Notizen / Changelog aktualisieren
-- [ ] TODO-/Implementierungsstatus aktualisieren
-- [ ] Versioning-/LLM-Gates am Phase-D-Ende nachziehen (`llm-preflight classify/ack/check`, `LLM_ENTRY`-Sync falls noetig)
-- [ ] Scope-Check: kein Pattern-/Zone-/Tech-Grossumbau
+- [x] technische Notizen / Changelog aktualisieren
+- [x] TODO-/Implementierungsstatus aktualisieren
+- [x] Versioning-/LLM-Gates am Phase-D-Ende nachziehen (`llm-preflight classify/ack/check`, `LLM_ENTRY`-Sync falls noetig)
+- [x] Scope-Check: kein Pattern-/Zone-/Tech-Grossumbau
+- Verifiziert mit:
+  - `node tests/test-version-traceability.mjs`
+  - `npm run test:quick`
+  - `npm run test:truth`
+  - Scope-Gegenprobe:
+    - kein neues Pattern-System
+    - kein finales Zonensystem
+    - kein Tech-Tree-/Objective-Rework
+    - keine Contract-/Schema-Erhoehung
 
 ## Zielzustand nach Phase D
 
@@ -216,3 +233,17 @@ phaseD: {
 - Das aktive Tool meldet im HUD jetzt explizit den Infrastrukturpfad und den staged Stand.
 - `lage` und `welt` zeigen Sicht-/Fog-Status als Main-Run-Leseschicht; die Renderer-Abstufung aus D3/D4 bleibt der visuelle Source of Truth.
 - `src/project/contract/dataflow.js` fuehrt die drei Infra-Actions jetzt auch formal als UI-Dispatch-Quellen, damit Manifest und reale UI-Callpaths wieder deckungsgleich sind.
+
+## D7-Implementierungsstand
+
+- Neuer Standard-Smoke `tests/test-standard-infra-flow.mjs` fuehrt den kanonischen Pfad jetzt bis zum ersten Infra-Commit und prueft Sichtgewinn plus `explored`-Persistenz nach Leitungsverlust.
+- `tests/test-smoke.mjs` behandelt `visibility/explored` jetzt auch im `LAB_AUTORUN` als feste Invariante: tile-aligned Arrays und saubere Fog-Partition ohne Drift.
+- `tests/test-main-runtime-callers.mjs` bleibt der leichte Guard dafuer, dass Bootstrap, Recovery und Benchmark ihre expliziten Lab-/Genesis-Caller nicht verlieren.
+- Manuell ist der Labor-Benchmarkpfad erneut angerissen: Start-Event kommt hoch, Fog-UI erzeugt keine `console.error`, und es tauchen keine `undefined`-/`NaN`-Artefakte im Paneltext auf.
+
+## D8-Implementierungsstand
+
+- Release-/Governance-Artefakte sind auf `v2.7.0` synchronisiert (`package.json`, Manifest, README, `index.html`, Snapshot-/Log-Doku).
+- `docs/SESSION_HANDOFF.md` und `docs/PROJECT_STRUCTURE.md` fuehren Phase D jetzt als abgeschlossene Codebasis und benennen Phase E explizit als naechsten Block.
+- `docs/PHASE_D_TODO.md` ist damit nicht mehr Arbeitsliste fuer offene Produktivarbeit, sondern abgeschlossener Nachweis fuer Infrastruktur + aktive Sicht/Fog.
+- Abschlusslaeufe `quick` und `truth` sind nach D7/D8 erneut gruen; `SCHEMA_VERSION` blieb unveraendert bei `2`, also kein Major-Fall.
