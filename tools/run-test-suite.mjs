@@ -11,6 +11,23 @@ if (!Object.prototype.hasOwnProperty.call(TEST_SUITES, suiteName)) {
   console.error(`Unknown suite '${suiteName}'. Use one of: ${Object.keys(TEST_SUITES).join(", ")}`);
   process.exit(2);
 }
+const llmTask = String(process.env.LLM_TASK || "testing").trim() || "testing";
+const preflightScript = path.join(root, "tools", "llm-preflight.mjs");
+const preflight = spawnSync(process.execPath, [preflightScript, "check", "--task", llmTask], {
+  cwd: root,
+  encoding: "utf8",
+  stdio: ["ignore", "pipe", "pipe"],
+  timeout: 30_000,
+});
+if (preflight.stdout) process.stdout.write(preflight.stdout);
+if (preflight.stderr) process.stderr.write(preflight.stderr);
+if (preflight.error) {
+  console.error(`[suite:${suiteName}] llm preflight failed: ${preflight.error.message}`);
+  process.exit(1);
+}
+if (preflight.status !== 0) {
+  process.exit(preflight.status ?? 1);
+}
 
 const files = TEST_SUITES[suiteName];
 const budgetMs = Number(TEST_BUDGETS_MS[suiteName] || 120_000);
