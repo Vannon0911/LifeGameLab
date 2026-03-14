@@ -1,6 +1,6 @@
 # PROJECT_CONTRACT_SNAPSHOT
 
-**APP_VERSION:** 2.5.0
+**APP_VERSION:** 2.7.0
 
 ## Contract-Status
 - Manifest-first aktiv
@@ -12,11 +12,14 @@
 - Reducer-Control-Actions in `reducer/controlActions.js` extrahiert (pure)
 - UI-Klasse in `ui.js`, UI-Read-Model in `ui.model.js`, UI-Konstanten in `ui.constants.js`
 - UI-DOM-/Feedback-Helfer in `ui.dom.js` und `ui.feedback.js` extrahiert
+- Infrastruktur-Helfer in `src/game/sim/infra.js` zentralisiert
+- Fog-/CPU-Read-Helfer in `src/game/render/fogOfWar.js` zentralisiert
 - Public Browser API aus `main.js` in `src/app/runtime/publicApi.js` extrahiert (kompatible Hooks bleiben)
 - Runtime-Helfer aus `main.js` in `src/app/runtime/worldStateLog.js`, `reportUtils.js`, `bootStatus.js`
 - Deterministisches Advisor-Read-Model als gemeinsame Source of Truth fuer `render_game_to_text`, HUD und Statuspanel
 - Main-Run-Defaults: Placement Cost standardmaessig an, Global Learning standardmaessig aus, Win-Mode nach Tick 0 fixiert
 - Renderer respektiert `meta.activeOverlay` als echte Diagnoseansicht fuer Energie, Toxin, Naehrstoffe, Territorium und Konflikt
+- `world.visibility`/`world.explored` sind aktive Runtime-Felder fuer Sicht, Memory und CPU-Informationsgating
 
 ## Kernmodule
 - `src/project/contract/*`
