@@ -38,7 +38,7 @@ export const stateSchema = {
         devMutationVault: { type: "object", shape: {}, allowUnknown: true },
         playerLineageId: { type: "number", default: 0 },
         cpuLineageId: { type: "number", default: 0 },
-        placementCostEnabled: { type: "boolean", default: false },
+        placementCostEnabled: { type: "boolean", default: true },
       },
     },
     world: { type: "object", shape: {}, allowUnknown: true },

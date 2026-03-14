@@ -12,6 +12,7 @@ import { clamp, cloneTypedArray, paintCircle } from "../shared.js";
 import {
   BRUSH_MODE,
   GAME_RESULT,
+  OVERLAY_MODE,
   WIN_MODE,
   isBrushMode,
 } from "../../contracts/ids.js";
@@ -82,6 +83,7 @@ export function makeInitialState() {
       brushMode:   BRUSH_MODE.OBSERVE,
       brushRadius: 3,
       renderMode:  "combined",
+      activeOverlay: OVERLAY_MODE.NONE,
       physics:     { ...PHYSICS_DEFAULT },
       ui: {
         panelOpen: false,
@@ -93,7 +95,7 @@ export function makeInitialState() {
       },
       globalLearning: defaultGlobalLearning(),
       devMutationVault: defaultDevMutationVault(),
-      placementCostEnabled: false,
+      placementCostEnabled: true,
     },
     world: null,
     sim: {
@@ -358,7 +360,7 @@ export function reducer(state, action, { rng }) {
     }
 
     case "SET_WIN_MODE": {
-      const patches = buildSetWinModePatches(action);
+      const patches = buildSetWinModePatches(state, action);
       if (!patches.length) return [];
       assertSimPatchesAllowed(manifest, state, "SET_WIN_MODE", patches);
       return patches;
