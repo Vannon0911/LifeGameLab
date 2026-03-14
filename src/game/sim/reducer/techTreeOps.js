@@ -102,7 +102,7 @@ export const DEV_MUTATION_CATALOG = buildDevMutationCatalogs();
 
 export function defaultGlobalLearning() {
   return {
-    enabled: true,
+    enabled: false,
     strength: 0.42,
     bank: {
       light: 0.5,
@@ -132,7 +132,7 @@ export function mergeWorldLearningIntoBank(world, learning, sim) {
   const out = cloneJson(learning || defaultGlobalLearning());
   if (!out || typeof out !== "object") return defaultGlobalLearning();
   if (!out.bank || typeof out.bank !== "object") out.bank = cloneJson(defaultGlobalLearning().bank);
-  if (typeof out.enabled !== "boolean") out.enabled = true;
+  if (typeof out.enabled !== "boolean") out.enabled = defaultGlobalLearning().enabled;
   if (!Number.isFinite(out.strength)) out.strength = 0.42;
   if (!out.enabled || !world?.lineageMemory) return out;
   const entries = Object.values(world.lineageMemory);
@@ -176,7 +176,7 @@ export function applyGlobalLearningToWorld(world, learning) {
   let gl = cloneJson(learning || defaultGlobalLearning());
   if (!gl || typeof gl !== "object") gl = defaultGlobalLearning();
   if (!gl.bank || typeof gl.bank !== "object") gl.bank = cloneJson(defaultGlobalLearning().bank);
-  if (typeof gl.enabled !== "boolean") gl.enabled = true;
+  if (typeof gl.enabled !== "boolean") gl.enabled = defaultGlobalLearning().enabled;
   if (!Number.isFinite(gl.strength)) gl.strength = 0.42;
   world.globalLearning = gl;
   if (!world.lineageMemory) world.lineageMemory = {};

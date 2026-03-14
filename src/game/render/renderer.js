@@ -3,6 +3,8 @@
 // Pure: reads state, writes pixels. Never mutates state.
 // ============================================================
 
+import { OVERLAY_MODE } from "../contracts/ids.js";
+
 function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 const LOD_ZOOM_STEPS = [512, 256, 128, 64]; // requested: 512 /2 /2 /2
@@ -65,6 +67,181 @@ function getDoctrinePalette(doctrine, synergies = 0) {
     link: base.link,
     bonus,
   };
+}
+
+function toRgbTriplet(r, g, b) {
+  return [
+    Math.round(clamp(r, 0, 255)),
+    Math.round(clamp(g, 0, 255)),
+    Math.round(clamp(b, 0, 255)),
+  ];
+}
+
+function computeConflictSignal(actionMap, idx, meta) {
+  const raw = Number(actionMap?.[idx] || 0);
+  if (raw <= 0) return { raw: 0, visible: 0, remote: false, defense: false };
+  const remote = raw >= 240;
+  const defense = raw >= 200 && raw < 240;
+  const showRemote = !!meta?.ui?.showRemoteAttackOverlay;
+  const showDefense = !!meta?.ui?.showDefenseOverlay;
+  if (remote && !showRemote) return { raw, visible: 0, remote, defense };
+  if (defense && !showDefense) return { raw, visible: 0, remote, defense };
+  return { raw, visible: clamp01(raw / 255), remote, defense };
+}
+
+function computeRenderModeFieldColor(world, meta, idx) {
+  const mode = meta?.renderMode || "combined";
+  const lv = clamp01(world?.L?.[idx] ?? 0);
+  const rv = clamp01(world?.R?.[idx] ?? 0);
+  const wv = clamp01(world?.W?.[idx] ?? 0);
+  const sv = clamp01(world?.Sat?.[idx] ?? 0);
+  const pv = clamp01(world?.P?.[idx] ?? 0);
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  if (mode === "light") {
+    const lum = 14 + lv * 220;
+    r = lum; g = lum; b = lum;
+  } else if (mode === "energy") {
+    r = wv * 40; g = rv * 60; b = lv * 80;
+  } else if (mode === "fields") {
+    r = 18 + wv * 180 + sv * 90;
+    g = 14 + rv * 170 + pv * 110 - wv * 36;
+    b = 16 + lv * 70 + pv * 64 + (1 - sv) * 24;
+  } else if (mode === "diagnostic") {
+    r = 10 + wv * 170 + sv * 72 + (1 - lv) * 52;
+    g = 10 + rv * 150 + pv * 92;
+    b = 10 + lv * 140;
+  } else if (mode === "cells") {
+    r = 0; g = 0; b = 0;
+  } else {
+    const nutrientGlow = clamp01(rv * 0.90 + pv * 0.35);
+    const lightLift = clamp01(lv * 0.85);
+    const toxinHeat = clamp01(wv * 0.70);
+    const saturationMist = clamp01(sv * 0.55);
+    r = 8 + lightLift * 10 + nutrientGlow * 10 + saturationMist * 8 + toxinHeat * 44;
+    g = 14 + lightLift * 30 + nutrientGlow * 86 + saturationMist * 14 + toxinHeat * 20;
+    b = 18 + lightLift * 44 + nutrientGlow * 28 + (1 - saturationMist) * 18 + toxinHeat * 8;
+    if (toxinHeat > 0.02) {
+      r += toxinHeat * 28;
+      g -= toxinHeat * 6;
+      b -= toxinHeat * 4;
+    }
+  }
+
+  return toRgbTriplet(r, g, b);
+}
+
+function computeOverlayFieldColor(world, meta, idx, overlay) {
+  const lv = clamp01(world?.L?.[idx] ?? 0);
+  const rv = clamp01(world?.R?.[idx] ?? 0);
+  const wv = clamp01(world?.W?.[idx] ?? 0);
+  const sv = clamp01(world?.Sat?.[idx] ?? 0);
+  const pv = clamp01(world?.P?.[idx] ?? 0);
+  const ev = clamp01((world?.E?.[idx] ?? 0) / Math.max(0.0001, Number(meta?.physics?.Emax || 3.2)));
+  const reserve = clamp01(world?.reserve?.[idx] ?? 0);
+  const link = clamp01(world?.link?.[idx] ?? 0);
+  const cluster = clamp01(world?.clusterField?.[idx] ?? 0);
+  const alive = world?.alive?.[idx] === 1;
+  const lineageId = Number(world?.lineageId?.[idx] || 0);
+  const playerLineageId = Number(meta?.playerLineageId || 1);
+  const cpuLineageId = Number(meta?.cpuLineageId || 2);
+
+  if (overlay === OVERLAY_MODE.ENERGY) {
+    const reserveRisk = clamp01((0.12 - reserve) / 0.12);
+    const charge = clamp01(ev * 0.7 + reserve * 0.3);
+    return toRgbTriplet(
+      14 + reserveRisk * 168 + wv * 42,
+      20 + charge * 156 + reserve * 32,
+      28 + reserve * 126 + lv * 58
+    );
+  }
+
+  if (overlay === OVERLAY_MODE.TOXIN) {
+    const detoxTint = clamp01((1 - wv) * 0.35 + reserve * 0.15);
+    return toRgbTriplet(
+      18 + wv * 224,
+      12 + detoxTint * 76 + sv * 18,
+      16 + detoxTint * 38
+    );
+  }
+
+  if (overlay === OVERLAY_MODE.NUTRIENT) {
+    const growth = clamp01(rv * 0.78 + pv * 0.45);
+    return toRgbTriplet(
+      18 + growth * 112 + lv * 18,
+      28 + growth * 182,
+      18 + rv * 38 + pv * 28
+    );
+  }
+
+  if (overlay === OVERLAY_MODE.TERRITORY) {
+    if (!alive) {
+      return toRgbTriplet(
+        10 + rv * 20,
+        14 + rv * 32 + lv * 8,
+        18 + lv * 30
+      );
+    }
+    if (lineageId === playerLineageId) {
+      return toRgbTriplet(
+        18 + cluster * 38,
+        66 + link * 104 + cluster * 28,
+        82 + cluster * 132
+      );
+    }
+    if (lineageId === cpuLineageId) {
+      return toRgbTriplet(
+        86 + cluster * 128,
+        22 + link * 32,
+        44 + cluster * 66
+      );
+    }
+    return toRgbTriplet(
+      72 + cluster * 46,
+      58 + link * 42,
+      36 + cluster * 30
+    );
+  }
+
+  if (overlay === OVERLAY_MODE.CONFLICT) {
+    const signal = computeConflictSignal(world?.actionMap, idx, meta);
+    if (signal.visible <= 0) {
+      return toRgbTriplet(
+        10 + wv * 26,
+        10 + rv * 18,
+        14 + lv * 28
+      );
+    }
+    if (signal.remote) {
+      return toRgbTriplet(
+        102 + signal.visible * 136,
+        24 + signal.visible * 16,
+        84 + signal.visible * 108
+      );
+    }
+    if (signal.defense) {
+      return toRgbTriplet(
+        24 + signal.visible * 42,
+        92 + signal.visible * 82,
+        118 + signal.visible * 112
+      );
+    }
+    return toRgbTriplet(
+      72 + signal.visible * 172,
+      44 + signal.visible * 92,
+      18 + signal.visible * 34
+    );
+  }
+
+  return computeRenderModeFieldColor(world, meta, idx);
+}
+
+export function computeFieldSurfaceColor(world, meta, idx) {
+  const overlay = String(meta?.activeOverlay || OVERLAY_MODE.NONE);
+  if (overlay !== OVERLAY_MODE.NONE) return computeOverlayFieldColor(world, meta, idx, overlay);
+  return computeRenderModeFieldColor(world, meta, idx);
 }
 
 // Background/tile pass (without direct cell colour)
@@ -850,50 +1027,17 @@ function drawCanvasHud(ctx, state, CW, CH) {
 }
 
 function drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality = 3) {
-  const { w, h, L, R, W, Sat, P } = world;
-  const mode = meta.renderMode || "combined";
-  const detail = quality >= 2 && tilePx >= 5;
+  const { w, h, L, W, Sat } = world;
+  const overlayActive = String(meta?.activeOverlay || OVERLAY_MODE.NONE) !== OVERLAY_MODE.NONE;
+  const detail = !overlayActive && quality >= 2 && tilePx >= 5;
   const step = tilePx < 3 ? 2 : 1;
   for (let y = 0; y < h; y += step) {
     for (let x = 0; x < w; x += step) {
       const i = y * w + x;
+      const [r, g, b] = computeFieldSurfaceColor(world, meta, i);
       const lv = clamp01(L?.[i] ?? 0);
-      const rv = clamp01(R?.[i] ?? 0);
       const wv = clamp01(W?.[i] ?? 0);
       const sv = clamp01(Sat?.[i] ?? 0);
-      const pv = clamp01(P?.[i] ?? 0);
-      let r = 0, g = 0, b = 0;
-
-      if (mode === "light") {
-        const lum = 14 + lv * 220;
-        r = lum; g = lum; b = lum;
-      } else if (mode === "energy") {
-        r = wv * 40; g = rv * 60; b = lv * 80;
-      } else if (mode === "fields") {
-        r = 18 + wv * 180 + sv * 90;
-        g = 14 + rv * 170 + pv * 110 - wv * 36;
-        b = 16 + lv * 70 + pv * 64 + (1 - sv) * 24;
-      } else if (mode === "diagnostic") {
-        r = 10 + wv * 170 + sv * 72 + (1 - lv) * 52;
-        g = 10 + rv * 150 + pv * 92;
-        b = 10 + lv * 140;
-      } else if (mode === "cells") {
-        r = 0; g = 0; b = 0;
-      } else {
-        // Cooler tactical palette: dark slate base with teal growth signal and restrained toxin heat.
-        const nutrientGlow = clamp01(rv * 0.90 + pv * 0.35);
-        const lightLift = clamp01(lv * 0.85);
-        const toxinHeat = clamp01(wv * 0.70);
-        const saturationMist = clamp01(sv * 0.55);
-        r = 8 + lightLift * 10 + nutrientGlow * 10 + saturationMist * 8 + toxinHeat * 44;
-        g = 14 + lightLift * 30 + nutrientGlow * 86 + saturationMist * 14 + toxinHeat * 20;
-        b = 18 + lightLift * 44 + nutrientGlow * 28 + (1 - saturationMist) * 18 + toxinHeat * 8;
-        if (toxinHeat > 0.02) {
-          r += toxinHeat * 28;
-          g -= toxinHeat * 6;
-          b -= toxinHeat * 4;
-        }
-      }
 
       const px = offX + x * tilePx;
       const py = offY + y * tilePx;
@@ -1051,6 +1195,7 @@ export function drawFrame(ctx, state, perf = {}) {
   const isHugeGrid = cells >= 120 * 120;
   const tactical = quality <= 1 || isHugeGrid;
   const balanced = quality === 2 || isHeavyGrid;
+  const overlayActive = String(meta?.activeOverlay || OVERLAY_MODE.NONE) !== OVERLAY_MODE.NONE;
 
   // Composite to main canvas
   ctx.fillStyle = "#080c14";
@@ -1061,19 +1206,19 @@ export function drawFrame(ctx, state, perf = {}) {
   drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality);
 
   // Overlays
-  if (!tactical && quality >= 3 && lod.level <= 1) drawFieldHotspots(ctx, world, offX, offY, tilePx);
-  if (quality >= 1 && lod.level <= 2 && !isHugeGrid) drawClusterOverlay(ctx, world, offX, offY, tilePx);
+  if (!overlayActive && !tactical && quality >= 3 && lod.level <= 1) drawFieldHotspots(ctx, world, offX, offY, tilePx);
+  if (!overlayActive && quality >= 1 && lod.level <= 2 && !isHugeGrid) drawClusterOverlay(ctx, world, offX, offY, tilePx);
   
   // Always show Birth Charge Nodes for visual feedback of cell creation
-  if (!tactical && quality >= 1 && lod.level <= 2) drawBirthChargeNodes(ctx, world, offX, offY, tilePx, sim?.tick || 0);
+  if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawBirthChargeNodes(ctx, world, offX, offY, tilePx, sim?.tick || 0);
 
   if (quality >= 1 && lod.level <= 2) drawActionOverlay(ctx, world, meta, offX, offY, tilePx);
-  if (!isHugeGrid && quality >= 1 && lod.level <= 2) drawLightShadowOverlay(ctx, world, meta, offX, offY, tilePx);
-  if (!balanced && quality >= 2 && lod.level <= 2) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim);
-  if (!tactical && quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, sim?.tick || 0);
+  if (!overlayActive && !isHugeGrid && quality >= 1 && lod.level <= 2) drawLightShadowOverlay(ctx, world, meta, offX, offY, tilePx);
+  if (!overlayActive && !balanced && quality >= 2 && lod.level <= 2) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim);
+  if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, sim?.tick || 0);
   drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality);
-  if (!balanced && quality >= 3 && lod.level <= 1) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
-  if (!tactical && quality >= 1 && !isHugeGrid) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
+  if (!overlayActive && !balanced && quality >= 3 && lod.level <= 1) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
+  if (!overlayActive && !tactical && quality >= 1 && !isHugeGrid) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawZoneOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level);
   if (quality >= 1 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);

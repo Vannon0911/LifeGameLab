@@ -624,6 +624,33 @@ export class UI {
 	      );
 	      container.appendChild(progressCard);
 
+      const timeCard = el("section", "nx-card");
+      timeCard.appendChild(el("div", "nx-card-title", "Zeitfenster"));
+      timeCard.appendChild(el("div", "nx-note", advisorModel.advisor.nextAction === "wait_and_advance_time"
+        ? "Beobachtung ist gerade die beste Hauptaktion. Vorspulen macht die naechste Diagnose sichtbar."
+        : "Vorspulen bleibt Analysewerkzeug. Nutze es, um die Wirkung deines letzten Eingriffs zu lesen."));
+      const timeGrid = el("div", "nx-chip-grid");
+      for (const [label, ms] of [["+1s", 1000], ["+5s", 5000], ["+15s", 15000]]) {
+        const btn = el("button", "nx-btn nx-btn-ghost", label);
+        btn.addEventListener("click", async () => {
+          if (typeof window.advanceTime !== "function") {
+            this._setActionFeedback({ ok: false, message: "advanceTime ist im aktuellen Runtime-Kontext nicht verfuegbar.", hint: "" });
+            return;
+          }
+          const beforeTick = Number(this._store.getState()?.sim?.tick || 0);
+          const result = await window.advanceTime(ms);
+          this._setActionFeedback({
+            ok: true,
+            message: `${label} vorgespult.`,
+            hint: `Tick ${beforeTick} -> ${Number(result?.tick || beforeTick)} in ${Number(result?.steps || 0)} Schritten.`,
+          });
+          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+        });
+        timeGrid.appendChild(btn);
+      }
+      timeCard.appendChild(timeGrid);
+      container.appendChild(timeCard);
+
       if (gateFeedback.length) {
         const gateCard = el("section", "nx-card");
         gateCard.appendChild(el("div", "nx-card-title", "Gate-Check"));
@@ -1293,7 +1320,7 @@ export class UI {
       renderRow.append(render);
       worldCard.appendChild(renderRow);
 
-      const gl = meta.globalLearning || { enabled:true, strength:0.42 };
+      const gl = meta.globalLearning || { enabled:false, strength:0.42 };
       const learnCard = el("section","nx-card nx-card-lab");
       learnCard.setAttribute("aria-labelledby", "systems-learning-title");
       const learnTitle = el("div", "nx-card-title", "Lab: Lernen");
@@ -1424,10 +1451,11 @@ export class UI {
     if (ctx === "sieg") {
       const currentMode = String(sim.winMode || WIN_MODE.SUPREMACY);
       const playerStage = Number(sim.playerStage || 1);
+      const runLocked = Number(sim.tick || 0) > 0;
       const WIN_MODES = [
-        { id: WIN_MODE.SUPREMACY, label:"Energie-Suprematie", desc:"Dominanz: EIn > CPU × 1.5", req:"Stage 2 benötigt", stage:2 },
-        { id: WIN_MODE.STOCKPILE, label:"Territorial-Dominanz", desc:"Pop-Vorteil: Pop > CPU × 1.5", req:"Stage 3 benötigt", stage:3 },
-        { id: WIN_MODE.EFFICIENCY, label:"Effizienz-Meister", desc:"Kontrolle: E/Zelle > 0.18", req:"Stage 4 benötigt", stage:4 },
+        { id: WIN_MODE.SUPREMACY, label:"Energie-Suprematie", desc:"Dominanz: EIn > CPU x 1.5", req:"Stage 2 empfohlen", stage:2 },
+        { id: WIN_MODE.STOCKPILE, label:"Territorial-Dominanz", desc:"Pop-Vorteil: Pop > CPU x 1.5", req:"Stage 3 empfohlen", stage:3 },
+        { id: WIN_MODE.EFFICIENCY, label:"Effizienz-Meister", desc:"Kontrolle: E/Zelle > 0.18", req:"Stage 4 empfohlen", stage:4 },
       ];
 
       const modeCard = el("section","nx-card");
@@ -1435,21 +1463,23 @@ export class UI {
       const modesTitle = el("div", "nx-card-title", "Siegpfad wählen");
       modesTitle.id = "victory-modes-title";
       modeCard.appendChild(modesTitle);
+      modeCard.appendChild(el("div", "nx-note", runLocked ? "Der Run-Pfad ist nach Tick 1 fixiert. Bereitschaft bleibt sichtbar, Umschalten ist gesperrt." : "Den Run-Pfad vor Tick 1 festlegen. Stage-Hinweise bleiben Bereitschaft, kein Auswahl-Lock."));
 
       for (const m of WIN_MODES) {
-        const isLocked = playerStage < m.stage;
         const isActive = currentMode === m.id;
+        const ready = playerStage >= m.stage;
+        const isLocked = runLocked && !isActive;
         const row = el("div",`nx-zone-row${isActive ?" nx-zone-active":""}${isLocked?" nx-archetype-locked":""}`);
         row.style.cursor = isLocked ? "default" : "pointer";
         row.setAttribute("role", "button");
         row.setAttribute("tabindex", isLocked ? "-1" : "0");
-        row.setAttribute("aria-label", `Siegmodus ${m.label}: ${isLocked ? "Gesperrt (" + m.req + ")" : m.desc}`);
+        row.setAttribute("aria-label", `Siegmodus ${m.label}: ${isLocked ? "Im laufenden Run fixiert" : m.desc}`);
         row.setAttribute("aria-pressed", isActive);
         if (isLocked) row.setAttribute("aria-disabled", "true");
 
         const left2 = el("div","");
         left2.appendChild(el("div","nx-zone-name",m.label));
-        left2.appendChild(el("div","nx-zone-desc",isLocked ? `🔒 ${m.req}` : m.desc));
+        left2.appendChild(el("div","nx-zone-desc", `${m.desc} · ${ready ? "Bereit" : m.req}`));
         row.appendChild(left2);
 
         if (!isLocked) {
@@ -1500,10 +1530,10 @@ export class UI {
         mkProg("Effizienz",  effTicks,  100, "nx-bar-nutrient", currentMode===WIN_MODE.EFFICIENCY, modeLocked && currentMode===WIN_MODE.EFFICIENCY ? "Stage zu niedrig" : null),
         mkProg("Kollaps-Risiko", lossStreak, 150, "nx-bar-loss", true, null),
       );
+      progCard.appendChild(el("div", "nx-note", `Aktiver Blocker: ${advisorModel.winProgress.blockerCode} - ${advisorModel.winProgress.blockerDetail}`));
 
       container.append(modeCard, progCard);
       return;
-    }
     }
 
     // ── GAME OVER OVERLAY ───────────────────────────────────
@@ -1629,11 +1659,14 @@ export class UI {
     const energyNet  = Number(sim.playerEnergyNet || 0);
     const season     = Number(sim.seasonPhase || 0);
     const playerAlive= Number(sim.playerAliveCount || 0);
-    const playerMemory = getPlayerMemory(state);
-    const doctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
-    const goalState = getGoalState(sim, doctrine);
-    const riskState = getRiskState(sim);
-    const structureState = getStructureState(sim);
+    const advisorModel = buildAdvisorModel(state, { benchmark: this._getBenchmarkState() });
+    const doctrine = DOCTRINE_BY_ID[String(advisorModel.runIdentity.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
+    const riskState = getRiskState(advisorModel.status.risk);
+    const goalState = getGoalState(advisorModel);
+    const structureState = getStructureState(advisorModel.status.structure);
+    const bottleneckState = getBottleneckState(advisorModel.advisor.bottleneckPrimary);
+    const nextLeverState = getLeverState(advisorModel.advisor.nextLever);
+    const winModeState = getWinModeState(advisorModel.runIdentity.winMode);
     const seasonIcon = season<0.25?"🌱":season<0.5?"☀":season<0.75?"🍂":"❄";
 
     // Topbar play btn
@@ -1645,20 +1678,24 @@ export class UI {
     this._playerChip.textContent = `p ${playerAlive}`;
     this._dnaChip.textContent    = `◉ ${playerAlive}`;
     this._energyChip.textContent = `🧬 ${playerDNA.toFixed(1)}`;
+    this._stageLabel.textContent = "Risiko";
+    this._dangerLabel.textContent = "Run-Pfad";
+    this._goalLabel.textContent = "Engpass";
     this._stageChip.textContent  = riskState.chip;
     this._seasonChip.textContent = `${seasonIcon} ${(season*100).toFixed(0)}%`;
     this._stageChip.style.color = riskState.color;
     this._stageChip.style.borderColor = riskState.color;
 
     const netSign = energyNet >= 0;
-    this._dangerChip.textContent = `◎ ${doctrine.label}`;
-    this._goalChip.textContent = `🎯 ${goalState.short}`;
+    this._dangerChip.textContent = `◎ ${winModeState.label}`;
+    this._goalChip.textContent = `🎯 ${bottleneckState.title}`;
+    this._goalChip.title = `${goalState.title}: ${goalState.detail}`;
 
     // UI-GAME-01: Canvas-HUD sync — Reduced to Trend arrow
     this._hudEnergyArrow.textContent = netSign ? "▲" : "▼";
     this._hudEnergyVal.textContent   = `${netSign ? "+" : ""}${energyNet.toFixed(1)} ⚡`;
     this._hudEnergy.style.color      = netSign ? "var(--green)" : "var(--red)";
-    this._hudTool.textContent = `${structureState.tier} · ${this._getActiveToolMeta(state).label}`;
+    this._hudTool.textContent = `${doctrine.label}: ${advisorModel.runIdentity.doctrineTradeoff} | Hebel: ${nextLeverState.label}`;
 
     this._dockPlayBtn.classList.toggle("running", !!running);
     this._dockPlayBtn.querySelector(".nx-dock-icon").textContent = running ? "⏸" : "▶";
