@@ -87,7 +87,8 @@ npm run test:stress
 
 ## Qualitätsgates
 
-- `npm test` = Vollsuite inkl. Redteam
+- `npm test` = Quick-Suite (truth/stress bewusst aus, um grosse Testlaeufe nicht implizit zu triggern)
+- `npm run test:full` = Quick + Truth + Stress
 - Keine Zufallsquellen außerhalb Kernel-RNG
 - State-Änderungen nur via `dispatch()` + Patches
 - Contract-Tests für String-/Dataflow-/Wrapper-Hardening aktiv

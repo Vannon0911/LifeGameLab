@@ -40,9 +40,17 @@ function runSuite(name) {
 
 runPreflight();
 
-for (const name of ["quick", "truth", "stress"]) {
+const lifecycleEvent = String(process.env.npm_lifecycle_event || "").toLowerCase();
+const fullRequested = process.argv.includes("--full") || lifecycleEvent === "test:full";
+const selectedSuites = fullRequested ? ["quick", "truth", "stress"] : ["quick"];
+
+for (const name of selectedSuites) {
   if (!TEST_SUITES[name]) throw new Error(`Missing test suite '${name}'`);
   runSuite(name);
 }
 
-console.log("ALL_TESTS_OK quick + truth + stress passed");
+if (fullRequested) {
+  console.log("ALL_TESTS_OK quick + truth + stress passed");
+} else {
+  console.log("ALL_TESTS_OK quick passed (truth/stress disabled by default; use --full)");
+}

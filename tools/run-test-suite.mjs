@@ -13,25 +13,29 @@ if (!Object.prototype.hasOwnProperty.call(TEST_SUITES, suiteName)) {
 }
 
 const preflightScript = path.join(root, "tools", "llm-preflight.mjs");
-const preflight = spawnSync(
-  process.execPath,
-  [preflightScript, "check", "--paths", "tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs"],
-  {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    timeout: 30_000,
-  },
-);
-if (preflight.stdout) process.stdout.write(preflight.stdout);
-if (preflight.stderr) process.stderr.write(preflight.stderr);
-if (preflight.error) {
-  console.error(`[suite:${suiteName}] llm preflight failed: ${preflight.error.message}`);
-  process.exit(1);
+function runPreflight(paths, label = "suite") {
+  const preflight = spawnSync(
+    process.execPath,
+    [preflightScript, "check", "--paths", paths],
+    {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 30_000,
+    },
+  );
+  if (preflight.stdout) process.stdout.write(preflight.stdout);
+  if (preflight.stderr) process.stderr.write(preflight.stderr);
+  if (preflight.error) {
+    console.error(`[suite:${suiteName}] ${label} llm preflight failed: ${preflight.error.message}`);
+    process.exit(1);
+  }
+  if (preflight.status !== 0) {
+    process.exit(preflight.status ?? 1);
+  }
 }
-if (preflight.status !== 0) {
-  process.exit(preflight.status ?? 1);
-}
+
+runPreflight("tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs");
 
 const files = TEST_SUITES[suiteName];
 const budgetMs = Number(TEST_BUDGETS_MS[suiteName] || 120_000);
@@ -39,6 +43,7 @@ const perCaseTimeoutMs = Math.max(120_000, Math.ceil(budgetMs * 1.2));
 
 const startedAt = Date.now();
 for (const rel of files) {
+  runPreflight(`${rel},tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs`, `atomic:${rel}`);
   const abs = path.join(root, rel);
   console.log(`Running ${rel}`);
   const res = spawnSync(process.execPath, [abs], {

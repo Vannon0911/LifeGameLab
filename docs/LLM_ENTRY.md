@@ -42,13 +42,17 @@ Dieses Repository ist ein deterministisches Contract-System. Jede Aenderung muss
 - Determinismus intakt
 - Pfadhygiene intakt
 - Doku und Code synchron
-- `npm test` gruen
+- `npm run test:quick` gruen
 
 ## Zusätzliche Pflichtchecks bei Sim/UI-Refactors
 - `node tests/test-drift-negative-order.mjs`
 - `node tests/test-determinism-long.mjs`
 - `npm run test:quick`
 - `npm run test:truth`
+
+Hinweis:
+- `npm test` ist bewusst quick-only.
+- Grosse Laeufe (`truth`, `stress`) nur explizit (`npm run test:full` oder gezielte Suiten).
 
 ## Testklassen (bindend)
 - `quick`: lokale Schnellgates
