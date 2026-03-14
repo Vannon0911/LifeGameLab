@@ -1,5 +1,7 @@
 # progress
 
+Original prompt: Implement the LifeGameLab V1 Freeze-Handover with fixed Main-Run rooms, preset-bound deterministic worldgen, contract-first new actions/fields, water/biome separation, labor isolation for legacy tools, and progression decoupled from HARVEST_CELL.
+
 - 2026-03-14: Dokumentation auf LLM_ENTRY-basierte Struktur vollstaendig neu gesetzt.
 - 2026-03-14: Historische Dokuinhalte konsolidiert und ersetzt.
 - 2026-03-14: Naechster Schritt: groesste Datenquellen inventarisieren und Aufteilungs-/Verkleinerungsplan erstellen.
@@ -12,3 +14,9 @@
 - 2026-03-14: Main-Run Defaults geschaerft: `SET_WIN_MODE` nach Tick 0 gesperrt, Placement Cost standardmaessig aktiv, Global Learning standardmaessig aus (`src/game/sim/reducer/controlActions.js`, `src/game/sim/reducer/index.js`, `src/project/contract/stateSchema.js`, `src/game/sim/reducer/techTreeOps.js`).
 - 2026-03-14: Renderer-Overlays an `meta.activeOverlay` angebunden; `energy`, `toxin`, `nutrient`, `territory`, `conflict` liefern jetzt echte Diagnosebilder (`src/game/render/renderer.js`).
 - 2026-03-14: Advisor-/Overlay-Vertraege und neue Main-Run Defaults mit fokussierten Tests abgesichert; `npm run test:quick` erfolgreich (`tests/test-advisor-model.mjs`, `tests/test-overlay-diagnostics.mjs`, aktualisierte Vertrags- und Interaktions-Tests).
+- 2026-03-14: Playwright-Smoke gegen localhost aufgedeckt und behoben: Renderer brach im Feldsurface-Pfad mit `rv is not defined`; Fix in `src/game/render/renderer.js` validiert, UI rendert wieder, `advanceTime`/`render_game_to_text` laufen und der Energie-Overlay erzeugt im Pausenbild ein anderes Diagnosebild.
+- 2026-03-14: Freeze-Rework gestartet: `worldPresetId`, `world.water`, `world.biomeId`, neue Main-Run-Actions und Progressionsfelder im Contract verankert.
+- 2026-03-14: `worldgen.js` auf preset-gebundene deterministische Pipeline mit `river_delta`, `dry_basin`, `wet_meadow` umgestellt; `expandWorldPreserve()` kopiert jetzt `world.water` und `world.biomeId`.
+- 2026-03-14: UI auf `lage/eingriffe/evolution/welt/labor` umgezogen; Main-Run nutzt `HARVEST_PULSE`, `PRUNE_CLUSTER`, `RECYCLE_PATCH`, `SEED_SPREAD`, Labor kapselt Render-/Overlay-/Brush-Diagnose.
+- 2026-03-14: Freeze-Doku und fokussierte Tests hinzugefuegt (`docs/SESSION_HANDOFF.md`, `tests/test-freeze-contract.mjs`, `tests/test-freeze-progression.mjs`, `tests/test-world-presets-determinism.mjs`).
+- 2026-03-14: Offene Punkte fuer Nacharbeit: Advisor-Texte und Rest-Legacy in `ui.js` weiter ausduennen, Playwright-Smoke fuer neue Panels wiederholen, groessere Truth-Suite nach Freeze-Refactor komplett durchlaufen lassen.

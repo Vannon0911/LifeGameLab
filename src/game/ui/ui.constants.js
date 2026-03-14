@@ -6,8 +6,8 @@ export const PHYSICS_KEYS = [
 ];
 
 export const STATUS_GROUPS = [
-  ["Koloniezustand", [["Population", "playerAliveCount", 0], ["Stabilität", "lineageDiversity", 0], ["Ernteleistung", "totalHarvested", 0], ["Bedrohung", "meanToxinField", 3]]],
-  ["Details", [["Licht-Anteil", "lightShare", 3], ["Nährstoff-Anteil", "nutrientShare", 3], ["Sättigung", "meanSaturationField", 3], ["Pflanzen-Bio", "meanPlantField", 3]]],
+  ["Koloniezustand", [["Population", "playerAliveCount", 0], ["Stabilitaet", "stabilityScore", 3], ["Fortschritt", "stageProgressScore", 3], ["Bedrohung", "meanToxinField", 3]]],
+  ["Oekologie", [["Wasserfeld", "meanWaterField", 3], ["Pflanzen-Bio", "meanPlantField", 3], ["Aktive Biome", "activeBiomeCount", 0], ["Sättigung", "meanSaturationField", 3]]],
   ["CPU & Sim", [["CPU Alive", "cpuAliveCount", 0], ["Geburten", "birthsLastStep", 0], ["Tode", "deathsLastStep", 0], ["Mutationen", "mutationsLastStep", 0]]],
 ];
 
@@ -42,13 +42,20 @@ export const ZONE_TYPES = [
 export const STAGE_THRESHOLDS = [0, 5, 15, 30, 60];
 
 export const PANEL_DEFS = [
-  { key: "status", icon: "📊", label: "Status", desktopLabel: "Status", title: "Statusraum", tone: "status" },
+  { key: "lage", icon: "📊", label: "Lage", desktopLabel: "Lage", title: "Lage", tone: "status" },
+  { key: "eingriffe", icon: "✦", label: "Eingriffe", desktopLabel: "Eingriffe", title: "Eingriffe", tone: "tools" },
   { key: "evolution", icon: "🧪", label: "Evolution", desktopLabel: "Evolution", title: "Evolution", tone: "evolution" },
-  { key: "tools", icon: "🛠", label: "Werkzeuge", desktopLabel: "Werkzeuge", title: "Werkzeuge", tone: "tools" },
-  { key: "systems", icon: "⚙️", label: "Systeme", desktopLabel: "Systeme", title: "Systeme", tone: "systems" },
+  { key: "welt", icon: "◌", label: "Welt", desktopLabel: "Welt", title: "Welt", tone: "status" },
+  { key: "labor", icon: "⚙", label: "Labor", desktopLabel: "Labor", title: "Labor", tone: "systems" },
 ];
 
 export const PANEL_BY_KEY = Object.fromEntries(PANEL_DEFS.map((panel) => [panel.key, panel]));
+
+export const WORLD_PRESET_OPTIONS = [
+  { id: "river_delta", label: "River Delta", desc: "Hoher Wasserkorridor und stabile Expansion." },
+  { id: "dry_basin", label: "Dry Basin", desc: "Wenig Wasser, hoher Lichtdruck und harte Gates." },
+  { id: "wet_meadow", label: "Wet Meadow", desc: "Gleichmaessige Feuchte und weichere Fruehphase." },
+];
 
 export const TECH_LANE_LABELS = {
   metabolism: "Metabolismus",
@@ -57,4 +64,3 @@ export const TECH_LANE_LABELS = {
   growth: "Wachstum",
   evolution: "Evolution",
 };
-

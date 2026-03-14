@@ -25,6 +25,7 @@ import {
   STAGE_THRESHOLDS,
   STATUS_GROUPS,
   TECH_LANE_LABELS,
+  WORLD_PRESET_OPTIONS,
   ZONE_TYPES,
 } from "./ui.constants.js";
 import {
@@ -135,10 +136,10 @@ export class UI {
 
   _getPanelRefreshCooldown(contextKey, running) {
     if (!running) return this._panelRenderCooldownMs;
-    if (contextKey === "status") return 260;
+    if (contextKey === "lage") return 260;
     if (contextKey === "evolution") return 900;
-    if (contextKey === "tools") return 1200;
-    if (contextKey === "systems") return 1200;
+    if (contextKey === "eingriffe") return 1200;
+    if (contextKey === "labor") return 1200;
     return 700;
   }
 
@@ -267,7 +268,7 @@ export class UI {
     this._sheet = el("div", "nx-sheet hidden");
     const handle = el("div", "nx-sheet-handle");
     const head   = el("div", "nx-sheet-head");
-    this._sheetTitle = el("div", "nx-sheet-title", "Status");
+    this._sheetTitle = el("div", "nx-sheet-title", "Lage");
     this._sheetClose = el("button", "nx-sheet-close", "✕");
     head.append(this._sheetTitle, this._sheetClose);
     this._sheetBody = el("div", "nx-sheet-body");
@@ -341,10 +342,10 @@ export class UI {
     if (desktop) {
       this._sheet.classList.add("hidden");
       this._sheetBackdrop.classList.add("hidden");
-      if (forceReset || !PANEL_BY_KEY[this._activeContext]) this._activeContext = "status";
+      if (forceReset || !PANEL_BY_KEY[this._activeContext]) this._activeContext = "lage";
       this._renderPanelBody(this._sidebarBody, this._store.getState());
     } else if (forceReset) {
-      this._activeContext = "status";
+      this._activeContext = "lage";
       this._sidebarBody.innerHTML = "";
       this._sheet.classList.add("hidden");
       this._sheetBackdrop.classList.add("hidden");
@@ -401,7 +402,7 @@ export class UI {
 
   _closeContext() {
     if (isDesktopLayout()) {
-      this._activeContext = "status";
+      this._activeContext = "lage";
       this._renderPanelBody(this._sidebarBody, this._store.getState());
       this._updateContextButtons();
       return;
@@ -465,10 +466,11 @@ export class UI {
     const eyebrow = el("div", "nx-panel-eyebrow", isDesktopLayout() ? "Cell Factory" : "Factory Dock");
       const title = el("h2", "nx-panel-title", panelMeta.title);
       const summaryMap = {
-        status: "Lagebild, Risiko und Missionsfokus der aktiven Kolonie.",
+        lage: "Koloniezustand, Warnungen und Zielspannung der aktiven Linie.",
+        eingriffe: "Organische Main-Run-Eingriffe mit sichtbarer Weltreaktion.",
         evolution: "Ein fokussierter Aufstiegspfad statt eine lange Einkaufsliste.",
-        tools: "Wenige spürbare Eingriffe für eine Linie, die primär selbst wächst.",
-        systems: "Spieloptionen vorn, Labor und Benchmark getrennt dahinter.",
+        welt: "Preset, Seed und Raumgroesse fuer den naechsten Run.",
+        labor: "Diagnose, Benchmark, Overlays und Rohwerkzeuge bleiben hier.",
       };
       const copy = el("p", "nx-panel-copy", summaryMap[ctx] || "");
       hero.append(eyebrow, title, copy);
@@ -485,7 +487,7 @@ export class UI {
     }
 
 	    // ── STATUS (Lagebericht) ────────────────────────────────
-	    if (ctx === "status") {
+    if (ctx === "lage") {
 	      const playerMemory = getPlayerMemory(state);
 	      const playerStage = Number(sim.playerStage || 1);
 	      const playerAlive = Number(sim.playerAliveCount || 0);
@@ -610,7 +612,8 @@ export class UI {
 	      progressCard.append(
 	        mkMetric("Stage", `S${playerStage}`, "nx-mono nx-chip-stage"),
 	        mkMetric("DNA", `🧬 ${fmt(Number(sim.playerDNA || 0), 1)}`),
-	        mkMetric("Ernten", String(Number(sim.totalHarvested || 0))),
+	        mkMetric("Harvest Yield", fmt(Number(sim.harvestYieldTotal || 0), 1)),
+	        mkMetric("Aktive Biome", String(Number(sim.activeBiomeCount || 0))),
 	        mkMetric("Aktiver Siegpfad", winModeState.label),
 	        mkMetric("Win-Fortschritt", `${advisorModel.winProgress.progress} / ${advisorModel.winProgress.target}`),
 	        mkMetric("Naechste Zone", zoneState.label),
@@ -664,68 +667,28 @@ export class UI {
       }
 
 	      const ovCard = el("section", "nx-card");
-	      ovCard.appendChild(el("div", "nx-card-title", "Scanner"));
-	      ovCard.appendChild(el("div", "nx-note", `Empfohlen: ${overlayState.label}${overlayState.id !== "none" ? ` fuer ${bottleneckState.title}` : ""}`));
-	      const ovGrid = el("div", "nx-chip-grid");
-      const overlayLabels = {
-        [OVERLAY_MODE.NONE]: "Normal",
-        [OVERLAY_MODE.ENERGY]: "Energie",
-        [OVERLAY_MODE.TOXIN]: "Toxine",
-        [OVERLAY_MODE.NUTRIENT]: "Nährstoffe",
-        [OVERLAY_MODE.TERRITORY]: "Besitz",
-        [OVERLAY_MODE.CONFLICT]: "Konflikt",
-      };
-      for (const overlayId of OVERLAY_MODE_VALUES) {
-        const btn = el("button", `nx-btn nx-btn-ghost ${meta.activeOverlay === overlayId ? "is-active" : ""}`, overlayLabels[overlayId] || overlayId);
-        btn.setAttribute("aria-pressed", meta.activeOverlay === overlayId);
-        btn.addEventListener("click", () => {
-          this._dispatch(
-            { type:"SET_OVERLAY", payload: overlayId },
-            { ok: `Scanner auf ${overlayLabels[overlayId] || overlayId} gesetzt.`, blocked: "Scanner konnte nicht umgeschaltet werden.", hint: "Nächster Schritt: prüfe aktive Panel- und Spielzustände." }
-          );
-          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-        });
-	        ovGrid.appendChild(btn);
-	      }
-	      ovCard.appendChild(ovGrid);
+	      ovCard.appendChild(el("div", "nx-card-title", "Diagnose"));
+	      ovCard.appendChild(el("div", "nx-note", `Scanner und Overlays bleiben Labor-Werkzeuge. Empfohlen waere derzeit ${overlayState.label} fuer ${bottleneckState.title}, aber der Main-Run bleibt in der kanonischen Weltansicht.`));
 	      container.appendChild(ovCard);
 	      return;
     }
 
-    // ── TOOLS (Werkzeuge Hub) ───────────────────────────────
-    if (ctx === "tools") {
-      const activeTool = this._getActiveToolMeta(state);
-      const splitUnlocked = this._hasSplitUnlock(state);
+    // ── EINGRIFFE ───────────────────────────────────────────
+    if (ctx === "eingriffe") {
       const playerMemory = getPlayerMemory(state);
       const playerStage = Number(sim.playerStage || 1);
       const commandScore = deriveCommandScore(sim);
       const influencePhase = getInfluencePhase(playerStage, commandScore);
       const currentDoctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
-      const zoneUnlocked = playerStage >= 2 || commandScore >= 0.10;
-      const gateFeedback = this._getGateFeedback(state);
 
       const activeCard = el("section","nx-card");
-      activeCard.appendChild(el("div", "nx-card-title", "Aktiver Eingriff"));
-      const activeHero = el("div", "nx-active-tool");
-      activeHero.append(
-        el("div", "nx-active-tool-label", activeTool.label),
-        el("div", "nx-active-tool-copy", activeTool.detail || "Direkte Werkzeuge sind sparsam. Wachstum bleibt autonom.")
-      );
-      activeCard.appendChild(activeHero);
-      activeCard.appendChild(el("div", "nx-note", `Phase ${influencePhase}. Priorität ${currentDoctrine.label} steuert die Linie permanent.`));
+      activeCard.appendChild(el("div", "nx-card-title", "Handlungsraum"));
+      activeCard.appendChild(el("div", "nx-note", `Phase ${influencePhase}. ${currentDoctrine.label} bleibt Dauerhaltung, die Eingriffe loesen Prozesse statt Einzelklicks aus.`));
+      activeCard.appendChild(el("div", "nx-note", `Fortschritt ${fmt(Number(sim.stageProgressScore || 0), 3)} · Stabilitaet ${fmt(Number(sim.stabilityScore || 0), 3)} · Oekologie ${fmt(Number(sim.ecologyScore || 0), 3)}`));
       container.appendChild(activeCard);
 
-      if (gateFeedback.length) {
-        const gateCard = el("section", "nx-card");
-        gateCard.appendChild(el("div", "nx-card-title", "Werkzeug-Gates"));
-        for (const item of gateFeedback) {
-          gateCard.appendChild(el("div", "nx-note", `${item.text} ${item.next}`));
-        }
-        container.appendChild(gateCard);
-      }
-
       const doctrineCard = el("section","nx-card");
-      doctrineCard.appendChild(el("div", "nx-card-title", "Priorität"));
+      doctrineCard.appendChild(el("div", "nx-card-title", "Prioritaet"));
       const doctrineGrid = el("div", "nx-doctrine-grid");
       for (const doctrine of PLAYER_DOCTRINES) {
         const locked = playerStage < Number(doctrine.unlockStage || 1);
@@ -740,11 +703,7 @@ export class UI {
         card.addEventListener("click", () => {
           this._dispatch(
             { type:"SET_PLAYER_DOCTRINE", payload:{ doctrineId: doctrine.id } },
-            {
-              ok: `Priorität auf ${doctrine.label} gesetzt.`,
-              blocked: `${doctrine.label} ist noch gesperrt.`,
-              hint: `Nächster Schritt: Stage ${doctrine.unlockStage} erreichen.`,
-            }
+            { ok: `Prioritaet auf ${doctrine.label} gesetzt.`, blocked: `${doctrine.label} ist noch gesperrt.`, hint: `Nächster Schritt: Stage ${doctrine.unlockStage} erreichen.` }
           );
           queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
         });
@@ -753,131 +712,38 @@ export class UI {
       doctrineCard.appendChild(doctrineGrid);
       container.appendChild(doctrineCard);
 
-      const mainCard = el("section","nx-card");
-      mainCard.appendChild(el("div", "nx-card-title", "Strategische Eingriffe"));
-      for (const act of [
-        { id:BRUSH_MODE.OBSERVE, label:"Beobachtung", desc:"Keine direkte Manipulation. Die Kolonie wächst autonom.", tag:"Standard", locked:false },
-        { id:BRUSH_MODE.SPLIT_PLACE, label:"Split-Seed", desc: splitUnlocked ? "Setzt einen neuen 4x4-Cluster als kontrollierten Startpunkt." : "Benötigt Split-Kern plus Clusterstärke.", tag: splitUnlocked ? "4x4" : "gesperrt", locked:!splitUnlocked },
-        { id:BRUSH_MODE.CELL_HARVEST, label:"DNA-Ernte", desc:"Erntet gezielt eine eigene Zelle für DNA.", tag:"+DNA", locked:false },
-        { id:BRUSH_MODE.ZONE_PAINT, label:"Territorium", desc: zoneUnlocked ? "Markiert Harvest-, Buffer- oder Defense-Zonen." : "Erst ab stabiler Kolonie sinnvoll.", tag: zoneUnlocked ? "Zone" : "später", locked:!zoneUnlocked },
-      ]) {
-        const isActive = meta.brushMode === act.id;
-        const row = el("div", `nx-zone-row${isActive ? " nx-zone-active" : ""}${act.locked ? " nx-archetype-locked" : ""}`);
-        row.style.cursor = "pointer";
-        row.setAttribute("role", "button");
-        row.setAttribute("tabindex", "0");
-        row.setAttribute("aria-pressed", isActive);
-        if (act.locked) row.setAttribute("aria-disabled", "true");
+      const actionCard = el("section","nx-card");
+      actionCard.appendChild(el("div", "nx-card-title", "Main-Run-Eingriffe"));
+      const actions = [
+        { type: "HARVEST_PULSE", label: "Ernten", what: "Loest einen lokalen Erntepuls ueber die eigene Kolonie aus.", gain: "DNA und Harvest-Yield steigen.", risk: "Pflanzenmasse und lokale Saettigung sinken.", where: "Stark in nassen, dichten Korridoren." },
+        { type: "PRUNE_CLUSTER", label: "Pflegen", what: "Schneidet ueberwuchernde oder toxische Cluster zurueck.", gain: "Prune-Yield und Raumkontrolle steigen.", risk: "Zu harte Rueckschnitte kosten kurzzeitig Biomasse.", where: "Gut in toxischen, dichten Clustern." },
+        { type: "RECYCLE_PATCH", label: "Regenerieren", what: "Fuehrt toxinbelastete Flaechen in Naehrstofffluss zurueck.", gain: "Recycle-Yield und lokale Fruchtbarkeit steigen.", risk: "Braucht vorhandenen Toxindruck als Material.", where: "Am besten in belasteten Ufer- oder Sumpfsaeumen." },
+        { type: "SEED_SPREAD", label: "Aussaeen", what: "Verteilt neue Pflanzen- und Biocharge-Impulse entlang der Linie.", gain: "Seed-Yield, Pflanzenmasse und Oekologie wachsen.", risk: "Verbraucht kurzfristig DNA.", where: "Besonders stark in Riverlands und Nasswald." },
+      ];
+      for (const act of actions) {
+        const box = el("div", "nx-zone-row");
         const left = el("div", "");
         left.appendChild(el("div", "nx-zone-name", act.label));
-        left.appendChild(el("div", "nx-zone-desc", act.desc));
-        row.append(left, el("span", isActive ? "nx-badge-active" : "nx-badge", act.tag));
-        const trigger = () => {
-          if (act.locked) return;
+        left.appendChild(el("div", "nx-zone-desc", act.what));
+        box.appendChild(left);
+        const btn = el("button", "nx-btn nx-btn-ghost", act.label);
+        btn.addEventListener("click", () => {
           this._dispatch(
-            { type:"SET_BRUSH", payload:{ brushMode:act.id } },
-            { ok: `${act.label} aktiviert.`, blocked: `${act.label} bleibt gesperrt.`, hint: act.locked ? "Nächster Schritt: Gate im Status-Panel erfüllen." : "" }
+            { type: act.type, payload: {} },
+            { ok: `${act.label} ausgelöst.`, blocked: `${act.label} wurde blockiert.`, hint: `${act.gain} ${act.risk}` }
           );
           queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-        };
-        row.addEventListener("click", trigger);
-        row.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); trigger(); } });
-        mainCard.appendChild(row);
+        });
+        box.appendChild(btn);
+        actionCard.appendChild(box);
+        actionCard.appendChild(el("div", "nx-note", `Ertrag: ${act.gain} Risiko: ${act.risk} Kontext: ${act.where}`));
       }
-      container.appendChild(mainCard);
-
-
-      const zoneCard = el("section","nx-card");
-      zoneCard.appendChild(el("div", "nx-card-title", "Zonentyp"));
-
-      for (const z of ZONE_TYPES) {
-        const isActive = this._activeZoneType === z.id && meta.brushMode === BRUSH_MODE.ZONE_PAINT;
-        const row = el("div",`nx-zone-row${isActive ?" nx-zone-active":""}${!zoneUnlocked ? " nx-archetype-locked" : ""}`);
-        row.append(el("span","nx-zone-name",`${z.label}`), el("span","nx-zone-desc",z.desc));
-        row.style.cursor="pointer";
-        row.setAttribute("role", "button");
-        row.setAttribute("tabindex", "0");
-        row.setAttribute("aria-label", `Zone ${z.label}: ${z.desc}`);
-        row.setAttribute("aria-pressed", isActive);
-        if (!zoneUnlocked) row.setAttribute("aria-disabled", "true");
-
-        const trigger = () => {
-          if (!zoneUnlocked) return;
-          this._activeZoneType=z.id;
-          this._dispatch(
-            { type:"SET_BRUSH", payload:{ brushMode:BRUSH_MODE.ZONE_PAINT } },
-            { ok: `${z.label}-Zone aktiv.`, blocked: "Zone-Pinsel konnte nicht aktiviert werden.", hint: "Nächster Schritt: Stage/Command-Gate prüfen." }
-          );
-          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-        };
-        row.addEventListener("click", trigger);
-        row.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); trigger(); } });
-        zoneCard.appendChild(row);
-      }
-      container.appendChild(zoneCard);
-
-      const sandboxCard = el("section","nx-card");
-      sandboxCard.appendChild(el("div", "nx-card-title", "Labormodus"));
-      const sandInfo = el("div", "nx-note", "Direkte Umweltmanipulation bleibt nur fuer spaetere Tests. Sie ist bewusst aus der Primaersteuerung entfernt.");
-      sandboxCard.appendChild(sandInfo);
-      
-      const sRow = el("div", "nx-row");
-      const brush = document.createElement("select"); brush.className="nx-select";
-      brush.setAttribute("aria-label", "Umwelt-Pinsel Modus wählen");
-      [["light","☀ Licht +"],["light_remove","☀ Licht -"],
-       ["nutrient","🌿 Nährstoff +"],["toxin","☣ Toxin +"],
-       ["saturation_reset","↺ Reset"]
-      ].forEach(([v,t]) => {
-        const o = document.createElement("option"); o.value=v; o.textContent=t;
-        if (meta.brushMode === v) o.selected=true;
-        brush.appendChild(o);
-      });
-      brush.addEventListener("change", () => {
-        this._dispatch(
-          { type:"SET_BRUSH", payload:{ brushMode:brush.value } },
-          { ok: `Laborpinsel ${brush.value} aktiv.`, blocked: "Laborpinsel wurde vom Brush-Gate abgewiesen.", hint: "Nächster Schritt: nur erlaubte Brush-Modi verwenden." }
-        );
-        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-      });
-      sRow.append(el("span", "nx-label", "Umwelt-Pinsel"), brush);
-      sandboxCard.appendChild(sRow);
-
-      const radRow = el("div", "nx-stat-row nx-stat-row-col");
-      radRow.append(el("span", "nx-label", `Pinsel-Radius: ${meta.brushRadius || 3}`));
-      const radRange = document.createElement("input");
-      radRange.type = "range"; radRange.min = "1"; radRange.max = "10"; radRange.value = String(meta.brushRadius || 3);
-      radRange.className = "nx-range";
-      radRange.setAttribute("aria-label", "Pinsel-Radius anpassen");
-      radRange.addEventListener("input", (e) => {
-        this._dispatch({ type:"SET_BRUSH", payload:{ brushRadius: Number(e.target.value) } });
-      });
-      radRow.appendChild(radRange);
-      sandboxCard.appendChild(radRow);
-
-      const costRow = el("div", "nx-row");
-      const costToggle = el("button", `nx-btn ${meta.placementCostEnabled ? "nx-btn-primary" : ""}`, meta.placementCostEnabled ? "Kosten: AN" : "Kosten: AUS");
-      costToggle.setAttribute("aria-label", `Platzierungs-Kosten ${meta.placementCostEnabled ? "deaktivieren" : "aktivieren"}`);
-      costToggle.setAttribute("aria-pressed", meta.placementCostEnabled);
-      costToggle.addEventListener("click", () => {
-        this._dispatch(
-          { type:"SET_PLACEMENT_COST", payload:{ enabled:!meta.placementCostEnabled } },
-          {
-            ok: !meta.placementCostEnabled ? "Platzierungskosten aktiviert." : "Platzierungskosten deaktiviert.",
-            blocked: "Kostenumschaltung wurde blockiert.",
-            hint: "",
-          }
-        );
-        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-      });
-      costRow.append(el("span", "nx-label", "Platzierungs-Kosten (0.5 DNA)"), costToggle);
-      sandboxCard.appendChild(costRow);
-
-      container.appendChild(sandboxCard);
+      container.appendChild(actionCard);
       return;
     }
 
     // ── ENERGIE (Analyse) ───────────────────────────────────
-    if (ctx === "energie") {
+    if (ctx === "legacy_energie") {
       const eIn = Number(sim.playerEnergyIn || 0), eOut = Number(sim.playerEnergyOut || 0);
       const eNet = Number(sim.playerEnergyNet || 0), eStored = Number(sim.playerEnergyStored || 0);
       const cpuEIn = Number(sim.cpuEnergyIn || 0);
@@ -1089,7 +955,7 @@ export class UI {
 
 
     // ── HARVEST ────────────────────────────────────────────
-    if (ctx === "harvest") {
+    if (ctx === "legacy_harvest") {
       const playerDNA = Number(sim.playerDNA || 0);
       const totalHarvested = Number(sim.totalHarvested || 0);
       const playerStage = Number(sim.playerStage || 1);
@@ -1130,7 +996,7 @@ export class UI {
     }
 
     // ── TOOLS (Wachsen) ─────────────────────────────────────
-    if (ctx === "tools") {
+    if (ctx === "legacy_tools") {
       const card = el("section","nx-card");
       card.appendChild(el("div","nx-card-title","Kolonie erweitern"));
       
@@ -1179,7 +1045,7 @@ export class UI {
     }
 
     // ── ZONEN ───────────────────────────────────────────────
-    if (ctx === "zonen") {
+    if (ctx === "legacy_zonen") {
       const card = el("section","nx-card");
       card.setAttribute("aria-labelledby", "zones-placement-title");
       const zonesTitle = el("div", "nx-card-title", "Zonen-Placement");
@@ -1213,12 +1079,47 @@ export class UI {
     }
 
     // ── WELT ────────────────────────────────────────────────
-    if (ctx === "world") {
+    if (ctx === "welt") {
       const card = el("section","nx-card");
       card.setAttribute("aria-labelledby", "world-settings-title");
       const worldTitle = el("div", "nx-card-title", "Welt");
       worldTitle.id = "world-settings-title";
       card.appendChild(worldTitle);
+
+      const presetRow = el("div", "nx-stack");
+      presetRow.append(el("span", "nx-label", "Preset"));
+      const preset = document.createElement("select"); preset.className = "nx-select";
+      preset.setAttribute("aria-label", "Welt-Preset waehlen");
+      for (const entry of WORLD_PRESET_OPTIONS) {
+        const option = document.createElement("option");
+        option.value = entry.id;
+        option.textContent = entry.label;
+        if (String(meta.worldPresetId || "river_delta") === entry.id) option.selected = true;
+        preset.appendChild(option);
+      }
+      preset.addEventListener("change", () => {
+        this._dispatch({ type: "SET_WORLD_PRESET", payload: { presetId: preset.value } });
+        this._dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
+      });
+      presetRow.appendChild(preset);
+      const presetDef = WORLD_PRESET_OPTIONS.find((entry) => entry.id === String(meta.worldPresetId || "river_delta"));
+      presetRow.appendChild(el("div", "nx-note", presetDef?.desc || ""));
+      card.appendChild(presetRow);
+
+      const seedRow = el("div", "nx-stack");
+      seedRow.append(el("span", "nx-label", "Seed"));
+      const seedInput = document.createElement("input");
+      seedInput.type = "text";
+      seedInput.className = "nx-select";
+      seedInput.value = String(meta.seed || "");
+      seedInput.setAttribute("aria-label", "Seed setzen");
+      const seedApply = el("button", "nx-btn nx-btn-ghost", "Seed anwenden");
+      seedApply.addEventListener("click", () => {
+        this._dispatch({ type: "SET_SEED", payload: seedInput.value });
+        this._dispatch({ type: "GEN_WORLD" });
+      });
+      seedRow.append(seedInput, seedApply);
+      card.appendChild(seedRow);
 
       const sizeRow = el("div","nx-row"); sizeRow.append(el("span","nx-label","Größe"));
       const size = document.createElement("select"); size.className="nx-select";
@@ -1236,6 +1137,7 @@ export class UI {
         this._dispatch({ type:"TOGGLE_RUNNING", payload:{running:true} });
       });
       sizeRow.append(size);
+      card.appendChild(sizeRow);
 
       const speedRow = el("div","nx-stack");
       speedRow.append(el("span","nx-label",`Geschwindigkeit ${meta.speed} T/s`));
@@ -1245,27 +1147,16 @@ export class UI {
       speed.setAttribute("aria-label", "Simulationsgeschwindigkeit anpassen");
       speed.addEventListener("input", () => this._dispatch({ type:"SET_SPEED", payload:Number(speed.value) }));
       speedRow.append(speed);
-
-      const renderRow = el("div","nx-row"); renderRow.append(el("span","nx-label","Ansicht"));
-      const render = document.createElement("select"); render.className="nx-select";
-      render.setAttribute("aria-label", "Darstellungsmodus wählen");
-      [["combined","Natürlich"],["light","Licht"],["fields","Felder"],["cells","Zellen"]].forEach(([v,t]) => {
-        const o=document.createElement("option"); o.value=v; o.textContent=t;
-        if ((meta.renderMode||"combined")===v) o.selected=true;
-        render.appendChild(o);
-      });
-      render.addEventListener("change", () => this._dispatch({ type:"SET_RENDER_MODE", payload:render.value }));
-      renderRow.append(render);
-      card.append(sizeRow, speedRow, renderRow);
+      card.appendChild(speedRow);
       container.append(card);
       return;
     }
 
-    // ── SYSTEME ─────────────────────────────────────────────
-    if (ctx === "systems") {
+    // ── LABOR ───────────────────────────────────────────────
+    if (ctx === "labor") {
       const worldCard = el("section","nx-card");
       worldCard.setAttribute("aria-labelledby", "systems-world-title");
-      const worldTitle = el("div", "nx-card-title", "Spielraum");
+      const worldTitle = el("div", "nx-card-title", "Laboransicht");
       worldTitle.id = "systems-world-title";
       worldCard.appendChild(worldTitle);
 
@@ -1319,6 +1210,22 @@ export class UI {
       render.addEventListener("change", () => this._dispatch({ type:"SET_RENDER_MODE", payload:render.value }));
       renderRow.append(render);
       worldCard.appendChild(renderRow);
+
+      const overlayRow = el("div","nx-row");
+      overlayRow.append(el("span","nx-label","Overlay"));
+      const overlay = document.createElement("select");
+      overlay.className = "nx-select";
+      overlay.setAttribute("aria-label", "Diagnose-Overlay waehlen");
+      [["none","Kanonisch"],["energy","Energie"],["toxin","Toxin"],["nutrient","Naehrstoffe"],["territory","Territorium"],["conflict","Konflikt"]].forEach(([v, t]) => {
+        const option = document.createElement("option");
+        option.value = v;
+        option.textContent = t;
+        if ((meta.activeOverlay || "none") === v) option.selected = true;
+        overlay.appendChild(option);
+      });
+      overlay.addEventListener("change", () => this._dispatch({ type:"SET_OVERLAY", payload: overlay.value }));
+      overlayRow.append(overlay);
+      worldCard.appendChild(overlayRow);
 
       const gl = meta.globalLearning || { enabled:false, strength:0.42 };
       const learnCard = el("section","nx-card nx-card-lab");
@@ -1443,12 +1350,73 @@ export class UI {
         inp.addEventListener("input", () => this._dispatch({ type:"SET_PHYSICS", payload:{ [key]:Number(inp.value) } }));
         row.append(inp); phyCard.append(row);
       }
-      container.append(worldCard, learnCard, accCard, phyCard);
+
+      const rawCard = el("section", "nx-card nx-card-lab");
+      rawCard.appendChild(el("div", "nx-card-title", "Lab: Rohwerkzeuge"));
+      rawCard.appendChild(el("div", "nx-note", "Direkte Brushes, Zonen und Legacy-Ernte bleiben hier isoliert und sind kein Main-Run-Pfad."));
+
+      const rawBrushRow = el("div", "nx-row");
+      const brush = document.createElement("select"); brush.className = "nx-select";
+      brush.setAttribute("aria-label", "Labor-Brush waehlen");
+      [
+        [BRUSH_MODE.OBSERVE, "Beobachtung"],
+        [BRUSH_MODE.CELL_HARVEST, "Legacy Ernte"],
+        [BRUSH_MODE.SPLIT_PLACE, "Split-Seed"],
+        [BRUSH_MODE.ZONE_PAINT, "Zone malen"],
+        [BRUSH_MODE.CELL_ADD, "Zelle setzen"],
+        [BRUSH_MODE.CELL_REMOVE, "Zelle entfernen"],
+        [BRUSH_MODE.LIGHT, "Licht +"],
+        [BRUSH_MODE.LIGHT_REMOVE, "Licht -"],
+        [BRUSH_MODE.NUTRIENT, "Naehrstoff +"],
+        [BRUSH_MODE.TOXIN, "Toxin +"],
+        [BRUSH_MODE.SATURATION_RESET, "Reset"],
+      ].forEach(([v, t]) => {
+        const option = document.createElement("option");
+        option.value = v;
+        option.textContent = t;
+        if ((meta.brushMode || BRUSH_MODE.OBSERVE) === v) option.selected = true;
+        brush.appendChild(option);
+      });
+      brush.addEventListener("change", () => this._dispatch({ type:"SET_BRUSH", payload:{ brushMode: brush.value } }));
+      rawBrushRow.append(el("span", "nx-label", "Brush"), brush);
+      rawCard.appendChild(rawBrushRow);
+
+      const zoneRow = el("div", "nx-row");
+      zoneRow.append(el("span", "nx-label", "Zone"));
+      const zone = document.createElement("select"); zone.className = "nx-select";
+      for (const entry of ZONE_TYPES) {
+        const option = document.createElement("option");
+        option.value = String(entry.id);
+        option.textContent = entry.label;
+        if (this._activeZoneType === entry.id) option.selected = true;
+        zone.appendChild(option);
+      }
+      zone.addEventListener("change", () => {
+        this._activeZoneType = Number(zone.value);
+        this._dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.ZONE_PAINT } });
+      });
+      zoneRow.append(zone);
+      rawCard.appendChild(zoneRow);
+
+      const radiusRow = el("div","nx-stack");
+      radiusRow.append(el("span","nx-label", `Pinsel-Radius ${meta.brushRadius || 3}`));
+      const radius = document.createElement("input");
+      radius.type = "range";
+      radius.className = "nx-range";
+      radius.min = "1";
+      radius.max = "10";
+      radius.value = String(meta.brushRadius || 3);
+      radius.setAttribute("aria-label", "Pinsel-Radius anpassen");
+      radius.addEventListener("input", () => this._dispatch({ type:"SET_BRUSH", payload:{ brushRadius:Number(radius.value) } }));
+      radiusRow.append(radius);
+      rawCard.appendChild(radiusRow);
+
+      container.append(worldCard, learnCard, accCard, phyCard, rawCard);
       return;
     }
 
     // ── SIEG (Pfad & Blocker) ───────────────────────────────
-    if (ctx === "sieg") {
+    if (ctx === "legacy_sieg") {
       const currentMode = String(sim.winMode || WIN_MODE.SUPREMACY);
       const playerStage = Number(sim.playerStage || 1);
       const runLocked = Number(sim.tick || 0) > 0;
@@ -1578,9 +1546,11 @@ export class UI {
       if (e.code === "Space") { e.preventDefault(); this._btnPlay.click(); }
       else if (e.key === "n" || e.key === "N") { e.preventDefault(); this._btnNew.click(); }
       else if (e.key === "Escape") this._closeContext();
-      else if (e.key === "s" || e.key === "S") { e.preventDefault(); this._togglePanel("status"); }
+      else if (e.key === "l" || e.key === "L") { e.preventDefault(); this._togglePanel("lage"); }
       else if (e.key === "e" || e.key === "E") { e.preventDefault(); this._togglePanel("evolution"); }
-      else if (e.key === "w" || e.key === "W") { e.preventDefault(); this._togglePanel("tools"); }
+      else if (e.key === "i" || e.key === "I") { e.preventDefault(); this._togglePanel("eingriffe"); }
+      else if (e.key === "w" || e.key === "W") { e.preventDefault(); this._togglePanel("welt"); }
+      else if (e.key === "b" || e.key === "B") { e.preventDefault(); this._togglePanel("labor"); }
     });
   }
 
@@ -1706,7 +1676,7 @@ export class UI {
     // Re-render open panel (safe update)
     if (this._activeContext) {
       const container = isDesktopLayout() ? this._sidebarBody : this._sheetBody;
-      const suppressAutoRefresh = !!running && (this._activeContext === "tools" || this._activeContext === "systems");
+      const suppressAutoRefresh = !!running && (this._activeContext === "eingriffe" || this._activeContext === "labor");
       if (suppressAutoRefresh) return;
       const now = Date.now();
       const panelCooldown = this._getPanelRefreshCooldown(this._activeContext, !!running);
@@ -1715,7 +1685,7 @@ export class UI {
         this._renderPanelBody(container, state);
       }
     } else if (isDesktopLayout()) {
-      this._activeContext = "status";
+      this._activeContext = "lage";
       this._renderPanelBody(this._sidebarBody, state);
       this._updateContextButtons();
     }
