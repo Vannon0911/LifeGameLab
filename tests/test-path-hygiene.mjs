@@ -1,3 +1,5 @@
+import { startEvidenceCase } from "./support/liveTestKit.mjs";
+startEvidenceCase("test-path-hygiene.mjs");
 import fs from "node:fs";
 import path from "node:path";
 

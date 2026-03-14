@@ -261,6 +261,7 @@ const store = createStore(manifest, { reducer, simStep: simStepPatch });
 // Initialize Log with Seed from Store
 WorldStateLog.init(store.getState().meta.seed);
 window.__worldStateLog = WorldStateLog;
+const RuntimeHooks = { onStructuralChange: null };
 
 // ── SIM_STEP Precompute Buffer (idle-time compute) ─────────
 const stepBuffer = createSimStepBuffer({
@@ -281,7 +282,9 @@ store.dispatch = (action) => {
     return;
   }
   if (t && t !== "SIM_STEP" && t !== "APPLY_BUFFERED_SIM_STEP") stepBuffer.invalidate();
-  return _dispatchRaw(action);
+  const result = _dispatchRaw(action);
+  if (t && t !== "SIM_STEP" && t !== "APPLY_BUFFERED_SIM_STEP") RuntimeHooks.onStructuralChange?.(t, action);
+  return result;
 };
 
 const Benchmark = {
@@ -382,7 +385,7 @@ const Benchmark = {
     this.emitUpdate();
 
     // 1. Main-Thread setup
-    store.dispatch({ type: "SET_UI_PREFERENCE", payload: { key: "offscreenEnabled", value: false } });
+    store.dispatch({ type: "SET_UI", payload: { offscreenEnabled: false } });
     store.dispatch({ type: "SET_SIZE", payload: { w: 144, h: 144 } });
     store.dispatch({ type: "GEN_WORLD" });
     store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
@@ -405,7 +408,7 @@ const Benchmark = {
       this.logResults("main");
       this.phase = "worker_init";
       this.emitUpdate();
-      store.dispatch({ type: "SET_UI_PREFERENCE", payload: { key: "offscreenEnabled", value: true } });
+      store.dispatch({ type: "SET_UI", payload: { offscreenEnabled: true } });
       setTimeout(() => {
         if (!this.isRunning) return;
         this.phase = "worker";
@@ -452,10 +455,12 @@ function hasRunnableWorld(state) {
 
 function recoverWorld(reason) {
   console.error("[runtime] world recovery:", reason);
-  stepBuffer.invalidate();
+  stepBuffer.stop();
+  RenderManager.flush?.(reason);
   store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: false } });
   store.dispatch({ type: "GEN_WORLD" });
   store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
+  stepBuffer.start();
 }
 
 if (!hasRunnableWorld(store.getState())) {
@@ -477,31 +482,126 @@ const RenderManager = {
   isInitialized: false,
   isPending: false,
   lastRenderInfo: null,
+  generation: 0,
+  lastSignature: "",
+  lastSubmittedTick: -1,
+  mode: "main",
+  canvasMode: "main",
+  hasMainContext: false,
 
-  init(canvas) {
+  replaceCanvas(nextMode = "main") {
+    const prev = canvas;
+    if (!prev?.parentNode) return canvas;
+    const replacement = document.createElement("canvas");
+    replacement.id = prev.id || "cv";
+    replacement.className = prev.className;
+    replacement.style.cssText = prev.style.cssText;
+    const rect = prev.getBoundingClientRect();
+    replacement.width = Math.max(1, prev.width || Math.floor(rect.width) || 300);
+    replacement.height = Math.max(1, prev.height || Math.floor(rect.height) || 150);
+    prev.parentNode.replaceChild(replacement, prev);
+    canvas = replacement;
+    ui?.setCanvas?.(replacement);
+    this.isInitialized = false;
+    this.isPending = false;
+    this.lastRenderInfo = null;
+    this.lastSignature = "";
+    this.lastSubmittedTick = -1;
+    this.canvasMode = nextMode === "worker" ? "fresh" : "main";
+    this.hasMainContext = false;
+    return replacement;
+  },
+
+  init(canvas, retry = false) {
     if (this.isInitialized || !("transferControlToOffscreen" in canvas)) return false;
     try {
       this.worker = new Worker(new URL("../game/render/render.worker.js", import.meta.url), { type: "module" });
       const offscreen = canvas.transferControlToOffscreen();
-      this.worker.postMessage({ type: "INIT", payload: { canvas: offscreen } }, [offscreen]);
+      this.worker.postMessage({
+        cmd: "INIT",
+        payload: { canvas: offscreen, width: canvas.width || 300, height: canvas.height || 150 },
+      }, [offscreen]);
       
       this.worker.onmessage = (e) => {
-        if (e.data.type === "RENDER_COMPLETE") {
+        if (e.data.cmd === "RENDER_COMPLETE") {
+          if (Number(e.data?.generation || 0) !== this.generation) return;
           this.lastRenderInfo = e.data.payload;
           if (this.lastRenderInfo) ui.setRenderInfo(this.lastRenderInfo);
           this.isPending = false;
         }
       };
       this.isInitialized = true;
+      this.canvasMode = "worker";
       return true;
     } catch (err) {
+      const msg = String(err?.message || err || "");
+      if (!retry && msg.includes("Cannot transfer control from a canvas that has a rendering context")) {
+        const fresh = this.replaceCanvas("worker");
+        return this.init(fresh, true);
+      }
       console.warn("[RenderManager] Failed to init worker:", err);
       return false;
     }
   },
 
+  flush(reason = "reset") {
+    this.generation++;
+    this.isPending = false;
+    this.lastRenderInfo = null;
+    this.lastSignature = "";
+    this.lastSubmittedTick = -1;
+    try {
+      this.worker?.postMessage({ cmd: "RESET", generation: this.generation, reason });
+    } catch {}
+  },
+
+  shouldUseOffscreen(state) {
+    const cells = Number(state?.meta?.gridW || state?.world?.w || 0) * Number(state?.meta?.gridH || state?.world?.h || 0);
+    const autoThreshold = PerfBudget.isMobile ? 72 * 72 : 96 * 96;
+    const pref = state?.meta?.ui?.offscreenEnabled;
+    if (!("transferControlToOffscreen" in canvas)) return false;
+    return pref == null ? cells >= autoThreshold : !!pref;
+  },
+
+  makeSignature(state, perf) {
+    const ui = state?.meta?.ui || {};
+    return [
+      Number(state?.sim?.tick || 0),
+      Number(state?.meta?.gridW || 0),
+      Number(state?.meta?.gridH || 0),
+      String(state?.meta?.renderMode || "combined"),
+      Number(perf?.quality || 0),
+      Number(perf?.dprCap || 0),
+      Number(ui.showBiochargeOverlay || 0),
+      Number(ui.showRemoteAttackOverlay ?? 1),
+      Number(ui.showDefenseOverlay ?? 1),
+      this.shouldUseOffscreen(state) ? 1 : 0,
+    ].join("|");
+  },
+
   render(canvas, state, perf) {
-    const useOffscreen = !!state.meta.ui?.offscreenEnabled;
+    const useOffscreen = this.shouldUseOffscreen(state);
+    const tick = Number(state?.sim?.tick || 0);
+    const signature = this.makeSignature(state, perf);
+    this.mode = useOffscreen ? "worker" : "main";
+    if (useOffscreen && this.hasMainContext) {
+      canvas = this.replaceCanvas("worker");
+    } else if (!useOffscreen && this.canvasMode === "worker") {
+      canvas = this.replaceCanvas("main");
+    }
+    const dpr = Number.isFinite(perf?.dpr) ? perf.dpr : 1;
+    const rect = canvas.getBoundingClientRect();
+    const cw = Math.max(1, Math.floor(rect.width * dpr));
+    const ch = Math.max(1, Math.floor(rect.height * dpr));
+    if (canvas.width !== cw || canvas.height !== ch) {
+      canvas.width = cw;
+      canvas.height = ch;
+      this.lastSignature = "";
+      this.lastSubmittedTick = -1;
+      try {
+        this.worker?.postMessage({ cmd: "RESIZE", payload: { width: cw, height: ch }, generation: this.generation });
+      } catch {}
+    }
     
     if (useOffscreen) {
       if (!this.isInitialized) {
@@ -509,20 +609,18 @@ const RenderManager = {
         if (!ok) return render(canvas, state, perf);
       }
       
-      if (!this.isPending) {
+      if (!this.isPending && (signature !== this.lastSignature || tick !== this.lastSubmittedTick)) {
         this.isPending = true;
-        this.worker.postMessage({ type: "RENDER", payload: { state, perf } });
+        this.lastSignature = signature;
+        this.lastSubmittedTick = tick;
+        this.worker.postMessage({ cmd: "RENDER", generation: this.generation, payload: { state, perf, tick } });
       }
       return this.lastRenderInfo;
     } else {
-      if (this.isInitialized) {
-         if (!this.isPending) {
-           this.isPending = true;
-           this.worker.postMessage({ type: "RENDER", payload: { state, perf } });
-         }
-         return this.lastRenderInfo;
-      }
-      return render(canvas, state, perf);
+      const info = render(canvas, state, perf);
+      this.hasMainContext = true;
+      this.canvasMode = "main";
+      return info;
     }
   }
 };
@@ -726,16 +824,65 @@ const PerfBudget = {
   renderEvery: 1,
   dprCap: 2.0,
   lastHudTs: 0,
-  minQuality: 2,
+  minQuality: 1,
+  maxSimStepsPerFrame: 3,
+  maxSimFrameBudgetMs: 7.5,
+  maxCatchupMs: 130,
+  lastRenderedTick: -1,
 };
 
-function runOneSimStep() {
+function publishPerfStats(state = store.getState()) {
+  const gridW = Number(state?.meta?.gridW || state?.world?.w || 0);
+  const gridH = Number(state?.meta?.gridH || state?.world?.h || 0);
+  window.__lifeGamePerfStats = {
+    fpsEma: Number(PerfBudget.fpsEma.toFixed(2)),
+    frameMsEma: Number(PerfBudget.frameMsEma.toFixed(2)),
+    renderMsEma: Number(PerfBudget.renderMsEma.toFixed(2)),
+    quality: PerfBudget.quality,
+    renderEvery: PerfBudget.renderEvery,
+    dprCap: PerfBudget.dprCap,
+    maxSimStepsPerFrame: PerfBudget.maxSimStepsPerFrame,
+    maxSimFrameBudgetMs: PerfBudget.maxSimFrameBudgetMs,
+    maxCatchupMs: PerfBudget.maxCatchupMs,
+    stepBufferSize: stepBuffer.size(),
+    offscreenMode: RenderManager.mode,
+    offscreenAuto: RenderManager.shouldUseOffscreen(state),
+    tick: Number(state?.sim?.tick || 0),
+    grid: `${gridW}x${gridH}`,
+    cells: gridW * gridH,
+  };
+}
+
+RuntimeHooks.onStructuralChange = (type, action) => {
+  const shouldFlush =
+    type === "SET_SIZE" ||
+    type === "GEN_WORLD" ||
+    type === "SET_SEED" ||
+    type === "TOGGLE_RUNNING" ||
+    (type === "SET_UI" && (
+      Object.prototype.hasOwnProperty.call(action?.payload || {}, "offscreenEnabled") ||
+      Object.prototype.hasOwnProperty.call(action?.payload || {}, "showBiochargeOverlay") ||
+      Object.prototype.hasOwnProperty.call(action?.payload || {}, "showRemoteAttackOverlay") ||
+      Object.prototype.hasOwnProperty.call(action?.payload || {}, "showDefenseOverlay")
+    ));
+  if (shouldFlush) {
+    stepBuffer.stop();
+    RenderManager.flush(type);
+    stepBuffer.start();
+    PerfBudget.lastRenderedTick = -1;
+    publishPerfStats();
+  }
+};
+
+function runOneSimStep(options = null) {
+  const force = !!options?.force;
+  const useBuffer = options?.useBuffer !== false;
   try {
-    const buffered = stepBuffer.consumeOneOrNull();
+    const buffered = useBuffer ? stepBuffer.consumeOneOrNull() : null;
     if (buffered) {
       store.dispatch({ type: "APPLY_BUFFERED_SIM_STEP", payload: { patches: buffered.patches } });
     } else {
-      store.dispatch({ type: "SIM_STEP" });
+      store.dispatch({ type: "SIM_STEP", payload: force ? { force: true } : {} });
     }
     return true;
   } catch (err) {
@@ -758,9 +905,12 @@ function runDevBalanceChecks() {
 }
 
 function runRender(perfHints) {
+  const state = store.getState();
+  const tick = Number(state?.sim?.tick || 0);
+  if (RenderManager.mode !== "worker" && tick === PerfBudget.lastRenderedTick && PerfBudget.renderEvery > 1) return;
   const t0 = globalThis.performance ? globalThis.performance.now() : 0;
   try {
-    renderInfo = RenderManager.render(canvas, store.getState(), perfHints);
+    renderInfo = RenderManager.render(canvas, state, perfHints);
     if (renderInfo) ui.setRenderInfo(renderInfo);
   } catch (err) {
     console.error("[runtime] render failed:", String(err?.message || err));
@@ -771,6 +921,8 @@ function runRender(perfHints) {
   }
   const rdt = (globalThis.performance ? globalThis.performance.now() : 0) - t0;
   PerfBudget.renderMsEma += (rdt - PerfBudget.renderMsEma) * 0.10;
+  PerfBudget.lastRenderedTick = tick;
+  publishPerfStats(state);
 }
 
 function runUiSync() {
@@ -840,7 +992,7 @@ async function advanceTime(ms = 1000) {
   const speed = Math.max(1, Number(store.getState().meta.speed || 1));
   const steps = Math.max(1, Math.round((duration / 1000) * speed));
   for (let i = 0; i < steps; i++) {
-    store.dispatch({ type: "SIM_STEP", payload: { force: true } });
+    runOneSimStep({ force: true, useBuffer: false });
   }
   runRender({
     quality: PerfBudget.quality,
@@ -852,16 +1004,19 @@ async function advanceTime(ms = 1000) {
     targetMaxFps: PerfBudget.targetMaxFps,
   });
   runUiSync();
+  publishPerfStats();
   return { steps, tick: Number(store.getState().sim.tick || 0) };
 }
 
 window.render_game_to_text = renderGameToText;
 window.advanceTime = advanceTime;
+publishPerfStats();
 
 function tunePerformance(state) {
   const cells = (state?.world?.w || state.meta.gridW || 0) * (state?.world?.h || state.meta.gridH || 0);
   const isHeavyGrid = cells >= 120 * 120;
-  const overloaded = PerfBudget.frameMsEma > PerfBudget.targetFrameMs * 1.15 || PerfBudget.fpsEma < 29;
+  const isMediumGrid = cells >= 72 * 72;
+  const overloaded = PerfBudget.frameMsEma > PerfBudget.targetFrameMs * 1.10 || PerfBudget.fpsEma < (PerfBudget.isMobile ? 24 : 29);
   const underloaded = PerfBudget.frameMsEma < PerfBudget.targetFrameMs * 0.75 && PerfBudget.fpsEma > 52;
 
   if (overloaded) {
@@ -871,11 +1026,29 @@ function tunePerformance(state) {
   }
 
   if (PerfBudget.isMobile && isHeavyGrid) {
-    PerfBudget.renderEvery = 1;
-    PerfBudget.dprCap = PerfBudget.quality === 2 ? 1.25 : 1.5;
+    PerfBudget.renderEvery = PerfBudget.fpsEma < 24 ? 3 : 2;
+    PerfBudget.dprCap = PerfBudget.quality <= 1 ? 1.0 : PerfBudget.quality === 2 ? 1.15 : 1.3;
+    PerfBudget.maxSimStepsPerFrame = 1;
+    PerfBudget.maxSimFrameBudgetMs = 4.5;
+    PerfBudget.maxCatchupMs = 90;
+  } else if (isHeavyGrid) {
+    PerfBudget.renderEvery = PerfBudget.fpsEma < 28 ? 3 : 2;
+    PerfBudget.dprCap = PerfBudget.quality <= 1 ? 1.0 : PerfBudget.quality === 2 ? 1.2 : 1.45;
+    PerfBudget.maxSimStepsPerFrame = 1;
+    PerfBudget.maxSimFrameBudgetMs = 5.5;
+    PerfBudget.maxCatchupMs = 110;
+  } else if (isMediumGrid) {
+    PerfBudget.renderEvery = overloaded ? 2 : 1;
+    PerfBudget.dprCap = PerfBudget.quality <= 1 ? 1.15 : PerfBudget.quality === 2 ? 1.3 : 1.6;
+    PerfBudget.maxSimStepsPerFrame = 2;
+    PerfBudget.maxSimFrameBudgetMs = 6.5;
+    PerfBudget.maxCatchupMs = 120;
   } else {
     PerfBudget.renderEvery = 1;
-    PerfBudget.dprCap = PerfBudget.quality === 2 ? 1.4 : 2.0;
+    PerfBudget.dprCap = PerfBudget.quality <= 1 ? 1.25 : PerfBudget.quality === 2 ? 1.45 : 2.0;
+    PerfBudget.maxSimStepsPerFrame = 3;
+    PerfBudget.maxSimFrameBudgetMs = 7.5;
+    PerfBudget.maxCatchupMs = 130;
   }
 }
 
@@ -891,13 +1064,18 @@ function loop(ts) {
 
   if (state.sim.running) {
     acc += dt;
-    if (acc >= stepMs) {
-      acc -= stepMs;
+    if (acc > PerfBudget.maxCatchupMs) acc = PerfBudget.maxCatchupMs;
+    const simStart = globalThis.performance ? globalThis.performance.now() : 0;
+    let stepsDone = 0;
+    while (acc >= stepMs && stepsDone < PerfBudget.maxSimStepsPerFrame) {
       runOneSimStep();
       runDevBalanceChecks();
       WorldStateLog.track(store.getState());
+      acc -= stepMs;
+      stepsDone++;
+      const spent = (globalThis.performance ? globalThis.performance.now() : simStart) - simStart;
+      if (spent >= PerfBudget.maxSimFrameBudgetMs) break;
     }
-    if (acc > stepMs * 1.25) acc = stepMs * 1.25;
   } else {
     acc = 0;
   }
@@ -920,9 +1098,10 @@ function loop(ts) {
   if (ts - PerfBudget.lastHudTs > 900) {
     PerfBudget.lastHudTs = ts;
     setBootStatus(
-      `Perf ${PerfBudget.fpsEma.toFixed(0)} FPS | q${PerfBudget.quality} | dpr≤${PerfBudget.dprCap.toFixed(2)}`,
+      `Perf ${PerfBudget.fpsEma.toFixed(0)} FPS | q${PerfBudget.quality} | r/${PerfBudget.renderEvery} | dpr≤${PerfBudget.dprCap.toFixed(2)}`,
       PerfBudget.fpsEma < 30 ? "rgba(255,170,150,0.95)" : "rgba(180,220,180,0.95)"
     );
+    publishPerfStats();
   }
 
   requestAnimationFrame(loop);

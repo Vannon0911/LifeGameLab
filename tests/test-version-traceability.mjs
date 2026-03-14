@@ -1,3 +1,5 @@
+import { startEvidenceCase } from "./support/liveTestKit.mjs";
+startEvidenceCase("test-version-traceability.mjs");
 import fs from "node:fs";
 import path from "node:path";
 import { APP_VERSION, SCHEMA_VERSION } from "../src/project/project.manifest.js";

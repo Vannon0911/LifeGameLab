@@ -1,3 +1,5 @@
+import { startEvidenceCase } from "./support/liveTestKit.mjs";
+startEvidenceCase("test-layer-split.mjs");
 import * as manifest from "../src/project/project.manifest.js";
 import { makeInitialState, reducer, simStepPatch } from "../src/project/project.logic.js";
 import { applyPatches } from "../src/core/kernel/patches.js";

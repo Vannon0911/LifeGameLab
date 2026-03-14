@@ -26,6 +26,9 @@ Dieses Projekt ist ein Contract-System. Änderungen ohne Manifest-, Schema- und 
 - Simulation bleibt deterministisch: kein `Math.random()`, kein `Date.now()`, keine systemzeitabhängige Logik.
 - Neue State-Felder, Actions und Write-Pfade zuerst im Manifest definieren.
 - Operative Doku lebt ausschließlich unter `docs/`.
+- Tests werden nicht vorschnell abgeschwächt oder enger auf den neuen Code zugeschnitten.
+- Wenn ein Test nach einer Änderung fehlschlägt, zuerst Ursachenforschung, reale Contract-Prüfung und alternative Fixes priorisieren.
+- Testanpassungen sind nur legitim, wenn der Test nachweislich falsche Annahmen prüft oder Laufzeit-/Tooling-Rauschen statt Produktverhalten misst.
 
 ## Repro-Kommandos
 

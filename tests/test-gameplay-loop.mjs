@@ -1,3 +1,5 @@
+import { startEvidenceCase } from "./support/liveTestKit.mjs";
+startEvidenceCase("test-gameplay-loop.mjs");
 /**
      * test-gameplay-loop.mjs
      * End-to-end proof that the core gameplay loop works.

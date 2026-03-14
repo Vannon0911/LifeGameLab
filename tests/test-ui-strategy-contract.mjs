@@ -1,3 +1,5 @@
+import { startEvidenceCase } from "./support/liveTestKit.mjs";
+startEvidenceCase("test-ui-strategy-contract.mjs");
 import fs from "node:fs";
 import path from "node:path";
 
@@ -33,5 +35,6 @@ for (const required of ["TECH_TREE.filter", "TECH_SYNERGIES", "hasRequiredTechs"
 
 assert(main.includes("window.render_game_to_text = renderGameToText;"), "main.js missing render_game_to_text hook");
 assert(main.includes("window.advanceTime = advanceTime;"), "main.js missing advanceTime hook");
+assert(main.includes("window.__lifeGamePerfStats"), "main.js missing __lifeGamePerfStats hook");
 
 console.log("UI_STRATEGY_CONTRACT_OK tools, tech-tree, and browser hooks verified");
