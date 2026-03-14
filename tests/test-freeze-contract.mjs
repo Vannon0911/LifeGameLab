@@ -8,10 +8,14 @@ function assert(cond, msg) {
 }
 
 assert(RUN_PHASE.GENESIS_ZONE === "genesis_zone", "RUN_PHASE.GENESIS_ZONE missing or drifted");
+assert(RUN_PHASE.DNA_ZONE_SETUP === "dna_zone_setup", "RUN_PHASE.DNA_ZONE_SETUP missing or drifted");
 
 const requiredActions = [
   "CONFIRM_FOUNDATION",
   "CONFIRM_CORE_ZONE",
+  "START_DNA_ZONE_SETUP",
+  "TOGGLE_DNA_ZONE_CELL",
+  "CONFIRM_DNA_ZONE",
   "SET_WORLD_PRESET",
   "HARVEST_PULSE",
   "PRUNE_CLUSTER",
@@ -35,6 +39,10 @@ for (const key of [
   "nextZoneUnlockCostEnergy",
   "zoneUnlockProgress",
   "coreEnergyStableTicks",
+  "zone2Unlocked",
+  "zone2PlacementBudget",
+  "dnaZoneCommitted",
+  "nextInfraUnlockCostDNA",
   "cpuBootstrapDone",
   "meanWaterField",
   "stageProgressScore",
@@ -53,6 +61,7 @@ assert(worldKeys.water?.ctor === "Float32Array", "world.water missing or wrong t
 assert(worldKeys.biomeId?.ctor === "Int8Array", "world.biomeId missing or wrong type");
 assert(worldKeys.founderMask?.ctor === "Uint8Array", "world.founderMask missing or wrong type");
 assert(worldKeys.coreZoneMask?.ctor === "Uint8Array", "world.coreZoneMask missing or wrong type");
+assert(worldKeys.dnaZoneMask?.ctor === "Uint8Array", "world.dnaZoneMask missing or wrong type");
 assert(worldKeys.visibility?.ctor === "Uint8Array", "world.visibility missing or wrong type");
 assert(worldKeys.explored?.ctor === "Uint8Array", "world.explored missing or wrong type");
 
@@ -65,6 +74,10 @@ assert(manifest.stateSchema?.shape?.sim?.shape?.nextZoneUnlockKind?.default === 
 assert(manifest.stateSchema?.shape?.sim?.shape?.nextZoneUnlockCostEnergy?.default === 0, "sim.nextZoneUnlockCostEnergy default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.zoneUnlockProgress?.default === 0, "sim.zoneUnlockProgress default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.coreEnergyStableTicks?.default === 0, "sim.coreEnergyStableTicks default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.zone2Unlocked?.default === false, "sim.zone2Unlocked default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.zone2PlacementBudget?.default === 0, "sim.zone2PlacementBudget default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.dnaZoneCommitted?.default === false, "sim.dnaZoneCommitted default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.nextInfraUnlockCostDNA?.default === 0, "sim.nextInfraUnlockCostDNA default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.cpuBootstrapDone?.default === 0, "sim.cpuBootstrapDone default drift");
 
 console.log("FREEZE_CONTRACT_OK phase-a contract surface is bound");

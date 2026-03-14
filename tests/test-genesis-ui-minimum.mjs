@@ -10,6 +10,7 @@ function assert(cond, msg) {
 
 assert(getInfluencePhase(1, 0, "genesis_setup") === "Gruenden", "genesis influence phase must be Gruenden");
 assert(getInfluencePhase(1, 0, "genesis_zone") === "Energiekern", "genesis zone influence phase must be Energiekern");
+assert(getInfluencePhase(1, 0, "dna_zone_setup") === "DNA-Zone", "dna zone setup influence phase must be DNA-Zone");
 assert(getInfluencePhase(4, 0.30, "run_active") === "Kommandieren", "run_active influence phase regression");
 
 const uiSource = fs.readFileSync(new URL("../src/game/ui/ui.js", import.meta.url), "utf8");
@@ -21,6 +22,13 @@ assert(uiSource.includes("Genesis-Zone aktiv: erst Energiekern bestaetigen."), "
 assert(uiSource.includes("Step ist in der Genesis-Zone gesperrt."), "genesis zone step hint missing in ui");
 assert(uiSource.includes("Energiekern bestaetigen"), "core confirm button label missing in ui");
 assert(uiSource.includes("Zone 2: DNA"), "dna unlock card missing in ui");
+assert(uiSource.includes("DNA-Zone starten"), "dna zone start button missing in ui");
+assert(uiSource.includes("DNA-Zone setzen"), "dna zone setup card missing in ui");
+assert(uiSource.includes("DNA-Zone bestaetigen"), "dna zone confirm button missing in ui");
+assert(uiSource.includes("Step ist im DNA-Zone-Setup gesperrt."), "dna zone setup step hint missing in ui");
+assert(uiSource.includes("TOGGLE_DNA_ZONE_CELL"), "dna zone cell dispatch missing in ui");
+assert(uiSource.includes("Zone 2 aktiv"), "dna zone committed card missing in ui");
+assert(uiSource.includes("Naechster Unlock"), "next infra unlock text missing in ui");
 assert(uiSource.includes("sim.zoneUnlockProgress"), "dna unlock progress binding missing in ui");
 assert(uiSource.includes("sim.coreEnergyStableTicks"), "core stable ticks binding missing in ui");
 

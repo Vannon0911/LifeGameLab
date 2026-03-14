@@ -47,8 +47,38 @@ mustNotThrow(() => {
     { op: "set", path: "/sim/nextZoneUnlockCostEnergy", value: 12 },
     { op: "set", path: "/sim/zoneUnlockProgress", value: 0 },
     { op: "set", path: "/sim/coreEnergyStableTicks", value: 0 },
+    { op: "set", path: "/sim/zone2Unlocked", value: false },
+    { op: "set", path: "/sim/zone2PlacementBudget", value: 0 },
+    { op: "set", path: "/sim/dnaZoneCommitted", value: false },
+    { op: "set", path: "/sim/nextInfraUnlockCostDNA", value: 0 },
     { op: "set", path: "/sim/cpuBootstrapDone", value: 0 },
   ]);
 }, "SIM_GATE_PHASE_B_CONTRACT_KEYS");
+
+mustNotThrow(() => {
+  assertSimPatchesAllowed(manifest, state, "START_DNA_ZONE_SETUP", [
+    { op: "set", path: "/world/dnaZoneMask", value: new Uint8Array(tileCount) },
+    { op: "set", path: "/sim/runPhase", value: "dna_zone_setup" },
+    { op: "set", path: "/sim/running", value: false },
+    { op: "set", path: "/sim/zone2Unlocked", value: true },
+    { op: "set", path: "/sim/zone2PlacementBudget", value: 4 },
+  ]);
+}, "SIM_GATE_PHASE_C_START_SETUP_KEYS");
+
+mustNotThrow(() => {
+  assertSimPatchesAllowed(manifest, state, "CONFIRM_DNA_ZONE", [
+    { op: "set", path: "/world/dnaZoneMask", value: new Uint8Array(tileCount) },
+    { op: "set", path: "/sim/unlockedZoneTier", value: 2 },
+    { op: "set", path: "/sim/dnaZoneCommitted", value: true },
+    { op: "set", path: "/sim/nextZoneUnlockKind", value: "INFRA" },
+    { op: "set", path: "/sim/nextZoneUnlockCostEnergy", value: 0 },
+    { op: "set", path: "/sim/zoneUnlockProgress", value: 0 },
+    { op: "set", path: "/sim/coreEnergyStableTicks", value: 0 },
+    { op: "set", path: "/sim/nextInfraUnlockCostDNA", value: 30 },
+    { op: "set", path: "/sim/zone2PlacementBudget", value: 0 },
+    { op: "set", path: "/sim/runPhase", value: "run_active" },
+    { op: "set", path: "/sim/running", value: true },
+  ]);
+}, "SIM_GATE_PHASE_C_CONTRACT_KEYS");
 
 console.log("SIM_GATE_OK");

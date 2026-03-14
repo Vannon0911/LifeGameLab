@@ -29,6 +29,7 @@ assert(store.getState().meta.placementCostEnabled === true, "placement cost defa
 assert(store.getState().meta.activeOverlay === OVERLAY_MODE.NONE, "activeOverlay default drift");
 assert(store.getState().meta.globalLearning?.enabled === false, "global learning default drift");
 assert(RUN_PHASE.GENESIS_ZONE === "genesis_zone", "RUN_PHASE.GENESIS_ZONE contract id drift");
+assert(RUN_PHASE.DNA_ZONE_SETUP === "dna_zone_setup", "RUN_PHASE.DNA_ZONE_SETUP contract id drift");
 
 const sigA = store.getSignature();
 store.dispatch({ type: "SET_BRUSH", payload: { brushMode: "INVALID_MODE" } });
