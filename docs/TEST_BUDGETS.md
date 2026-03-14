@@ -26,3 +26,11 @@ Ziel: Lange Determinismuslaeufe sind bewusst teuer und kein Defekt.
 Interpretation:
 - Wenn diese Tests innerhalb des Budgets laufen, gilt das als gesund.
 - "Langsam" ist hier kein "kaputt", solange Hash-/Trace-Gleichheit und Exitcode stimmen.
+
+## Aenderungsnotiz 2026-03-14 (Test-Haertung)
+- `tests/test-smoke.mjs`: Determinismus auf Checkpoints erweitert (Tick 25/50/75/100) inklusive seed-/tick-spezifischer Fehlertexte; `clusterRatio` nur finite + nicht-negativ.
+- `tests/test-ui-contract.mjs`: Dispatch-Erkennung von globaler String-Regex auf dispatch-nahe Extraktion umgestellt; Kommentare und irrelevante Literale zaehlen nicht als echte Dispatches; bidirektionaler Contract-Check beibehalten.
+- `tests/test-ui-strategy-contract.mjs`: Assertions auf harte Contract-Invarianten fokussiert (Panel-Key-Set, disjunkte Main-Run/Lab-Action-Sets, Manifest-Bindungen, Public-API-Bindungen).
+- `tests/test-llm-contract.mjs`: Preflight-Verhalten weiter via `spawnSync`; Fehlerpruefung auf stabile Markerklassen gehaertet; Task-Mismatch-Negativfall ergaenzt.
+- Drift-Fix: `SET_PLACEMENT_COST`-Deklaration in `src/project/contract/dataflow.js` auf reale Dispatch-Quelle korrigiert (`dispatchSources: []` statt UI-Quelle).
+- Produktivlogik unveraendert; einzige Produktivdatei-Aenderung ist die Contract-Korrektur in `src/project/contract/dataflow.js`.
