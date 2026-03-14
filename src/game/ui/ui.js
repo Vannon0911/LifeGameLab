@@ -33,23 +33,14 @@ import {
   getRiskState,
   getStructureState,
 } from "./ui.model.js";
+import { el, fmt, fmtSign, isDesktopLayout } from "./ui.dom.js";
+import { announceInLiveRegion, buildGateFeedback, createActionFeedback } from "./ui.feedback.js";
 
 // ============================================================
 // UI — Mobile-First Web App v2.1
 // Bottom Sheet + Bottom Nav on mobile, Sidebar on desktop.
 // Reads state, dispatches actions. Never mutates state directly.
 // ============================================================
-
-function el(tag, cls, text) {
-  const n = document.createElement(tag);
-  if (cls) n.className = cls;
-  if (text != null) n.textContent = text;
-  return n;
-}
-function fmt(v, d = 2)    { return (typeof v === "number" && Number.isFinite(v)) ? v.toFixed(d) : "--"; }
-function fmtSign(v, d = 2){ return (typeof v === "number" && Number.isFinite(v)) ? (v >= 0 ? "+" : "") + v.toFixed(d) : "--"; }
-
-const isDesktop = () => window.matchMedia("(min-width:800px)").matches;
 
 export class UI {
   constructor(store, canvas) {
@@ -66,7 +57,7 @@ export class UI {
     this._lastDNA         = 0;
     this._lastStage       = 1;
     this._lastGameEndTick = 0;
-    this._layoutDesktop = isDesktop();
+    this._layoutDesktop = isDesktopLayout();
     this._actionFeedback = null;
     this._lastPanelRenderAt = 0;
     this._panelRenderCooldownMs = 220;
@@ -102,12 +93,7 @@ export class UI {
   }
 
   _setActionFeedback(payload) {
-    this._actionFeedback = {
-      ok: !!payload?.ok,
-      message: String(payload?.message || ""),
-      hint: String(payload?.hint || ""),
-      at: Date.now(),
-    };
+    this._actionFeedback = createActionFeedback(payload, Date.now());
     if (this._actionFeedback.message) {
       this._announce(this._actionFeedback.message, this._actionFeedback.ok ? 2 : 1);
     }
@@ -117,43 +103,12 @@ export class UI {
     const playerMemory = getPlayerMemory(state);
     const playerStage = Number(state?.sim?.playerStage || 1);
     const commandScore = deriveCommandScore(state?.sim || {});
-    const splitTech = Array.isArray(playerMemory?.techs) && playerMemory.techs.includes("cluster_split");
-    const splitUnlocked = !!playerMemory?.splitUnlock && splitTech;
-    const out = [];
-    if (!splitUnlocked) {
-      out.push({
-        key: "split",
-        level: "warn",
-        text: "Split-Seed gesperrt: Tech 'Split-Kern' fehlt.",
-        next: "Nächster Schritt: Stage 2 erreichen und den Cluster-Split im Evolution-Panel kaufen.",
-      });
-    } else if (commandScore < 0.22) {
-      out.push({
-        key: "split-command",
-        level: "warn",
-        text: "Split-Seed ist freigeschaltet, aber Clusterstärke ist noch niedrig.",
-        next: `Nächster Schritt: Command auf mindestens 22 bringen (aktuell ${Math.round(commandScore * 100)}).`,
-      });
-    }
-    if (playerStage < 2 && commandScore < 0.10) {
-      out.push({
-        key: "zones",
-        level: "info",
-        text: "Territoriums-Zonen sind noch nicht effektiv.",
-        next: "Nächster Schritt: Erst stabilen Kern aufbauen, danach Zone-Paint für Harvest/Buffer nutzen.",
-      });
-    }
-    return out;
+    return buildGateFeedback(playerMemory, playerStage, commandScore);
   }
 
   _announce(message, level = 1) { // level 1: critical, 2: all
-    if (!this._announcer || !message || typeof message !== "string") return;
     const ariaLevel = Number(this._store.getState().meta.ui.ariaLevel || 1);
-    if (ariaLevel < level) return;
-    this._announcer.textContent = ""; // Clear to ensure announcement
-    queueMicrotask(() => {
-      this._announcer.textContent = message;
-    });
+    announceInLiveRegion(this._announcer, message, ariaLevel, level);
   }
 
   _isPanelInteractionActive() {
@@ -167,7 +122,7 @@ export class UI {
       tag === "TEXTAREA" ||
       !!active.isContentEditable;
     if (!interactive) return false;
-    const container = isDesktop() ? this._sidebarBody : this._sheetBody;
+    const container = isDesktopLayout() ? this._sidebarBody : this._sheetBody;
     return !!(container && container.contains(active));
   }
 
@@ -373,7 +328,7 @@ export class UI {
   }
 
   _applyResponsiveDefaults(forceReset = false) {
-    const desktop = isDesktop();
+    const desktop = isDesktopLayout();
     const app = document.getElementById("app");
     app?.classList.remove("is-panel-open");
     if (desktop) {
@@ -393,7 +348,7 @@ export class UI {
   _updateContextButtons() {
     const mobileOpen = !this._sheet.classList.contains("hidden");
     for (const [key, btn] of Object.entries(this._ctxButtons)) {
-      btn.classList.toggle("is-active", key === this._activeContext && isDesktop());
+      btn.classList.toggle("is-active", key === this._activeContext && isDesktopLayout());
     }
     for (const [key, btn] of Object.entries(this._dockTabBtns)) {
       btn.classList.toggle("is-active", mobileOpen && key === this._activeContext);
@@ -401,7 +356,7 @@ export class UI {
   }
 
   _togglePanel(key) {
-    if (isDesktop()) this._toggleSidebar(key);
+    if (isDesktopLayout()) this._toggleSidebar(key);
     else this._toggleSheet(key);
   }
 
@@ -438,7 +393,7 @@ export class UI {
   }
 
   _closeContext() {
-    if (isDesktop()) {
+    if (isDesktopLayout()) {
       this._activeContext = "status";
       this._renderPanelBody(this._sidebarBody, this._store.getState());
       this._updateContextButtons();
@@ -499,7 +454,7 @@ export class UI {
     const panelMeta = PANEL_BY_KEY[ctx];
     if (panelMeta) {
       const hero = el("section", `nx-panel-hero nx-panel-hero-${panelMeta.tone}`);
-      const eyebrow = el("div", "nx-panel-eyebrow", isDesktop() ? "Cell Factory" : "Factory Dock");
+    const eyebrow = el("div", "nx-panel-eyebrow", isDesktopLayout() ? "Cell Factory" : "Factory Dock");
       const title = el("h2", "nx-panel-title", panelMeta.title);
       const summaryMap = {
         status: "Lagebild, Risiko und Missionsfokus der aktiven Kolonie.",
@@ -1687,7 +1642,7 @@ export class UI {
 
     // Re-render open panel (safe update)
     if (this._activeContext) {
-      const container = isDesktop() ? this._sidebarBody : this._sheetBody;
+      const container = isDesktopLayout() ? this._sidebarBody : this._sheetBody;
       const suppressAutoRefresh = !!running && (this._activeContext === "tools" || this._activeContext === "systems");
       if (suppressAutoRefresh) return;
       const now = Date.now();
@@ -1696,7 +1651,7 @@ export class UI {
       if (!panelInCooldown && !this._isPanelInteractionActive()) {
         this._renderPanelBody(container, state);
       }
-    } else if (isDesktop()) {
+    } else if (isDesktopLayout()) {
       this._activeContext = "status";
       this._renderPanelBody(this._sidebarBody, state);
       this._updateContextButtons();

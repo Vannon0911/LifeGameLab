@@ -8,8 +8,12 @@
 - Kernel-Isolation aktiv
 - Thin-Facades fuer `project.manifest.js`, `sim.js`, `reducer.js` aktiv
 - Tick-Orchestrierung in `step.js`, Phasenlogik in `stepPhases.js`
+- Tick-Helfer aus `step.js` in `stepRuntime.js` extrahiert (pure, deterministisch)
+- Reducer-Control-Actions in `reducer/controlActions.js` extrahiert (pure)
 - UI-Klasse in `ui.js`, UI-Read-Model in `ui.model.js`, UI-Konstanten in `ui.constants.js`
+- UI-DOM-/Feedback-Helfer in `ui.dom.js` und `ui.feedback.js` extrahiert
 - Public Browser API aus `main.js` in `src/app/runtime/publicApi.js` extrahiert (kompatible Hooks bleiben)
+- Runtime-Helfer aus `main.js` in `src/app/runtime/worldStateLog.js`, `reportUtils.js`, `bootStatus.js`
 
 ## Kernmodule
 - `src/project/contract/*`
@@ -26,8 +30,12 @@
 - `node tests/test-path-hygiene.mjs`
 - `node tools/redteam-stress-master.mjs`
 - `npm test`
+- `npm run test:quick`
+- `npm run test:truth`
+- `npm run test:stress`
 
 ## Offene Schwerpunkte
 - Performance-Profiling und Reduktion von Render-/Sim-Hotspots
 - weitere Entmonolithisierung im Sim-Reducer
 - visuelle Feedback-Dichte im Gameplay erhoehen
+- Hotspot-Messung siehe `docs/PERF_HOTSPOTS.md`

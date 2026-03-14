@@ -19,9 +19,16 @@ Dieses Repository ist ein deterministisches Contract-System. Jede Aenderung muss
 13. `src/game/ui/ui.js`
 14. `src/app/main.js`
 15. `src/game/sim/stepPhases.js`
-16. `src/game/ui/ui.constants.js`
-17. `src/game/ui/ui.model.js`
-18. `src/app/runtime/publicApi.js`
+16. `src/game/sim/stepRuntime.js`
+17. `src/game/sim/reducer/controlActions.js`
+18. `src/game/ui/ui.constants.js`
+19. `src/game/ui/ui.model.js`
+20. `src/game/ui/ui.dom.js`
+21. `src/game/ui/ui.feedback.js`
+22. `src/app/runtime/publicApi.js`
+23. `src/app/runtime/worldStateLog.js`
+24. `src/app/runtime/reportUtils.js`
+25. `src/app/runtime/bootStatus.js`
 
 ## Harte Invarianten
 - State nur ueber `dispatch()` + Patches.
@@ -40,3 +47,14 @@ Dieses Repository ist ein deterministisches Contract-System. Jede Aenderung muss
 ## Zusätzliche Pflichtchecks bei Sim/UI-Refactors
 - `node tests/test-drift-negative-order.mjs`
 - `node tests/test-determinism-long.mjs`
+- `npm run test:quick`
+- `npm run test:truth`
+
+## Testklassen (bindend)
+- `quick`: lokale Schnellgates
+- `truth`: Determinismus-/Wahrheitsbeweise
+- `stress`: Redteam-Stress
+
+## Hygiene
+- Release-Artefakte nie mit `.git` oder `node_modules` verteilen.
+- Kein altes Sandbox-Nebenuniversum im aktiven Projektbaum mitfuehren.
