@@ -4,6 +4,7 @@ import { assertLlmGateSync } from "../src/project/llm/gateSync.js";
 import { createLlmCommandAdapter, ACTION_ENVELOPE } from "../src/project/llm/commandAdapter.js";
 import { buildLlmReadModel } from "../src/project/llm/readModel.js";
 import { manifest } from "../src/project/project.manifest.js";
+import { WIN_MODE } from "../src/game/contracts/ids.js";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
@@ -60,6 +61,7 @@ const sampleState = {
     lossStreakTicks: 0,
     meanToxinField: 0.2,
     aliveRatio: 0.2,
+    winMode: WIN_MODE.SUPREMACY,
   },
 };
 const readModel = buildLlmReadModel(sampleState, { phase: "idle" });
@@ -71,7 +73,7 @@ assert(readModel.status?.goal === "harvest_secure", "status.goal mismatch");
 assert(readModel.runIdentity?.doctrine === "equilibrium", "runIdentity.doctrine mismatch");
 assert(Array.isArray(readModel.advisor?.reasonCodes), "advisor.reasonCodes missing");
 assert(typeof readModel.advisor?.nextAction === "string", "advisor.nextAction missing");
-assert(readModel.winProgress?.mode === sampleState.sim.winMode, "winProgress.mode mismatch");
+assert(readModel.winProgress?.mode === WIN_MODE.SUPREMACY, "winProgress.mode mismatch");
 assert(readModel.benchmark?.phase === "idle", "read model benchmark mismatch");
 
 console.log("LLM_CONTRACT_OK");

@@ -4,10 +4,13 @@ startEvidenceCase("test-overlay-diagnostics.mjs");
 import { OVERLAY_MODE, WIN_MODE } from "../src/game/contracts/ids.js";
 import { computeFieldSurfaceColor } from "../src/game/render/renderer.js";
 import { buildAdvisorDebugModel } from "../src/project/llm/advisorModel.js";
+import { TECH_TREE } from "../src/game/techTree.js";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
+
+const ALL_TECHS = TECH_TREE.map((tech) => tech.id);
 
 const world = {
   w: 2,
@@ -27,7 +30,7 @@ const world = {
   hue: new Float32Array([160, 330, 180, 0]),
   actionMap: new Uint8Array([245, 212, 120, 0]),
   lineageMemory: {
-    1: { doctrine: "detox", techs: ["light_harvest"], synergies: [], splitUnlock: 0 },
+    1: { doctrine: "detox", techs: ALL_TECHS, synergies: [], splitUnlock: 1 },
   },
 };
 
@@ -81,15 +84,15 @@ const meta = {
       running: false,
       playerStage: 2,
       playerDNA: 4,
-      playerAliveCount: 3,
+      playerAliveCount: 12,
       cpuAliveCount: 2,
       playerEnergyNet: -3.8,
       playerEnergyStored: 1,
       playerEnergyIn: 4,
       playerEnergyOut: 7.8,
       cpuEnergyIn: 3,
-      clusterRatio: 0.22,
-      networkRatio: 0.1,
+      clusterRatio: 0.31,
+      networkRatio: 0.14,
       goal: "survive_energy",
       lossStreakTicks: 24,
       meanReserveAlive: 0.03,

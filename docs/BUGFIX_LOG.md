@@ -1,4 +1,4 @@
-# BUGFIX LOG — v2.3.0
+# BUGFIX LOG — v2.4.0
 
 ## Format
 - Datum
@@ -9,7 +9,7 @@
 
 ## Aktiver Eintrag
 - 2026-03-14
-- Problem: Runtime-Canvas-Resize bei Offscreen-Transfer erzeugte wiederkehrende Render-Fehler.
-- Ursache: Resize-Schreibzugriff auf transferierten Canvas.
-- Fix: Guard + konservativer Fallback auf frischen Main-Canvas.
-- Verifikation: Browser-Livecheck ohne Console-Errors, `npm test` gruen.
+- Problem: Main Run war in mehreren UI-/Read-Model-/Default-Pfaden inkonsistent und zu sandbox-lastig.
+- Ursache: Advisor, HUD, Win-Mode-Steuerung, Overlays und Defaults waren nicht auf einen gemeinsamen Laufzeitvertrag gezogen.
+- Fix: Deterministisches Advisor-Modell als Source of Truth, Main-Run-Defaults geschaerft, Win-Mode-Lock nach Tick 0, echte Diagnose-Overlays und fokussierte Vertrags-Tests.
+- Verifikation: `npm run test:quick` gruen, inklusive `test-advisor-model`, `test-overlay-diagnostics`, `test-string-contract`, `test-version-traceability`.

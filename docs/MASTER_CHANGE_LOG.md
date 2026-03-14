@@ -1,7 +1,7 @@
 # MASTER_CHANGE_LOG
 
 Reproduzierbar generierter Commit-Changelog (Source of Truth: Git-Historie).
-Release-Version: v2.3.0
+Release-Version: v2.4.0
 Policy: append-only.
 
 ## Reproduzierbarkeit
@@ -353,4 +353,3 @@ Policy: append-only.
   - `docs/START_HERE.md`
   - `docs/TASK_SEQUENCE.md`
   - `progress.md`
-

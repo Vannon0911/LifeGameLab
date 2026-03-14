@@ -5,7 +5,7 @@ import { simGate } from "./simGate.js";
 import { dataflow } from "./dataflow.js";
 
 export const SCHEMA_VERSION = 2;
-export const APP_VERSION = "2.3.0";
+export const APP_VERSION = "2.4.0";
 
 export const manifest = {
   SCHEMA_VERSION,
