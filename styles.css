@@ -1,38 +1,38 @@
 /* ============================================================
-   LifexLab — Mobile-First Design System v2.1
-   Scientific Noir · Bioluminescent · Touch-First
+   LifexLab — Mobile-First Design System v2.2
+   Cell Factory · Tactical Neon · Touch-First
    Base = Mobile, @media min-width = Desktop enhancement
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Outfit:wght@400;600;700;900&display=swap');
 
 :root {
-  --bg:      #04100f;
-  --bg2:     #071716;
-  --bg3:     #0b1f1d;
-  --bg4:     #102826;
-  --bg5:     #17302d;
+  --bg:      #0d1116;
+  --bg2:     #121921;
+  --bg3:     #1a232e;
+  --bg4:     #232f3d;
+  --bg5:     #2c3a4c;
   --panel:   rgba(5,14,14,0.96);
   --glass:   rgba(255,255,255,0.03);
   --glass-hover: rgba(255,255,255,0.055);
-  --line:    rgba(96,180,164,0.13);
-  --line-mid:rgba(96,180,164,0.24);
-  --line-hi: rgba(129,224,205,0.42);
-  --cyan:    #73e4d4;
-  --cyan-dim:#1d5f59;
-  --cyan-glow:rgba(115,228,212,0.18);
-  --green:   #7fe07c;
-  --green-dim:#1a5330;
-  --orange:  #f4b15e;
-  --red:     #ff6b58;
+  --line:    rgba(132,164,205,0.15);
+  --line-mid:rgba(132,164,205,0.28);
+  --line-hi: rgba(160,199,255,0.46);
+  --cyan:    #7cc2ff;
+  --cyan-dim:#21486a;
+  --cyan-glow:rgba(124,194,255,0.20);
+  --green:   #89e37f;
+  --green-dim:#214f2b;
+  --orange:  #ffc46a;
+  --red:     #ff7a62;
   --red-dim: #5a1414;
-  --violet:  #9fc4ff;
-  --violet-dim:#29456e;
-  --gold:    #f1c85e;
-  --teal:    #51f0c0;
-  --text:    #daf8ee;
-  --text-mid:#95beb2;
-  --text-dim:#557b73;
+  --violet:  #b1bbff;
+  --violet-dim:#33447a;
+  --gold:    #ffd36b;
+  --teal:    #53e2c2;
+  --text:    #e9f0ff;
+  --text-mid:#a8bad2;
+  --text-dim:#6f839c;
   --font-ui:   'Outfit', sans-serif;
   --font-mono: 'DM Mono', ui-monospace, monospace;
   --r-sm:  8px;
@@ -60,9 +60,9 @@ html,body{
 body::before{
   content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
-    radial-gradient(ellipse 90vw 55vh at 10% -10%,rgba(37,131,120,0.16) 0%,transparent 55%),
-    radial-gradient(ellipse 65vw 50vh at 92% 105%,rgba(71,157,90,0.12) 0%,transparent 55%),
-    radial-gradient(ellipse 45vw 40vh at 50% 48%,rgba(171,209,102,0.04) 0%,transparent 60%);
+    radial-gradient(ellipse 90vw 60vh at 6% -8%,rgba(93,133,212,0.16) 0%,transparent 56%),
+    radial-gradient(ellipse 70vw 50vh at 92% 104%,rgba(255,176,79,0.10) 0%,transparent 58%),
+    radial-gradient(ellipse 48vw 42vh at 50% 50%,rgba(91,231,177,0.05) 0%,transparent 62%);
 }
 
 #app{
@@ -170,16 +170,33 @@ button,select,input{
 .nx-canvas-wrap{
   position:relative;flex:1;min-height:clamp(380px,60dvh,680px);overflow:hidden;
   border-radius:22px;border:1px solid rgba(96,180,164,0.18);
-  background:linear-gradient(180deg,rgba(4,14,14,0.92) 0%,rgba(9,22,20,0.78) 100%);
-  box-shadow:0 24px 60px rgba(0,0,0,0.28),0 0 0 1px rgba(255,255,255,0.02) inset, inset 0 0 90px rgba(115,228,212,0.04);
+  background:linear-gradient(180deg,rgba(8,12,18,0.95) 0%,rgba(10,16,26,0.84) 100%);
+  box-shadow:0 24px 60px rgba(0,0,0,0.30),0 0 0 1px rgba(255,255,255,0.03) inset, inset 0 0 90px rgba(124,194,255,0.06);
   transition:transform 0.22s ease,filter 0.22s ease,box-shadow 0.22s ease;
+}
+.nx-canvas-wrap::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px) 0 0/24px 24px,
+    linear-gradient(0deg, rgba(255,255,255,0.02) 1px, transparent 1px) 0 0/24px 24px;
+  opacity:0.22;
 }
 #app.is-panel-open .nx-canvas-wrap{
   transform:scale(0.985);
   filter:brightness(0.72) saturate(0.85);
   box-shadow:0 16px 40px rgba(0,0,0,0.24);
 }
-#cv{width:100%;height:100%;display:block;image-rendering:auto;touch-action:none;}
+#cv{
+  width:100%;
+  height:100%;
+  display:block;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  touch-action:none;
+}
 
 /* ── HUD ── */
 /* UI-GAME-01: Spiel-HUD — Energie-Trend, Gefahren-Badge, Tool-Hint */
@@ -309,7 +326,7 @@ button,select,input{
 }
 .nx-card-lab{
   border-style:dashed;
-  border-color:rgba(241,200,94,0.22);
+  border-color:rgba(255,196,106,0.30);
 }
 .nx-card-title{
   font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;
@@ -321,10 +338,10 @@ button,select,input{
   background:linear-gradient(160deg,rgba(77,216,248,0.10),rgba(255,255,255,0.02) 40%,rgba(255,255,255,0.015));
   box-shadow:0 18px 40px rgba(0,0,0,0.16);
 }
-.nx-panel-hero-status{background:linear-gradient(160deg,rgba(77,216,248,0.14),rgba(255,255,255,0.02) 48%,rgba(255,255,255,0.015));}
-.nx-panel-hero-evolution{background:linear-gradient(160deg,rgba(184,123,255,0.16),rgba(255,255,255,0.02) 48%,rgba(255,255,255,0.015));}
-.nx-panel-hero-tools{background:linear-gradient(160deg,rgba(78,207,133,0.14),rgba(255,255,255,0.02) 48%,rgba(255,255,255,0.015));}
-.nx-panel-hero-systems{background:linear-gradient(160deg,rgba(240,192,64,0.12),rgba(255,255,255,0.02) 48%,rgba(255,255,255,0.015));}
+.nx-panel-hero-status{background:linear-gradient(160deg,rgba(124,194,255,0.16),rgba(255,255,255,0.02) 48%,rgba(255,255,255,0.015));}
+.nx-panel-hero-evolution{background:linear-gradient(160deg,rgba(177,187,255,0.16),rgba(255,255,255,0.02) 48%,rgba(255,255,255,0.015));}
+.nx-panel-hero-tools{background:linear-gradient(160deg,rgba(137,227,127,0.16),rgba(255,255,255,0.02) 48%,rgba(255,255,255,0.015));}
+.nx-panel-hero-systems{background:linear-gradient(160deg,rgba(255,196,106,0.14),rgba(255,255,255,0.02) 48%,rgba(255,255,255,0.015));}
 .nx-panel-eyebrow{
   font-family:var(--font-mono);font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-dim);
 }
@@ -394,9 +411,14 @@ button,select,input{
 
 /* ── Forms ── */
 .nx-select{
-  height:34px;padding:0 10px;background:var(--bg3);
+  height:40px;padding:0 12px;background:var(--bg3);
   border:1px solid var(--line-mid);border-radius:var(--r-sm);
-  color:var(--text);font-family:var(--font-ui);font-size:13px;cursor:pointer;flex-shrink:0;
+  color:var(--text);font-family:var(--font-ui);font-size:14px;cursor:pointer;flex-shrink:0;
+  touch-action:manipulation;
+}
+.nx-select:focus{
+  border-color:var(--cyan);
+  box-shadow:0 0 0 2px rgba(124,194,255,0.18);
 }
 .nx-range{width:100%;-webkit-appearance:none;height:5px;background:var(--bg4);border-radius:3px;outline:none;cursor:pointer;}
 .nx-range::-webkit-slider-thumb{

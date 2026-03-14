@@ -161,6 +161,8 @@ export class UI {
     this._lastGameEndTick = 0;
     this._layoutDesktop = isDesktop();
     this._actionFeedback = null;
+    this._lastPanelRenderAt = 0;
+    this._panelRenderCooldownMs = 180;
 
     this._build();
     queueMicrotask(() => this._bindControls());
@@ -245,6 +247,21 @@ export class UI {
     queueMicrotask(() => {
       this._announcer.textContent = message;
     });
+  }
+
+  _isPanelInteractionActive() {
+    if (!this._activeContext) return false;
+    const active = document.activeElement;
+    if (!active || !(active instanceof HTMLElement)) return false;
+    const tag = String(active.tagName || "");
+    const interactive =
+      tag === "SELECT" ||
+      tag === "INPUT" ||
+      tag === "TEXTAREA" ||
+      !!active.isContentEditable;
+    if (!interactive) return false;
+    const container = isDesktop() ? this._sidebarBody : this._sheetBody;
+    return !!(container && container.contains(active));
   }
 
   _build() {
@@ -559,13 +576,14 @@ export class UI {
   // ── PANEL BODY RENDERER (shared by sheet + sidebar) ─────
   _renderPanelBody(container, state) {
     if (!this._activeContext) return;
+    this._lastPanelRenderAt = Date.now();
     const { meta, sim } = state;
     container.innerHTML = "";
     const ctx = this._activeContext;
     const panelMeta = PANEL_BY_KEY[ctx];
     if (panelMeta) {
       const hero = el("section", `nx-panel-hero nx-panel-hero-${panelMeta.tone}`);
-      const eyebrow = el("div", "nx-panel-eyebrow", isDesktop() ? "Mission Control" : "Control Room");
+      const eyebrow = el("div", "nx-panel-eyebrow", isDesktop() ? "Cell Factory" : "Factory Dock");
       const title = el("h2", "nx-panel-title", panelMeta.title);
       const summaryMap = {
         status: "Lagebild, Risiko und Missionsfokus der aktiven Kolonie.",
@@ -1754,7 +1772,11 @@ export class UI {
     // Re-render open panel (safe update)
     if (this._activeContext) {
       const container = isDesktop() ? this._sidebarBody : this._sheetBody;
-      this._renderPanelBody(container, state);
+      const now = Date.now();
+      const panelInCooldown = (now - this._lastPanelRenderAt) < this._panelRenderCooldownMs;
+      if (!panelInCooldown && !this._isPanelInteractionActive()) {
+        this._renderPanelBody(container, state);
+      }
     } else if (isDesktop()) {
       this._activeContext = "status";
       this._renderPanelBody(this._sidebarBody, state);
