@@ -54,5 +54,11 @@ Dieser Log rekonstruiert die Evolution der Codebasis bis zum aktuellen v2.3.0 Re
 - **Dokumentation:** Arbeitsdoku und Einstiegspfade auf diese Policy synchronisiert.
 - **Traceability:** Konsistenztest erweitert, damit der Changelog nicht stillschweigend zu einer Kurzfassung zurückgebaut wird.
 
+## Nachtrag — 2026-03-14: Doku-/TODO-Sync nach Gameplay- und LLM-Checks
+- **Statuskorrektur:** Snapshot und Handoff auf den realen Prüfstand synchronisiert; die Vollsuite ist aktuell nicht vollständig grün.
+- **Erster Blocker:** `tests/test-faction-metrics.mjs` schlägt derzeit für mindestens einen Seed fehl, weil die Player-Fraktion bis Tick 80 ausstirbt.
+- **LLM-Test-Entry:** Als offene Integrationspunkte dokumentiert, dass `window.render_game_to_text` und `window.advanceTime` noch fehlen.
+- **UI/UX-Stand:** Browser-Checks für Mobile/Desktop, Tool-Feedback und Benchmark-UI waren grün; der offene Stand ist damit primär Sim-/Teststabilität, nicht Shell oder Rendering.
+
 ---
 *Ende der aktuell rekonstruierten und append-only geführten Historie.*

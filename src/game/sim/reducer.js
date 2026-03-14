@@ -10,6 +10,15 @@ import { TRAIT_COUNT, TRAIT_DEFAULT } from "./life.data.js";
 import { manifest } from "../../project/project.manifest.js";
 import { assertSimPatchesAllowed } from "./gate.js";
 import { clamp, wrapHue, renormTraits, defaultLineageMemory } from "./shared.js";
+import {
+  DOCTRINE_BY_ID,
+  TECH_BY_ID,
+  SYNERGY_BY_ID,
+  normalizeTechArray,
+  hasRequiredTechs,
+  deriveCommandScore,
+  computeUnlockedSynergies,
+} from "../techTree.js";
 
 function lerp(a, b, t) {
   return a + (b - a) * t;
@@ -105,6 +114,109 @@ function paintCircle({ w, h, x, y, radius, cb }) {
       const falloff = t * t;
       cb(yy * w + xx, falloff);
     }
+  }
+}
+
+function findPlayerTraitSource({ alive, lineageId, playerLineageId, idx, w, h }) {
+  const x = idx % w;
+  const y = (idx / w) | 0;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const xx = x + dx;
+      const yy = y + dy;
+      if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+      const j = yy * w + xx;
+      if (alive[j] === 1 && (Number(lineageId[j]) | 0) === playerLineageId) return j;
+    }
+  }
+  return -1;
+}
+
+function populatePlayerCell({
+  idx,
+  tick,
+  playerLineageId,
+  alive,
+  E,
+  reserve,
+  link,
+  lineageId,
+  hue,
+  trait,
+  age,
+  born,
+  died,
+  W,
+  w,
+  h,
+}) {
+  if (alive[idx] === 1) return false;
+
+  alive[idx] = 1;
+  if (born) born[idx] = 1;
+  if (died) died[idx] = 0;
+  if (age) age[idx] = 0;
+  if (E) E[idx] = 0.40;
+  if (reserve) reserve[idx] = 0.10;
+  if (link) link[idx] = 0;
+  if (W) W[idx] = Math.max(0, Math.min(1, Number(W[idx] || 0) * 0.5));
+
+  lineageId[idx] = playerLineageId >>> 0;
+
+  const sourceIdx = findPlayerTraitSource({ alive, lineageId, playerLineageId, idx, w, h });
+  if (trait) {
+    const dst = idx * TRAIT_COUNT;
+    if (sourceIdx >= 0) {
+      const src = sourceIdx * TRAIT_COUNT;
+      for (let t = 0; t < TRAIT_COUNT; t++) trait[dst + t] = Number(trait[src + t] ?? TRAIT_DEFAULT[t]);
+    } else {
+      for (let t = 0; t < TRAIT_COUNT; t++) trait[dst + t] = TRAIT_DEFAULT[t];
+    }
+  }
+
+  if (hue) {
+    if (sourceIdx >= 0) hue[idx] = wrapHue(Number(hue[sourceIdx] || 0));
+    else hue[idx] = wrapHue((playerLineageId % 360) + (rng01(playerLineageId, (idx ^ tick) | 0) - 0.5) * 8);
+  }
+
+  return true;
+}
+
+function applyLineageTraitDelta({
+  alive,
+  lineageId,
+  targetLineageId,
+  trait,
+  hue,
+  vec = [],
+  hueDelta = 0,
+  intensity = 1,
+}) {
+  const scaled = Number(intensity || 0);
+  if (!scaled) return false;
+  let changed = false;
+  for (let i = 0; i < alive.length; i++) {
+    if (alive[i] !== 1) continue;
+    if ((Number(lineageId[i]) | 0) !== (targetLineageId | 0)) continue;
+    const o = i * TRAIT_COUNT;
+    for (let k = 0; k < TRAIT_COUNT; k++) {
+      trait[o + k] = Number(trait[o + k] || TRAIT_DEFAULT[k]) + Number(vec[k] || 0) * scaled;
+    }
+    renormTraits(trait, o);
+    if (hue) hue[i] = wrapHue(Number(hue[i] || 0) + Number(hueDelta || 0) * scaled);
+    changed = true;
+  }
+  return changed;
+}
+
+function applyMemoryDelta(target, delta, intensity = 1) {
+  if (!delta || typeof delta !== "object") return;
+  const scale = Number(intensity || 0);
+  for (const key of Object.keys(delta)) {
+    const next = Number(delta[key]);
+    if (!Number.isFinite(next)) continue;
+    target[key] = clamp(Number(target[key] ?? 0) + next * scale, 0, 1);
   }
 }
 
@@ -482,14 +594,14 @@ export function makeInitialState() {
       seed:        "life-light",
       gridW:       32,
       gridH:       32,
-      speed:       10,
-      brushMode:   "paint_light",
+      speed:       4,
+      brushMode:   "observe",
       brushRadius: 3,
       renderMode:  "combined",
       physics:     { ...PHYSICS_DEFAULT },
       ui: {
-        panelOpen: true,
-        activeTab: "tools",
+        panelOpen: false,
+        activeTab: "status",
         expertMode: false,
         showBiochargeOverlay: false,
         showRemoteAttackOverlay: true,
@@ -780,39 +892,24 @@ export function reducer(state, action, { rng }) {
         // Placement may only fill empty tiles and always belongs to the player.
         if (alive[idx] === 1) return [];
         if (costEnabled && playerDNA < cost) return [];
-        alive[idx] = 1;
-        if (born) born[idx] = 1;
-        if (died) died[idx] = 0;
-        if (age) age[idx] = 0;
-        if (E) E[idx] = 0.40;
-        if (reserve) reserve[idx] = 0.10;
-        if (link) link[idx] = 0;
-        if (W) W[idx] = Math.max(0, Math.min(1, Number(W[idx] || 0) * 0.5));
-
-        lineageId[idx] = playerLineageId >>> 0;
-
-        // Prefer neighbouring player traits/hue so placement respects current evolution.
-        let sourceIdx = -1;
-        const neigh = [-1, +1, -w, +w, -w-1, -w+1, +w-1, +w+1];
-        for (let k = 0; k < neigh.length; k++) {
-          const j = idx + neigh[k];
-          if (j < 0 || j >= w * h) continue;
-          if (alive[j] === 1 && (Number(lineageId[j]) | 0) === playerLineageId) { sourceIdx = j; break; }
-        }
-
-        if (sourceIdx >= 0 && trait) {
-          const dst = idx * TRAIT_COUNT;
-          const src = sourceIdx * TRAIT_COUNT;
-          for (let t = 0; t < TRAIT_COUNT; t++) trait[dst + t] = Number(trait[src + t] ?? TRAIT_DEFAULT[t]);
-        } else if (trait) {
-          const o = idx * TRAIT_COUNT;
-          for (let t = 0; t < TRAIT_COUNT; t++) trait[o + t] = TRAIT_DEFAULT[t];
-        }
-
-        if (hue) {
-          if (sourceIdx >= 0) hue[idx] = wrapHue(Number(hue[sourceIdx] || 0));
-          else hue[idx] = wrapHue((playerLineageId % 360) + (rng01(playerLineageId, (idx ^ state.sim.tick) | 0) - 0.5) * 8);
-        }
+        if (!populatePlayerCell({
+          idx,
+          tick: state.sim.tick,
+          playerLineageId,
+          alive,
+          E,
+          reserve,
+          link,
+          lineageId,
+          hue,
+          trait,
+          age,
+          born,
+          died,
+          W,
+          w,
+          h,
+        })) return [];
       }
 
       const patches = [
@@ -831,6 +928,94 @@ export function reducer(state, action, { rng }) {
       if (!remove && costEnabled) {
         patches.push({ op: "set", path: "/sim/playerDNA", value: playerDNA - cost });
       }
+      assertSimPatchesAllowed(manifest, state, action.type, patches);
+      return patches;
+    }
+
+    case "PLACE_SPLIT_CLUSTER": {
+      const world = state.world;
+      if (!world) return [];
+      const w = Number(world.w || state.meta.gridW || 0) | 0;
+      const h = Number(world.h || state.meta.gridH || 0) | 0;
+      const x = Number(action.payload?.x) | 0;
+      const y = Number(action.payload?.y) | 0;
+      if (x < 0 || y < 0 || x >= w || y >= h) return [];
+      if (w < 4 || h < 4) return [];
+
+      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+      const playerDNA = Number(state.sim.playerDNA || 0);
+      const costPerCell = 0.5;
+      const costEnabled = !!state.meta.placementCostEnabled;
+      const splitMemory = world.lineageMemory?.[playerLineageId];
+      if (Number(splitMemory?.splitUnlock || 0) < 1) return [];
+      const unlockedTechs = new Set(normalizeTechArray(splitMemory?.techs));
+      if (!unlockedTechs.has("cluster_split")) return [];
+      if (deriveCommandScore(state.sim) + 1e-9 < Number(TECH_BY_ID.cluster_split?.commandReq || 0)) return [];
+
+      const alive = cloneTypedArray(world.alive);
+      const E = cloneTypedArray(world.E);
+      const reserve = cloneTypedArray(world.reserve);
+      const link = cloneTypedArray(world.link);
+      const lineageId = cloneTypedArray(world.lineageId);
+      const hue = cloneTypedArray(world.hue);
+      const trait = cloneTypedArray(world.trait);
+      const age = cloneTypedArray(world.age);
+      const born = cloneTypedArray(world.born);
+      const died = cloneTypedArray(world.died);
+      const W = world.W ? cloneTypedArray(world.W) : null;
+
+      const startX = Math.max(0, Math.min(w - 4, x - 1));
+      const startY = Math.max(0, Math.min(h - 4, y - 1));
+      const cells = [];
+      for (let yy = startY; yy < startY + 4; yy++) {
+        for (let xx = startX; xx < startX + 4; xx++) {
+          const idx = yy * w + xx;
+          if (alive[idx] === 1) continue;
+          cells.push(idx);
+        }
+      }
+      if (!cells.length) return [];
+
+      const totalCost = cells.length * costPerCell;
+      if (costEnabled && playerDNA < totalCost) return [];
+
+      let placed = 0;
+      for (const idx of cells) {
+        if (populatePlayerCell({
+          idx,
+          tick: state.sim.tick,
+          playerLineageId,
+          alive,
+          E,
+          reserve,
+          link,
+          lineageId,
+          hue,
+          trait,
+          age,
+          born,
+          died,
+          W,
+          w,
+          h,
+        })) placed++;
+      }
+      if (!placed) return [];
+
+      const patches = [
+        { op: "set", path: "/world/alive", value: alive },
+        { op: "set", path: "/world/E", value: E },
+        { op: "set", path: "/world/reserve", value: reserve },
+        { op: "set", path: "/world/link", value: link },
+        { op: "set", path: "/world/lineageId", value: lineageId },
+        { op: "set", path: "/world/hue", value: hue },
+        { op: "set", path: "/world/trait", value: trait },
+        { op: "set", path: "/world/age", value: age },
+        { op: "set", path: "/world/born", value: born },
+        { op: "set", path: "/world/died", value: died },
+      ];
+      if (W) patches.push({ op: "set", path: "/world/W", value: W });
+      if (costEnabled) patches.push({ op: "set", path: "/sim/playerDNA", value: playerDNA - totalCost });
       assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
@@ -1043,24 +1228,39 @@ export function reducer(state, action, { rng }) {
       return patches;
     }
 
+    case "SET_PLAYER_DOCTRINE": {
+      if (!state.world) return [];
+      const doctrineId = String(action.payload?.doctrineId || "");
+      const doctrine = DOCTRINE_BY_ID[doctrineId];
+      if (!doctrine) return [];
+      const playerStage = Number(state.sim.playerStage || 1);
+      if (playerStage < Number(doctrine.unlockStage || 1)) return [];
+      const playerLineageId = Number(state.meta.playerLineageId || 0) | 0;
+      if (!playerLineageId) return [];
+      const nextLineageMemory = cloneJson(state.world.lineageMemory || {});
+      const current = { ...defaultLineageMemory(), ...(nextLineageMemory[playerLineageId] || {}) };
+      current.doctrine = doctrineId;
+      current.stage = Math.max(Number(current.stage || 1), playerStage);
+      nextLineageMemory[playerLineageId] = current;
+      const patches = [{ op: "set", path: "/world/lineageMemory", value: nextLineageMemory }];
+      assertSimPatchesAllowed(manifest, state, action.type, patches);
+      return patches;
+    }
+
     case "BUY_EVOLUTION": {
       if (!state.world) return [];
       const archetypeId = typeof action.payload?.archetypeId === "string"
         ? action.payload.archetypeId : "";
-
-      // Guard: archetypeId muss in DEV_MUTATION_CATALOG.buffAlias existieren
-      const buffId = DEV_MUTATION_CATALOG.buffAlias[archetypeId];
-      if (!buffId) return [];
-      const buff = DEV_MUTATION_CATALOG.buffs.find((b) => b.id === buffId);
-      if (!buff) return [];
+      const tech = TECH_BY_ID[archetypeId];
+      if (!tech) return [];
 
       const playerLineageId = state.meta.playerLineageId | 0;
       const playerStage     = Number(state.sim.playerStage) || 1;
       const playerDNA       = Number(state.sim.playerDNA)   || 0;
-
-      // dnaCost = 5 * playerStage — keine andere Formel
       const dnaCost = 5 * playerStage;
       if (playerDNA < dnaCost) return [];
+      if (playerStage < Number(tech.stage || 1)) return [];
+      const commandScore = deriveCommandScore(state.sim);
 
       const world       = state.world;
       const alive       = world.alive;
@@ -1070,39 +1270,63 @@ export function reducer(state, action, { rng }) {
       const nextTrait         = cloneTypedArray(world.trait);
       const nextHue           = world.hue ? cloneTypedArray(world.hue) : null;
       const nextLineageMemory = cloneJson(world.lineageMemory || {});
+      const currentMemory = { ...defaultLineageMemory(), ...(nextLineageMemory[playerLineageId] || {}) };
+      const unlocked = new Set(normalizeTechArray(currentMemory.techs));
+      if (unlocked.has(archetypeId)) return [];
+      if (!hasRequiredTechs(unlocked, tech.requires)) return [];
+      if (commandScore + 1e-9 < Number(tech.commandReq || 0)) return [];
 
-      const intensity = 0.02; // feste Basisintensität für Player-Käufe
-      const vec = Array.isArray(buff.trait) ? buff.trait : [];
-      const N = alive.length;
+      unlocked.add(archetypeId);
+      currentMemory.techs = [...unlocked].sort();
+      currentMemory.stage = Math.max(Number(currentMemory.stage || 1), playerStage);
+      if (archetypeId === "cluster_split") currentMemory.splitUnlock = 1;
 
-      // Nur Zellen mit lineageId === playerLineageId mutieren
-      for (let i = 0; i < N; i++) {
-        if (alive[i] !== 1) continue;
-        if ((Number(lineageId[i]) | 0) !== playerLineageId) continue;
-
-        const o = i * TRAIT_COUNT;
-        for (let k = 0; k < TRAIT_COUNT; k++) {
-          nextTrait[o + k] = Number(nextTrait[o + k] || TRAIT_DEFAULT[k]) + Number(vec[k] || 0) * intensity;
-        }
-        renormTraits(nextTrait, o);
-        if (nextHue) nextHue[i] = wrapHue(Number(nextHue[i] || 0) + Number(buff.hue || 0) * intensity);
+      const effectQueue = [];
+      const buffId = DEV_MUTATION_CATALOG.buffAlias[archetypeId];
+      const buff = buffId ? DEV_MUTATION_CATALOG.buffs.find((entry) => entry.id === buffId) : null;
+      if (buff) {
+        effectQueue.push({
+          trait: Array.isArray(buff.trait) ? buff.trait : [],
+          hue: Number(buff.hue || 0),
+          mem: buff.mem || null,
+          intensity: 0.05,
+        });
       }
 
-      // lineageMemory für playerLineageId aktualisieren
-      if (buff.mem && typeof buff.mem === "object") {
-        const cur = nextLineageMemory[playerLineageId] || defaultLineageMemory();
-        for (const mk of Object.keys(buff.mem)) {
-          const v = Number(buff.mem[mk]);
-          if (!Number.isFinite(v)) continue;
-          cur[mk] = clamp(Number(cur[mk] ?? 0) + v * intensity, 0, 1);
-        }
-        nextLineageMemory[playerLineageId] = cur;
+      const previousSynergies = new Set(normalizeTechArray(currentMemory.synergies));
+      const nextSynergies = computeUnlockedSynergies(unlocked);
+      for (const synergyId of nextSynergies) {
+        if (previousSynergies.has(synergyId)) continue;
+        const synergy = SYNERGY_BY_ID[synergyId];
+        if (!synergy) continue;
+        effectQueue.push({
+          trait: Array.isArray(synergy.trait) ? synergy.trait : [],
+          hue: Number(synergy.hue || 0),
+          mem: synergy.mem || null,
+          intensity: 1,
+        });
       }
+      currentMemory.synergies = nextSynergies;
+
+      for (const effect of effectQueue) {
+        applyLineageTraitDelta({
+          alive,
+          lineageId,
+          targetLineageId: playerLineageId,
+          trait: nextTrait,
+          hue: nextHue,
+          vec: effect.trait,
+          hueDelta: effect.hue,
+          intensity: effect.intensity,
+        });
+        applyMemoryDelta(currentMemory, effect.mem, effect.intensity);
+      }
+      nextLineageMemory[playerLineageId] = currentMemory;
 
       const patches = [
         { op: "set", path: "/sim/playerDNA",         value: playerDNA - dnaCost },
-        { op: "set", path: "/world/trait",            value: nextTrait },
         { op: "set", path: "/world/lineageMemory",    value: nextLineageMemory },
+        { op: "set", path: "/world/trait",            value: nextTrait },
       ];
       if (nextHue) patches.push({ op: "set", path: "/world/hue", value: nextHue });
       assertSimPatchesAllowed(manifest, state, action.type, patches);
