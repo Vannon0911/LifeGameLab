@@ -1,14 +1,28 @@
 # Playwright Debug Loop
 
-Zweck: reproduzierbarer Browser-Loop fuer Main-Run-Checks mit sauberem Neustart pro Iteration.
+Zweck: reproduzierbarer Browser-Loop fuer Main-Run-Checks und Labor-/Benchmark-Debugging mit sauberem Neustart pro Iteration.
 
 ## Verhalten
 - startet jede Iteration in frischem Browser-Context
 - klickt den Start-Button, falls der Run noch steht
 - erhoeht danach `ticks/s` per `SET_SPEED`
 - sweeped danach alle fuenf Freeze-Raeume als Raster: `lage`, `eingriffe`, `evolution`, `welt`, `labor`
+- prueft im Live-Debug `labor` zusaetzlich auf Benchmark-Phasen, Statuswechsel und Export-Buttons
 - schreibt Boot-/Run-Screenshots, JSON-State und Console-Log unter `output/web-game/debug-loop`
 - leert vor jedem Close `localStorage`, `sessionStorage`, `indexedDB`, `CacheStorage` und Cookies
+
+## Manueller Live-Loop
+1. Browser frisch oeffnen und auf `http://127.0.0.1:8091/` navigieren.
+2. Bootzustand lesen: kein falscher Kollaps-/Nullzustand, keine Console-Errors.
+3. Run starten und `ticks/s` auf `24` setzen.
+4. Raeume live durchgehen: `lage`, `eingriffe`, `evolution`, `welt`, `labor`.
+   Nach Welt-/Labor-Controls sofort gegenpruefen, dass Paneltexte nicht auf altem State haengen:
+   Preset, Seed, Groesse, Geschwindigkeit, Render-Modus und Overlay muessen ohne sichtbaren Stale-Frame nachziehen.
+5. In `labor` den Benchmark starten und beobachten:
+   `Start Benchmark` muss zu laufendem Status wechseln.
+   Der Status muss Phasen wie `setup_main`, `main`, `worker_init`, `worker` sichtbar machen.
+   Nach Abschluss muessen JSON/CSV-Buttons aktiv werden.
+6. Vor Browser-Close immer Storage/Caches/Cookies loeschen.
 
 ## Aufruf
 

@@ -35,6 +35,7 @@ assert(weltStart >= 0 && weltEnd > weltStart, "welt panel branch not found");
 const weltBlock = ui.slice(weltStart, weltEnd);
 assert(weltBlock.includes('type: "SET_WORLD_PRESET"'), "welt panel missing SET_WORLD_PRESET dispatch");
 assert(!weltBlock.includes('type:"SET_RENDER_MODE"'), "welt panel must not expose render mode");
+assert(weltBlock.includes('queueMicrotask(() => this._renderPanelBody(container, this._store.getState()))'), "welt panel must force repaint after world-control dispatches");
 
 const laborStart = ui.indexOf('if (ctx === "labor") {');
 const laborEnd = ui.indexOf('// ── SIEG', laborStart);
@@ -43,6 +44,9 @@ const laborBlock = ui.slice(laborStart, laborEnd);
 for (const required of ['type:"SET_RENDER_MODE"', 'type:"SET_OVERLAY"', 'BRUSH_MODE.CELL_HARVEST', 'BRUSH_MODE.ZONE_PAINT']) {
   assert(laborBlock.includes(required), `labor panel missing ${required}`);
 }
+assert(laborBlock.includes('type: "RUN_BENCHMARK"'), "labor panel missing RUN_BENCHMARK dispatch");
+assert(laborBlock.includes('queueMicrotask(() => this._renderPanelBody(container, this._store.getState()))'), "labor panel must force repaint after local control dispatches");
+assert(ui.includes('window.addEventListener("benchmark:update"'), "ui missing benchmark:update live sync");
 
 assert(main.includes("window.render_game_to_text = renderGameToText;"), "main.js missing render_game_to_text hook");
 assert(main.includes("window.advanceTime = advanceTime;"), "main.js missing advanceTime hook");
