@@ -1,6 +1,7 @@
 import { TRAIT_DEFAULT, TRAIT_COUNT } from "./life.data.js";
 import { clamp } from "./shared.js";
 import { forNeighbours8 } from "./neighbors.js";
+import { isCommittedInfraValue } from "./infra.js";
 
 const TRAITS = TRAIT_COUNT;
 
@@ -24,6 +25,7 @@ function socialPair(trait, hue, i, j) {
 export function computeClusterAndLinks(world, phy) {
   const { w, h, alive, lineageId, trait, hue, E } = world;
   const N = w * h;
+  const playerLineageId = Number(phy?.playerLineageId || 0) | 0;
 
   if (!world.clusterField || world.clusterField.length !== N) world.clusterField = new Float32Array(N);
   if (!world.link || world.link.length !== N) world.link = new Float32Array(N);
@@ -33,6 +35,10 @@ export function computeClusterAndLinks(world, phy) {
   const linkDecay = clamp(Number(phy.linkDecay ?? 0.02), 0, 1);
   for (let i = 0; i < N; i++) {
     if (alive[i] !== 1) { link[i] = 0; clusterField[i] = 0; continue; }
+    if (playerLineageId && (Number(lineageId[i]) | 0) === playerLineageId && isCommittedInfraValue(link[i])) {
+      link[i] = 1;
+      continue;
+    }
     link[i] = clamp(link[i] * (1 - linkDecay), 0, 1);
   }
 
@@ -65,10 +71,20 @@ export function computeClusterAndLinks(world, phy) {
     });
     if (bestJ < 0 || bestScore < 0.58) continue;
     if (bestJ < i) continue;
+    const lidI = Number(lineageId[i]) | 0;
+    const lidJ = Number(lineageId[bestJ]) | 0;
+    const playerPair = playerLineageId && (lidI === playerLineageId || lidJ === playerLineageId);
     const cost = linkCost * (0.90 - bestScore * 0.35);
     if (E[i] < cost || E[bestJ] < cost) continue;
     E[i] = Math.max(0, E[i] - cost * 0.5);
     E[bestJ] = Math.max(0, E[bestJ] - cost * 0.5);
+    if (playerPair) {
+      if (lidI === playerLineageId && isCommittedInfraValue(link[i])) link[i] = 1;
+      else link[i] = clamp(link[i] + linkBuild * bestScore, 0, 0.95);
+      if (lidJ === playerLineageId && isCommittedInfraValue(link[bestJ])) link[bestJ] = 1;
+      else link[bestJ] = clamp(link[bestJ] + linkBuild * bestScore, 0, 0.95);
+      continue;
+    }
     link[i] = clamp(link[i] + linkBuild * bestScore, 0, 1);
     link[bestJ] = clamp(link[bestJ] + linkBuild * bestScore, 0, 1);
   }
@@ -94,4 +110,3 @@ export function computeClusterAndLinks(world, phy) {
     }
   }
 }
-
