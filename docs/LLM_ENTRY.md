@@ -15,20 +15,21 @@ Dieses Repository ist ein deterministisches Contract-System. Jede Aenderung muss
 9. `src/game/sim/worldgen.js`
 10. `src/project/renderer.js`
 11. `src/game/render/renderer.js`
-12. `src/project/ui.js`
-13. `src/game/ui/ui.js`
-14. `src/app/main.js`
-15. `src/game/sim/stepPhases.js`
-16. `src/game/sim/stepRuntime.js`
-17. `src/game/sim/reducer/controlActions.js`
-18. `src/game/ui/ui.constants.js`
-19. `src/game/ui/ui.model.js`
-20. `src/game/ui/ui.dom.js`
-21. `src/game/ui/ui.feedback.js`
-22. `src/app/runtime/publicApi.js`
-23. `src/app/runtime/worldStateLog.js`
-24. `src/app/runtime/reportUtils.js`
-25. `src/app/runtime/bootStatus.js`
+12. `src/game/render/render.worker.js`
+13. `src/project/ui.js`
+14. `src/game/ui/ui.js`
+15. `src/app/main.js`
+16. `src/game/sim/stepPhases.js`
+17. `src/game/sim/stepRuntime.js`
+18. `src/game/sim/reducer/controlActions.js`
+19. `src/game/ui/ui.constants.js`
+20. `src/game/ui/ui.model.js`
+21. `src/game/ui/ui.dom.js`
+22. `src/game/ui/ui.feedback.js`
+23. `src/app/runtime/publicApi.js`
+24. `src/app/runtime/worldStateLog.js`
+25. `src/app/runtime/reportUtils.js`
+26. `src/app/runtime/bootStatus.js`
 
 ## Harte Invarianten
 - State nur ueber `dispatch()` + Patches.
