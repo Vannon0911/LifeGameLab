@@ -6,9 +6,24 @@ import { reducer, simStepPatch } from "../src/project/project.logic.js";
 
 const SEEDS = ["smoke-a", "smoke-b", "smoke-c", "smoke-d"];
 const TICKS = 100;
+const CHECKPOINTS = [25, 50, 75, 100];
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
+}
+
+function snapshotState(state) {
+  const sim = state.sim || {};
+  return {
+    aliveRatio: Number(sim.aliveRatio || 0),
+    meanPlantField: Number(sim.meanPlantField || 0),
+    meanNutrientField: Number(sim.meanNutrientField || 0),
+    meanToxinField: Number(sim.meanToxinField || 0),
+    clusterRatio: Number(sim.clusterRatio || 0),
+    networkRatio: Number(sim.networkRatio || 0),
+    playerDNA: Number(sim.playerDNA || 0),
+    tick: Number(sim.tick || 0),
+  };
 }
 
 function runSeed(seed) {
@@ -16,10 +31,19 @@ function runSeed(seed) {
   store.dispatch({ type: "SET_SEED", payload: seed });
   store.dispatch({ type: "GEN_WORLD" });
   store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
+  const checkpoints = new Map();
   for (let t = 0; t < TICKS; t++) {
     store.dispatch({ type: "SIM_STEP", payload: { force: true } });
+    const tick = t + 1;
+    if (CHECKPOINTS.includes(tick)) {
+      const stateAtTick = store.getState();
+      checkpoints.set(tick, {
+        signature: store.getSignature(),
+        snapshot: snapshotState(stateAtTick),
+      });
+    }
   }
-  return { state: store.getState(), signature: store.getSignature() };
+  return { state: store.getState(), signature: store.getSignature(), checkpoints };
 }
 
 function assertFiniteMetrics(sim, label) {
@@ -64,33 +88,31 @@ function assertSeedInvariants(result, label) {
   assert(Number(sim.plantTileRatio || 0) <= 0.16, `${label}: plantTileRatio cap exceeded (${sim.plantTileRatio})`);
 }
 
-function metricSnapshot(state) {
-  const sim = state.sim || {};
-  return {
-    aliveRatio: Number(sim.aliveRatio || 0),
-    meanPlantField: Number(sim.meanPlantField || 0),
-    meanNutrientField: Number(sim.meanNutrientField || 0),
-    meanToxinField: Number(sim.meanToxinField || 0),
-    clusterRatio: Number(sim.clusterRatio || 0),
-    networkRatio: Number(sim.networkRatio || 0),
-    playerDNA: Number(sim.playerDNA || 0),
-    tick: Number(sim.tick || 0),
-  };
-}
-
 for (const seed of SEEDS) {
   const runA = runSeed(seed);
   const runB = runSeed(seed);
   assertSeedInvariants(runA, `${seed}/runA`);
   assertSeedInvariants(runB, `${seed}/runB`);
 
-  const snapA = metricSnapshot(runA.state);
-  const snapB = metricSnapshot(runB.state);
-  assert(runA.signature === runB.signature, `${seed}: signature drift between identical runs`);
+  const finalSnapA = snapshotState(runA.state);
+  const finalSnapB = snapshotState(runB.state);
+  assert(runA.signature === runB.signature, `${seed}: final signature drift between identical runs`);
   assert(
-    JSON.stringify(snapA) === JSON.stringify(snapB),
-    `${seed}: metric snapshot drift between identical runs (${JSON.stringify({ snapA, snapB })})`,
+    JSON.stringify(finalSnapA) === JSON.stringify(finalSnapB),
+    `${seed}: final metric drift between identical runs (${JSON.stringify({ finalSnapA, finalSnapB })})`,
   );
+
+  for (const tick of CHECKPOINTS) {
+    const cpA = runA.checkpoints.get(tick);
+    const cpB = runB.checkpoints.get(tick);
+    assert(cpA, `${seed}: missing checkpoint runA@${tick}`);
+    assert(cpB, `${seed}: missing checkpoint runB@${tick}`);
+    assert(cpA.signature === cpB.signature, `${seed}: checkpoint signature drift at tick=${tick}`);
+    assert(
+      JSON.stringify(cpA.snapshot) === JSON.stringify(cpB.snapshot),
+      `${seed}: checkpoint metric drift at tick=${tick} (${JSON.stringify({ cpA: cpA.snapshot, cpB: cpB.snapshot })})`,
+    );
+  }
 }
 
-console.log(`SMOKE_OK seeds=${SEEDS.length} ticks=${TICKS} deterministic metrics/signatures verified`);
+console.log(`SMOKE_OK seeds=${SEEDS.length} ticks=${TICKS} checkpoints=${CHECKPOINTS.join(",")} deterministic metrics/signatures verified`);

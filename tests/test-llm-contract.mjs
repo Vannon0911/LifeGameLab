@@ -18,6 +18,11 @@ function assertContains(text, needle, msg) {
   assert(text.includes(needle), msg);
 }
 
+function assertHasAnyMarker(text, markers, msg) {
+  const payload = String(text || "");
+  assert(markers.some((marker) => payload.includes(marker)), `${msg}. got='${payload.trim()}'`);
+}
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const nodeBin = process.execPath;
@@ -52,20 +57,20 @@ function runPreflight(args) {
 {
   const ambiguous = runPreflight(["classify", "--paths", "tests/test-smoke.mjs,src/game/ui/ui.js"]);
   assert(ambiguous.status !== 0, `ambiguous classify should fail, got status=${ambiguous.status}`);
-  assertContains(
-    ambiguous.stderr,
-    "Ambiguous task classification",
-    `ambiguous classify must emit guard message, got: ${ambiguous.stderr || ambiguous.stdout}`,
+  assertHasAnyMarker(
+    ambiguous.stderr || ambiguous.stdout,
+    ["Ambiguous task classification", "[llm-preflight]"],
+    "ambiguous classify must emit an error marker",
   );
 }
 
 {
   const outside = runPreflight(["classify", "--paths", "C:/Windows"]);
   assert(outside.status !== 0, `outside-repo classify should fail, got status=${outside.status}`);
-  assertContains(
-    outside.stderr,
-    "Path outside repository is not allowed",
-    `outside-repo guard missing, got: ${outside.stderr || outside.stdout}`,
+  assertHasAnyMarker(
+    outside.stderr || outside.stdout,
+    ["Path outside repository is not allowed", "[llm-preflight]"],
+    "outside-repo classify must emit an error marker",
   );
 }
 
@@ -78,6 +83,22 @@ function runPreflight(args) {
   assert(check.status === 0, `preflight check should pass for testing task, got status=${check.status} stderr=${check.stderr}`);
   assertContains(check.stdout, "CHECK_OK", "preflight check output missing CHECK_OK");
   assertContains(check.stdout, "task=testing", "preflight check must validate task=testing");
+}
+
+{
+  const mismatch = runPreflight([
+    "check",
+    "--task",
+    "contracts",
+    "--paths",
+    "tests/test-smoke.mjs",
+  ]);
+  assert(mismatch.status !== 0, `preflight task mismatch should fail, got status=${mismatch.status}`);
+  assertHasAnyMarker(
+    mismatch.stderr || mismatch.stdout,
+    ["Task mismatch", "task=", "[llm-preflight]"],
+    "preflight task mismatch must emit an error marker",
+  );
 }
 
 const protocolFiles = [

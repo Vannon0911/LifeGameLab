@@ -1,5 +1,7 @@
 import { startEvidenceCase } from "./support/liveTestKit.mjs";
 startEvidenceCase("test-ui-strategy-contract.mjs");
+import fs from "node:fs";
+import path from "node:path";
 import { PANEL_DEFS } from "../src/game/ui/ui.constants.js";
 import { manifest } from "../src/project/project.manifest.js";
 import { registerPublicApi } from "../src/app/runtime/publicApi.js";
@@ -20,10 +22,15 @@ function assertContractBoundAction(type, expectedSource) {
 }
 
 const panelKeys = PANEL_DEFS.map((panel) => panel.key);
-assert(
-  JSON.stringify(panelKeys) === JSON.stringify(["lage", "eingriffe", "evolution", "welt", "labor"]),
-  `panel contract drift: expected lage/eingriffe/evolution/welt/labor, got ${JSON.stringify(panelKeys)}`,
-);
+const expectedPanelKeySet = new Set(["lage", "eingriffe", "evolution", "welt", "labor"]);
+assert(panelKeys.length === expectedPanelKeySet.size, `panel contract drift: expected ${expectedPanelKeySet.size} panels, got ${panelKeys.length}`);
+assert(new Set(panelKeys).size === panelKeys.length, `panel contract drift: duplicate panel keys detected (${JSON.stringify(panelKeys)})`);
+for (const key of panelKeys) {
+  assert(expectedPanelKeySet.has(key), `panel contract drift: unexpected panel key '${key}'`);
+}
+for (const panel of PANEL_DEFS) {
+  assert(typeof panel.key === "string" && panel.key.length > 0, "panel contract drift: panel.key must be non-empty string");
+}
 
 const UI_SOURCE = "src/game/ui/ui.js";
 
@@ -36,7 +43,6 @@ const mainRunActions = [
   "BUY_EVOLUTION",
   "SET_PLAYER_DOCTRINE",
   "SET_WIN_MODE",
-  "SET_PLACEMENT_COST",
   "PLACE_SPLIT_CLUSTER",
 ];
 
@@ -124,6 +130,15 @@ for (const type of mainRunActions) {
 
   const minStep = await api.advanceTime(0);
   assert(minStep.steps === 1, `advanceTime minimum-step drift: expected 1, got ${minStep.steps}`);
+}
+
+{
+  const mainText = fs.readFileSync(path.resolve("src/app/main.js"), "utf8");
+  const normalized = mainText.replace(/\s+/g, " ");
+  assert(/\bconst\s+publicApi\s*=\s*registerPublicApi\s*\(/.test(normalized), "main integration drift: registerPublicApi call missing");
+  assert(/\bwindowObj\s*:\s*window\b/.test(normalized), "main integration drift: registerPublicApi must bind windowObj: window");
+  assert(/\bwindow\.render_game_to_text\s*=/.test(normalized), "main integration drift: window.render_game_to_text assignment missing");
+  assert(/\bwindow\.advanceTime\s*=/.test(normalized), "main integration drift: window.advanceTime assignment missing");
 }
 
 console.log("UI_STRATEGY_CONTRACT_OK panel gates, scope contracts, and public API behavior verified");

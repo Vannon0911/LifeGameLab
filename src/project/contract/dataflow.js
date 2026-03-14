@@ -30,7 +30,7 @@ const DISPATCH_SOURCES = Object.freeze({
   SET_PLAYER_DOCTRINE: ["src/game/ui/ui.js"],
   SET_WIN_MODE: ["src/game/ui/ui.js"],
   SET_OVERLAY: ["src/game/ui/ui.js"],
-  SET_PLACEMENT_COST: ["src/game/ui/ui.js"],
+  SET_PLACEMENT_COST: [],
   RUN_BENCHMARK: ["src/game/ui/ui.js"],
 });
 
