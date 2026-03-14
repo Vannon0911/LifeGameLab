@@ -31,7 +31,7 @@ export const WORLD_KEYS = [
 ];
 
 export const WORLD_SIM_STEP_KEYS = WORLD_KEYS.filter(
-  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "coreZoneMask" && k !== "dnaZoneMask" && k !== "infraCandidateMask" && k !== "superId" && k !== "actionMap" && k !== "born" && k !== "died" && k !== "founderMask" && k !== "visibility" && k !== "explored"
+  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "coreZoneMask" && k !== "dnaZoneMask" && k !== "infraCandidateMask" && k !== "superId" && k !== "actionMap" && k !== "born" && k !== "died" && k !== "founderMask"
 );
 
 export const SIM_KEYS = [

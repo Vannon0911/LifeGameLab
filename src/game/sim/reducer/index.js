@@ -65,6 +65,7 @@ import {
   handleRecyclePatch,
   handleSeedSpread,
 } from "../mainRunActions.js";
+import { hasAdjacentCommittedInfra4, isCommittedInfraValue } from "../infra.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
@@ -180,10 +181,10 @@ function isAlivePlayerOwnedTile(world, idx, playerLineageId) {
 function touchesCommittedInfraAnchor(world, idx, w, h) {
   return isMarked(world?.coreZoneMask, idx)
     || isMarked(world?.dnaZoneMask, idx)
-    || Number(world?.link?.[idx] || 0) > 0
+    || isCommittedInfraValue(world?.link?.[idx])
     || hasAdjacentMarkedTile4(world?.coreZoneMask, idx, w, h)
     || hasAdjacentMarkedTile4(world?.dnaZoneMask, idx, w, h)
-    || hasAdjacentMarkedTile4(world?.link, idx, w, h);
+    || hasAdjacentCommittedInfra4(world?.link, idx, w, h);
 }
 
 function getInfraStartCosts(sim) {
@@ -590,9 +591,12 @@ function runWorldSimV4(world, meta, sim, rng) {
   const TA_MUT_KEYS = [
     "alive", "E", "L", "R", "W", "Sat", "P", "B", "plantKind",
     "reserve", "link", "clusterField", "hue", "lineageId", "trait", "age", "born", "died",
+    "visibility", "explored",
     // lazily-created buffers inside sim.js:
     "actionMap",
   ];
+  const preset = getWorldPreset(meta.worldPresetId);
+  const phaseD = preset?.phaseD || {};
   for (const k of TA_MUT_KEYS) {
     if (worldMutable[k] && ArrayBuffer.isView(worldMutable[k])) {
       worldMutable[k] = cloneTA(worldMutable[k]);
@@ -612,6 +616,9 @@ function runWorldSimV4(world, meta, sim, rng) {
     cpuLineageId: (meta.cpuLineageId | 0) || 2,
     seasonLength: meta.physics?.seasonLength || 300,
     gameMode: normalizeGameMode(meta.gameMode, GAME_MODE.GENESIS),
+    visionRadiusCore: Math.max(0, Number(phaseD.visionRadiusCore || 0) | 0),
+    visionRadiusDNA: Math.max(0, Number(phaseD.visionRadiusDNA || 0) | 0),
+    visionRadiusInfra: Math.max(0, Number(phaseD.visionRadiusInfra || 0) | 0),
   }, sim.tick);
   return { world: worldMutable, metrics };
 }
@@ -880,7 +887,7 @@ export function reducer(state, action, { rng }) {
       }
       if (remove) return [];
       if (!isAlivePlayerOwnedTile(world, idx, playerLineageId)) return [];
-      if (Number(world.link[idx] || 0) > 0) return [];
+      if (isCommittedInfraValue(world.link[idx])) return [];
       const touchesAnchor = touchesCommittedInfraAnchor(world, idx, w, h);
       const touchesCandidate = hasAdjacentMarkedTile4(infraCandidateMask, idx, w, h);
       if (!touchesAnchor && !touchesCandidate) return [];
@@ -914,7 +921,7 @@ export function reducer(state, action, { rng }) {
       let touchesAnchor = false;
       for (const idx of candidateIndices) {
         if (!isAlivePlayerOwnedTile(world, idx, playerLineageId)) return [];
-        if (Number(world.link[idx] || 0) > 0) return [];
+        if (isCommittedInfraValue(world.link[idx])) return [];
         if (!touchesAnchor && touchesCommittedInfraAnchor(world, idx, w, h)) touchesAnchor = true;
       }
       if (!touchesAnchor) return [];
