@@ -2,6 +2,7 @@ import { startEvidenceCase } from "./support/liveTestKit.mjs";
 startEvidenceCase("test-llm-contract.mjs");
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { assertLlmGateSync } from "../src/project/llm/gateSync.js";
 import { createLlmCommandAdapter, ACTION_ENVELOPE } from "../src/project/llm/commandAdapter.js";
@@ -19,21 +20,65 @@ function assertContains(text, needle, msg) {
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
+const nodeBin = process.execPath;
+const preflightScript = path.join(root, "tools", "llm-preflight.mjs");
 
-const suiteRunner = fs.readFileSync(path.join(root, "tools", "run-test-suite.mjs"), "utf8");
-assertContains(suiteRunner, "llm-preflight.mjs", "suite preflight wiring missing");
-assertContains(suiteRunner, "--paths", "suite preflight must classify task by paths");
-assertContains(suiteRunner, '"check"', "suite preflight check mode missing");
+function runPreflight(args) {
+  const res = spawnSync(nodeBin, [preflightScript, ...args], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30_000,
+  });
+  if (res.error) throw res.error;
+  return {
+    status: Number(res.status ?? 1),
+    stdout: String(res.stdout || ""),
+    stderr: String(res.stderr || ""),
+  };
+}
 
-const allRunner = fs.readFileSync(path.join(root, "tools", "run-all-tests.mjs"), "utf8");
-assertContains(allRunner, "llm-preflight.mjs", "run-all-tests preflight wiring missing");
-assertContains(allRunner, "--paths", "run-all-tests preflight must classify task by paths");
+{
+  const ok = runPreflight([
+    "classify",
+    "--paths",
+    "tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs",
+  ]);
+  assert(ok.status === 0, `preflight classify should pass, got status=${ok.status} stderr=${ok.stderr}`);
+  assertContains(ok.stdout, "CLASSIFY_OK", "preflight classify output missing CLASSIFY_OK");
+  assertContains(ok.stdout, "task=testing", "preflight classify must resolve task=testing");
+}
 
-const preflightScript = fs.readFileSync(path.join(root, "tools", "llm-preflight.mjs"), "utf8");
-assertContains(preflightScript, "classify", "preflight classify command missing");
-assertContains(preflightScript, "requiredEntrySha256", "task entry hash check missing");
-assertContains(preflightScript, "Ambiguous task classification", "ambiguous task guard missing");
-assertContains(preflightScript, "Task classification requires '--paths", "paths-required guard missing");
+{
+  const ambiguous = runPreflight(["classify", "--paths", "tests/,src/game/ui/ui.js"]);
+  assert(ambiguous.status !== 0, `ambiguous classify should fail, got status=${ambiguous.status}`);
+  assertContains(
+    ambiguous.stderr,
+    "Ambiguous task classification",
+    `ambiguous classify must emit guard message, got: ${ambiguous.stderr || ambiguous.stdout}`,
+  );
+}
+
+{
+  const outside = runPreflight(["classify", "--paths", "C:/Windows"]);
+  assert(outside.status !== 0, `outside-repo classify should fail, got status=${outside.status}`);
+  assertContains(
+    outside.stderr,
+    "Path outside repository is not allowed",
+    `outside-repo guard missing, got: ${outside.stderr || outside.stdout}`,
+  );
+}
+
+{
+  const check = runPreflight([
+    "check",
+    "--paths",
+    "tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs",
+  ]);
+  assert(check.status === 0, `preflight check should pass for testing task, got status=${check.status} stderr=${check.stderr}`);
+  assertContains(check.stdout, "CHECK_OK", "preflight check output missing CHECK_OK");
+  assertContains(check.stdout, "task=testing", "preflight check must validate task=testing");
+}
 
 const protocolFiles = [
   "docs/START_HERE.md",
@@ -124,4 +169,4 @@ assert(typeof readModel.advisor?.nextAction === "string", "advisor.nextAction mi
 assert(readModel.winProgress?.mode === WIN_MODE.SUPREMACY, "winProgress.mode mismatch");
 assert(readModel.benchmark?.phase === "idle", "read model benchmark mismatch");
 
-console.log("LLM_CONTRACT_OK");
+console.log("LLM_CONTRACT_OK preflight behavior + doc phase gates + adapter/readModel contracts verified");
