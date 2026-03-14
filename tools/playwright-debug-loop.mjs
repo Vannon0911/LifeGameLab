@@ -138,25 +138,15 @@ async function clearBrowserData(page, context) {
 
 async function capture(page, outPath) {
   try {
-    await page.screenshot({
-      path: outPath,
-      fullPage: false,
-      type: "png",
-      animations: "disabled",
-      timeout: 10000,
+    const session = await page.context().newCDPSession(page);
+    const shot = await session.send("Page.captureScreenshot", {
+      format: "png",
+      fromSurface: true,
+      captureBeyondViewport: false,
     });
+    fs.writeFileSync(outPath, Buffer.from(String(shot.data || ""), "base64"));
     return;
   } catch {}
-  const canvas = page.locator("canvas").first();
-  if (await canvas.count()) {
-    await canvas.screenshot({
-      path: outPath,
-      type: "png",
-      animations: "disabled",
-      timeout: 10000,
-    });
-    return;
-  }
   await page.screenshot({
     path: outPath,
     fullPage: false,
