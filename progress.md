@@ -1,47 +1,5 @@
-Original prompt: Baue github repo so um das es wie ein spiel produkt wirkt und lösche auser Bioemmergenzia alle repos dauerhaft
+# progress
 
-- 2026-03-14: Bestehende GitHub-Repos inventarisiert. `Bioemmergenzia` ist in der aktuellen Liste nicht vorhanden, daher noch keine Löschaktion ausgeführt.
-- 2026-03-14: Produkt-Umbau auf `LifeGameLab` fokussiert. Nächste Schritte: Live-Ansicht prüfen, README/GitHub-Metadaten auf Produktdarstellung umbauen, danach Löschumfang explizit absichern.
-- 2026-03-14: Live-Screenshot der App erzeugt und unter `docs/assets/lifegamelab-home.png` abgelegt.
-- 2026-03-14: Sichtbare Brand-Punkte auf `LifeGameLab` angehoben, README auf Produktdarstellung umgestellt, Favicon ergänzt.
-- 2026-03-14: UI-Rework auf `Control Room` umgesetzt. Mobile-First-Header mit KPI-Rail, vereinheitlichte 4-Panel-IA und persistente Desktop-Mission-Control-Sidebar eingebaut.
-- 2026-03-14: `Status` absorbiert Energie- und Siegpfad-Inhalte, `Systeme` absorbiert Welt-/Render-Parameter. Keine Änderungen an Sim- oder Action-Logik.
-- 2026-03-14: Verifiziert mit `node tests/test-ui-contract.mjs`, `node tests/test-version-traceability.mjs`, `npm run test:quick` sowie manuellen Mobile-/Desktop-Screenshots über lokalen Static-Server.
-- 2026-03-14: Gameplay-Pacing verlangsamt: kein Bootstrap-Autostart mehr, neue Welten bleiben pausiert, Default-Speed auf `4 T/s` abgesenkt und automatische Birth-Transfers deutlich reduziert.
-- 2026-03-14: Überlebensregel verschärft: isolierte Zellen sterben nun ohne mindestens einen Nachbarn. Zusätzlich `Split-Kern` als Evo-Freischaltung eingebaut; danach kann ein `4x4`-Split-Cluster als eigenes Tool platziert werden.
-- 2026-03-14: Tooling vereinheitlicht: kanonische Brush-IDs genutzt, Split als dediziertes Werkzeug ergänzt und sichtbares HUD-Feedback für das aktuell aktive Werkzeug eingebaut.
-- 2026-03-14: Benchmark praktisch nutzbar gemacht: Laufstatus und Phasenreport im UI, JSON/CSV-Download, Precompute-Buffer-Crash beim Resize behoben und falsche Perf-Feldnamen im Report-Fill korrigiert.
-- 2026-03-14: Verifiziert mit `node tests/test-gameplay-loop.mjs`, `npm run test:quick` und Browser-Check über lokalen Server inklusive Benchmark-Start, numerischem Report und funktionierendem Download.
-- 2026-03-14: LLM-/Contract-Check durchgeführt. Grün: `test-manifest-dataflow`, `test-version-traceability`, `test-core-gates`, `test-path-hygiene`, `tools/debug-ui`, Mobile/Desktop-Playwright-Check ohne Console-Errors.
-- 2026-03-14: Nicht voll konform zu `docs/LLM_ENTRY.md`, weil `npm test` aktuell fehlschlägt. Erster Brecher: `tests/test-faction-metrics.mjs` meldet für `faction-1` bei Tick 80 keine lebenden Player-Zellen.
-- 2026-03-14: Doku-Drift festgestellt: `docs/PROJECT_CONTRACT_SNAPSHOT.md` behauptet weiterhin „VERIFIZIERT · 21 Testdateien + Redteam grün“, steht aber nicht mehr im Einklang mit dem aktuellen Teststand.
-- 2026-03-14: Für deterministic browser-driven game testing fehlen weiterhin `window.render_game_to_text` und `window.advanceTime`; projektweite Suche ergab keine Implementierung.
-- 2026-03-14: Doku-/TODO-Sync ausgeführt. `docs/PROJECT_CONTRACT_SNAPSHOT.md`, `docs/SESSION_HANDOFF.md` und append-only `docs/MASTER_CHANGE_LOG.md` auf den realen Prüfstand aktualisiert.
-- 2026-03-14: Gameplay auf autonome Kolonieentwicklung umgestellt. `observe` ist jetzt Default, direkte Zellplatzierung ist aus dem Primär-UI entfernt; Split bleibt als strategischer `4x4`-Seed hinter Evo-Gating bestehen.
-- 2026-03-14: Echter Evo-Tree eingeführt: Tech-Nodes mit Prereqs, Command-Score-Gating und Synergien laufen zentral über `src/game/techTree.js`; Doctrine/Prioritäten werden in `lineageMemory` persistiert und in Sim + UI genutzt.
-- 2026-03-14: Simulationskern nachgezogen: Doctrine-/Tech-Boni beeinflussen Energiezufluss, Upkeep, Birth-Charge, Toxinresistenz und Clusterstabilität. `aliveCount` wird am Step-Ende gegen den realen Weltzustand konsolidiert.
-- 2026-03-14: Browser-Test-Hooks ergänzt: `window.render_game_to_text` und `window.advanceTime` existieren jetzt und wurden im Playwright-Check gegen Mobile/Desktop aktiv verifiziert.
-- 2026-03-14: Verifiziert mit `node tests/test-gameplay-loop.mjs`, `node tests/test-faction-metrics.mjs`, `node tests/test-ui-strategy-contract.mjs`, `npm run test:quick` und `npm test`. Browser-Abnahme: Mobile-Toolsheet, Doctrine-Wechsel, Evolution-Tree und Desktop-Sidebar ohne Console-Errors.
-- 2026-03-14: Split-Sicherheitslücke geschlossen. `PLACE_SPLIT_CLUSTER` ist jetzt atomar: belegte Tiles oder Quarantäne (`zoneType 5`) blockieren die komplette 4x4-Platzierung, und ein abgewiesener Split verbrennt kein DNA-Budget.
-- 2026-03-14: Regression abgesichert mit `tests/test-split-security-gate.mjs`; Vollsuite inkl. Redteam weiterhin grün.
-- 2026-03-14: Projektbaum gesäubert. Leere Legacy-Pfade (`src/kernel`, `src/render`, `src/runtime`, `src/sim`, `src/ui`, `reports`, `docs/00_governance`, `docs/01_source_plans`, verschachteltes `LifeGameLab/`) wurden entfernt; `tests/test-path-hygiene.mjs` erzwingt jetzt deren echte Abwesenheit statt bloß leere Hüllen zu tolerieren.
-- 2026-03-14: Reducer modularisiert: spielernahe Action-Handler (`PLACE_CELL`, `PLACE_SPLIT_CLUSTER`, `HARVEST_CELL`, `SET_ZONE`, `SET_PLAYER_DOCTRINE`, `BUY_EVOLUTION`) leben jetzt in `src/game/sim/playerActions.js`; gemeinsame Helfer `cloneTypedArray` und `paintCircle` wurden nach `src/game/sim/shared.js` verschoben.
-- 2026-03-14: Verifiziert mit `node tests/test-path-hygiene.mjs`, `node tests/test-gameplay-loop.mjs`, `node tests/test-split-security-gate.mjs`, `node tests/test-ui-strategy-contract.mjs` und `npm test`.
-- 2026-03-14: Rework Plan v3 umgesetzt. Mobile-Sheet blockiert das Dock nicht mehr; Top-HUD fokussiert jetzt `Kolonie`, `DNA`, `Risiko`, `Directive` und `Mission` statt alter Dashboard-Chips. `Status` zeigt Mission, Risiko und Strukturreife; `Evolution` ist auf aktuellen + nächsten Ring komprimiert; `Systeme` trennt `Spielraum` von `Lab`-Bereichen fuer Lernen, Benchmark und Kernparameter.
-- 2026-03-14: Canvas-Render auf lesbareres Zellspiel umgestellt. Hintergrundpalette jetzt petrol/gruen statt bunter Feldsuppe, Grid deutlich schwächer, Netzwerke doctrine-getoent. Stabile `2x2`-Cluster werden als Biomodule mit gemeinsamer Huelle/Kern gerendert; dichte Kolonien lesen sich sichtbar als reifere Kerne statt als lose Pixelpunkte.
-- 2026-03-14: `window.render_game_to_text` erweitert um `risk`, `mission` und `structure`; Tool-Ausgabe normalisiert. HUD-Toolaliasse fuer alte `paint_*`-Brush-IDs geglaettet, damit im Spiel keine internen ID-Reste mehr sichtbar bleiben.
-- 2026-03-14: Browser-Abnahme fuer Rework v3 ausgefuehrt. Verifiziert mit Web-Game-Playwright-Client (`output/web-game/rework/*.png`), Mobile-Screenshots fuer offenes `Status`- und `Evolution`-Sheet (`output/mobile-status-sheet.png`, `output/mobile-evolution-sheet.png`) und Desktop-Screenshot nach 5s Lauf (`output/desktop-5s.png`). Dock-Wechsel bei offenem Mobile-Sheet funktioniert jetzt ohne Pointer-Blockade; Console ohne neue Errors.
-- 2026-03-14: Rework v3 haelt gegen die Vollsuite. Verifiziert mit `node tests/test-ui-contract.mjs`, `node tests/test-ui-strategy-contract.mjs`, `node tests/test-gameplay-loop.mjs`, `node tests/test-split-security-gate.mjs` und `npm test` (`ALL_TESTS_OK`).
-- 2026-03-14: Performance-/Render-Recovery umgesetzt: Worker-Render bekam robuste `CW/CH`-Übergabe (`render.worker.js`), `drawFrame` fallback-sicher gemacht und Grid auch auf Tactical/Quality-1 wieder sichtbar geschaltet (`renderer.js`).
-- 2026-03-14: Sequential-Resize-/actionMap-Drift hart behoben: `worldgen` erzeugt jetzt immer `actionMap`; `prepareStepBuffers` erzwingt TypedArray-Längen gegen `N`; `simStepBuffer` hat Generation-Guard gegen stale Idle-Pumps nach Flush/Resize.
-- 2026-03-14: `advanceTime`-Hook repariert: wieder erzwungene Sim-Steps im Pause-Modus (`force: true`, ohne Precompute-Queue), damit Browser-Hook deterministisch tickt statt bei `tick=0` zu hängen.
-- 2026-03-14: Vollsuite erneut grün nach Fixes: `npm test` => `ALL_TESTS_OK` (inkl. Determinismus, Gates, Gameplay, Redteam).
-- 2026-03-14: Browser-Vollabnahme mit identischen Voraussetzungen auf Größen `32,48,64,72,96,120,144` durchgeführt (Seed `life-light`, neue Welt pro Größe, Actions + `advanceTime` + Pointer-Mapping). Finale Artefakte unter `output/playwright/perf-raster/*-after-fix-v3.png` und Konsole `output/playwright/perf-raster/logs/console-final-v3.log` (0 Errors).
-- 2026-03-14: Wichtiger Cache-Hinweis: älterer Browser-Origin (`:8080`) hielt alte ES-Module im Cache und zeigte alte Fehlerbilder; verlässliche Verifikation erfolgte auf frischem Origin `http://127.0.0.1:8081` nach Vorher-/Nachher-Storage-Clean.
-- 2026-03-14: Konservative Architektur-Umstrukturierung begonnen: Pflicht-Lesereihenfolge aus `docs/LLM_ENTRY.md` vollständig abgearbeitet, Kernel-Grenzen bestätigt.
-- 2026-03-14: Contract intern modularisiert nach `src/project/contract/*`; `src/project/project.manifest.js` auf kompatible Reexport-Fassade reduziert.
-- 2026-03-14: LLM-Schicht isoliert unter `src/project/llm/*`; `main.js` nutzt jetzt Read-Model (`renderLlmReadModelAsText`) und LLM-Action-Adapter ohne Kernel-Eingriff.
-- 2026-03-14: Reducer-Struktur konservativ gesplittet: aktive Implementierung in `src/game/sim/reducer/index.js`, kompatibler Entry bleibt `src/game/sim/reducer.js`.
-- 2026-03-14: Domänenmodule für Reducer ergänzt (`metrics`, `worldRules`, `winConditions`, `techTreeOps`, `cpuActions`) und im Index verdrahtet.
-- 2026-03-14: `src/game/sim/sim.js` als dünnen Kompatibilitäts-Reexport auf `step.js` wieder eingeführt; Wrapper-Ban-Test auf Legacy-Verbot statt Datei-Abwesenheit angepasst.
-- 2026-03-14: Neue Absicherungstests ergänzt: `tests/test-contract-facade.mjs`, `tests/test-llm-contract.mjs`.
+- 2026-03-14: Dokumentation auf LLM_ENTRY-basierte Struktur vollstaendig neu gesetzt.
+- 2026-03-14: Historische Dokuinhalte konsolidiert und ersetzt.
+- 2026-03-14: Naechster Schritt: groesste Datenquellen inventarisieren und Aufteilungs-/Verkleinerungsplan erstellen.

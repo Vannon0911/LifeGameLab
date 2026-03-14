@@ -1,48 +1,17 @@
-# SESSION HANDOFF — LifexLab v2.3.0 Game Sandbox
+# SESSION_HANDOFF
 
-## Stand
+## Aktueller Betriebsmodus
+- Kernel bleibt einziger Keeper
+- Contract-Module unter `src/project/contract/*`
+- LLM-Module unter `src/project/llm/*`
+- Sim-Reexports fuer Kompatibilitaet erhalten
 
-- kanonische Projektstruktur aktiv
-- flache aktive Doku unter `docs/`
-- operative Doku bereinigt
-- leere Legacy-Pfade entfernt; Hygiene-Test erzwingt jetzt echte Abwesenheit
-- Vollsuite grün: `npm test`
-- Determinismus grün: long, per-tick und interaction traces
-- Core-, SIM-, Dataflow- und Pfadhygiene-Gates grün
-- SIM-Kompatibilität konservativ: `src/game/sim/sim.js` ist jetzt dünner Reexport auf `step.js` (keine Legacy-Signatur, kein Runtime-Backcompat-Wrapper)
-- String-/ID-Contract zentralisiert in `src/game/contracts/ids.js`
-- Contract intern modularisiert unter `src/project/contract/*`; `src/project/project.manifest.js` bleibt Fassade
-- Reducer-Struktur modularisiert: aktive Implementierung in `src/game/sim/reducer/index.js`, kompatibler Entry bleibt `src/game/sim/reducer.js`
-- neue LLM-Schicht außerhalb des Kernels unter `src/project/llm/*`
-- neue Contract-Tests aktiv:
-  - `tests/test-contract-facade.mjs`
-  - `tests/test-llm-contract.mjs`
-  - `tests/test-string-contract.mjs`
-  - `tests/test-dataflow-contract.mjs`
-  - `tests/test-wrapper-ban.mjs`
-- Browser-Check für UI/UX und Strategy-Contract grün; `window.render_game_to_text` und `window.advanceTime` vorhanden
-- Rework v3 steht:
-  - Mobile-Sheet blockiert das Dock nicht mehr
-  - HUD priorisiert `Kolonie`, `DNA`, `Risiko`, `Directive`, `Mission`
-  - `Status` kommuniziert Mission, Risiko und Strukturreife statt reiner KPI-Sammlung
-  - `Evolution` ist auf aktuellen und nächsten Ring komprimiert
-  - `Systeme` trennt `Spielraum` von `Lab`
-  - Renderer zeigt ruhigere Weltpalette und sichtbare `2x2`-Biomodule / reifere Koloniekerne
+## Beim naechsten Einstieg sofort pruefen
+- `docs/LLM_ENTRY.md`
+- `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+- `npm test`
 
-## Aktive Struktur
-
-- `src/app/`
-- `src/core/`
-- `src/game/`
-- `src/project/`
-- `tests/`
-- `tools/`
-- `docs/`
-
-## Nächste sinnvolle Schritte
-
-- Perf-Ziel aus Implementierungsplan schließen: `>=10%` Verbesserung je Profilfall (`tools/profile-core.mjs`) ist noch nicht erreicht
-- Render-/Benchmark-Abnahme nachziehen (Main/Worker-Phasenwerte dokumentieren)
-- weiteren Reducer-Abbau in `src/game/sim/reducer/index.js` fortsetzen
-- visuelle Energie-/Flow-Layer ausarbeiten
-- Missions-, Unlock- und Synergie-FX im Canvas weiter verdichten, damit der Produkt-Loop noch weniger nach Kontrollpanel und stärker nach Spiel wirkt
+## Naechste sinnvolle Arbeit
+- Performance-Baseline neu messen
+- groesste Datenquellen aufteilen/reduzieren
+- UX-Feedback im Kernloop weiter schaerfen
