@@ -94,8 +94,10 @@ function computeRenderModeFieldColor(world, meta, idx) {
   const lv = clamp01(world?.L?.[idx] ?? 0);
   const rv = clamp01(world?.R?.[idx] ?? 0);
   const wv = clamp01(world?.W?.[idx] ?? 0);
+  const water = clamp01(world?.water?.[idx] ?? 0);
   const sv = clamp01(world?.Sat?.[idx] ?? 0);
   const pv = clamp01(world?.P?.[idx] ?? 0);
+  const biome = Number(world?.biomeId?.[idx] ?? 0);
   let r = 0;
   let g = 0;
   let b = 0;
@@ -106,9 +108,9 @@ function computeRenderModeFieldColor(world, meta, idx) {
   } else if (mode === "energy") {
     r = wv * 40; g = rv * 60; b = lv * 80;
   } else if (mode === "fields") {
-    r = 18 + wv * 180 + sv * 90;
-    g = 14 + rv * 170 + pv * 110 - wv * 36;
-    b = 16 + lv * 70 + pv * 64 + (1 - sv) * 24;
+    r = 18 + wv * 180 + sv * 90 - water * 18;
+    g = 14 + rv * 170 + pv * 110 + water * 36 - wv * 36;
+    b = 16 + lv * 70 + pv * 64 + water * 132 + (1 - sv) * 24;
   } else if (mode === "diagnostic") {
     r = 10 + wv * 170 + sv * 72 + (1 - lv) * 52;
     g = 10 + rv * 150 + pv * 92;
@@ -119,14 +121,24 @@ function computeRenderModeFieldColor(world, meta, idx) {
     const nutrientGlow = clamp01(rv * 0.90 + pv * 0.35);
     const lightLift = clamp01(lv * 0.85);
     const toxinHeat = clamp01(wv * 0.70);
+    const waterGloss = clamp01(water * 0.95);
     const saturationMist = clamp01(sv * 0.55);
-    r = 8 + lightLift * 10 + nutrientGlow * 10 + saturationMist * 8 + toxinHeat * 44;
-    g = 14 + lightLift * 30 + nutrientGlow * 86 + saturationMist * 14 + toxinHeat * 20;
-    b = 18 + lightLift * 44 + nutrientGlow * 28 + (1 - saturationMist) * 18 + toxinHeat * 8;
+    const biomeTint = biome === 2 ? [10, 24, 10]
+      : biome === 3 ? [18, 10, -4]
+      : biome === 4 ? [24, 0, -12]
+      : biome === 1 ? [4, 14, 18]
+      : [10, 6, 2];
+    r = 8 + lightLift * 10 + nutrientGlow * 10 + saturationMist * 8 + toxinHeat * 44 + waterGloss * 12 + biomeTint[0];
+    g = 14 + lightLift * 30 + nutrientGlow * 86 + saturationMist * 14 + toxinHeat * 20 + waterGloss * 22 + biomeTint[1];
+    b = 18 + lightLift * 44 + nutrientGlow * 28 + (1 - saturationMist) * 18 + toxinHeat * 8 + waterGloss * 86 + biomeTint[2];
     if (toxinHeat > 0.02) {
       r += toxinHeat * 28;
       g -= toxinHeat * 6;
       b -= toxinHeat * 4;
+    }
+    if (waterGloss > 0.08) {
+      b += waterGloss * 28;
+      g += waterGloss * 10;
     }
   }
 
@@ -1027,7 +1039,7 @@ function drawCanvasHud(ctx, state, CW, CH) {
 }
 
 function drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality = 3) {
-  const { w, h, L, W, Sat } = world;
+  const { w, h, L, R, P, W, Sat } = world;
   const overlayActive = String(meta?.activeOverlay || OVERLAY_MODE.NONE) !== OVERLAY_MODE.NONE;
   const detail = !overlayActive && quality >= 2 && tilePx >= 5;
   const step = tilePx < 3 ? 2 : 1;
@@ -1036,6 +1048,8 @@ function drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality = 3) {
       const i = y * w + x;
       const [r, g, b] = computeFieldSurfaceColor(world, meta, i);
       const lv = clamp01(L?.[i] ?? 0);
+      const rv = clamp01(R?.[i] ?? 0);
+      const pv = clamp01(P?.[i] ?? 0);
       const wv = clamp01(W?.[i] ?? 0);
       const sv = clamp01(Sat?.[i] ?? 0);
 

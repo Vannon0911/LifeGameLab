@@ -48,6 +48,14 @@ import {
 import { applyWinConditions, applyGoalCode } from "./winConditions.js";
 import { handleDevBalanceRunAi } from "./cpuActions.js";
 import { buildSetOverlayPatches, buildSetWinModePatches } from "./controlActions.js";
+import { applyPresetPhysicsOverrides, normalizeWorldPresetId } from "../worldPresets.js";
+import { deriveStageState } from "./progression.js";
+import {
+  handleHarvestPulse,
+  handlePruneCluster,
+  handleRecyclePatch,
+  handleSeedSpread,
+} from "../mainRunActions.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
@@ -73,6 +81,46 @@ function seededStartPhysics(seed, basePhysics) {
   return p;
 }
 
+function buildWorldGenerationPatches(state, presetId) {
+  const meta = state.meta;
+  const normalizedPresetId = normalizeWorldPresetId(presetId ?? meta.worldPresetId);
+  const seededPhysics = seededStartPhysics(meta.seed, PHYSICS_DEFAULT);
+  const tunedPhysics = applyPresetPhysicsOverrides(seededPhysics, normalizedPresetId);
+  const world = generateWorld(
+    meta.gridW,
+    meta.gridH,
+    meta.seed,
+    tunedPhysics,
+    normalizedPresetId
+  );
+  applyGlobalLearningToWorld(world, meta.globalLearning);
+  world.devMutationVault = cloneJson(meta.devMutationVault || defaultDevMutationVault());
+  world.zoneMap = new Int8Array(meta.gridW * meta.gridH);
+
+  const nextSim = makeInitialState().sim;
+  const N = (meta.gridW | 0) * (meta.gridH | 0);
+  let initialAlive = 0;
+  for (let i = 0; i < N; i++) if (world.alive[i] === 1) initialAlive++;
+  nextSim.aliveCount = initialAlive;
+  nextSim.aliveRatio = N > 0 ? initialAlive / N : 0;
+  const stageState = deriveStageState(world, nextSim, {
+    ...meta,
+    worldPresetId: normalizedPresetId,
+    playerLineageId: 1,
+  });
+  Object.assign(nextSim, stageState);
+
+  const patches = [
+    { op: "set", path: "/meta/worldPresetId", value: normalizedPresetId },
+    { op: "set", path: "/meta/physics", value: tunedPhysics },
+  ];
+  pushKeysPatches(patches, world, WORLD_KEYS, "/world");
+  pushKeysPatches(patches, nextSim, SIM_KEYS, "/sim");
+  patches.push({ op: "set", path: "/meta/playerLineageId", value: 1 });
+  patches.push({ op: "set", path: "/meta/cpuLineageId", value: 2 });
+  return patches;
+}
+
 export function makeInitialState() {
   return {
     meta: {
@@ -84,10 +132,11 @@ export function makeInitialState() {
       brushRadius: 3,
       renderMode:  "combined",
       activeOverlay: OVERLAY_MODE.NONE,
+      worldPresetId: "river_delta",
       physics:     { ...PHYSICS_DEFAULT },
       ui: {
         panelOpen: false,
-        activeTab: "status",
+        activeTab: "lage",
         expertMode: false,
         showBiochargeOverlay: false,
         showRemoteAttackOverlay: true,
@@ -104,6 +153,7 @@ export function makeInitialState() {
       meanLAlive: 0, meanEnergyAlive: 0, meanReserveAlive: 0,
       meanNutrientField: 0, meanToxinField: 0, meanSaturationField: 0, meanPlantField: 0,
       meanBiochargeField: 0,
+      meanWaterField: 0,
       lineageDiversity: 0,
       evolutionStageMean: 1,
       evolutionStageMax: 1,
@@ -111,6 +161,10 @@ export function makeInitialState() {
       birthsLastStep: 0, deathsLastStep: 0, mutationsLastStep: 0,
       raidEventsLastStep: 0, infectionsLastStep: 0, conflictKillsLastStep: 0, superCellsLastStep: 0,
       remoteAttacksLastStep: 0, remoteAttackKillsLastStep: 0, defenseActivationsLastStep: 0, resourceStolenLastStep: 0,
+      playerDNA: 0, totalHarvested: 0, playerStage: 1,
+      stageProgressScore: 0,
+      harvestYieldTotal: 0, pruneYieldTotal: 0, recycleYieldTotal: 0, seedYieldTotal: 0,
+      stabilityScore: 0, ecologyScore: 0, activeBiomeCount: 0,
       expansionCount: 0, lastExpandTick: -99999, expansionWork: 0, nextExpandCost: 120,
       stockpileTicks: 0,
       winMode: WIN_MODE.SUPREMACY,
@@ -160,35 +214,7 @@ export function reducer(state, action, { rng }) {
   switch (action.type) {
 
     case "GEN_WORLD": {
-      const { meta } = state;
-      const tunedPhysics = seededStartPhysics(meta.seed, PHYSICS_DEFAULT);
-      const world = generateWorld(
-        meta.gridW, meta.gridH,
-        meta.seed,
-        tunedPhysics
-      );
-      applyGlobalLearningToWorld(world, meta.globalLearning);
-      world.devMutationVault = cloneJson(meta.devMutationVault || defaultDevMutationVault());
-      // P3-02: zoneMap initialisieren — alle Zonen = 0 ('none')
-      world.zoneMap = new Int8Array(meta.gridW * meta.gridH);
-      
-      const patches = [{ op: "set", path: "/meta/physics", value: tunedPhysics }];
-      // Drift hardening: only patch known world keys.
-      pushKeysPatches(patches, world, WORLD_KEYS, "/world");
-      pushKeysPatches(patches, makeInitialState().sim, SIM_KEYS, "/sim");
-      // P1-03: Fraktions-IDs deterministisch setzen (fix: 1 = player, 2 = cpu)
-      patches.push({ op: "set", path: "/meta/playerLineageId", value: 1 });
-      patches.push({ op: "set", path: "/meta/cpuLineageId", value: 2 });
-
-      // Fix: compute initial alive count so UI shows correct stats at t=0
-      // (sim stats are normally computed in simStepPatch, but we seed them here
-      //  so the HUD does not display "alive 0" while the canvas already shows cells).
-      const N = (meta.gridW | 0) * (meta.gridH | 0);
-      let initialAlive = 0;
-      for (let _i = 0; _i < N; _i++) { if (world.alive[_i] === 1) initialAlive++; }
-      patches.push({ op: "set", path: "/sim/aliveCount", value: initialAlive });
-      patches.push({ op: "set", path: "/sim/aliveRatio",  value: N > 0 ? initialAlive / N : 0 });
-
+      const patches = buildWorldGenerationPatches(state, state.meta.worldPresetId);
       assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
@@ -224,6 +250,19 @@ export function reducer(state, action, { rng }) {
         { op: "set", path: "/meta/gridW", value: action.payload.w },
         { op: "set", path: "/meta/gridH", value: action.payload.h }
       ];
+
+    case "SET_WORLD_PRESET": {
+      const nextState = {
+        ...state,
+        meta: {
+          ...state.meta,
+          worldPresetId: normalizeWorldPresetId(action.payload?.presetId),
+        },
+      };
+      const patches = buildWorldGenerationPatches(nextState, nextState.meta.worldPresetId);
+      assertSimPatchesAllowed(manifest, state, action.type, patches);
+      return patches;
+    }
 
     case "SET_RENDER_MODE":
       return [{ op: "set", path: "/meta/renderMode", value: String(action.payload || "combined") }];
@@ -347,6 +386,22 @@ export function reducer(state, action, { rng }) {
       return handleHarvestCell(state, action);
     }
 
+    case "HARVEST_PULSE": {
+      return handleHarvestPulse(state, action);
+    }
+
+    case "PRUNE_CLUSTER": {
+      return handlePruneCluster(state, action);
+    }
+
+    case "RECYCLE_PATCH": {
+      return handleRecyclePatch(state, action);
+    }
+
+    case "SEED_SPREAD": {
+      return handleSeedSpread(state, action);
+    }
+
     case "SET_ZONE": {
       return handleSetZone(state, action);
     }
@@ -433,6 +488,7 @@ export function simStepPatch(state, action, ctx) {
   patches.push({ op: "set", path: "/meta/globalLearning", value: nextLearning });
 
   applyWinConditions(state, simOut, currentTick);
+  Object.assign(simOut, deriveStageState(worldMutable, simOut, state.meta));
   applyGoalCode(simOut, currentTick);
 
   // Drift hardening: only patch known sim keys.

@@ -1,0 +1,134 @@
+import { deriveRiskCode, RISK_CODE } from "../../contracts/ids.js";
+import { BIOME_IDS } from "../worldPresets.js";
+
+function clamp01(value) {
+  return value < 0 ? 0 : value > 1 ? 1 : value;
+}
+
+function getPlayerBiomeUsageBucket(world, playerLineageId) {
+  if (!world.lineageMemory || typeof world.lineageMemory !== "object") world.lineageMemory = {};
+  const current = { ...(world.lineageMemory[playerLineageId] || {}) };
+  const next = { ...(current.biomeUsageTicks || {}) };
+  current.biomeUsageTicks = next;
+  world.lineageMemory[playerLineageId] = current;
+  return next;
+}
+
+export function updateBiomeUsage(world, meta, simLike) {
+  const alive = world?.alive;
+  const lineageId = world?.lineageId;
+  const biomeId = world?.biomeId;
+  const playerLineageId = Number(meta?.playerLineageId || 0) | 0;
+  if (!alive || !lineageId || !biomeId || !playerLineageId) return { activeBiomes: 0, shares: {} };
+
+  const counts = {
+    [BIOME_IDS.barren_flats]: 0,
+    [BIOME_IDS.riverlands]: 0,
+    [BIOME_IDS.wet_forest]: 0,
+    [BIOME_IDS.dry_plains]: 0,
+    [BIOME_IDS.toxic_marsh]: 0,
+  };
+  let playerAliveCount = 0;
+  for (let i = 0; i < alive.length; i++) {
+    if (alive[i] !== 1) continue;
+    if ((Number(lineageId[i]) | 0) !== playerLineageId) continue;
+    playerAliveCount++;
+    const id = Number(biomeId[i]) | 0;
+    if (Object.prototype.hasOwnProperty.call(counts, id)) counts[id]++;
+  }
+
+  const usage = getPlayerBiomeUsageBucket(world, playerLineageId);
+  const shares = {};
+  let activeBiomes = 0;
+  for (const key of Object.keys(counts)) {
+    const id = Number(key) | 0;
+    const share = playerAliveCount > 0 ? counts[id] / playerAliveCount : 0;
+    shares[id] = share;
+    if (share >= 0.10) usage[id] = Number(usage[id] || 0) + 1;
+    if (Number(usage[id] || 0) >= 50) activeBiomes++;
+  }
+  return { activeBiomes, shares };
+}
+
+export function deriveStageState(world, simLike, meta) {
+  const playerDNA = Math.max(0, Number(simLike?.playerDNA || 0));
+  const harvestYieldTotal = Math.max(0, Number(simLike?.harvestYieldTotal || 0));
+  const pruneYieldTotal = Math.max(0, Number(simLike?.pruneYieldTotal || 0));
+  const recycleYieldTotal = Math.max(0, Number(simLike?.recycleYieldTotal || 0));
+  const seedYieldTotal = Math.max(0, Number(simLike?.seedYieldTotal || 0));
+  const totalYield = harvestYieldTotal + pruneYieldTotal + recycleYieldTotal + seedYieldTotal;
+  const playerAliveCount = Math.max(0, Number(simLike?.playerAliveCount || 0));
+  const clusterRatio = clamp01(Number(simLike?.clusterRatio || 0));
+  const playerEnergyNet = Number(simLike?.playerEnergyNet || 0);
+  const lineageDiversity = Math.max(0, Number(simLike?.lineageDiversity || 0));
+  const meanWaterField = clamp01(Number(simLike?.meanWaterField || 0));
+  const plantTileRatio = clamp01(Number(simLike?.plantTileRatio || 0));
+
+  const { activeBiomes } = updateBiomeUsage(world, meta, simLike);
+
+  const dnaScore = clamp01(playerDNA / 70);
+  const yieldScore = clamp01(totalYield / 56);
+  const stabilityScore = clamp01(
+    playerAliveCount / 18 * 0.34 +
+    clusterRatio / 0.20 * 0.28 +
+    clamp01((playerEnergyNet + 2) / 8) * 0.18 +
+    lineageDiversity / 8 * 0.20
+  );
+  const ecologyScore = clamp01(
+    meanWaterField / 0.25 * 0.35 +
+    plantTileRatio / 0.24 * 0.25 +
+    activeBiomes / 2 * 0.20 +
+    clamp01(1 - Number(simLike?.meanToxinField || 0)) * 0.20
+  );
+
+  const stageProgressScore =
+    dnaScore * 0.30 +
+    yieldScore * 0.25 +
+    stabilityScore * 0.25 +
+    ecologyScore * 0.20;
+
+  const yieldCategories =
+    (harvestYieldTotal > 0 ? 1 : 0) +
+    (pruneYieldTotal > 0 ? 1 : 0) +
+    (recycleYieldTotal > 0 ? 1 : 0) +
+    (seedYieldTotal > 0 ? 1 : 0);
+
+  const signals60 =
+    dnaScore >= 0.60 &&
+    yieldScore >= 0.60 &&
+    stabilityScore >= 0.60 &&
+    ecologyScore >= 0.60;
+
+  const risk = deriveRiskCode({
+    ...simLike,
+    playerAliveCount,
+    meanWaterField,
+  });
+
+  const gates = {
+    2: playerAliveCount >= 8 && playerEnergyNet > 0,
+    3: yieldCategories >= 2 && meanWaterField >= 0.10,
+    4: clusterRatio >= 0.12 && activeBiomes >= 2,
+    5: signals60 && risk !== RISK_CODE.COLLAPSE && risk !== RISK_CODE.CRITICAL,
+  };
+  const thresholds = {
+    2: 0.22,
+    3: 0.44,
+    4: 0.68,
+    5: 0.86,
+  };
+
+  let nextStage = Math.max(1, Number(simLike?.playerStage || 1));
+  for (const stage of [2, 3, 4, 5]) {
+    if (stageProgressScore + 1e-9 >= thresholds[stage] && gates[stage]) nextStage = Math.max(nextStage, stage);
+  }
+
+  return {
+    meanWaterField,
+    stabilityScore,
+    ecologyScore,
+    stageProgressScore,
+    playerStage: nextStage,
+    activeBiomeCount: activeBiomes,
+  };
+}

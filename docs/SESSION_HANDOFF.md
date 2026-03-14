@@ -1,28 +1,55 @@
-# SESSION_HANDOFF
+# LifeGameLab V1 Freeze-Handover
 
-## Aktueller Betriebsmodus
-- Kernel bleibt einziger Keeper
-- Contract-Module unter `src/project/contract/*`
-- LLM-Module unter `src/project/llm/*`
-- Sim-Reexports fuer Kompatibilitaet erhalten
-- `src/game/sim/step.js` ist Orchestrator, Tick-Phasen liegen in `src/game/sim/stepPhases.js`
-- `src/game/sim/stepRuntime.js` enthaelt pure Runtime-Helfer (Trait/Lineage)
-- `src/game/ui/ui.js` nutzt getrennte UI-Model-/Konstantenmodule
-- `src/game/ui/ui.dom.js` und `src/game/ui/ui.feedback.js` kapseln UI-Helfer
-- Public Hooks (`render_game_to_text`, `advanceTime`) werden ueber `src/app/runtime/publicApi.js` bereitgestellt
-- `main.js` wurde als Orchestrator abgespeckt; WorldLog/Report/BootStatus liegen in `src/app/runtime/*`
+## Arbeitsregel
+- Dieses Dokument ist die massgebliche Rework-Basis. Nicht auf alte Begriffe, fruehere Preset-Namen oder fruehere UI-Modelle zurueckfallen.
+- Wenn Legacy-Code, Altbegriffe oder bestehende UI diesem Plan widersprechen, gilt in dieser Reihenfolge: Main-Run-Produktlogik vor Legacy, Contract-first vor Implementierung, kanonische Weltansicht vor Diagnoseansichten, organische Spielerinteraktionen vor devigen Einzeltools, Delete-don't-hide im Main-Run.
 
-## Beim naechsten Einstieg sofort pruefen
-- `docs/LLM_ENTRY.md`
-- `docs/PROJECT_CONTRACT_SNAPSHOT.md`
-- `node tests/test-drift-negative-order.mjs`
-- `node tests/test-determinism-with-interactions.mjs`
-- `npm run test:quick`
-- `npm run test:truth`
-- `npm test`
+## Zusammenfassung
+- LifeGameLab V1 ist ein deterministisches Koloniespiel mit genau einem Main-Run, genau einer kanonischen Weltansicht, festen Presets und contract-first Erweiterungen.
+- Operativer Reducerpfad bleibt `src/game/sim/reducer/index.js`; `src/game/sim/reducer.js` bleibt reine Compatibility-Fassade.
+- Die kanonische Preset- und Freeze-Source-of-Truth lebt nur hier.
 
-## Naechste sinnvolle Arbeit
-- Performance-Baseline neu messen
-- Laufzeitbudgets in `docs/TEST_BUDGETS.md` aktuell halten
-- groesste Datenquellen aufteilen/reduzieren
-- UX-Feedback im Kernloop weiter schaerfen
+## Verbindliche Produkt- und Architekturentscheidungen
+- Main-Run-Raeume sind exakt und ausschliesslich: `lage`, `eingriffe`, `evolution`, `welt`, `labor`.
+- Raumbedeutungen:
+  `lage` = Koloniezustand, Ziele, Warnungen, Lageinterpretation.
+  `eingriffe` = semantische Main-Run-Handlungen, keine Roh-Tools, keine Diagnosemodi.
+  `evolution` = Freischaltungen, Doctrine, Entwicklungsweg, Gates.
+  `welt` = Preset, Seed, Weltgroesse, Main-Run-taugliche Weltwahl.
+  `labor` = Benchmark, Diagnose, Physics-Tuning, Roh-Brushes, alternative Modi.
+- Delete-don't-hide gilt hart fuer den Main-Run: alte Main-Run-Kontexte duerfen nicht als tote Renderzweige weiterexistieren; sie werden entfernt oder exakt migriert. Das gilt nicht fuer `labor`.
+- Alte Kontexte, die im Main-Run nicht als Parallelpfad ueberleben duerfen: `status`, `tools`, `systems`, `energie`, `harvest`, `zonen`, `welt` in alter Form, `sieg`.
+- Main-Run-Renderpfad ist ausschliesslich `combined`. Diagnose-Overlays und alternative Modi bleiben Labor-only.
+- Die kanonische Weltansicht kodiert verbindlich: Licht = Helligkeit, Ressourcen = Saettigung, Wasser = Feuchte/Glanz/Uferlesbarkeit, Toxin = kranke Verfaerbung/Sickern/Entsaettigung, Produktion = Groesse/Dichte/Form, Reaktion = Pulse/Rueckzug/Verdichtung.
+- Das Grid bleibt Simulationslogik und Datenraster, wird visuell aber entdominisiert; keine Excel-Rasteroptik.
+- Weltmodell: `meta.worldPresetId` mit Default `river_delta`, `world.water: Float32Array(N)`, `world.biomeId: Int8Array(N)`. `world.W` bleibt toxisches Feld und wird niemals als Wasser uminterpretiert.
+- Preset-IDs sind final und exklusiv: `river_delta`, `dry_basin`, `wet_meadow`. Verbotene Alt-Namen bleiben verworfen: `verdant_delta`, `ash_basin`, `fractured_wetlands`.
+- Biome sind V1-fest: `barren_flats`, `riverlands`, `wet_forest`, `dry_plains`, `toxic_marsh` mit IDs `0..4`. Jedes Biom braucht mindestens eine mechanische Signatur in mindestens einem dieser Bereiche: Wachstum, Regeneration, Yield, Risiko, Wasserverhalten, Toxintransport, Pflanzenverhalten.
+- Worldgen bleibt deterministisch ueber `(seed, worldPresetId)` und folgt fest: Preset laden, Basisparameter, Wasser, Licht, Fertilitaet, Biome, Pflanzen/Landmarks, Founder/Spawn.
+- Neue Main-Run-Actions sind: `SET_WORLD_PRESET`, `HARVEST_PULSE`, `PRUNE_CLUSTER`, `RECYCLE_PATCH`, `SEED_SPREAD`.
+- Contract-Reihenfolge ist verbindlich: zuerst `stateSchema`, `actionSchema`, `mutationMatrix`, `simGate`, danach `dataflow`, danach `manifest`.
+- Implementierung neuer Main-Run-Felder oder Actions vor vollstaendigem Contract ist unzulaessig.
+
+## Kritische Architekturgrenzen
+- `seededStartPhysics()` in `src/game/sim/reducer/index.js` wird nicht neu gebaut. Presets erweitern Startphysik nur ueber Config-Overrides.
+- `globalLearning` und `mergeWorldLearningIntoBank()` in `src/game/sim/reducer/techTreeOps.js` bleiben adaptive CPU-Basis und werden nicht ersetzt.
+- `expandWorldPreserve()` in `src/game/sim/reducer/worldRules.js` muss im `copy1`-Block `world.water` und `world.biomeId` mitfuehren.
+
+## Progression und Main-Run-Interaktionen
+- `HARVEST_CELL`, rohe Brush-Modi, Diagnose-Controls und direkte Paint-Interaktionen bleiben technisch kompatibel, aber nur fuer `labor`.
+- `HARVEST_CELL` ist kein zulaessiger Main-Run-Progressionsmotor und darf nicht ueber UI-, Reward- oder Stage-Logik indirekt wieder zentralisiert werden.
+- Stage-Progression wird von `totalHarvested` entkoppelt und auf `stageProgressScore` umgestellt. Gewichte: DNA total `30%`, Prozess-Yields `25%`, Stabilitaet/Dichte `25%`, Oeko/Wasser/Biom `20%`.
+- Harte Gates:
+  Stage 2: `playerAliveCount >= 8`, `playerEnergyNet > 0`.
+  Stage 3: mindestens `2` Yield-Kategorien `> 0`, `meanWaterField >= 0.10`.
+  Stage 4: `clusterRatio >= 0.12`, mindestens `2` Biome aktiv genutzt.
+  Stage 5: alle `4` Signalgruppen jeweils mindestens `60%` ihres Zielwerts, kein Kollaps-/Critical-Risk.
+- Score-Schwellen: Stage 2 `>= 0.22`, Stage 3 `>= 0.44`, Stage 4 `>= 0.68`, Stage 5 `>= 0.86`.
+- `playerStage` ist monoton nicht fallend. Nur `stageProgressScore` darf schwanken.
+
+## Testplan und Failure-Bedingungen
+- Contract-Gates muessen hart failen, wenn neue Felder oder Actions ohne vollstaendigen Eintrag in `stateSchema`, `actionSchema`, `mutationMatrix`, `simGate`, `dataflow` oder `manifest` eingefuehrt werden.
+- UI-Konsolidierung muss nachweisbar machen: Main-Run zeigt genau fuenf Raeume und keine weiteren Legacy-Kontextzweige.
+- Main-Run-UI und Main-Run-Dispatchpfade muessen hart verhindern: keine Dispatches zu `HARVEST_CELL` und keine Dispatches zu Roh-Brushes.
+- Progressionstests muessen explizit beweisen: `totalHarvested` allein erhoeht `playerStage` nie mehr; hohe Scores ohne Pflicht-Gates erhoehen Stage nicht; `playerStage` faellt nie zurueck.
+- Determinismustests muessen bitgleich beweisen: gleiches `(seed, preset)` erzeugt identische `water`-, `biomeId`- und Spawn-Felder; gleiches Seed mit anderem Preset erzeugt reproduzierbar andere Welten.
