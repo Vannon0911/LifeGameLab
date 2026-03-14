@@ -153,11 +153,11 @@ export function handleRecyclePatch(state) {
   const changed = applyIndices(indices, world, nextWorld, (idx, src, dst) => {
     const toxin = Number(src.W[idx] || 0);
     const water = Number(src.water?.[idx] || 0);
-    if (toxin <= 0.04) return false;
-    const reclaimed = toxin * (0.8 + water * 0.4);
-    dst.W[idx] = clamp(toxin * 0.54, 0, 1);
-    dst.R[idx] = clamp(Number(src.R[idx] || 0) + reclaimed * 0.35, 0, 1);
-    dst.Sat[idx] = clamp(Number(src.Sat[idx] || 0) + reclaimed * 0.08, 0, 1);
+    if (toxin <= 0.03) return false;
+    const reclaimed = toxin * (0.95 + water * 0.55);
+    dst.W[idx] = clamp(toxin * 0.46, 0, 1);
+    dst.R[idx] = clamp(Number(src.R[idx] || 0) + reclaimed * 0.42, 0, 1);
+    dst.Sat[idx] = clamp(Number(src.Sat[idx] || 0) + reclaimed * 0.10, 0, 1);
     yieldTotal += reclaimed;
     return true;
   });
@@ -165,7 +165,7 @@ export function handleRecyclePatch(state) {
 
   return finalizeAction(state, "RECYCLE_PATCH", nextWorld, {
     recycleYieldTotal: Number(state.sim.recycleYieldTotal || 0) + yieldTotal,
-    playerDNA: Number(state.sim.playerDNA || 0) + yieldTotal * 0.12,
+    playerDNA: Number(state.sim.playerDNA || 0) + yieldTotal * 0.14,
   }, [
     { op: "set", path: "/world/W", value: W },
     { op: "set", path: "/world/R", value: R },
