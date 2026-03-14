@@ -80,6 +80,8 @@ Zweck: Infrastruktur und aktive Sicht/Fog-Regeln nach stabiler DNA-Zone.
 - [ ] Pfadvorschau
 - [ ] Kostenanzeige
 - [ ] Sichtdarstellung
+- [ ] Worker-Renderpfad bei Sicht/Fog-Switch synchron halten (`src/game/render/render.worker.js`)
+- [ ] Worker-Fallback/Recovery pruefen (Offscreen fail -> main renderer ohne Stale-Canvas)
 - [ ] Blocker-Hinweise
 - [ ] Tests + Doku aktualisieren
 
@@ -87,12 +89,14 @@ Zweck: Infrastruktur und aktive Sicht/Fog-Regeln nach stabiler DNA-Zone.
 - [ ] Standard-Smokes um Infrastruktur-/Sicht-Schritt ergaenzen
 - [ ] `DNA -> Infra`-Flow absichern
 - [ ] Lab-/Recovery-/Benchmark-Pfade gegen Regression pruefen
+- [ ] Worker-Smoke explizit aufnehmen (Benchmark-Status `setup_main -> worker_init -> done`, JSON/CSV-Report vorhanden)
 - [ ] Tests + Doku aktualisieren
 
 ### D8 Finalisierung
 - [ ] technische Notizen / Changelog aktualisieren
 - [ ] TODO-/Implementierungsstatus aktualisieren
 - [ ] Versioning-/LLM-Gates am Phase-D-Ende nachziehen (`llm-preflight classify/ack/check`, `LLM_ENTRY`-Sync falls noetig)
+- [ ] LLM_ENTRY-Lesereihenfolge gegen reale Worker-Abhaengigkeiten verifizieren (`renderer.js` <-> `render.worker.js` <-> `main.js`)
 - [ ] Scope-Check: kein Pattern-/Zone-/Tech-Grossumbau
 
 ## Zielzustand nach Phase D
