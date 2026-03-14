@@ -39,6 +39,7 @@ export const GAME_MODE_VALUES = Object.freeze([
 export const RUN_PHASE = Object.freeze({
   GENESIS_SETUP: "genesis_setup",
   GENESIS_ZONE: "genesis_zone",
+  DNA_ZONE_SETUP: "dna_zone_setup",
   RUN_ACTIVE: "run_active",
   RESULT: "result",
 });
@@ -46,6 +47,7 @@ export const RUN_PHASE = Object.freeze({
 export const RUN_PHASE_VALUES = Object.freeze([
   RUN_PHASE.GENESIS_SETUP,
   RUN_PHASE.GENESIS_ZONE,
+  RUN_PHASE.DNA_ZONE_SETUP,
   RUN_PHASE.RUN_ACTIVE,
   RUN_PHASE.RESULT,
 ]);

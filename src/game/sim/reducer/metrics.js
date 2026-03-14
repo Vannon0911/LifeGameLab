@@ -23,17 +23,18 @@ export const WORLD_KEYS = [
   "clusterAttackState",
   "zoneMap",
   "coreZoneMask",
+  "dnaZoneMask",
   "founderMask",
   "visibility",
   "explored",
 ];
 
 export const WORLD_SIM_STEP_KEYS = WORLD_KEYS.filter(
-  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "coreZoneMask" && k !== "superId" && k !== "actionMap" && k !== "born" && k !== "died" && k !== "founderMask" && k !== "visibility" && k !== "explored"
+  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "coreZoneMask" && k !== "dnaZoneMask" && k !== "superId" && k !== "actionMap" && k !== "born" && k !== "died" && k !== "founderMask" && k !== "visibility" && k !== "explored"
 );
 
 export const SIM_KEYS = [
-  "tick", "running", "runPhase", "founderBudget", "founderPlaced", "unlockedZoneTier", "nextZoneUnlockKind", "nextZoneUnlockCostEnergy", "zoneUnlockProgress", "coreEnergyStableTicks", "cpuBootstrapDone",
+  "tick", "running", "runPhase", "founderBudget", "founderPlaced", "unlockedZoneTier", "nextZoneUnlockKind", "nextZoneUnlockCostEnergy", "zoneUnlockProgress", "coreEnergyStableTicks", "zone2Unlocked", "zone2PlacementBudget", "dnaZoneCommitted", "nextInfraUnlockCostDNA", "cpuBootstrapDone",
   "aliveCount", "aliveRatio",
   "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
   "meanNutrientField", "meanToxinField", "meanSaturationField", "meanPlantField", "meanBiochargeField",

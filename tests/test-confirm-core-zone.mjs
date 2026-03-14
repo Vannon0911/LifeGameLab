@@ -49,6 +49,10 @@ function createGenesisZoneStore(seed, presetId = "river_delta") {
   assert(after.sim.nextZoneUnlockCostEnergy === 16, "core confirm must read preset unlock cost");
   assert(after.sim.zoneUnlockProgress === 0, "core confirm must reset unlock progress");
   assert(after.sim.coreEnergyStableTicks === 0, "core confirm must reset stable ticks");
+  assert(after.sim.zone2Unlocked === false, "core confirm must not unlock zone 2 setup yet");
+  assert(after.sim.zone2PlacementBudget === 0, "core confirm must not allocate dna placement budget");
+  assert(after.sim.dnaZoneCommitted === false, "core confirm must not mark dna zone committed");
+  assert(after.sim.nextInfraUnlockCostDNA === 0, "core confirm must not expose infra unlock cost yet");
   assert(after.sim.cpuBootstrapDone === 1, "core confirm must mark cpu bootstrap done");
 
   let founderCount = 0;
@@ -144,6 +148,17 @@ function createGenesisZoneStore(seed, presetId = "river_delta") {
   };
   const patches = reducer(tamperedState, { type: "CONFIRM_CORE_ZONE" }, { rng: {} });
   assert(Array.isArray(patches) && patches.length === 0, "invalid founder component must block core confirm");
+}
+
+// phase-c contract basis: dna-zone setup actions exist but stay no-op until runtime logic is implemented.
+{
+  const store = createGenesisZoneStore("dna-zone-contract-basis-1");
+  store.dispatch({ type: "CONFIRM_CORE_ZONE" });
+  const sigBefore = store.getSignature();
+  store.dispatch({ type: "START_DNA_ZONE_SETUP" });
+  store.dispatch({ type: "TOGGLE_DNA_ZONE_CELL", payload: { x: 0, y: 0, remove: false } });
+  store.dispatch({ type: "CONFIRM_DNA_ZONE" });
+  assert(store.getSignature() === sigBefore, "dna-zone setup actions must remain no-op before phase-c runtime logic");
 }
 
 console.log("CONFIRM_CORE_ZONE_OK founder component -> core zone verified");

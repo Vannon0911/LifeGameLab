@@ -39,6 +39,12 @@ export const WORLD_PRESETS = Object.freeze({
     fertilityBias: 0.08,
     plantBoost: 0.10,
     coreZoneUnlockCostEnergy: 12,
+    phaseC: {
+      dnaPlacementBudget: 4,
+      nextInfraUnlockCostDNA: 30,
+      dnaZoneAdjacencyRule: "touch_core_or_owned",
+      dnaYieldScale: 1.0,
+    },
     startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 1.02,
@@ -60,6 +66,12 @@ export const WORLD_PRESETS = Object.freeze({
     fertilityBias: -0.10,
     plantBoost: -0.08,
     coreZoneUnlockCostEnergy: 16,
+    phaseC: {
+      dnaPlacementBudget: 4,
+      nextInfraUnlockCostDNA: 30,
+      dnaZoneAdjacencyRule: "touch_core_or_owned",
+      dnaYieldScale: 1.0,
+    },
     startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 1.16,
@@ -80,6 +92,12 @@ export const WORLD_PRESETS = Object.freeze({
     fertilityBias: 0.14,
     plantBoost: 0.18,
     coreZoneUnlockCostEnergy: 10,
+    phaseC: {
+      dnaPlacementBudget: 4,
+      nextInfraUnlockCostDNA: 30,
+      dnaZoneAdjacencyRule: "touch_core_or_owned",
+      dnaYieldScale: 1.0,
+    },
     startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 0.94,
