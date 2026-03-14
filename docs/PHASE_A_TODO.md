@@ -208,13 +208,14 @@ Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenf
     - kein Ueberspringen nach `RUN_ACTIVE`.
 
 ### B3 Energiekern bestaetigen
-- [ ] `CONFIRM_CORE_ZONE` validiert Founder-Komponente
-- [ ] `coreZoneMask` aus Founder-Komponente erzeugen
-- [ ] `unlockedZoneTier = 1` setzen
-- [ ] `nextZoneUnlockKind = "DNA"` setzen
-- [ ] `nextZoneUnlockCostEnergy` aus Preset lesen
-- [ ] `zoneUnlockProgress = 0` setzen
-- [ ] Tests + Doku aktualisieren
+- [x] `CONFIRM_CORE_ZONE` validiert Founder-Komponente
+- [x] `coreZoneMask` aus Founder-Komponente erzeugen
+- [x] `unlockedZoneTier = 1` setzen
+- [x] `nextZoneUnlockKind = "DNA"` setzen
+- [x] `nextZoneUnlockCostEnergy` aus Preset lesen
+- [x] `zoneUnlockProgress = 0` beim Confirm setzen
+- [x] `CONFIRM_CORE_ZONE` schaltet nach erfolgreicher Validierung nach `RUN_ACTIVE`
+- [x] Tests + Doku aktualisieren
 - Details:
   - Ziel: bestaetigte Founder-Komponente wird exakt erster Energiekern.
   - Erfolg nur wenn:
@@ -229,6 +230,8 @@ Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenf
     - `sim.nextZoneUnlockCostEnergy` aus Preset
     - `sim.zoneUnlockProgress=0`
     - `sim.coreEnergyStableTicks=0`
+    - `sim.runPhase=RUN_ACTIVE`
+    - `sim.running=true`
   - Dateien:
     - `src/game/sim/reducer/index.js`
     - `src/game/sim/playerActions.js` (oder neuer klarer Handler)
@@ -240,16 +243,17 @@ Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenf
     - erfolgreicher Kern-Commit
     - inkonsistenter/leerer Kern blockiert
     - bitgenaue Maskenpruefung
+    - erfolgreicher Commit fuehrt in `RUN_ACTIVE`
   - Doku:
-    - Energiekern-Regel + Validierungsbedingungen dokumentieren.
+    - Energiekern-Regel, Validierungsbedingungen und `Core -> Run`-Uebergang dokumentieren.
   - Nicht-Ziele:
     - keine Pattern-Semantik, keine neue Zonenlogik.
 
 ### B4 CPU-Bootstrap
-- [ ] Standardmodus: CPU erst nach `CONFIRM_CORE_ZONE` spawnen
-- [ ] deterministischen Spawn-Helfer bauen/extrahieren
-- [ ] `cpuBootstrapDone` gegen Doppelseed absichern
-- [ ] Tests + Doku aktualisieren
+- [x] Standardmodus: CPU erst nach `CONFIRM_CORE_ZONE` spawnen
+- [x] deterministischen Spawn-Helfer bauen/extrahieren
+- [x] `cpuBootstrapDone` gegen Doppelseed absichern
+- [x] Tests + Doku aktualisieren
 - Details:
   - Ziel: CPU im Standardmodus genau einmal und deterministisch nach Kernbestaetigung.
   - Regeln:
@@ -277,10 +281,10 @@ Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenf
     - keine laufende CPU-KI-Aenderung, kein KI-Rework.
 
 ### B5 DNA-Unlock-Meter
-- [ ] `zoneUnlockProgress` aus bestehender Energie ableiten
-- [ ] `coreEnergyStableTicks` zaehlen
-- [ ] keine neue Ressource einfuehren
-- [ ] Tests + Doku aktualisieren
+- [x] `zoneUnlockProgress` aus bestehender Energie ableiten
+- [x] `coreEnergyStableTicks` zaehlen
+- [x] keine neue Ressource einfuehren
+- [x] Tests + Doku aktualisieren
 - Details:
   - Ziel: sofort sichtbares Progress-Ziel fuer Zone 2 (`DNA`) ohne neue Oekonomie.
   - Minimalmodell:
@@ -301,25 +305,26 @@ Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenf
     - Fortschritt steigt mit `playerEnergyStored`
     - stabile Ticks zaehlen korrekt
   - Doku:
-    - Unlock-Meter-Regel + Tick-Bedingungen dokumentieren.
+    - Unlock-Meter-Regel + Tick-Bedingungen dokumentieren; kein Platzhalter-Meter.
   - Nicht-Ziele:
     - keine DNA-Zone-Freischaltung in Phase B.
 
 ### B6 Genesis-Zone-Gates
-- [ ] `PLACE_CELL` in `GENESIS_ZONE` blockieren
-- [ ] `PLACE_SPLIT_CLUSTER` in `GENESIS_ZONE` blockieren
-- [ ] `SET_ZONE` in `GENESIS_ZONE` blockieren
-- [ ] `HARVEST_CELL` in `GENESIS_ZONE` blockieren
-- [ ] `BUY_EVOLUTION` in `GENESIS_ZONE` blockieren
-- [ ] `HARVEST_PULSE` in `GENESIS_ZONE` blockieren
-- [ ] `PRUNE_CLUSTER` in `GENESIS_ZONE` blockieren
-- [ ] `RECYCLE_PATCH` in `GENESIS_ZONE` blockieren
-- [ ] `SEED_SPREAD` in `GENESIS_ZONE` blockieren
-- [ ] `SIM_STEP/APPLY_BUFFERED_SIM_STEP/TOGGLE_RUNNING` in `GENESIS_ZONE` blockieren
-- [ ] Tests + Doku aktualisieren
+- [x] `PLACE_CELL` in `GENESIS_ZONE` blockieren
+- [x] `PLACE_SPLIT_CLUSTER` in `GENESIS_ZONE` blockieren
+- [x] `SET_ZONE` in `GENESIS_ZONE` blockieren
+- [x] `HARVEST_CELL` in `GENESIS_ZONE` blockieren
+- [x] `BUY_EVOLUTION` in `GENESIS_ZONE` blockieren
+- [x] `HARVEST_PULSE` in `GENESIS_ZONE` blockieren
+- [x] `PRUNE_CLUSTER` in `GENESIS_ZONE` blockieren
+- [x] `RECYCLE_PATCH` in `GENESIS_ZONE` blockieren
+- [x] `SEED_SPREAD` in `GENESIS_ZONE` blockieren
+- [x] `SIM_STEP/APPLY_BUFFERED_SIM_STEP/TOGGLE_RUNNING` in `GENESIS_ZONE` blockieren
+- [x] Tests + Doku aktualisieren
 - Details:
-  - Ziel: `GENESIS_ZONE` ist harte Zwischenphase ohne versteckten Run.
+  - Ziel: `GENESIS_ZONE` ist die harte Zwischenphase zwischen Foundation-Confirm und Kern-Confirm.
   - Einzige erlaubte Aktion in `GENESIS_ZONE`: `CONFIRM_CORE_ZONE`.
+  - Nach erfolgreichem `CONFIRM_CORE_ZONE` endet diese Sperrphase explizit; der Run wechselt nach `RUN_ACTIVE`.
   - Dateien:
     - `src/game/sim/reducer/index.js`
     - `src/game/sim/playerActions.js`
@@ -328,20 +333,21 @@ Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenf
   - Abnahme:
     - alle gelisteten Legacy-/Run-Actions in `GENESIS_ZONE` liefern `[]` bzw. No-Op.
     - `TOGGLE_RUNNING(true)` bleibt ohne Fortschritt.
+    - nach erfolgreichem `CONFIRM_CORE_ZONE` gelten wieder die `RUN_ACTIVE`-Regeln.
   - Tests:
     - jede gesperrte Action mindestens einmal absichern.
   - Doku:
-    - Action-Gates-Tabelle um `GENESIS_ZONE` erweitern.
+    - Action-Gates-Tabelle um die klare Trennung `GENESIS_ZONE -> CONFIRM_CORE_ZONE -> RUN_ACTIVE` erweitern.
   - Nicht-Ziele:
-    - kein "verkleidetes RUN_ACTIVE".
+    - kein versteckter Autostart vor Kernconfirm.
 
 ### B7 UI-Minimum
-- [ ] Founder-Komponente in `GENESIS_ZONE` hervorheben
-- [ ] Button `Energiekern bestaetigen` einbauen
-- [ ] Play/Step in `GENESIS_ZONE` deaktivieren oder Hinweis
-- [ ] Influence-Phase auf Kernzone/Energiekern setzen
-- [ ] DNA-Unlock-Meter nach Kernbestaetigung anzeigen
-- [ ] Tests + Doku aktualisieren
+- [x] Founder-Komponente in `GENESIS_ZONE` hervorheben
+- [x] Button `Energiekern bestaetigen` einbauen
+- [x] Play/Step in `GENESIS_ZONE` deaktivieren oder Hinweis
+- [x] Influence-Phase auf Kernzone/Energiekern setzen
+- [x] DNA-Unlock-Meter nach Kernbestaetigung anzeigen
+- [x] Tests + Doku aktualisieren
 - Details:
   - Ziel: Flow ist im UI als absichtlicher Startschritt klar sichtbar.
   - In `GENESIS_ZONE`:
@@ -366,6 +372,7 @@ Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenf
     - Play/Step deaktiviert
     - Unlock-Meter nach Kernbestaetigung
     - Influence-Phase korrekt
+    - `quick` enthaelt den Genesis-UI-Smoke explizit
   - Doku:
     - Phase-B-UI-Flow aktualisieren.
   - Nicht-Ziele:
