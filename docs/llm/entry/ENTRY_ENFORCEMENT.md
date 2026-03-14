@@ -1,18 +1,22 @@
 # Entry Enforcement
 
-`docs/LLM_ENTRY.md` ist verpflichtend vor jeder technischen Umsetzung.
+`docs/LLM_ENTRY.md` und genau ein task-spezifischer Entry sind verpflichtend vor jeder operativen Arbeit.
 
 ## Pflichtmechanik
 
-- `node tools/llm-preflight.mjs ack --task <scope>` erzeugt lokales Ack in `.llm/entry-ack.json`.
-- `npm run llm:ack` setzt das Standard-Ack fuer `testing`.
-- `node tools/llm-preflight.mjs check` validiert:
+- Taskklassifikation erfolgt ueber `docs/llm/TASK_ENTRY_MATRIX.json` anhand von Pfaden.
+- `node tools/llm-preflight.mjs classify --paths <comma-separated-paths>` klassifiziert den Task.
+- `node tools/llm-preflight.mjs ack --paths <...>` erzeugt Ack in `.llm/entry-ack.json`.
+- `node tools/llm-preflight.mjs check --paths <...>` validiert:
   - Hash von `docs/LLM_ENTRY.md` gegen `docs/llm/entry/LLM_ENTRY_LOCK.json`
-  - Vorhandensein spezialisierter Task-Entry-Dateien
-  - gueltiges Ack mit passendem Entry-Hash
-- `tools/run-test-suite.mjs` ruft `check` vor jeder Suite auf und bricht bei Fehler hart ab.
+  - passendes `requiredEntry` aus Matrix
+  - Hash des task-spezifischen Entry im Ack
+  - Ack fuer exakt den aktiv klassifizierten Task
+- `tools/run-test-suite.mjs` und `tools/run-all-tests.mjs` rufen `check` auf und brechen bei Fehler hart ab.
 
-## Gueltigkeitsregel
+## Gueltigkeitsregeln
 
-- Ack ist nur gueltig, wenn der gespeicherte Entry-Hash exakt zum aktuellen Lock passt.
-- Bei Aenderung an `docs/LLM_ENTRY.md` muss Lock aktualisiert und Ack neu gesetzt werden.
+- Kein Test ohne Ack.
+- Kein Taskwechsel ohne neues passendes Ack.
+- Wenn `docs/LLM_ENTRY.md` oder task-spezifischer Entry geaendert wurde: Ack neu setzen.
+- Wenn Pfade mehreren Tasks zugeordnet werden: in Subtasks splitten, je Subtask eigener Zyklus.
