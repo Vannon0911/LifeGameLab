@@ -83,10 +83,15 @@ export const stateSchema = {
         ui: {
           type: "object",
           shape: {
+            panelOpen: { type: "boolean", default: false },
+            activeTab: { type: "string", default: "status" },
+            expertMode: { type: "boolean", default: false },
+            showBiochargeOverlay: { type: "boolean", default: false },
+            showRemoteAttackOverlay: { type: "boolean", default: true },
+            showDefenseOverlay: { type: "boolean", default: true },
             offscreenEnabled: { type: "boolean", default: false },
             ariaLevel: { type: "number", default: 1 }
-          },
-          allowUnknown: true
+          }
         },
         globalLearning: { type: "object", shape: {}, allowUnknown: true },
         devMutationVault: { type: "object", shape: {}, allowUnknown: true },
@@ -187,11 +192,6 @@ export const actionSchema = {
   SET_WIN_MODE:  { type: "object", shape: { winMode: { type: "string" } } },
   SET_OVERLAY:   { type: "string" },
   SET_PLACEMENT_COST: { type: "object", shape: { enabled: { type: "boolean" } } },
-  SET_UI_PREFERENCE: { type: "object", shape: { key: { type: "string" }, value: { type: "any" } } },
-  
-  // -- UI-only (no mutation)
-  INIT: { type: "object", shape: {} },
-  RENDER: { type: "object", shape: {} },
   RUN_BENCHMARK: { type: "object", shape: {} },
 };
 
@@ -220,11 +220,6 @@ export const mutationMatrix = {
   SET_WIN_MODE:  ["/sim/winMode"],
   SET_OVERLAY:   ["/meta/activeOverlay"],
   SET_PLACEMENT_COST: ["/meta/placementCostEnabled"],
-  SET_UI_PREFERENCE: ["/meta/ui"],
-
-  // -- UI-only (no mutation)
-  INIT: [],
-  RENDER: [],
   RUN_BENCHMARK: [],
 };
 

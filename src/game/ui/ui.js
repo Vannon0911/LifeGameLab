@@ -170,6 +170,12 @@ export class UI {
   }
 
   setRenderInfo(info) { this._rInfo = info; }
+  setCanvas(canvas) {
+    if (!canvas || canvas === this._canvas) return;
+    this._canvas = canvas;
+    this._canvas.id = "cv";
+    this._bindCanvasPaint();
+  }
   _dispatch(action) { this._store.dispatch(action); }
 
   _announce(message, level = 1) { // level 1: critical, 2: all
@@ -1262,7 +1268,7 @@ export class UI {
         ariaSel.appendChild(o);
       });
       ariaSel.addEventListener("change", () => {
-        this._dispatch({ type: "SET_UI_PREFERENCE", payload: { key: "ariaLevel", value: Number(ariaSel.value) } });
+      this._dispatch({ type: "SET_UI", payload: { ariaLevel: Number(ariaSel.value) } });
       });
       ariaRow.appendChild(ariaSel);
       accCard.appendChild(ariaRow);
@@ -1273,7 +1279,7 @@ export class UI {
       offToggle.setAttribute("aria-label", `Performance-Threading ${offscreenEnabled ? "deaktivieren" : "aktivieren"} (Experimentell)`);
       offToggle.setAttribute("aria-pressed", offscreenEnabled);
       offToggle.addEventListener("click", () => {
-        this._dispatch({ type: "SET_UI_PREFERENCE", payload: { key: "offscreenEnabled", value: !offscreenEnabled } });
+      this._dispatch({ type: "SET_UI", payload: { offscreenEnabled: !offscreenEnabled } });
         queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
       });
       offRow.append(el("span", "nx-label", "Offscreen-Rendering"), offToggle);

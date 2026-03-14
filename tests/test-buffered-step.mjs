@@ -1,3 +1,5 @@
+import { startEvidenceCase } from "./support/liveTestKit.mjs";
+startEvidenceCase("test-buffered-step.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import { createRngStreamsScoped } from "../src/core/kernel/rng.js";
 import { applyPatches } from "../src/core/kernel/patches.js";
