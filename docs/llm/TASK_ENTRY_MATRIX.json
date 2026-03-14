@@ -1,6 +1,7 @@
 {
   "ui": {
     "triggerPrefixes": [
+      "src/app/",
       "src/game/ui/",
       "src/project/ui.js",
       "src/game/render/",

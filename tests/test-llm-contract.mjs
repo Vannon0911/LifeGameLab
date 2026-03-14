@@ -92,6 +92,12 @@ function runPreflight(args) {
 }
 
 {
+  const appMain = runPreflight(["classify", "--paths", "src/app/main.js"]);
+  assert(appMain.status === 0, `app main classify should pass, got status=${appMain.status} stderr=${appMain.stderr}`);
+  assertContains(appMain.stdout, "task=ui", "app main classify must resolve task=ui");
+}
+
+{
   const phaseTodo = runPreflight(["classify", "--paths", "docs/PHASE_A_TODO.md"]);
   assert(phaseTodo.status === 0, `phase todo classify should pass, got status=${phaseTodo.status} stderr=${phaseTodo.stderr}`);
   assertContains(phaseTodo.stdout, "task=versioning", "phase todo classify must resolve task=versioning");
@@ -135,6 +141,9 @@ for (const rel of protocolFiles) {
   assertContains(text, "SCHREIBEN", `${rel} missing SCHREIBEN phase`);
   assertContains(text, "DOKU", `${rel} missing DOKU phase`);
 }
+
+const uiTaskEntry = fs.readFileSync(path.join(root, "docs/llm/ui/UI_TASK_ENTRY.md"), "utf8");
+assertContains(uiTaskEntry, "src/app/main.js", "UI task entry must mention src/app/main.js for caller/orchestration work");
 
 const mandatoryReading = fs.readFileSync(path.join(root, "MANDATORY_READING.md"), "utf8");
 assertContains(mandatoryReading, "docs/START_HERE.md", "MANDATORY_READING must redirect to START_HERE");
