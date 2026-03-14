@@ -5,6 +5,7 @@
 ## Pflichtmechanik
 
 - `node tools/llm-preflight.mjs ack --task <scope>` erzeugt lokales Ack in `.llm/entry-ack.json`.
+- `npm run llm:ack` setzt das Standard-Ack fuer `testing`.
 - `node tools/llm-preflight.mjs check` validiert:
   - Hash von `docs/LLM_ENTRY.md` gegen `docs/llm/entry/LLM_ENTRY_LOCK.json`
   - Vorhandensein spezialisierter Task-Entry-Dateien

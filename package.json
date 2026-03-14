@@ -7,6 +7,8 @@
     "serve": "python3 -m http.server 8080",
     "debug:ui": "node tools/debug-ui.mjs",
     "debug:playwright": "node tools/playwright-debug-loop.mjs",
+    "llm:ack": "node tools/llm-preflight.mjs ack --task testing",
+    "llm:check": "node tools/llm-preflight.mjs check --task testing",
     "test": "node tools/run-all-tests.mjs",
     "test:quick": "node tools/run-test-suite.mjs quick",
     "test:truth": "node tools/run-test-suite.mjs truth",
