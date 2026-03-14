@@ -603,7 +603,8 @@ const RenderManager = {
     const ch = Math.max(1, Math.floor(rect.height * dpr));
     if (canvas.width !== cw || canvas.height !== ch) {
       // Offscreen canvas can't be resized via DOM canvas after transferControlToOffscreen().
-      const canResizeDomCanvas = !(useOffscreen && this.isInitialized);
+      const hasTransferredCanvas = this.canvasMode === "worker";
+      const canResizeDomCanvas = !(useOffscreen && (this.isInitialized || hasTransferredCanvas));
       if (canResizeDomCanvas) {
         canvas.width = cw;
         canvas.height = ch;
@@ -618,7 +619,14 @@ const RenderManager = {
     if (useOffscreen) {
       if (!this.isInitialized) {
         const ok = this.init(canvas);
-        if (!ok) return render(canvas, state, perf);
+        if (!ok) {
+          // Conservative recovery: swap to fresh main canvas if worker init failed.
+          canvas = this.replaceCanvas("main");
+          this.mode = "main";
+          const info = render(canvas, state, perf);
+          this.hasMainContext = true;
+          return info;
+        }
       }
       
       if (!this.isPending && (signature !== this.lastSignature || tick !== this.lastSubmittedTick)) {
