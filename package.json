@@ -7,7 +7,9 @@
     "serve": "python3 -m http.server 8080",
     "debug:ui": "node tools/debug-ui.mjs",
     "test": "node tools/run-all-tests.mjs",
-    "test:quick": "node tests/test-ui-contract.mjs && node tests/test-smoke.mjs",
+    "test:quick": "node tools/run-test-suite.mjs quick",
+    "test:truth": "node tools/run-test-suite.mjs truth",
+    "test:stress": "node tools/run-test-suite.mjs stress",
     "test:redteam": "node tools/redteam-stress-master.mjs",
     "test:full": "node tools/run-all-tests.mjs"
   }

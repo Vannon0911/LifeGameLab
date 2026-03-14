@@ -70,6 +70,9 @@ Optional:
 
 ```bash
 npm run serve
+npm run test:quick
+npm run test:truth
+npm run test:stress
 ```
 
 ## Steuerung

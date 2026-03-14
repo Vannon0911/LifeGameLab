@@ -19,3 +19,16 @@
 - Render: reine Darstellung
 - UI: read-only + Action-Dispatch
 - Project: stabile Fassaden und Contract-Definition
+
+## Aktuelle Zuschnitte (2026-03-14)
+- `src/game/ui/ui.js`: UI-Orchestrierung (Panels, Event-Wiring, Dispatch)
+- `src/game/ui/ui.dom.js`: DOM-/Format-Helfer
+- `src/game/ui/ui.feedback.js`: Gate-/Action-Feedback und Live-Region-Announcements
+- `src/app/main.js`: Bootstrap + Runtime-Orchestrierung
+- `src/app/runtime/worldStateLog.js`: Weltzustands-Logging + CSV
+- `src/app/runtime/reportUtils.js`: Report-Utilities
+- `src/app/runtime/bootStatus.js`: Boot/Error-Statusanzeige
+- `src/game/sim/step.js`: Tick-Orchestrierung
+- `src/game/sim/stepRuntime.js`: Lineage-/Trait-Runtime-Helfer (pure)
+- `src/game/sim/reducer/index.js`: Routing/Komposition
+- `src/game/sim/reducer/controlActions.js`: pure Control-Action-Helfer
