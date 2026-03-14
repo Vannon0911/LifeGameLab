@@ -47,6 +47,10 @@ for (const required of ['type:"SET_RENDER_MODE"', 'type:"SET_OVERLAY"', 'BRUSH_M
 assert(laborBlock.includes('type: "RUN_BENCHMARK"'), "labor panel missing RUN_BENCHMARK dispatch");
 assert(laborBlock.includes('queueMicrotask(() => this._renderPanelBody(container, this._store.getState()))'), "labor panel must force repaint after local control dispatches");
 assert(ui.includes('window.addEventListener("benchmark:update"'), "ui missing benchmark:update live sync");
+assert(ui.includes("_syncUiPanelState("), "ui missing panel state sync helper");
+assert(ui.includes('type: "SET_UI"') && ui.includes("activeTab") && ui.includes("panelOpen"), "ui must persist activeTab/panelOpen through SET_UI");
+assert(!ui.includes("Scanner und Overlays bleiben Labor-Werkzeuge"), "main-run copy must not reintroduce scanner wording");
+assert(!ui.includes("Naechster Overlay-Scan"), "main-run copy must not expose overlay-scan wording");
 
 assert(main.includes("window.render_game_to_text = renderGameToText;"), "main.js missing render_game_to_text hook");
 assert(main.includes("window.advanceTime = advanceTime;"), "main.js missing advanceTime hook");

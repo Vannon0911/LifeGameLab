@@ -18,6 +18,8 @@ Zweck: reproduzierbarer Browser-Loop fuer Main-Run-Checks und Labor-/Benchmark-D
 4. Raeume live durchgehen: `lage`, `eingriffe`, `evolution`, `welt`, `labor`.
    Nach Welt-/Labor-Controls sofort gegenpruefen, dass Paneltexte nicht auf altem State haengen:
    Preset, Seed, Groesse, Geschwindigkeit, Render-Modus und Overlay muessen ohne sichtbaren Stale-Frame nachziehen.
+   Dabei pruefen, dass `meta.ui.activeTab` dem offenen Raum folgt und `panelOpen` sauber gesetzt bleibt.
+   Im Main-Run keine Scanner-/Overlay-Begriffe mehr verwenden; Diagnose-Sprache bleibt laborbezogen.
 5. In `labor` den Benchmark starten und beobachten:
    `Start Benchmark` muss zu laufendem Status wechseln.
    Der Status muss Phasen wie `setup_main`, `main`, `worker_init`, `worker` sichtbar machen.

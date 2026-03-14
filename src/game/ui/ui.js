@@ -380,6 +380,18 @@ export class UI {
     else this._toggleSheet(key);
   }
 
+  _syncUiPanelState(panelOpen, activeTab) {
+    const ui = this._store.getState()?.meta?.ui || {};
+    if (ui.panelOpen === panelOpen && String(ui.activeTab || "lage") === String(activeTab || "lage")) return;
+    this._dispatch({
+      type: "SET_UI",
+      payload: {
+        panelOpen: !!panelOpen,
+        activeTab: String(activeTab || "lage"),
+      },
+    });
+  }
+
   // ── SHEET (mobile) ──────────────────────────────────────
   _toggleSheet(key) {
     if (this._activeContext === key && !this._sheet.classList.contains("hidden")) {
@@ -396,6 +408,7 @@ export class UI {
     requestAnimationFrame(() => { this._sheet.style.animation = ""; });
     this._renderPanelBody(this._sheetBody, this._store.getState());
     this._updateContextButtons();
+    this._syncUiPanelState(true, key);
   }
 
   _closeSheet() {
@@ -403,6 +416,7 @@ export class UI {
     this._sheetBackdrop.classList.add("hidden");
     document.getElementById("app")?.classList.remove("is-panel-open");
     this._updateContextButtons();
+    this._syncUiPanelState(false, this._activeContext || "lage");
   }
 
   // ── SIDEBAR (desktop) ────────────────────────────────────
@@ -410,6 +424,7 @@ export class UI {
     this._activeContext = key;
     this._renderPanelBody(this._sidebarBody, this._store.getState());
     this._updateContextButtons();
+    this._syncUiPanelState(true, key);
   }
 
   _closeContext() {
@@ -417,6 +432,7 @@ export class UI {
       this._activeContext = "lage";
       this._renderPanelBody(this._sidebarBody, this._store.getState());
       this._updateContextButtons();
+      this._syncUiPanelState(true, "lage");
       return;
     }
     this._closeSheet();
@@ -629,7 +645,7 @@ export class UI {
 	        mkMetric("Aktiver Siegpfad", winModeState.label),
 	        mkMetric("Win-Fortschritt", `${advisorModel.winProgress.progress} / ${advisorModel.winProgress.target}`),
 	        mkMetric("Naechste Zone", zoneState.label),
-	        mkMetric("Naechster Overlay-Scan", overlayState.label)
+        mkMetric("Naechste Labor-Diagnose", overlayState.label)
 	      );
 	      progressCard.append(
 	        el("div", "nx-note", `${structureState.detail} Phase ${influencePhase}: ${advisorModel.winProgress.blockerDetail}`),
@@ -680,7 +696,7 @@ export class UI {
 
 	      const ovCard = el("section", "nx-card");
 	      ovCard.appendChild(el("div", "nx-card-title", "Diagnose"));
-	      ovCard.appendChild(el("div", "nx-note", `Scanner und Overlays bleiben Labor-Werkzeuge. Empfohlen waere derzeit ${overlayState.label} fuer ${bottleneckState.title}, aber der Main-Run bleibt in der kanonischen Weltansicht.`));
+      ovCard.appendChild(el("div", "nx-note", `Diagnose bleibt im Labor. Empfohlen waere derzeit ${overlayState.label} fuer ${bottleneckState.title}, aber der Main-Run bleibt in der kanonischen Weltansicht.`));
 	      container.appendChild(ovCard);
 	      return;
     }
