@@ -2,7 +2,7 @@
 // Reducer — V4 COMPATIBLE (Patch-based)
 // ============================================================
 
-import { generateWorld } from "../worldgen.js";
+import { generateWorld, seedDeterministicBootstrapCluster } from "../worldgen.js";
 import { simStep } from "../step.js";
 import { PHYSICS_DEFAULT } from "../../../core/kernel/physics.js";
 import { hashString, rng01 } from "../../../core/kernel/rng.js";
@@ -129,9 +129,65 @@ function canConfirmFoundation(state) {
   return areFounderTilesConnected8(founderIndices, w, h);
 }
 
+function collectFounderIndices(state) {
+  const world = state.world;
+  if (!world?.alive || !world?.lineageId || !world?.founderMask) return null;
+  const w = Number(world.w || state.meta.gridW || 0) | 0;
+  const h = Number(world.h || state.meta.gridH || 0) | 0;
+  if (w <= 0 || h <= 0) return null;
+  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+
+  const founderIndices = [];
+  for (let i = 0; i < world.founderMask.length; i++) {
+    if ((Number(world.founderMask[i]) | 0) !== 1) continue;
+    founderIndices.push(i);
+  }
+  if (founderIndices.length !== 4) return null;
+
+  for (const idx of founderIndices) {
+    if ((Number(world.alive[idx]) | 0) !== 1) return null;
+    if ((Number(world.lineageId[idx]) | 0) !== playerLineageId) return null;
+  }
+  if (!areFounderTilesConnected8(founderIndices, w, h)) return null;
+  return founderIndices;
+}
+
+function canConfirmCoreZone(state) {
+  if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return false;
+  if (state.sim.runPhase !== RUN_PHASE.GENESIS_ZONE) return false;
+  const founderIndices = collectFounderIndices(state);
+  if (!founderIndices) return false;
+  const coreZoneMask = state.world?.coreZoneMask;
+  if (!coreZoneMask || !ArrayBuffer.isView(coreZoneMask)) return false;
+  for (let i = 0; i < coreZoneMask.length; i++) {
+    if ((Number(coreZoneMask[i]) | 0) !== 0) return false;
+  }
+  return true;
+}
+
 function isGenesisSetupInStandardMode(state) {
   return normalizeGameMode(state?.meta?.gameMode, GAME_MODE.GENESIS) === GAME_MODE.GENESIS
     && normalizeRunPhase(state?.sim?.runPhase, RUN_PHASE.GENESIS_SETUP) === RUN_PHASE.GENESIS_SETUP;
+}
+
+function isPreRunGenesisPhase(state) {
+  return normalizeGameMode(state?.meta?.gameMode, GAME_MODE.GENESIS) === GAME_MODE.GENESIS
+    && normalizeRunPhase(state?.sim?.runPhase, RUN_PHASE.GENESIS_SETUP) !== RUN_PHASE.RUN_ACTIVE;
+}
+
+function countAlivePlayerCoreCells(world, playerLineageId) {
+  const coreZoneMask = world?.coreZoneMask;
+  const alive = world?.alive;
+  const lineageId = world?.lineageId;
+  if (!coreZoneMask || !alive || !lineageId) return 0;
+  let count = 0;
+  for (let i = 0; i < coreZoneMask.length; i++) {
+    if ((Number(coreZoneMask[i]) | 0) !== 1) continue;
+    if ((Number(alive[i]) | 0) !== 1) continue;
+    if ((Number(lineageId[i]) | 0) !== (playerLineageId | 0)) continue;
+    count++;
+  }
+  return count;
 }
 
 function seededStartPhysics(seed, basePhysics) {
@@ -363,6 +419,7 @@ export function makeInitialState() {
     world: null,
     sim: {
       tick: 0, running: false, runPhase: RUN_PHASE.GENESIS_SETUP, founderBudget: 4, founderPlaced: 0,
+      unlockedZoneTier: 0, nextZoneUnlockKind: "", nextZoneUnlockCostEnergy: 0, zoneUnlockProgress: 0, coreEnergyStableTicks: 0, cpuBootstrapDone: 0,
       aliveCount: 0, aliveRatio: 0,
       meanLAlive: 0, meanEnergyAlive: 0, meanReserveAlive: 0,
       meanNutrientField: 0, meanToxinField: 0, meanSaturationField: 0, meanPlantField: 0,
@@ -449,6 +506,73 @@ export function reducer(state, action, { rng }) {
     case "CONFIRM_FOUNDATION": {
       if (!canConfirmFoundation(state)) return [];
       const patches = [
+        { op: "set", path: "/sim/runPhase", value: RUN_PHASE.GENESIS_ZONE },
+        { op: "set", path: "/sim/running", value: false },
+      ];
+      assertSimPatchesAllowed(manifest, state, action.type, patches);
+      return patches;
+    }
+
+    case "CONFIRM_CORE_ZONE": {
+      if (!canConfirmCoreZone(state)) return [];
+      const founderIndices = collectFounderIndices(state);
+      if (!founderIndices) return [];
+      const coreZoneMask = cloneTypedArray(state.world.coreZoneMask);
+      for (const idx of founderIndices) coreZoneMask[idx] = 1;
+      const preset = getWorldPreset(state.meta.worldPresetId);
+      const nextZoneUnlockCostEnergy = Math.max(0, Number(preset?.coreZoneUnlockCostEnergy || 0));
+      const alive = cloneTypedArray(state.world.alive);
+      const E = cloneTypedArray(state.world.E);
+      const reserve = cloneTypedArray(state.world.reserve);
+      const link = cloneTypedArray(state.world.link);
+      const lineageId = cloneTypedArray(state.world.lineageId);
+      const hue = cloneTypedArray(state.world.hue);
+      const trait = cloneTypedArray(state.world.trait);
+      const age = cloneTypedArray(state.world.age);
+      const born = cloneTypedArray(state.world.born);
+      const died = cloneTypedArray(state.world.died);
+      const W = state.world.W ? cloneTypedArray(state.world.W) : null;
+      const bootstrapWorld = {
+        ...state.world,
+        alive,
+        E,
+        reserve,
+        link,
+        lineageId,
+        hue,
+        trait,
+        age,
+        born,
+        died,
+        W,
+      };
+      const cpuSpawn = Number(state.sim.cpuBootstrapDone || 0) === 0
+        ? seedDeterministicBootstrapCluster(
+          bootstrapWorld,
+          state.meta.seed,
+          preset?.startWindows?.cpu,
+          Number(state.meta.cpuLineageId || 2) | 0,
+        )
+        : [];
+      const patches = [
+        { op: "set", path: "/world/alive", value: alive },
+        { op: "set", path: "/world/E", value: E },
+        { op: "set", path: "/world/reserve", value: reserve },
+        { op: "set", path: "/world/link", value: link },
+        { op: "set", path: "/world/lineageId", value: lineageId },
+        { op: "set", path: "/world/hue", value: hue },
+        { op: "set", path: "/world/trait", value: trait },
+        { op: "set", path: "/world/age", value: age },
+        { op: "set", path: "/world/born", value: born },
+        { op: "set", path: "/world/died", value: died },
+        { op: "set", path: "/world/W", value: W },
+        { op: "set", path: "/world/coreZoneMask", value: coreZoneMask },
+        { op: "set", path: "/sim/unlockedZoneTier", value: 1 },
+        { op: "set", path: "/sim/nextZoneUnlockKind", value: "DNA" },
+        { op: "set", path: "/sim/nextZoneUnlockCostEnergy", value: nextZoneUnlockCostEnergy },
+        { op: "set", path: "/sim/zoneUnlockProgress", value: 0 },
+        { op: "set", path: "/sim/coreEnergyStableTicks", value: 0 },
+        { op: "set", path: "/sim/cpuBootstrapDone", value: cpuSpawn.length ? 1 : Number(state.sim.cpuBootstrapDone || 0) },
         { op: "set", path: "/sim/runPhase", value: RUN_PHASE.RUN_ACTIVE },
         { op: "set", path: "/sim/running", value: true },
       ];
@@ -614,7 +738,7 @@ export function reducer(state, action, { rng }) {
     }
 
     case "PLACE_SPLIT_CLUSTER": {
-      if (isGenesisSetupInStandardMode(state)) return [];
+      if (isPreRunGenesisPhase(state)) return [];
       return handlePlaceSplitCluster(state, action);
     }
 
@@ -623,32 +747,32 @@ export function reducer(state, action, { rng }) {
     }
 
     case "HARVEST_CELL": {
-      if (isGenesisSetupInStandardMode(state)) return [];
+      if (isPreRunGenesisPhase(state)) return [];
       return handleHarvestCell(state, action);
     }
 
     case "HARVEST_PULSE": {
-      if (isGenesisSetupInStandardMode(state)) return [];
+      if (isPreRunGenesisPhase(state)) return [];
       return handleHarvestPulse(state, action);
     }
 
     case "PRUNE_CLUSTER": {
-      if (isGenesisSetupInStandardMode(state)) return [];
+      if (isPreRunGenesisPhase(state)) return [];
       return handlePruneCluster(state, action);
     }
 
     case "RECYCLE_PATCH": {
-      if (isGenesisSetupInStandardMode(state)) return [];
+      if (isPreRunGenesisPhase(state)) return [];
       return handleRecyclePatch(state, action);
     }
 
     case "SEED_SPREAD": {
-      if (isGenesisSetupInStandardMode(state)) return [];
+      if (isPreRunGenesisPhase(state)) return [];
       return handleSeedSpread(state, action);
     }
 
     case "SET_ZONE": {
-      if (isGenesisSetupInStandardMode(state)) return [];
+      if (isPreRunGenesisPhase(state)) return [];
       return handleSetZone(state, action);
     }
 
@@ -657,7 +781,7 @@ export function reducer(state, action, { rng }) {
     }
 
     case "BUY_EVOLUTION": {
-      if (isGenesisSetupInStandardMode(state)) return [];
+      if (isPreRunGenesisPhase(state)) return [];
       return handleBuyEvolution(state, action, DEV_MUTATION_CATALOG);
     }
 
@@ -736,6 +860,16 @@ export function simStepPatch(state, action, ctx) {
   patches.push({ op: "set", path: "/meta/globalLearning", value: nextLearning });
 
   applyWinConditions(state, simOut, currentTick);
+  const nextZoneUnlockCostEnergy = Math.max(0, Number(state.sim.nextZoneUnlockCostEnergy || 0));
+  const alivePlayerCoreCells = countAlivePlayerCoreCells(worldMutable, Number(state.meta.playerLineageId || 1) | 0);
+  if (Number(state.sim.unlockedZoneTier || 0) >= 1) {
+    simOut.zoneUnlockProgress = nextZoneUnlockCostEnergy > 0
+      ? clamp(Number(simOut.playerEnergyStored || 0) / nextZoneUnlockCostEnergy, 0, 1)
+      : 0;
+    simOut.coreEnergyStableTicks = Number(simOut.playerEnergyNet || 0) > 0 && alivePlayerCoreCells > 0
+      ? (Number(state.sim.coreEnergyStableTicks || 0) + 1)
+      : 0;
+  }
   Object.assign(simOut, deriveStageState(worldMutable, simOut, state.meta));
   applyGoalCode(simOut, currentTick);
 

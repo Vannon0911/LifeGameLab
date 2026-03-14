@@ -4,6 +4,16 @@ Zweck: Abbruch-sichere Arbeitsliste fuer den Genesis-Start ohne Auto-Founder.
 
 ## Status
 
+### P0 Workflow-Entblockung
+- [x] `llm-preflight classify` deckt `src/game/contracts/ids.js` als Contract-Core ab
+- [x] `llm-preflight classify` deckt `docs/PHASE_*_TODO.md` als Versioning-/Governance-Doku ab
+- [x] Matrix/Entry-Doku/Smoketest auf neue Klassifizierungsregeln nachgezogen
+- Verifiziert mit:
+  - `node tools/llm-preflight.mjs classify --paths src/game/contracts/ids.js`
+  - `node tools/llm-preflight.mjs classify --paths docs/PHASE_A_TODO.md`
+  - `node tools/llm-preflight.mjs classify --paths docs/PHASE_B_TODO.md,docs/PHASE_C_TODO.md`
+  - `node tests/test-llm-contract.mjs`
+
 - [x] A1 Enums / State / Contracts
   - `GAME_MODE`, `RUN_PHASE`, `BRUSH_MODE.FOUNDER_PLACE`
   - `meta.gameMode`
@@ -126,18 +136,23 @@ Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenf
 ## Status
 
 ### B1 Contract-/State-Basis
-- [ ] `RUN_PHASE.GENESIS_ZONE` einfuehren
-- [ ] `world.coreZoneMask` ergaenzen
-- [ ] `sim.unlockedZoneTier` ergaenzen
-- [ ] `sim.nextZoneUnlockKind` ergaenzen
-- [ ] `sim.nextZoneUnlockCostEnergy` ergaenzen
-- [ ] `sim.zoneUnlockProgress` ergaenzen
-- [ ] `sim.coreEnergyStableTicks` ergaenzen
-- [ ] `sim.cpuBootstrapDone` ergaenzen
-- [ ] `CONFIRM_CORE_ZONE` Action ergaenzen
-- [ ] Contracts/Gates/Metrics/Assertions updaten
-- [ ] Tests + Doku aktualisieren
-- Details:
+- [x] `RUN_PHASE.GENESIS_ZONE` einfuehren
+- [x] `world.coreZoneMask` ergaenzen
+- [x] `sim.unlockedZoneTier` ergaenzen
+- [x] `sim.nextZoneUnlockKind` ergaenzen
+- [x] `sim.nextZoneUnlockCostEnergy` ergaenzen
+- [x] `sim.zoneUnlockProgress` ergaenzen
+- [x] `sim.coreEnergyStableTicks` ergaenzen
+- [x] `sim.cpuBootstrapDone` ergaenzen
+- [x] `CONFIRM_CORE_ZONE` Action ergaenzen
+- [x] Contracts/Gates/Metrics/Assertions updaten
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-bootstrap-gen-world.mjs`
+  - `node tests/test-freeze-contract.mjs`
+  - `node tests/test-sim-gate.mjs`
+  - `node tests/test-string-contract.mjs`
+  - Details:
   - Ziel: reine Contract-/State-Basis fuer Energiekern + Unlock-Meter ohne Gameplay-Rework.
   - Dateien:
     - `src/game/contracts/ids.js`
@@ -163,10 +178,15 @@ Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenf
     - kein `ZONE_ROLE`-System, kein `zoneMap`-Rework, kein Kernel-Angriff.
 
 ### B2 Foundation -> Genesis Zone
-- [ ] `CONFIRM_FOUNDATION` fuehrt nach `GENESIS_ZONE` statt `RUN_ACTIVE`
-- [ ] `running` bleibt `false`
-- [ ] Founder werden gesperrt
-- [ ] Tests + Doku aktualisieren
+- [x] `CONFIRM_FOUNDATION` fuehrt nach `GENESIS_ZONE` statt `RUN_ACTIVE`
+- [x] `running` bleibt `false`
+- [x] Founder werden gesperrt
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-confirm-foundation.mjs`
+  - `node tests/test-founder-placement.mjs`
+  - `node tests/test-freeze-contract.mjs`
+  - `node tests/test-string-contract.mjs`
 - Details:
   - Ziel: Founder-Bestaetigung startet den Run nicht mehr direkt.
   - Dateien:

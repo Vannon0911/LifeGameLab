@@ -4,7 +4,8 @@ startEvidenceCase("test-genesis-action-gates.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
-import { GAME_MODE } from "../src/game/contracts/ids.js";
+import { BRUSH_MODE, GAME_MODE } from "../src/game/contracts/ids.js";
+import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
@@ -29,6 +30,26 @@ for (const action of blockedInGenesis) {
   genesisStore.dispatch(action);
   const sigAfter = genesisStore.getSignature();
   assert(sigAfter === sigBefore, `${action.type} must be blocked in genesis setup`);
+}
+
+genesisStore.dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
+const genesisState = genesisStore.getState();
+const preset = getWorldPreset(genesisState.meta.worldPresetId);
+const range = getStartWindowRange(preset.startWindows.player, genesisState.world.w, genesisState.world.h);
+for (const founder of [
+  { x: range.x0, y: range.y0 },
+  { x: range.x0 + 1, y: range.y0 },
+  { x: range.x0, y: range.y0 + 1 },
+  { x: range.x0 + 1, y: range.y0 + 1 },
+]) {
+  genesisStore.dispatch({ type: "PLACE_CELL", payload: { ...founder, remove: false } });
+}
+genesisStore.dispatch({ type: "CONFIRM_FOUNDATION" });
+for (const action of blockedInGenesis) {
+  const sigBefore = genesisStore.getSignature();
+  genesisStore.dispatch(action);
+  const sigAfter = genesisStore.getSignature();
+  assert(sigAfter === sigBefore, `${action.type} must be blocked in genesis zone`);
 }
 
 const labStore = createStore(manifest, { reducer, simStep: simStepPatch });
