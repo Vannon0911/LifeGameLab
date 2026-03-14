@@ -111,3 +111,34 @@ npm run test:stress
 - Performance-Ziel aus dem letzten Implementierungsplan (`>=10%` je Profilfall) ist noch offen.
 
 Details: `docs/PROJECT_STRUCTURE.md`, `docs/PROJECT_CONTRACT_SNAPSHOT.md`, `docs/SESSION_HANDOFF.md`
+
+## Konzept Ab Aktuellem Head
+
+Das hier ist der reale Rework-Plan, nicht Wunschdenken. `Phase A-C` sind auf Codebasis bereits umgesetzt: Genesis-Start, Energiekern, DNA-Zone und die zugehoerigen Contract-/Gate-/Smoke-Pfade existieren. Der naechste echte Produktblock ist `Phase D`.
+
+### Bereits umgesetzt
+
+- `Foundation -> Core -> DNA -> Run` ist als deterministischer Main-Run-Pfad vorhanden.
+- `coreZoneMask` und `dnaZoneMask` sind die aktuelle Zwischenwahrheit fuer Progression.
+- DNA-Unlock, DNA-Placement und DNA-Erzeugung laufen produktiv und sind testabgesichert.
+
+### Geplantes Konzept fuer die Restphasen
+
+- `Phase D`: Infrastruktur wird als echter Netz-/Pfad-Schritt gebaut. `world.link` bleibt der kanonische Infrastrukturtraeger. Sicht/Fog wird aktiv aus Kern, DNA und Infrastruktur abgeleitet.
+- `Phase E`: Spezialmasken werden in ein kanonisches Zonensystem ueberfuehrt. Darauf sitzt eine deterministische Pattern-Engine statt losem Sonderfall-Code.
+- `Phase F`: Tech-Tree, Progression und Objectives werden auf DNA, Infrastruktur und Pattern neu ausgerichtet.
+- `Phase G`: Cleanup, Balancing, Vollsuite und RC-Haertung. Keine neuen Kernfeatures mehr, nur Stabilisierung und Release-Reife.
+
+### Bewusst noch nicht drin
+
+- kein finales Zonensystem
+- kein produktives Pattern-System
+- kein aktives Fog-/Visibility-Gameplay
+- kein Rework von Tech-Tree, Objectives oder Endgame
+
+Die kanonische Arbeitssteuerung dafuer lebt in:
+
+- `docs/PHASE_D_TODO.md`
+- `docs/PHASE_E_TODO.md`
+- `docs/PHASE_F_TODO.md`
+- `docs/PHASE_G_TODO.md`
