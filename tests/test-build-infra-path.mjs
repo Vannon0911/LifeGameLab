@@ -81,7 +81,7 @@ function createInfraBuildStore(seed) {
   const chain = [
     coreXY[0],
     { x: minX - 1, y: minY },
-    { x: minX - 2, y: minY },
+    { x: minX - 1, y: minY + 1 },
   ];
   patchPlayerCells(store, chain);
   store.dispatch({
@@ -94,7 +94,7 @@ function createInfraBuildStore(seed) {
     },
   });
   store.dispatch({ type: "BEGIN_INFRA_BUILD", payload: {} });
-  return { store, chain, farCell: { x: minX - 4, y: minY + 3 } };
+  return { store, chain, farCell: { x: Math.min(active.world.w - 1, minX + 4), y: Math.min(active.world.h - 1, minY + 3) } };
 }
 
 {
