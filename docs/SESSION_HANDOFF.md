@@ -12,8 +12,8 @@
 ## Aktiver Restphasen-Stand
 - Phase A und B sind abgeschlossen.
 - Phase C ist funktional und prozessual abgeschlossen; `docs/PHASE_C_TODO.md` ist der abgeschlossene Nachweis.
-- Phase D ist der naechste produktive Block und wird ueber `docs/PHASE_D_TODO.md` gesteuert.
-- Phase E, F und G sind vorbereitet, aber strikt gesperrt bis ihre jeweilige Vorphase stabil abgeschlossen ist.
+- Phase D ist auf Codebasis abgeschlossen; `docs/PHASE_D_TODO.md` bleibt der Nachweis fuer Infrastruktur, aktive Sicht/Fog, CPU-Gating, Link/Sicht-Gates und die zugehoerigen Smokes.
+- Phase E ist jetzt der naechste produktive Block; Phase F und G bleiben vorbereitet, aber strikt gesperrt bis ihre jeweilige Vorphase stabil abgeschlossen ist.
 - Kanonische Restphasen-Doku ab jetzt: `docs/PHASE_D_TODO.md`, `docs/PHASE_E_TODO.md`, `docs/PHASE_F_TODO.md`, `docs/PHASE_G_TODO.md`.
 
 ## Verbindliche Produkt- und Architekturentscheidungen
@@ -42,6 +42,7 @@
 - `globalLearning` und `mergeWorldLearningIntoBank()` in `src/game/sim/reducer/techTreeOps.js` bleiben adaptive CPU-Basis und werden nicht ersetzt.
 - `expandWorldPreserve()` in `src/game/sim/reducer/worldRules.js` muss im `copy1`-Block `world.water` und `world.biomeId` mitfuehren.
 - Phase A bleibt contract-first: `GAME_MODE`, `RUN_PHASE`, `BRUSH_MODE.FOUNDER_PLACE`, `CONFIRM_FOUNDATION`, `meta.gameMode`, `sim.runPhase`, `sim.founderBudget`, `sim.founderPlaced`, `world.founderMask`, `world.visibility` und `world.explored` muessen zuerst in IDs, State, Gates und Metrics verankert werden, bevor Worldgen, Runtime oder UI darauf umgestellt werden.
+- Phase D liefert jetzt produktiv: committed Infrastruktur als eigener Pfad-Commit, tickbasierte Sicht aus Kern/DNA/Infra, monotones `explored`, fog-aware CPU-Readouts, Main-Run-Infra-UI und D7-Smokes fuer `DNA -> Infra -> Sicht`.
 
 ## Progression und Main-Run-Interaktionen
 - `HARVEST_CELL`, rohe Brush-Modi, Diagnose-Controls und direkte Paint-Interaktionen bleiben technisch kompatibel, aber nur fuer `labor`.

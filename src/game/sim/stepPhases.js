@@ -6,6 +6,55 @@ import { applyWorldAi } from "./worldAi.js";
 import { applyDynamicDamping } from "./damping.js";
 import { computeClusterAndLinks } from "./network.js";
 import { PLANT_ACTIVE_THRESHOLD } from "./constants.js";
+import { isCommittedInfraValue } from "./infra.js";
+
+function applyCircularVision(mask, w, h, idx, radius) {
+  const r = Math.max(0, Number(radius) | 0);
+  if (r <= 0) {
+    mask[idx] = 1;
+    return;
+  }
+  const x = idx % w;
+  const y = (idx / w) | 0;
+  const rr = r * r;
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      if ((dx * dx) + (dy * dy) > rr) continue;
+      const xx = x + dx;
+      const yy = y + dy;
+      if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+      mask[(yy * w) + xx] = 1;
+    }
+  }
+}
+
+function recomputeVisibility(world, phy) {
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  const N = w * h;
+  if (!N || !world?.alive || !world?.lineageId) return;
+  if (!world.visibility || world.visibility.length !== N) world.visibility = new Uint8Array(N);
+  if (!world.explored || world.explored.length !== N) world.explored = new Uint8Array(N);
+
+  const visibility = world.visibility;
+  const explored = world.explored;
+  visibility.fill(0);
+
+  const playerLineageId = Number(phy?.playerLineageId || 0) | 0;
+  const radiusCore = Math.max(0, Number(phy?.visionRadiusCore || 0) | 0);
+  const radiusDNA = Math.max(0, Number(phy?.visionRadiusDNA || 0) | 0);
+  const radiusInfra = Math.max(0, Number(phy?.visionRadiusInfra || 0) | 0);
+  for (let i = 0; i < N; i++) {
+    if ((Number(world.alive[i]) | 0) !== 1) continue;
+    if ((Number(world.lineageId[i]) | 0) !== playerLineageId) continue;
+    if ((Number(world.coreZoneMask?.[i]) | 0) === 1) applyCircularVision(visibility, w, h, i, radiusCore);
+    if ((Number(world.dnaZoneMask?.[i]) | 0) === 1) applyCircularVision(visibility, w, h, i, radiusDNA);
+    if (isCommittedInfraValue(world.link?.[i])) applyCircularVision(visibility, w, h, i, radiusInfra);
+  }
+  for (let i = 0; i < N; i++) {
+    if ((Number(visibility[i]) | 0) === 1) explored[i] = 1;
+  }
+}
 
 export function runFieldPhase(world, phy, tick, traitHarvestFn) {
   const { w, h, alive, L, R, W, P, B, trait, lineageId } = world;
@@ -77,6 +126,7 @@ export function runWorldSystemsPhase(world, phy, tick, options = {}) {
   applyWorldAi(world, tick, options);
   applyDynamicDamping(world);
   computeClusterAndLinks(world, phy);
+  recomputeVisibility(world, phy);
   return { plantsPrunedLastStep };
 }
 

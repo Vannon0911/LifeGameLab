@@ -31,5 +31,14 @@ assert(uiSource.includes("Zone 2 aktiv"), "dna zone committed card missing in ui
 assert(uiSource.includes("Naechster Unlock"), "next infra unlock text missing in ui");
 assert(uiSource.includes("sim.zoneUnlockProgress"), "dna unlock progress binding missing in ui");
 assert(uiSource.includes("sim.coreEnergyStableTicks"), "core stable ticks binding missing in ui");
+assert(uiSource.includes("Sicht & Kartenwissen"), "visibility status card missing in lage panel");
+assert(uiSource.includes("Infrastruktur starten"), "infra start button missing in ui");
+assert(uiSource.includes("Infrastruktur bestaetigen"), "infra confirm button missing in ui");
+assert(uiSource.includes("Leerer Staging-Pfad hat nichts committed."), "empty infra confirm abort copy missing in ui");
+assert(uiSource.includes('type: "BEGIN_INFRA_BUILD"'), "infra start dispatch missing in ui");
+assert(uiSource.includes('type: "BUILD_INFRA_PATH"'), "infra path dispatch missing in ui");
+assert(uiSource.includes('type: "CONFIRM_INFRA_PATH"'), "infra confirm dispatch missing in ui");
+assert(uiSource.includes("Sicht-Legende"), "world fog legend missing in ui");
+assert(uiSource.includes("infraBuildMode"), "infra build mode ui handling missing");
 
 console.log("GENESIS_UI_MINIMUM_OK influence phase and genesis ui hooks verified");

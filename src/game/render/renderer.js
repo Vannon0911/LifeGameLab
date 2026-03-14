@@ -4,6 +4,7 @@
 // ============================================================
 
 import { OVERLAY_MODE } from "../contracts/ids.js";
+import { FOG_HIDDEN, FOG_MEMORY, FOG_VISIBLE, applyFogToColor, getTileFogState } from "./fogOfWar.js";
 
 function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -252,8 +253,10 @@ function computeOverlayFieldColor(world, meta, idx, overlay) {
 
 export function computeFieldSurfaceColor(world, meta, idx) {
   const overlay = String(meta?.activeOverlay || OVERLAY_MODE.NONE);
-  if (overlay !== OVERLAY_MODE.NONE) return computeOverlayFieldColor(world, meta, idx, overlay);
-  return computeRenderModeFieldColor(world, meta, idx);
+  const color = overlay !== OVERLAY_MODE.NONE
+    ? computeOverlayFieldColor(world, meta, idx, overlay)
+    : computeRenderModeFieldColor(world, meta, idx);
+  return applyFogToColor(color, getTileFogState(world, idx));
 }
 
 // Background/tile pass (without direct cell colour)
@@ -402,6 +405,7 @@ function drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim) {
   ctx.lineWidth = Math.max(0.5, tilePx * 0.05);
   for (let i = 0; i < N; i++) {
     if (alive[i] !== 1 || link[i] < 0.18) continue;
+    if (getTileFogState(world, i) !== FOG_VISIBLE) continue;
     const x = i % w;
     const y = (i / w) | 0;
     const v = [];
@@ -410,6 +414,7 @@ function drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim) {
     for (let n = 0; n < v.length; n++) {
       const j = v[n];
       if (alive[j] !== 1) continue;
+      if (getTileFogState(world, j) !== FOG_VISIBLE) continue;
       const strength = Math.min(link[i], link[j]);
       if (strength < 0.18) continue;
       const x1 = offX + x * tilePx + tilePx * 0.5;
@@ -694,8 +699,9 @@ function drawEvents(ctx, world, offX, offY, tilePx) {
 }
 
 function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) {
-  const { w, h, alive, E, hue, trait, clusterField, superId } = world;
+  const { w, h, alive, E, hue, trait, clusterField, superId, lineageId } = world;
   const Emax = Number(meta?.physics?.Emax) || 3.2;
+  const cpuLineageId = Number(meta?.cpuLineageId || 2) | 0;
   if (quality <= 0) return;
   const cellCount = Math.max(1, w * h);
   const isHeavyGrid = cellCount >= 96 * 96;
@@ -714,6 +720,17 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) 
       for (let x = 0; x < w; x++) {
         const i = y * w + x;
         if (alive[i] !== 1) continue;
+        const fogState = getTileFogState(world, i);
+        const lid = Number(lineageId?.[i] || 0) | 0;
+        if (fogState === FOG_HIDDEN) continue;
+        if (fogState === FOG_MEMORY) {
+          if (lid !== cpuLineageId) continue;
+          ctx.fillStyle = "rgba(196, 124, 112, 0.52)";
+          const px = offX + x * tilePx;
+          const py = offY + y * tilePx;
+          ctx.fillRect(px, py, Math.max(1, tilePx), Math.max(1, tilePx));
+          continue;
+        }
         const ev = clamp01((Number(E[i]) || 0) / Emax);
         const h0 = Number(hue[i]) || 0;
         const c = hslToRgb(h0, 38 + ev * 40, 46 + ev * 16);
@@ -732,6 +749,10 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) 
       for (let x = 0; x < w - 1; x++) {
         if (!hasStable2x2(world, x, y)) continue;
         const i = y * w + x;
+        if (getTileFogState(world, i) !== FOG_VISIBLE
+          || getTileFogState(world, i + 1) !== FOG_VISIBLE
+          || getTileFogState(world, i + w) !== FOG_VISIBLE
+          || getTileFogState(world, i + w + 1) !== FOG_VISIBLE) continue;
         if (moduleMask[i]) continue;
         moduleMask[i] = moduleMask[i + 1] = moduleMask[i + w] = moduleMask[i + w + 1] = 1;
         const ev = (
@@ -786,6 +807,9 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) 
     for (let x = 0; x < w; x += skip) {
       const i = y * w + x;
       if (alive[i] !== 1) continue;
+      const fogState = getTileFogState(world, i);
+      const lid = Number(lineageId?.[i] || 0) | 0;
+      if (fogState === FOG_HIDDEN) continue;
       const cx = offX + x * tilePx + tilePx * 0.5;
       const cy = offY + y * tilePx + tilePx * 0.5;
       const ev = clamp01((Number(E[i]) || 0) / Emax);
@@ -795,6 +819,19 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) 
       const inModule = moduleMask ? moduleMask[i] === 1 : false;
       const radius = Math.max(1, tilePx * (inModule ? 0.26 : isHugeGrid ? 0.34 : 0.36 + ev * 0.10));
       if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(radius)) continue;
+      if (fogState === FOG_MEMORY) {
+        if (lid !== cpuLineageId) continue;
+        ctx.fillStyle = "rgba(196, 124, 112, 0.28)";
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(1.2, radius * 0.58), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(228, 176, 152, 0.32)";
+        ctx.lineWidth = Math.max(0.5, radius * 0.10);
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(1.8, radius * 0.92), 0, Math.PI * 2);
+        ctx.stroke();
+        continue;
+      }
       const h0 = Number(hue[i]) || 0;
       const doctrineBlend = inModule ? 0.52 : 0.18 + doctrinePalette.bonus * 0.20;
       const sat = isHugeGrid ? 42 + mut * 36 : 22 + mut * 64 + doctrinePalette.bonus * 8;

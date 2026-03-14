@@ -1,6 +1,7 @@
 import { PHYSICS_DEFAULT } from "../../core/kernel/physics.js";
 import { APP_VERSION } from "../../project/project.manifest.js";
 import { buildAdvisorModel } from "../../project/llm/advisorModel.js";
+import { applyFogIntelToAdvisorModel } from "../render/fogOfWar.js";
 import {
   PLAYER_DOCTRINES,
   DOCTRINE_BY_ID,
@@ -45,6 +46,25 @@ import {
 } from "./ui.model.js";
 import { el, fmt, fmtSign, isDesktopLayout } from "./ui.dom.js";
 import { announceInLiveRegion, buildGateFeedback, createActionFeedback } from "./ui.feedback.js";
+
+function countMaskTiles(mask) {
+  if (!mask || typeof mask.length !== "number") return 0;
+  let total = 0;
+  for (let i = 0; i < mask.length; i += 1) {
+    total += (Number(mask[i] || 0) | 0) === 1 ? 1 : 0;
+  }
+  return total;
+}
+
+function summarizeFog(world) {
+  const total = Number(world?.w || 0) * Number(world?.h || 0);
+  if (!total) return { visible: 0, explored: 0, hidden: 0 };
+  const visible = countMaskTiles(world?.visibility);
+  const exploredAll = countMaskTiles(world?.explored);
+  const explored = Math.max(0, exploredAll - visible);
+  const hidden = Math.max(0, total - visible - explored);
+  return { visible, explored, hidden };
+}
 
 // ============================================================
 // UI — Mobile-First Web App v2.1
@@ -506,6 +526,16 @@ export class UI {
   }
 
   _getActiveToolMeta(state) {
+    if (String(state?.sim?.infraBuildMode || "") === "path") {
+      const staged = countMaskTiles(state?.world?.infraCandidateMask);
+      return {
+        mode: "infra_path",
+        label: "Infrastrukturpfad",
+        detail: staged > 0
+          ? `${staged} Kacheln vorgemerkt. Klick setzt/entfernt Pfad, bestaetigen commitet, leer bestaetigen bricht ab.`
+          : "Klick setzt/entfernt Pfad. Leer bestaetigen bricht ab und setzt den Run fort.",
+      };
+    }
     const mode = String(state?.meta?.brushMode || BRUSH_MODE.OBSERVE);
     const zone = ZONE_TYPES.find((entry) => entry.id === this._activeZoneType);
     const map = {
@@ -542,7 +572,10 @@ export class UI {
     if (!this._activeContext) return;
     this._lastPanelRenderAt = Date.now();
     const { meta, sim } = state;
-    const advisorModel = buildAdvisorModel(state, { benchmark: this._getBenchmarkState() });
+    const advisorModel = applyFogIntelToAdvisorModel(
+      buildAdvisorModel(state, { benchmark: this._getBenchmarkState() }),
+      state
+    );
     container.innerHTML = "";
     const ctx = this._activeContext;
     const panelMeta = PANEL_BY_KEY[ctx];
@@ -817,6 +850,17 @@ export class UI {
 	        mkBar(Math.min(1, Number(sim.efficiencyTicks || 0) / 100), "nx-bar-stage", "Effizienz-Fortschritt")
 	      );
 	      container.appendChild(progressCard);
+      const fog = summarizeFog(state.world);
+      const visibilityCard = el("section", "nx-card");
+      visibilityCard.appendChild(el("div", "nx-card-title", "Sicht & Kartenwissen"));
+      visibilityCard.appendChild(el("div", "nx-note", "Sicht kommt aus Kern, DNA-Zone und commiteter Infrastruktur. Erkundete Flaechen bleiben als Erinnerung, Unbekanntes bleibt verdeckt."));
+      visibilityCard.append(
+        mkMetric("Sichtbar", String(fog.visible), fog.visible > 0 ? "nx-mono nx-val-pos" : "nx-mono"),
+        mkMetric("Erkundet", String(fog.explored)),
+        mkMetric("Verborgen", String(fog.hidden)),
+        mkMetric("CPU Intel", advisorModel?.cpuIntel?.summary || "keine Sicht")
+      );
+      container.appendChild(visibilityCard);
       if (Number(sim.unlockedZoneTier || 0) >= 1 && String(sim.nextZoneUnlockKind || "") === "DNA") {
         const unlockProgress = Math.max(0, Math.min(1, Number(sim.zoneUnlockProgress || 0)));
         const unlockCard = el("section", "nx-card");
@@ -856,6 +900,62 @@ export class UI {
           mkMetric("DNA-Kosten", fmt(Number(sim.nextInfraUnlockCostDNA || 0), 0))
         );
         container.appendChild(dnaCommittedCard);
+      }
+      if (sim.dnaZoneCommitted || String(sim.infraBuildMode || "") === "path" || !!sim.infrastructureUnlocked) {
+        const infraCard = el("section", "nx-card");
+        const stagedCount = countMaskTiles(state.world?.infraCandidateMask);
+        const infraReady = String(sim.nextZoneUnlockKind || "") === "INFRA";
+        const inBuildMode = String(sim.infraBuildMode || "") === "path";
+        const infraTitle = inBuildMode ? "Infrastrukturpfad aktiv" : (sim.infrastructureUnlocked ? "Infrastruktur aktiv" : "Infrastruktur");
+        infraCard.appendChild(el("div", "nx-card-title", infraTitle));
+        infraCard.appendChild(el("div", "nx-note", inBuildMode
+          ? "Canvas-Klicks setzen oder entfernen den Pfad. Bestaetigen commitet, leer bestaetigen bricht ohne Kosten ab."
+          : "Infrastruktur erweitert Sicht nur ueber commitete Verbindungen. Ausbau bleibt an Link und Sicht gebunden."));
+        infraCard.append(
+          mkMetric("Status", inBuildMode ? "Pfad-Setup" : (sim.infrastructureUnlocked ? "freigeschaltet" : (infraReady ? "bereit" : "gesperrt")), inBuildMode || sim.infrastructureUnlocked || infraReady ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
+          mkMetric("Staged Pfad", String(stagedCount)),
+          mkMetric("DNA Startkosten", fmt(Number(sim.nextInfraUnlockCostDNA || 0), 0)),
+          mkMetric("Energie Buildkosten", fmt(Number(sim.infraBuildCostEnergy || 0), 0))
+        );
+        const infraActions = el("div", "nx-chip-grid");
+        if (!inBuildMode && !sim.infrastructureUnlocked) {
+          const startInfraBtn = el("button", "nx-btn nx-btn-primary", "Infrastruktur starten");
+          startInfraBtn.addEventListener("click", () => {
+            this._dispatch(
+              { type: "BEGIN_INFRA_BUILD", payload: {} },
+              {
+                ok: "Infrastrukturpfad aktiv. Canvas-Klicks stagen jetzt die Verbindung.",
+                blocked: "Infrastrukturstart blockiert.",
+                hint: "Erforderlich: RUN_ACTIVE, bestaetigte DNA-Zone, INFRA als naechster Unlock sowie genug DNA und gespeicherte Energie.",
+              }
+            );
+            queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+          });
+          infraActions.appendChild(startInfraBtn);
+        }
+        if (inBuildMode) {
+          const confirmInfraBtn = el("button", "nx-btn nx-btn-primary", "Infrastruktur bestaetigen");
+          confirmInfraBtn.addEventListener("click", () => {
+            const currentState = this._store.getState();
+            const emptyBefore = countMaskTiles(currentState.world?.infraCandidateMask) === 0;
+            this._dispatch(
+              { type: "CONFIRM_INFRA_PATH", payload: {} },
+              {
+                ok: emptyBefore ? "Infrastrukturpfad beendet. Leerer Staging-Pfad hat nichts committed." : "Infrastrukturpfad committed.",
+                blocked: "Infrastrukturpfad blockiert.",
+                hint: emptyBefore
+                  ? "Leeres Confirm beendet nur den Build-Modus. Fuer Commit braucht der Pfad eine gueltige zusammenhaengende Verbindung."
+                  : "Pfad muss zusammenhaengend sein und an Kern, DNA-Zone oder bestehende commitete Infrastruktur anschliessen.",
+              }
+            );
+            queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+          });
+          infraActions.appendChild(confirmInfraBtn);
+        }
+        if (infraActions.childNodes.length > 0) {
+          infraCard.appendChild(infraActions);
+        }
+        container.appendChild(infraCard);
       }
 
       const timeCard = el("section", "nx-card");
@@ -977,10 +1077,10 @@ export class UI {
     if (ctx === "legacy_energie") {
       const eIn = Number(sim.playerEnergyIn || 0), eOut = Number(sim.playerEnergyOut || 0);
       const eNet = Number(sim.playerEnergyNet || 0), eStored = Number(sim.playerEnergyStored || 0);
-      const cpuEIn = Number(sim.cpuEnergyIn || 0);
+      const cpuIntel = advisorModel?.cpuIntel || { summary: "CPU ausserhalb Sicht unbekannt", mode: "hidden", precise: false, visibleAlive: 0 };
       const lShare = Number(sim.lightShare || 0), nShare = Number(sim.nutrientShare || 0);
       const season = Number(sim.seasonPhase || 0);
-      const pAlive = Number(sim.playerAliveCount || 0), cAlive = Number(sim.cpuAliveCount || 0);
+      const pAlive = Number(sim.playerAliveCount || 0);
 
       const flowCard = el("section", "nx-card");
       flowCard.setAttribute("aria-labelledby", "energy-flow-title");
@@ -993,7 +1093,7 @@ export class UI {
         ["Ausgaben",  fmt(eOut,3),"nx-val-neg"],
         ["Netto",     fmtSign(eNet,3), eNet>=0?"nx-val-pos":"nx-val-neg"],
         ["Gespeichert",fmt(eStored,2),"nx-val"],
-        ["CPU Einnahmen",fmt(cpuEIn,3),"nx-val"],
+        ["CPU Intel", cpuIntel.summary, "nx-val"],
       ]) {
         const row = el("div", "nx-stat-row");
         row.append(el("span", "nx-label", label), el("span", `nx-mono ${cls}`, val));
@@ -1043,7 +1143,10 @@ export class UI {
       const pRow2 = el("div", "nx-stat-row");
       pRow2.append(el("span","nx-label","Spieler alive"), el("span","nx-mono nx-val-pos", String(pAlive)));
       const cRow2 = el("div", "nx-stat-row");
-      cRow2.append(el("span","nx-label","CPU alive"), el("span","nx-mono nx-val-neg", String(cAlive)));
+      cRow2.append(
+        el("span","nx-label","CPU Status"),
+        el("span","nx-mono nx-val-neg", cpuIntel.precise ? `${cpuIntel.visibleAlive} in Sicht` : cpuIntel.mode === "signature" ? "nur Signatur" : "keine Sicht")
+      );
       fracCard.append(pRow2, cRow2);
 
       container.append(flowCard, srcCard, seaCard, fracCard);
@@ -1383,7 +1486,17 @@ export class UI {
       });
       speedRow.append(speed);
       card.appendChild(speedRow);
-      container.append(card);
+
+      const fog = summarizeFog(state.world);
+      const fogCard = el("section", "nx-card");
+      fogCard.appendChild(el("div", "nx-card-title", "Sicht-Legende"));
+      fogCard.appendChild(el("div", "nx-note", "Sichtbar bleibt klar, erkundet wird gedimmt erinnert, unbesucht bleibt stark verdeckt."));
+      fogCard.append(
+        el("div", "nx-note", `Sichtbar: ${fog.visible}`),
+        el("div", "nx-note", `Erkundet: ${fog.explored}`),
+        el("div", "nx-note", `Unbesucht: ${fog.hidden}`)
+      );
+      container.append(card, fogCard);
       return;
     }
 
@@ -1832,6 +1945,20 @@ export class UI {
     if (wx<0||wy<0||wx>=state.meta.gridW||wy>=state.meta.gridH) return;
     const mode = state.meta.brushMode;
     const radius = state.meta.brushRadius || 3;
+    if (String(state.sim?.infraBuildMode || "") === "path") {
+      if (!start) return;
+      const idx = wy * state.meta.gridW + wx;
+      const isSelected = (Number(state.world?.infraCandidateMask?.[idx] || 0) | 0) === 1;
+      this._dispatch(
+        { type: "BUILD_INFRA_PATH", payload: { x: wx, y: wy, remove: isSelected } },
+        {
+          ok: isSelected ? "Infrastrukturkachel entfernt." : "Infrastrukturkachel vorgemerkt.",
+          blocked: "Infrastrukturpfad blockiert.",
+          hint: "Pfad muss zusammenhaengend bleiben und an Kern, DNA-Zone oder commitete Infrastruktur anschliessen.",
+        }
+      );
+      return;
+    }
     if (mode === BRUSH_MODE.OBSERVE) return;
     if (mode === BRUSH_MODE.CELL_HARVEST) {
       if (!start) return;
@@ -1936,7 +2063,10 @@ export class UI {
     const energyNet  = Number(sim.playerEnergyNet || 0);
     const season     = Number(sim.seasonPhase || 0);
     const playerAlive= Number(sim.playerAliveCount || 0);
-    const advisorModel = buildAdvisorModel(state, { benchmark: this._getBenchmarkState() });
+    const advisorModel = applyFogIntelToAdvisorModel(
+      buildAdvisorModel(state, { benchmark: this._getBenchmarkState() }),
+      state
+    );
     const doctrine = DOCTRINE_BY_ID[String(advisorModel.runIdentity.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
     const riskState = getRiskState(advisorModel.status.risk);
     const goalState = getGoalState(advisorModel);
