@@ -8,6 +8,7 @@ export const TEST_SUITES = Object.freeze({
     "tests/test-core-gates.mjs",
     "tests/test-dataflow-contract.mjs",
     "tests/test-faction-metrics.mjs",
+    "tests/test-genesis-ui-minimum.mjs",
     "tests/test-interaction-gates.mjs",
     "tests/test-interactions.mjs",
     "tests/test-layer-split.mjs",
