@@ -35,6 +35,8 @@ export const WORLD_PRESETS = Object.freeze({
     plantBoost: 0.10,
     physicsOverrides: {
       L_mean: 1.02,
+      T_survive: 0.92,
+      U_base: 0.88,
       R_gen: 1.08,
       plantCloudDensity: 1.10,
       W_decay: 1.05,

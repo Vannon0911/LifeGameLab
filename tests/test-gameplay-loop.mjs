@@ -225,12 +225,19 @@ startEvidenceCase("test-gameplay-loop.mjs");
       assert(Array.isArray(s.world.lineageMemory?.[s.meta.playerLineageId]?.techs) && s.world.lineageMemory[s.meta.playerLineageId].techs.includes("light_harvest"), "light_harvest did not unlock");
 
       let guard = 0;
-      while ((Number(s.sim.playerStage || 1) < 2 || Number(s.sim.playerDNA || 0) < 10) && guard < 32) {
-        s = earnDNA(store, 10);
+      while (Number(s.sim.playerStage || 1) < 2 && guard < 64) {
         s = stepFor(store, 2);
         guard++;
       }
       assert(Number(s.sim.playerStage || 1) >= 2, `Player stage did not reach 2: ${s.sim.playerStage}`);
+
+      guard = 0;
+      while (Number(s.sim.playerDNA || 0) < 10 && guard < 32) {
+        s = earnDNA(store, 10);
+        if (Number(s.sim.playerDNA || 0) >= 10) break;
+        s = stepFor(store, 2);
+        guard++;
+      }
 
       guard = 0;
       while (deriveCommandScore(s.sim) < 0.10 && guard < 80) {
