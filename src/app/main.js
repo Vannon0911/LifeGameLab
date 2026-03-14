@@ -9,6 +9,7 @@ import { render }            from "../project/renderer.js";
 import { UI }                from "../project/ui.js";
 import { hashString }        from "../core/kernel/rng.js";
 import { createSimStepBuffer } from "../core/runtime/simStepBuffer.js";
+import { deriveRiskCode, normalizeGoalCode } from "../game/contracts/ids.js";
 
 function getCookie(name) {
   const safeName = String(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -948,20 +949,11 @@ function renderGameToText() {
     paint_reset: "saturation_reset",
   };
   const energyNet = Number(state?.sim?.playerEnergyNet || 0);
-  const toxin = Number(state?.sim?.meanToxinField || 0);
   const playerAlive = Number(state?.sim?.playerAliveCount || 0);
   const clusterRatio = Number(state?.sim?.clusterRatio || 0);
   const networkRatio = Number(state?.sim?.networkRatio || 0);
-  let risk = "stable";
-  if (playerAlive === 0 && Number(state?.sim?.tick || 0) > 5) risk = "collapse";
-  else if (energyNet < -2.2) risk = "critical";
-  else if (toxin > 0.3) risk = "toxic";
-  else if (energyNet < 0.45) risk = "unstable";
-  const mission =
-    Number(state?.sim?.playerStage || 1) <= 1 ? "stabilize_first_cluster" :
-    Number(state?.sim?.totalHarvested || 0) < 15 ? "reach_next_stage" :
-    clusterRatio < 0.28 ? "form_biomodule" :
-    "push_directive";
+  const risk = deriveRiskCode(state?.sim || {});
+  const mission = normalizeGoalCode(state?.sim?.goal || "");
   const structure =
     clusterRatio >= 0.56 ? "colony_core" :
     clusterRatio >= 0.28 || networkRatio >= 0.22 ? "biomodule_2x2" :

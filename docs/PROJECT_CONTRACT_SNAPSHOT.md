@@ -1,5 +1,5 @@
 # LIFEXLAB — SYSTEM ARCHITECTURE SNAPSHOT
-**Datum:** 2026-03-14 | **Version:** 14.3 | **APP_VERSION:** 2.3.0 (Sandbox Build) | **Status:** VERIFIZIERT · Vollsuite, Determinismus, Core-Gates, Browser-Hooks und Rework-Doku synchron grün
+**Datum:** 2026-03-14 | **Version:** 14.4 | **APP_VERSION:** 2.3.0 (Sandbox Build) | **Status:** VERIFIZIERT · Vollsuite, Determinismus, Core-Gates und Contract-Hardening grün; Perf-Ziel aus Implementierungsplan noch offen
 
 ## Architektur-Mandat
 
@@ -17,6 +17,7 @@
 - `src/core/kernel/patches.js` erzwingt Write-Gates
 - `src/core/kernel/schema.js` erzwingt Sanitizing
 - `src/core/kernel/store.js` schützt Determinismus und Dispatch-Pipeline
+- `src/game/contracts/ids.js` ist Source-of-Truth für kritische String-IDs (`winMode`, `gameResult`, `goal`, `overlay`, `brushMode`)
 
 ## Empirische Beweise
 
@@ -28,8 +29,11 @@
 - Versionskonsistenz: `tests/test-version-traceability.mjs`
 - Pfadhygiene: `tests/test-path-hygiene.mjs`
 - Dataflow-Doku: `tests/test-manifest-dataflow.mjs`
+- Dataflow-Contract konkret: `tests/test-dataflow-contract.mjs`
 - Core-Gates: `tests/test-core-gates.mjs`
 - SIM-Gate: `tests/test-sim-gate.mjs`
+- String-Contract: `tests/test-string-contract.mjs`
+- Wrapper-Ban: `tests/test-wrapper-ban.mjs`
 - Browser-/Strategie-Entry: `tests/test-ui-strategy-contract.mjs`
 - Split-Sicherheitsgate: `tests/test-split-security-gate.mjs`
 - Redteam: `tools/redteam-stress-master.mjs`
@@ -49,8 +53,8 @@
 
 ## Offene Punkte
 
-- `CORE-01` Win-Conditions für Release-Build reaktivieren
-- `PERF-01` activeTiles-Optimierung in `src/game/sim/step.js`
+- `PERF-01` Ziel aus Implementierungsplan noch offen: `>=10%` Profilverbesserung je Fall aktuell nicht erreicht (`node tools/profile-core.mjs`: `4.154 / 5.481 / 9.003 ms_per_tick` für `32² / 64² / 96²`)
+- `PERF-02` Browser-Benchmark (Main/Worker) erneut messen und dokumentieren
 - `RENDER-01` Flow-Lines / Energiefluss visualisieren
 - `ARCH-01` weiteren Reducer-Abbau nach `playerActions.js` fortsetzen, damit `src/game/sim/reducer.js` kein Rest-Monolith bleibt
 - `UX-01` Missions- und Directive-Feedback weiter verdichten, damit Stage- und Tech-Unlocks noch härter im Canvas spürbar werden
