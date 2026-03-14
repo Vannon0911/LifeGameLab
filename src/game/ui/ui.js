@@ -75,6 +75,7 @@ export class UI {
     this._bindGlobalKeys();
     this._bindCanvasPaint();
     this._bindViewportMode();
+    this._bindBenchmarkUpdates();
     queueMicrotask(() => this._applyResponsiveDefaults());
   }
 
@@ -333,6 +334,17 @@ export class UI {
     };
     if (typeof media.addEventListener === "function") media.addEventListener("change", onChange);
     else if (typeof media.addListener === "function") media.addListener(onChange);
+  }
+
+  _bindBenchmarkUpdates() {
+    if (typeof window === "undefined" || typeof window.addEventListener !== "function") return;
+    window.addEventListener("benchmark:update", () => {
+      if (this._activeContext !== "labor") return;
+      const state = this._store.getState();
+      const target = isDesktopLayout() ? this._sidebarBody : this._sheetBody;
+      if (!target) return;
+      this._renderPanelBody(target, state);
+    });
   }
 
   _applyResponsiveDefaults(forceReset = false) {
@@ -1100,6 +1112,7 @@ export class UI {
       preset.addEventListener("change", () => {
         this._dispatch({ type: "SET_WORLD_PRESET", payload: { presetId: preset.value } });
         this._dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
+        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
       });
       presetRow.appendChild(preset);
       const presetDef = WORLD_PRESET_OPTIONS.find((entry) => entry.id === String(meta.worldPresetId || "river_delta"));
@@ -1117,6 +1130,7 @@ export class UI {
       seedApply.addEventListener("click", () => {
         this._dispatch({ type: "SET_SEED", payload: seedInput.value });
         this._dispatch({ type: "GEN_WORLD" });
+        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
       });
       seedRow.append(seedInput, seedApply);
       card.appendChild(seedRow);
@@ -1135,6 +1149,7 @@ export class UI {
         this._dispatch({ type:"SET_SIZE", payload:{w,h} });
         this._dispatch({ type:"GEN_WORLD" });
         this._dispatch({ type:"TOGGLE_RUNNING", payload:{running:true} });
+        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
       });
       sizeRow.append(size);
       card.appendChild(sizeRow);
@@ -1145,7 +1160,10 @@ export class UI {
       speed.type="range"; speed.className="nx-range";
       speed.min="1"; speed.max="60"; speed.value=String(meta.speed);
       speed.setAttribute("aria-label", "Simulationsgeschwindigkeit anpassen");
-      speed.addEventListener("input", () => this._dispatch({ type:"SET_SPEED", payload:Number(speed.value) }));
+      speed.addEventListener("input", () => {
+        this._dispatch({ type:"SET_SPEED", payload:Number(speed.value) });
+        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+      });
       speedRow.append(speed);
       card.appendChild(speedRow);
       container.append(card);
@@ -1178,6 +1196,7 @@ export class UI {
         this._dispatch({ type:"SET_SPEED", payload:this._speedForGrid(w,h) });
         this._dispatch({ type:"SET_SIZE", payload:{ w, h } });
         this._dispatch({ type:"GEN_WORLD" });
+        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
       });
       sizeRow.append(size);
       worldCard.appendChild(sizeRow);
@@ -1191,7 +1210,10 @@ export class UI {
       speed.max = "60";
       speed.value = String(meta.speed);
       speed.setAttribute("aria-label", "Simulationsgeschwindigkeit anpassen");
-      speed.addEventListener("input", () => this._dispatch({ type:"SET_SPEED", payload:Number(speed.value) }));
+      speed.addEventListener("input", () => {
+        this._dispatch({ type:"SET_SPEED", payload:Number(speed.value) });
+        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+      });
       speedRow.append(speed);
       worldCard.appendChild(speedRow);
 
@@ -1207,7 +1229,10 @@ export class UI {
         if ((meta.renderMode || "combined") === v) option.selected = true;
         render.appendChild(option);
       });
-      render.addEventListener("change", () => this._dispatch({ type:"SET_RENDER_MODE", payload:render.value }));
+      render.addEventListener("change", () => {
+        this._dispatch({ type:"SET_RENDER_MODE", payload:render.value });
+        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+      });
       renderRow.append(render);
       worldCard.appendChild(renderRow);
 
@@ -1223,7 +1248,10 @@ export class UI {
         if ((meta.activeOverlay || "none") === v) option.selected = true;
         overlay.appendChild(option);
       });
-      overlay.addEventListener("change", () => this._dispatch({ type:"SET_OVERLAY", payload: overlay.value }));
+      overlay.addEventListener("change", () => {
+        this._dispatch({ type:"SET_OVERLAY", payload: overlay.value });
+        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+      });
       overlayRow.append(overlay);
       worldCard.appendChild(overlayRow);
 
