@@ -3,16 +3,9 @@
 Zweck: DNA-Zone als echter zweiter Spielschritt nach stabilem Energiekern.
 
 ## Status
-
-- Produktiv geblockt bis Phase B sauber und stabil abgeschlossen ist.
-- Erlaubt vor Produktivstart:
-  - TODO-/Prompt-/Testmatrix-/Smoke-Vorbereitung
-  - UI-Textslots und Read-Model-Platzhalter vorbereiten
-- Nicht erlaubt vor Produktivstart:
-  - kein `DNA_ZONE_SETUP`-Produktivcode
-  - kein `dnaZoneMask`-Produktivcode
-  - kein Infrastruktur-Bau
-  - kein aktives Fog
+- Phase C ist funktional und prozessual abgeschlossen.
+- Diese Datei bleibt der kanonische Abschlussnachweis fuer DNA-/Zone-2.
+- Phase D baut auf diesem Abschluss auf; kein Rueckfall auf Prep-/Blocker-Stand.
 
 ## Zielbild
 
@@ -24,10 +17,9 @@ Zweck: DNA-Zone als echter zweiter Spielschritt nach stabilem Energiekern.
 
 ## Harte Reihenfolge
 
-1. B3/B4/B5/B6/B7/B8/B9 sauber beenden.
-2. Phase C nur vorbereiten oder in isolierten Prep-Tickets anfassen.
-3. Phase C vollstaendig mergen.
-4. Phase D erst auf stabiler C-Basis mergen.
+1. Phase C als abgeschlossene Basis stabil halten.
+2. Phase D nur auf stabiler C-Basis starten.
+3. Kein Infrastruktur-/Pattern-/Fog-/Tech-Rework rueckwirkend in Phase C ziehen.
 
 ## Ticket-Reihenfolge
 
