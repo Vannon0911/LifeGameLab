@@ -22,10 +22,10 @@ const evoEnd = ui.indexOf('// ── HARVEST', evoStart);
 assert(evoStart >= 0 && evoEnd > evoStart, "evolution panel branch not found");
 const evoBlock = ui.slice(evoStart, evoEnd);
 
-for (const required of ['id:"observe"', 'id:"split_place"', 'id:"cell_harvest"', 'id:"zone_paint"', 'SET_PLAYER_DOCTRINE']) {
+for (const required of ["id:BRUSH_MODE.OBSERVE", "id:BRUSH_MODE.SPLIT_PLACE", "id:BRUSH_MODE.CELL_HARVEST", "id:BRUSH_MODE.ZONE_PAINT", "SET_PLAYER_DOCTRINE"]) {
   assert(toolsBlock.includes(required), `tools panel missing ${required}`);
 }
-for (const forbidden of ['id:"cell_add"', 'id:"cell_remove"']) {
+for (const forbidden of ['id:"cell_add"', 'id:"cell_remove"', 'id:"observe"', 'id:"split_place"', 'id:"cell_harvest"', 'id:"zone_paint"']) {
   assert(!toolsBlock.includes(forbidden), `tools panel still exposes ${forbidden}`);
 }
 

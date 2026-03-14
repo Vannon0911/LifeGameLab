@@ -10,6 +10,7 @@ import {
 } from "../techTree.js";
 import {
   BRUSH_MODE,
+  GAME_RESULT,
   OVERLAY_MODE,
   OVERLAY_MODE_VALUES,
   WIN_MODE,
@@ -68,7 +69,7 @@ export class UI {
     this._layoutDesktop = isDesktop();
     this._actionFeedback = null;
     this._lastPanelRenderAt = 0;
-    this._panelRenderCooldownMs = 180;
+    this._panelRenderCooldownMs = 220;
 
     this._build();
     queueMicrotask(() => this._bindControls());
@@ -168,6 +169,15 @@ export class UI {
     if (!interactive) return false;
     const container = isDesktop() ? this._sidebarBody : this._sheetBody;
     return !!(container && container.contains(active));
+  }
+
+  _getPanelRefreshCooldown(contextKey, running) {
+    if (!running) return this._panelRenderCooldownMs;
+    if (contextKey === "status") return 260;
+    if (contextKey === "evolution") return 900;
+    if (contextKey === "tools") return 1200;
+    if (contextKey === "systems") return 1200;
+    return 700;
   }
 
   _build() {
@@ -739,10 +749,10 @@ export class UI {
       const mainCard = el("section","nx-card");
       mainCard.appendChild(el("div", "nx-card-title", "Strategische Eingriffe"));
       for (const act of [
-        { id:"observe", label:"Beobachtung", desc:"Keine direkte Manipulation. Die Kolonie wächst autonom.", tag:"Standard", locked:false },
-        { id:"split_place", label:"Split-Seed", desc: splitUnlocked ? "Setzt einen neuen 4x4-Cluster als kontrollierten Startpunkt." : "Benötigt Split-Kern plus Clusterstärke.", tag: splitUnlocked ? "4x4" : "gesperrt", locked:!splitUnlocked },
-        { id:"cell_harvest", label:"DNA-Ernte", desc:"Erntet gezielt eine eigene Zelle für DNA.", tag:"+DNA", locked:false },
-        { id:"zone_paint", label:"Territorium", desc: zoneUnlocked ? "Markiert Harvest-, Buffer- oder Defense-Zonen." : "Erst ab stabiler Kolonie sinnvoll.", tag: zoneUnlocked ? "Zone" : "später", locked:!zoneUnlocked },
+        { id:BRUSH_MODE.OBSERVE, label:"Beobachtung", desc:"Keine direkte Manipulation. Die Kolonie wächst autonom.", tag:"Standard", locked:false },
+        { id:BRUSH_MODE.SPLIT_PLACE, label:"Split-Seed", desc: splitUnlocked ? "Setzt einen neuen 4x4-Cluster als kontrollierten Startpunkt." : "Benötigt Split-Kern plus Clusterstärke.", tag: splitUnlocked ? "4x4" : "gesperrt", locked:!splitUnlocked },
+        { id:BRUSH_MODE.CELL_HARVEST, label:"DNA-Ernte", desc:"Erntet gezielt eine eigene Zelle für DNA.", tag:"+DNA", locked:false },
+        { id:BRUSH_MODE.ZONE_PAINT, label:"Territorium", desc: zoneUnlocked ? "Markiert Harvest-, Buffer- oder Defense-Zonen." : "Erst ab stabiler Kolonie sinnvoll.", tag: zoneUnlocked ? "Zone" : "später", locked:!zoneUnlocked },
       ]) {
         const isActive = meta.brushMode === act.id;
         const row = el("div", `nx-zone-row${isActive ? " nx-zone-active" : ""}${act.locked ? " nx-archetype-locked" : ""}`);
@@ -1143,12 +1153,12 @@ export class UI {
         advBtn.remove();
         const advRow = el("div", "nx-row");
         const brush = document.createElement("select"); brush.className="nx-select";
-        [["cell_add","🌱 Zelle setzen"],["cell_remove","✂ Entfernen"],["cell_harvest","🧬 Ernten"],
-         ["light","☀ Licht +"],["light_remove","☀ Licht –"],["nutrient","🌿 Nährstoff +"],
-         ["toxin","☣ Toxin +"],["saturation_reset","↺ Sättigung –"],["zone_paint","🧱 Zone malen"]
+        [[BRUSH_MODE.CELL_ADD,"🌱 Zelle setzen"],[BRUSH_MODE.CELL_REMOVE,"✂ Entfernen"],[BRUSH_MODE.CELL_HARVEST,"🧬 Ernten"],
+         [BRUSH_MODE.LIGHT,"☀ Licht +"],[BRUSH_MODE.LIGHT_REMOVE,"☀ Licht –"],[BRUSH_MODE.NUTRIENT,"🌿 Nährstoff +"],
+         [BRUSH_MODE.TOXIN,"☣ Toxin +"],[BRUSH_MODE.SATURATION_RESET,"↺ Sättigung –"],[BRUSH_MODE.ZONE_PAINT,"🧱 Zone malen"]
         ].forEach(([v,t]) => {
           const o = document.createElement("option"); o.value=v; o.textContent=t;
-          if ((meta.brushMode||"cell_add")===v) o.selected=true;
+          if ((meta.brushMode||BRUSH_MODE.CELL_ADD)===v) o.selected=true;
           brush.appendChild(o);
         });
         brush.addEventListener("change", () => this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:brush.value } }));
@@ -1519,7 +1529,7 @@ export class UI {
     // ── GAME OVER OVERLAY ───────────────────────────────────
 
   _showGameOverlay(sim) {
-    const isWin = sim.gameResult === "win";
+    const isWin = sim.gameResult === GAME_RESULT.WIN;
     const modeLbl = WIN_MODE_RESULT_LABEL[sim.winMode] || sim.winMode;
     const inner = this._gameOverlayInner;
     inner.innerHTML = "";
@@ -1678,8 +1688,11 @@ export class UI {
     // Re-render open panel (safe update)
     if (this._activeContext) {
       const container = isDesktop() ? this._sidebarBody : this._sheetBody;
+      const suppressAutoRefresh = !!running && (this._activeContext === "tools" || this._activeContext === "systems");
+      if (suppressAutoRefresh) return;
       const now = Date.now();
-      const panelInCooldown = (now - this._lastPanelRenderAt) < this._panelRenderCooldownMs;
+      const panelCooldown = this._getPanelRefreshCooldown(this._activeContext, !!running);
+      const panelInCooldown = (now - this._lastPanelRenderAt) < panelCooldown;
       if (!panelInCooldown && !this._isPanelInteractionActive()) {
         this._renderPanelBody(container, state);
       }
@@ -1703,8 +1716,8 @@ export class UI {
     this._lastStage = sim.playerStage;
 
     if (sim.gameResult && sim.gameEndTick === sim.tick && sim.gameEndTick !== this._lastGameEndTick) {
-      if (sim.gameResult === "win") this._announce(`Sieg! (${sim.winMode})`);
-      else if (sim.gameResult === "loss") this._announce(`Niederlage! (${sim.winMode})`);
+      if (sim.gameResult === GAME_RESULT.WIN) this._announce(`Sieg! (${sim.winMode})`);
+      else if (sim.gameResult === GAME_RESULT.LOSS) this._announce(`Niederlage! (${sim.winMode})`);
       this._lastGameEndTick = sim.gameEndTick;
     }
 
