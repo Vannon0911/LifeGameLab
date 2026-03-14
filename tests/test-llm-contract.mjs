@@ -19,8 +19,33 @@ assert(plain.type === "SET_SPEED", "adapter did not unwrap action");
 assert(plain.payload === 7 || Number(plain.payload) === 7, "adapter payload drift");
 
 const sampleState = {
-  meta: { brushMode: "observe", playerLineageId: 1 },
-  world: { lineageMemory: { 1: { doctrine: "equilibrium", techs: ["light_harvest"], synergies: [] } } },
+  meta: {
+    brushMode: "observe",
+    playerLineageId: 1,
+    cpuLineageId: 2,
+    placementCostEnabled: true,
+    activeOverlay: "none",
+    physics: { Emax: 3.2 },
+    ui: { showRemoteAttackOverlay: true, showDefenseOverlay: true },
+  },
+  world: {
+    w: 4,
+    h: 4,
+    alive: new Uint8Array(16),
+    lineageId: new Uint32Array(16),
+    zoneMap: new Int8Array(16),
+    E: new Float32Array(16),
+    L: new Float32Array(16),
+    R: new Float32Array(16),
+    W: new Float32Array(16),
+    Sat: new Float32Array(16),
+    P: new Float32Array(16),
+    reserve: new Float32Array(16),
+    link: new Float32Array(16),
+    clusterField: new Float32Array(16),
+    actionMap: new Uint8Array(16),
+    lineageMemory: { 1: { doctrine: "equilibrium", techs: ["light_harvest"], synergies: [] } },
+  },
   sim: {
     tick: 12,
     running: false,
@@ -41,6 +66,12 @@ const readModel = buildLlmReadModel(sampleState, { phase: "idle" });
 assert(readModel.tick === 12, "read model tick mismatch");
 assert(readModel.structure === "biomodule_2x2", "read model structure mismatch");
 assert(readModel.mission === "harvest_secure", "read model goal mismatch");
+assert(readModel.status?.structure === "biomodule_2x2", "status.structure mismatch");
+assert(readModel.status?.goal === "harvest_secure", "status.goal mismatch");
+assert(readModel.runIdentity?.doctrine === "equilibrium", "runIdentity.doctrine mismatch");
+assert(Array.isArray(readModel.advisor?.reasonCodes), "advisor.reasonCodes missing");
+assert(typeof readModel.advisor?.nextAction === "string", "advisor.nextAction missing");
+assert(readModel.winProgress?.mode === sampleState.sim.winMode, "winProgress.mode mismatch");
 assert(readModel.benchmark?.phase === "idle", "read model benchmark mismatch");
 
 console.log("LLM_CONTRACT_OK");
