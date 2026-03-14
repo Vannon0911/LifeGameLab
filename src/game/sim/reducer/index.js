@@ -81,6 +81,138 @@ function seededStartPhysics(seed, basePhysics) {
   return p;
 }
 
+function deriveBootstrapSimMetrics(world, meta, baseSim) {
+  const nextSim = { ...baseSim };
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  const N = w * h;
+  if (!N || !world?.alive) return nextSim;
+
+  const playerLineageId = 1;
+  const cpuLineageId = 2;
+  const alive = world.alive;
+  const lineageId = world.lineageId;
+  const light = world.L;
+  const energy = world.E;
+  const reserve = world.reserve;
+  const nutrients = world.R;
+  const toxin = world.W;
+  const water = world.water;
+  const plant = world.P;
+  const saturation = world.Sat;
+  const biocharge = world.B;
+  const link = world.link;
+  const physics = meta?.physics || PHYSICS_DEFAULT;
+
+  let aliveCount = 0;
+  let playerAliveCount = 0;
+  let cpuAliveCount = 0;
+  let linkedAlive = 0;
+  let clusteredPlayer = 0;
+  let playerLinked = 0;
+  let sumLAlive = 0;
+  let sumEAlive = 0;
+  let sumReserveAlive = 0;
+  let sumWater = 0;
+  let sumNutrients = 0;
+  let sumToxin = 0;
+  let sumSaturation = 0;
+  let sumPlant = 0;
+  let sumBiocharge = 0;
+  let plantTiles = 0;
+  let playerLight = 0;
+  let playerNutrients = 0;
+  let playerStored = 0;
+  const lineageSeen = new Set();
+
+  const hasPlayerNeighbour = (index) => {
+    const x = index % w;
+    const y = Math.floor(index / w);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const j = ny * w + nx;
+        if (alive[j] !== 1) continue;
+        if ((Number(lineageId?.[j] || 0) | 0) === playerLineageId) return true;
+      }
+    }
+    return false;
+  };
+
+  for (let i = 0; i < N; i++) {
+    const waterValue = Number(water?.[i] || 0);
+    const nutrientValue = Number(nutrients?.[i] || 0);
+    const toxinValue = Number(toxin?.[i] || 0);
+    const saturationValue = Number(saturation?.[i] || 0);
+    const plantValue = Number(plant?.[i] || 0);
+    const biochargeValue = Number(biocharge?.[i] || 0);
+    sumWater += waterValue;
+    sumNutrients += nutrientValue;
+    sumToxin += toxinValue;
+    sumSaturation += saturationValue;
+    sumPlant += plantValue;
+    sumBiocharge += biochargeValue;
+    if (plantValue > 0.001) plantTiles++;
+
+    if (alive[i] !== 1) continue;
+    aliveCount++;
+    const lid = Number(lineageId?.[i] || 0) | 0;
+    const lightValue = Number(light?.[i] || 0);
+    const energyValue = Number(energy?.[i] || 0);
+    const reserveValue = Number(reserve?.[i] || 0);
+    const linkValue = Number(link?.[i] || 0);
+    sumLAlive += lightValue;
+    sumEAlive += energyValue;
+    sumReserveAlive += reserveValue;
+    if (linkValue > 0.05) linkedAlive++;
+    if (lid) lineageSeen.add(lid);
+
+    if (lid === playerLineageId) {
+      playerAliveCount++;
+      playerLight += lightValue;
+      playerNutrients += nutrientValue;
+      playerStored += energyValue;
+      if (linkValue > 0.05) playerLinked++;
+      if (hasPlayerNeighbour(i)) clusteredPlayer++;
+    } else if (lid === cpuLineageId) {
+      cpuAliveCount++;
+    }
+  }
+
+  const invN = 1 / Math.max(1, N);
+  const invAlive = 1 / Math.max(1, aliveCount);
+  const approxPlayerEnergyIn = playerLight * 0.35 + playerNutrients * 0.12 + playerStored * 0.02;
+  const approxPlayerEnergyOut = playerAliveCount * Number(physics?.U_base || PHYSICS_DEFAULT.U_base || 0.04);
+
+  nextSim.aliveCount = aliveCount;
+  nextSim.aliveRatio = aliveCount * invN;
+  nextSim.playerAliveCount = playerAliveCount;
+  nextSim.cpuAliveCount = cpuAliveCount;
+  nextSim.meanLAlive = sumLAlive * invAlive;
+  nextSim.meanEnergyAlive = sumEAlive * invAlive;
+  nextSim.meanReserveAlive = sumReserveAlive * invAlive;
+  nextSim.meanNutrientField = sumNutrients * invN;
+  nextSim.meanToxinField = sumToxin * invN;
+  nextSim.meanSaturationField = sumSaturation * invN;
+  nextSim.meanPlantField = sumPlant * invN;
+  nextSim.meanBiochargeField = sumBiocharge * invN;
+  nextSim.meanWaterField = sumWater * invN;
+  nextSim.plantTileRatio = plantTiles * invN;
+  nextSim.lineageDiversity = lineageSeen.size;
+  nextSim.networkRatio = linkedAlive * invAlive;
+  nextSim.clusterRatio = playerAliveCount > 0 ? clusteredPlayer / playerAliveCount : 0;
+  nextSim.playerEnergyIn = approxPlayerEnergyIn;
+  nextSim.playerEnergyOut = approxPlayerEnergyOut;
+  nextSim.playerEnergyNet = approxPlayerEnergyIn - approxPlayerEnergyOut;
+  nextSim.playerEnergyStored = playerStored;
+  nextSim.lightShare = approxPlayerEnergyIn > 0 ? clamp(playerLight * 0.35 / approxPlayerEnergyIn, 0, 1) : 0;
+  nextSim.nutrientShare = approxPlayerEnergyIn > 0 ? clamp(playerNutrients * 0.12 / approxPlayerEnergyIn, 0, 1) : 0;
+  return nextSim;
+}
+
 function buildWorldGenerationPatches(state, presetId) {
   const meta = state.meta;
   const normalizedPresetId = normalizeWorldPresetId(presetId ?? meta.worldPresetId);
@@ -97,14 +229,10 @@ function buildWorldGenerationPatches(state, presetId) {
   world.devMutationVault = cloneJson(meta.devMutationVault || defaultDevMutationVault());
   world.zoneMap = new Int8Array(meta.gridW * meta.gridH);
 
-  const nextSim = makeInitialState().sim;
-  const N = (meta.gridW | 0) * (meta.gridH | 0);
-  let initialAlive = 0;
-  for (let i = 0; i < N; i++) if (world.alive[i] === 1) initialAlive++;
-  nextSim.aliveCount = initialAlive;
-  nextSim.aliveRatio = N > 0 ? initialAlive / N : 0;
+  const nextSim = deriveBootstrapSimMetrics(world, { ...meta, physics: tunedPhysics }, makeInitialState().sim);
   const stageState = deriveStageState(world, nextSim, {
     ...meta,
+    physics: tunedPhysics,
     worldPresetId: normalizedPresetId,
     playerLineageId: 1,
   });

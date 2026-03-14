@@ -1,5 +1,6 @@
 export const TEST_SUITES = Object.freeze({
   quick: [
+    "tests/test-bootstrap-gen-world.mjs",
     "tests/test-advisor-model.mjs",
     "tests/test-buffered-step.mjs",
     "tests/test-contract-facade.mjs",
