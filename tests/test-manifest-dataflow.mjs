@@ -1,3 +1,5 @@
+import { startEvidenceCase } from "./support/liveTestKit.mjs";
+startEvidenceCase("test-manifest-dataflow.mjs");
 import { manifest } from "../src/project/project.manifest.js";
 
 function fail(msg) {

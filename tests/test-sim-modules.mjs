@@ -1,3 +1,5 @@
+import { startEvidenceCase } from "./support/liveTestKit.mjs";
+startEvidenceCase("test-sim-modules.mjs");
 import crypto from "node:crypto";
 import { generateWorld } from "../src/game/sim/worldgen.js";
 import { PHYSICS_DEFAULT } from "../src/core/kernel/physics.js";

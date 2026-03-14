@@ -235,6 +235,7 @@ export function generateWorld(w, h, seedStr, phy) {
     age: new Uint16Array(N),
     born: new Uint8Array(N),
     died: new Uint8Array(N),
+    actionMap: new Uint8Array(N),
     lineageThreatMemory: {},
     lineageDefenseReadiness: {},
     clusterAttackState: {},

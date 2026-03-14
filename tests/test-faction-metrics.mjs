@@ -1,3 +1,5 @@
+import { startEvidenceCase } from "./support/liveTestKit.mjs";
+startEvidenceCase("test-faction-metrics.mjs");
 /**
  * test-faction-metrics.mjs
  * Verifies that P1 faction metrics (playerAliveCount, cpuAliveCount,

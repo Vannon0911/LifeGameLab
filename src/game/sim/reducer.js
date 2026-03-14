@@ -80,6 +80,8 @@ const UI_KEYS = new Set([
   "showBiochargeOverlay",
   "showRemoteAttackOverlay",
   "showDefenseOverlay",
+  "offscreenEnabled",
+  "ariaLevel",
 ]);
 
 const PHYSICS_KEYS = new Set(Object.keys(PHYSICS_DEFAULT || {}));
@@ -875,17 +877,6 @@ export function reducer(state, action, { rng }) {
     case "SET_PLACEMENT_COST": {
       const enabled = !!action.payload?.enabled;
       const patches = [{ op: "set", path: "/meta/placementCostEnabled", value: enabled }];
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
-      return patches;
-    }
-
-    case "SET_UI_PREFERENCE": {
-      const key = String(action.payload?.key || "");
-      const value = action.payload?.value;
-      if (!key) return [];
-      const prev = state.meta.ui || {};
-      const next = { ...prev, [key]: value };
-      const patches = [{ op: "set", path: "/meta/ui", value: next }];
       assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }

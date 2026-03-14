@@ -1,3 +1,5 @@
+import { startEvidenceCase } from "./support/liveTestKit.mjs";
+startEvidenceCase("test-sim-gate.mjs");
 import { assertSimPatchesAllowed } from "../src/game/sim/gate.js";
 import { makeInitialState } from "../src/project/project.logic.js";
 import { manifest } from "../src/project/project.manifest.js";

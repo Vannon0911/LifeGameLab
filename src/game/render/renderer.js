@@ -496,16 +496,38 @@ function drawEvents(ctx, world, offX, offY, tilePx) {
 function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) {
   const { w, h, alive, E, hue, trait, clusterField, superId } = world;
   const Emax = Number(meta?.physics?.Emax) || 3.2;
-  if (tilePx < 3 || quality <= 0) return;
+  if (quality <= 0) return;
   const cellCount = Math.max(1, w * h);
+  const isHeavyGrid = cellCount >= 96 * 96;
+  const isHugeGrid = cellCount >= 120 * 120;
   const detailBoost = clamp01((6400 - cellCount) / 4200);
-  const skip = tilePx < 4 ? 2 : quality <= 1 ? 2 : 1;
+  const skip = 1;
   const visual = getPlayerVisualState(world, meta, sim);
   const doctrinePalette = getDoctrinePalette(visual.doctrine, visual.synergies);
-  const moduleMask = new Uint8Array(w * h);
+  const allowModules = !isHeavyGrid && tilePx >= 4 && quality >= 2;
+  const moduleMask = allowModules ? new Uint8Array(w * h) : null;
   ctx.save();
 
-  if (tilePx >= 4) {
+  // Keep cell placement exact even on tiny tiles.
+  if (tilePx < 3) {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        if (alive[i] !== 1) continue;
+        const ev = clamp01((Number(E[i]) || 0) / Emax);
+        const h0 = Number(hue[i]) || 0;
+        const c = hslToRgb(h0, 38 + ev * 40, 46 + ev * 16);
+        ctx.fillStyle = `rgba(${Math.round(c[0])}, ${Math.round(c[1])}, ${Math.round(c[2])}, 0.96)`;
+        const px = offX + x * tilePx;
+        const py = offY + y * tilePx;
+        ctx.fillRect(px, py, Math.max(1, tilePx), Math.max(1, tilePx));
+      }
+    }
+    ctx.restore();
+    return;
+  }
+
+  if (allowModules) {
     for (let y = 0; y < h - 1; y++) {
       for (let x = 0; x < w - 1; x++) {
         if (!hasStable2x2(world, x, y)) continue;
@@ -570,33 +592,40 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) 
       const mut = mutationIntensityFromTrait(trait, i);
       const cv = clamp01(clusterField?.[i] ?? 0);
       const inSuper = (superId?.[i] ?? -1) >= 0;
-      const inModule = moduleMask[i] === 1;
-      const radius = Math.max(1, tilePx * (inModule ? 0.26 : 0.36 + ev * 0.10));
+      const inModule = moduleMask ? moduleMask[i] === 1 : false;
+      const radius = Math.max(1, tilePx * (inModule ? 0.26 : isHugeGrid ? 0.34 : 0.36 + ev * 0.10));
+      if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(radius)) continue;
       const h0 = Number(hue[i]) || 0;
       const doctrineBlend = inModule ? 0.52 : 0.18 + doctrinePalette.bonus * 0.20;
-      const sat = 14 + mut * 72 + doctrinePalette.bonus * 6;
-      const litCore = 38 + ev * 28 + mut * 12 + doctrinePalette.bonus * 5;
-      const litRim = 24 + ev * 12;
+      const sat = isHugeGrid ? 42 + mut * 36 : 22 + mut * 64 + doctrinePalette.bonus * 8;
+      const litCore = isHugeGrid ? 58 + ev * 14 : 42 + ev * 26 + mut * 12 + doctrinePalette.bonus * 6;
+      const litRim = isHugeGrid ? 38 + ev * 10 : 26 + ev * 14;
       const coreHue = h0 * (1 - doctrineBlend) + doctrinePalette.hue * doctrineBlend + mut * 12;
       const core = hslToRgb(coreHue, sat, litCore);
       const rim = hslToRgb(h0 - 12, Math.max(25, sat - 20), litRim);
-      const g = ctx.createRadialGradient(cx - radius * 0.28, cy - radius * 0.28, radius * 0.08, cx, cy, radius);
-      g.addColorStop(0, `rgba(${Math.round(core[0])}, ${Math.round(core[1])}, ${Math.round(core[2])}, 0.96)`);
-      g.addColorStop(0.72, `rgba(${Math.round(rim[0])}, ${Math.round(rim[1])}, ${Math.round(rim[2])}, 0.90)`);
-      g.addColorStop(1, `rgba(${Math.round(rim[0] * 0.78)}, ${Math.round(rim[1] * 0.78)}, ${Math.round(rim[2] * 0.78)}, 0.82)`);
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.fill();
+      if (isHugeGrid) {
+        const side = Math.max(1.4, tilePx * 0.68);
+        ctx.fillStyle = `rgba(${Math.round(core[0])}, ${Math.round(core[1])}, ${Math.round(core[2])}, 0.96)`;
+        ctx.fillRect(cx - side * 0.5, cy - side * 0.5, side, side);
+      } else {
+        const g = ctx.createRadialGradient(cx - radius * 0.28, cy - radius * 0.28, radius * 0.08, cx, cy, radius);
+        g.addColorStop(0, `rgba(${Math.round(core[0])}, ${Math.round(core[1])}, ${Math.round(core[2])}, 0.96)`);
+        g.addColorStop(0.72, `rgba(${Math.round(rim[0])}, ${Math.round(rim[1])}, ${Math.round(rim[2])}, 0.90)`);
+        g.addColorStop(1, `rgba(${Math.round(rim[0] * 0.78)}, ${Math.round(rim[1] * 0.78)}, ${Math.round(rim[2] * 0.78)}, 0.82)`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
-      if (quality >= 2 && cv > 0.5) {
+      if (!isHeavyGrid && quality >= 2 && cv > 0.5) {
         ctx.strokeStyle = `rgba(${doctrinePalette.link[0]}, ${doctrinePalette.link[1]}, ${doctrinePalette.link[2]}, ${0.05 + cv * 0.11})`;
         ctx.lineWidth = Math.max(0.6, radius * 0.09);
         ctx.beginPath();
         ctx.arc(cx, cy, radius * (1.20 + cv * 0.10), 0, Math.PI * 2);
         ctx.stroke();
       }
-      if (quality >= 2 && inSuper) {
+      if (!isHugeGrid && quality >= 2 && inSuper) {
         ctx.strokeStyle = `rgba(255, 225, 130, ${0.12 + ev * 0.18})`;
         ctx.lineWidth = Math.max(0.8, radius * 0.13);
         ctx.beginPath();
@@ -604,13 +633,13 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) 
         ctx.stroke();
       }
 
-      if (quality >= 2 && detailBoost > 0.22 && tilePx >= 4 && !inModule) {
+      if (!isHeavyGrid && quality >= 2 && detailBoost > 0.22 && tilePx >= 4 && !inModule) {
         ctx.fillStyle = `rgba(255,255,255,${(0.10 + ev * 0.15 + mut * 0.12) * detailBoost})`;
         ctx.beginPath();
         ctx.arc(cx - radius * 0.30, cy - radius * 0.32, Math.max(0.8, radius * 0.24), 0, Math.PI * 2);
         ctx.fill();
       }
-      if (quality >= 3 && detailBoost > 0.45 && tilePx >= 5) {
+      if (!isHeavyGrid && quality >= 3 && detailBoost > 0.45 && tilePx >= 5) {
         ctx.strokeStyle = `rgba(${Math.round(core[0])}, ${Math.round(core[1])}, ${Math.round(core[2])}, ${0.12 + detailBoost * 0.18})`;
         ctx.lineWidth = Math.max(0.6, radius * 0.11);
         ctx.beginPath();
@@ -624,7 +653,47 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) 
 
 // Draw subtle grid lines when zoomed in
 function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0) {
-  if (tilePx < 18 || lodLevel > 0) return;
+  if (lodLevel > 0) return;
+  // On dense grids show a lightweight macro-grid, so raster remains readable.
+  if (tilePx < 18) {
+    if (tilePx < 3) return;
+    ctx.save();
+    const minorEvery = tilePx >= 10 ? 1 : 2;
+    const majorEvery = tilePx >= 8 ? 8 : 12;
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = tilePx >= 10 ? "rgba(188,238,230,0.12)" : "rgba(188,238,230,0.08)";
+    for (let x = offX, c = 0; x <= offX + imageW; x += tilePx, c++) {
+      if (c % minorEvery !== 0) continue;
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, offY);
+      ctx.lineTo(x + 0.5, offY + imageH);
+      ctx.stroke();
+    }
+    for (let y = offY, c = 0; y <= offY + imageH; y += tilePx, c++) {
+      if (c % minorEvery !== 0) continue;
+      ctx.beginPath();
+      ctx.moveTo(offX, y + 0.5);
+      ctx.lineTo(offX + imageW, y + 0.5);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(208,252,242,0.18)";
+    for (let x = offX, c = 0; x <= offX + imageW; x += tilePx, c++) {
+      if (c % majorEvery !== 0) continue;
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, offY);
+      ctx.lineTo(x + 0.5, offY + imageH);
+      ctx.stroke();
+    }
+    for (let y = offY, c = 0; y <= offY + imageH; y += tilePx, c++) {
+      if (c % majorEvery !== 0) continue;
+      ctx.beginPath();
+      ctx.moveTo(offX, y + 0.5);
+      ctx.lineTo(offX + imageW, y + 0.5);
+      ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
   ctx.save();
   const small = tilePx < 22;
   const minorStep = 1;
@@ -788,14 +857,19 @@ function drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality = 3) {
       } else if (mode === "cells") {
         r = 0; g = 0; b = 0;
       } else {
-        // Controlled game palette: dark petrol world, nutrient bloom, toxic stress.
-        r = 6 + lv * 18 + rv * 12 + pv * 8;
-        g = 16 + lv * 28 + rv * 76 + pv * 46 + sv * 24;
-        b = 16 + lv * 34 + rv * 18 + (1 - sv) * 10;
-        const toxicHeat = clamp01(wv * 0.95);
-        r = r * (1 - toxicHeat) + (82 + wv * 132);
-        g = g * (1 - toxicHeat * 0.72) + (18 + wv * 54);
-        b = b * (1 - toxicHeat * 0.85) + (12 + wv * 18);
+        // Cooler tactical palette: dark slate base with teal growth signal and restrained toxin heat.
+        const nutrientGlow = clamp01(rv * 0.90 + pv * 0.35);
+        const lightLift = clamp01(lv * 0.85);
+        const toxinHeat = clamp01(wv * 0.70);
+        const saturationMist = clamp01(sv * 0.55);
+        r = 8 + lightLift * 10 + nutrientGlow * 10 + saturationMist * 8 + toxinHeat * 44;
+        g = 14 + lightLift * 30 + nutrientGlow * 86 + saturationMist * 14 + toxinHeat * 20;
+        b = 18 + lightLift * 44 + nutrientGlow * 28 + (1 - saturationMist) * 18 + toxinHeat * 8;
+        if (toxinHeat > 0.02) {
+          r += toxinHeat * 28;
+          g -= toxinHeat * 6;
+          b -= toxinHeat * 4;
+        }
       }
 
       const px = offX + x * tilePx;
@@ -805,8 +879,8 @@ function drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality = 3) {
       ctx.fillRect(px, py, size, size);
 
       if (detail) {
-        const shade = clamp01((1 - lv) * 0.38 + wv * 0.24 + sv * 0.08);
-        const glow = clamp01(lv * 0.42 + rv * 0.22 + pv * 0.10 - wv * 0.14);
+        const shade = clamp01((1 - lv) * 0.34 + wv * 0.14 + sv * 0.10);
+        const glow = clamp01(lv * 0.48 + rv * 0.28 + pv * 0.16 - wv * 0.08);
         if (shade > 0.05) {
           ctx.fillStyle = `rgba(3,8,10,${0.05 + shade * 0.10})`;
           ctx.fillRect(px, py, size, size);
@@ -815,7 +889,7 @@ function drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality = 3) {
           const gx = px + size * 0.25;
           const gy = py + size * 0.2;
           const grad = ctx.createRadialGradient(gx, gy, size * 0.08, gx, gy, size * 0.72);
-          grad.addColorStop(0, `rgba(176,255,220,${0.06 + glow * 0.14})`);
+          grad.addColorStop(0, `rgba(132,232,214,${0.05 + glow * 0.16})`);
           grad.addColorStop(1, "rgba(176,255,220,0)");
           ctx.fillStyle = grad;
           ctx.fillRect(px, py, size, size);
@@ -936,10 +1010,13 @@ export function render(canvas, state, perf = null) {
  * Modular drawing function — can be used with any 2D context (Main or Offscreen).
  * No direct window or document dependencies.
  */
-export function drawFrame(ctx, state, perf) {
+export function drawFrame(ctx, state, perf = {}) {
   const { world, meta, sim } = state;
   const { w, h } = world;
-  const { quality, CW, CH } = perf;
+  const quality = clamp((perf?.quality ?? 3) | 0, 0, 3);
+  const CW = Number.isFinite(perf?.CW) && perf.CW > 0 ? perf.CW : Math.max(1, Number(ctx?.canvas?.width || 1));
+  const CH = Number.isFinite(perf?.CH) && perf.CH > 0 ? perf.CH : Math.max(1, Number(ctx?.canvas?.height || 1));
+  const cells = w * h;
 
   const tilePx = Math.max(1, Math.floor(Math.min(CW / w, CH / h)));
   const lod = computeLodFromZoom(tilePx);
@@ -947,6 +1024,10 @@ export function drawFrame(ctx, state, perf) {
   const imageH = h * tilePx;
   const offX   = Math.floor((CW - imageW) / 2);
   const offY   = Math.floor((CH - imageH) / 2);
+  const isHeavyGrid = cells >= 96 * 96;
+  const isHugeGrid = cells >= 120 * 120;
+  const tactical = quality <= 1 || isHugeGrid;
+  const balanced = quality === 2 || isHeavyGrid;
 
   // Composite to main canvas
   ctx.fillStyle = "#080c14";
@@ -957,22 +1038,22 @@ export function drawFrame(ctx, state, perf) {
   drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality);
 
   // Overlays
-  if (quality >= 3 && lod.level <= 1) drawFieldHotspots(ctx, world, offX, offY, tilePx);
-  if (quality >= 1 && lod.level <= 2) drawClusterOverlay(ctx, world, offX, offY, tilePx);
+  if (!tactical && quality >= 3 && lod.level <= 1) drawFieldHotspots(ctx, world, offX, offY, tilePx);
+  if (quality >= 1 && lod.level <= 2 && !isHugeGrid) drawClusterOverlay(ctx, world, offX, offY, tilePx);
   
   // Always show Birth Charge Nodes for visual feedback of cell creation
-  if (quality >= 1 && lod.level <= 2) drawBirthChargeNodes(ctx, world, offX, offY, tilePx, sim?.tick || 0);
+  if (!tactical && quality >= 1 && lod.level <= 2) drawBirthChargeNodes(ctx, world, offX, offY, tilePx, sim?.tick || 0);
 
   if (quality >= 1 && lod.level <= 2) drawActionOverlay(ctx, world, meta, offX, offY, tilePx);
-  if (quality >= 1 && lod.level <= 2) drawLightShadowOverlay(ctx, world, meta, offX, offY, tilePx);
-  if (quality >= 2 && lod.level <= 2) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim);
-  if (quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, sim?.tick || 0);
+  if (!isHugeGrid && quality >= 1 && lod.level <= 2) drawLightShadowOverlay(ctx, world, meta, offX, offY, tilePx);
+  if (!balanced && quality >= 2 && lod.level <= 2) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim);
+  if (!tactical && quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, sim?.tick || 0);
   drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality);
-  if (quality >= 3 && lod.level <= 1) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
-  if (quality >= 1) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
+  if (!balanced && quality >= 3 && lod.level <= 1) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
+  if (!tactical && quality >= 1 && !isHugeGrid) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawZoneOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level);
-  if (quality >= 2 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);
+  if (!balanced && quality >= 2 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);
 
   return { tilePx, offX, offY, dpr: perf.dpr, quality, lod };
 }

@@ -42,6 +42,7 @@ export function createSimStepBuffer({ store, manifest, project, maxBufferedSteps
   let scheduled = 0;
   let queue = [];
   let shadowDoc = null;
+  let generation = 0;
 
   function clear() {
     queue = [];
@@ -105,9 +106,9 @@ export function createSimStepBuffer({ store, manifest, project, maxBufferedSteps
     return true;
   }
 
-  function pump(deadline) {
+  function pump(deadline, gen) {
     scheduled = 0;
-    if (!running) return;
+    if (!running || gen !== generation) return;
     const start = nowMs();
     // Work only while we have time and space.
     while (queue.length < maxBufferedSteps) {
@@ -121,21 +122,24 @@ export function createSimStepBuffer({ store, manifest, project, maxBufferedSteps
       if (!ok) break;
     }
     // Keep pumping when running.
-    schedule();
+    if (gen === generation) schedule();
   }
 
   function schedule() {
     if (!running) return;
     if (scheduled) return;
-    scheduled = getIdle(pump);
+    const gen = generation;
+    scheduled = getIdle((deadline) => pump(deadline, gen));
   }
 
   function start() {
+    generation++;
     running = true;
     schedule();
   }
 
   function stop() {
+    generation++;
     running = false;
     if (scheduled) cancelIdle(scheduled);
     scheduled = 0;
@@ -143,6 +147,7 @@ export function createSimStepBuffer({ store, manifest, project, maxBufferedSteps
   }
 
   function invalidate() {
+    generation++;
     clear();
   }
 
@@ -162,4 +167,3 @@ export function createSimStepBuffer({ store, manifest, project, maxBufferedSteps
 
   return { start, stop, invalidate, consumeOneOrNull, size };
 }
-

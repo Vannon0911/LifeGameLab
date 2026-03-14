@@ -1,3 +1,5 @@
+import { startEvidenceCase } from "./support/liveTestKit.mjs";
+startEvidenceCase("test-ui-contract.mjs");
 import fs from "node:fs";
 import path from "node:path";
 import * as manifest from "../src/project/project.manifest.js";
@@ -28,4 +30,3 @@ if (missing.length) {
 }
 
 console.log(`UI_CONTRACT_OK ${all.length} action types covered by actionSchema`);
-
