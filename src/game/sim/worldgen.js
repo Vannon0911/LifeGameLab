@@ -145,6 +145,10 @@ function deriveBaseFields(state, preset, seedBase) {
       baseSat[idx] = fertility;
       Sat[idx] = fertility;
       biomeId[idx] = assignBiome(light, moisture, fertility, nx, ny);
+      state.R[idx] = clamp01(Number(state.R[idx] || 0) + fertility * 0.18 + moisture * 0.08);
+      if (biomeId[idx] === BIOME_IDS.riverlands || biomeId[idx] === BIOME_IDS.wet_forest) {
+        state.P[idx] = clamp01(Number(state.P[idx] || 0) + 0.03 + moisture * 0.05);
+      }
     }
   }
 }
@@ -177,7 +181,7 @@ function buildSpawnClusters(state, preset) {
   return picks.map((pick, index) => ({
     x: pick.x,
     y: pick.y,
-    r: preset.id === "wet_meadow" ? 3 : 2,
+    r: preset.id === "dry_basin" ? 3 : 4,
     lineageId: index === 0 ? 1 : 2,
   }));
 }
@@ -194,11 +198,14 @@ function placeClusters(state, clusters, seedBase) {
         if (rng01(seedBase, stream++) > 0.78) continue;
         const idx = y * state.w + x;
         state.alive[idx] = 1;
-        state.E[idx] = 0.26 + rng01(seedBase, stream++) * 0.34;
-        state.reserve[idx] = 0.06 + rng01(seedBase, stream++) * 0.10;
+        state.E[idx] = 0.46 + rng01(seedBase, stream++) * 0.42;
+        state.reserve[idx] = 0.12 + rng01(seedBase, stream++) * 0.12;
         state.age[idx] = Math.floor(rng01(seedBase, stream++) * 80);
         state.lineageId[idx] = cluster.lineageId;
         state.hue[idx] = cluster.lineageId === 1 ? 210 : 0;
+        state.R[idx] = clamp01(Math.max(Number(state.R[idx] || 0), 0.24 + Number(state.water[idx] || 0) * 0.16));
+        state.P[idx] = clamp01(Math.max(Number(state.P[idx] || 0), 0.10 + Number(state.baseSat[idx] || 0) * 0.10));
+        state.Sat[idx] = clamp01(Math.max(Number(state.Sat[idx] || 0), Number(state.baseSat[idx] || 0)));
         const o = idx * TRAIT_COUNT;
         for (let t = 0; t < TRAIT_COUNT; t++) state.trait[o + t] = TRAIT_DEFAULT[t];
       }
@@ -234,6 +241,15 @@ function placePlants(state, phy, preset, seedBase) {
       }
     }
   }
+}
+
+function capInitialPlantCoverage(state, maxRatio = 0.14) {
+  let active = 0;
+  for (let i = 0; i < state.P.length; i++) if (Number(state.P[i] || 0) > 0.05) active++;
+  const ratio = active / Math.max(1, state.P.length);
+  if (ratio <= maxRatio) return;
+  const scale = Math.max(0.45, maxRatio / Math.max(0.001, ratio));
+  for (let i = 0; i < state.P.length; i++) state.P[i] = clamp01(Number(state.P[i] || 0) * scale);
 }
 
 export function generateWorld(w, h, seedStr, phy, presetId = "river_delta") {
@@ -280,6 +296,7 @@ export function generateWorld(w, h, seedStr, phy, presetId = "river_delta") {
   state.water = buildWaterField(w, h, descriptor, preset, seedBase);
   deriveBaseFields(state, preset, seedBase);
   placePlants(state, phy, preset, seedBase);
+  capInitialPlantCoverage(state);
   placeClusters(state, buildSpawnClusters(state, preset), seedBase);
   state.superId.fill(-1);
   return state;
