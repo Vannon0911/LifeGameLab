@@ -1,6 +1,6 @@
-# LifeGameLab v2.3.0
+# LifeGameLab v2.4.0
 
-![Version](https://img.shields.io/badge/version-2.3.0-0ea5e9)
+![Version](https://img.shields.io/badge/version-2.4.0-0ea5e9)
 ![Tests](https://img.shields.io/badge/tests-npm%20test-green)
 ![Determinismus](https://img.shields.io/badge/sim-deterministisch-22c55e)
 
@@ -15,10 +15,12 @@ Deterministisches Zell-Strategieprodukt: autonome Kolonieentwicklung, fokussiert
 ## Produkt-Highlights
 
 - Mobile-first Shell (Bottom-Dock + Sheet), Desktop als Mission-Control
-- Klare Top-Signale: `Kolonie`, `DNA`, `Risiko`, `Directive`, `Mission`
+- Klare Top-Signale: `Kolonie`, `DNA`, `Risiko`, `Run-Pfad`, `Engpass`
+- Deterministischer Advisor fuer `Run-Pfad`, Engpass, Blocker und naechsten Ausbauhebel
 - Sichtbare Strukturreife: Einzelzellen -> 2x2-Biomodule -> Koloniekerne
 - Deterministischer Kernel mit harten Manifest-/Schema-/Mutation-Gates
-- Browser-Hooks für QA/Automation: `window.render_game_to_text`, `window.advanceTime`
+- Echte Diagnose-Scanner fuer `energy`, `toxin`, `nutrient`, `territory`, `conflict`
+- Browser-Hooks fuer QA/Automation: `window.render_game_to_text`, `window.advanceTime`
 
 ## Screens
 
@@ -103,6 +105,8 @@ npm run test:stress
 ## Aktueller Engineering-Status (ehrlich)
 
 - Contract-/Gate-Härtung ist umgesetzt und testgrün.
+- Main-Run ist jetzt staerker auf `ernten -> investieren -> ausbauen -> Engpaesse loesen` verdrahtet.
+- Win-Mode-Lock, Placement-Cost-Default und Global-Learning-Default stuetzen jetzt den Main Run statt den Sandbox-Fall.
 - Performance-Ziel aus dem letzten Implementierungsplan (`>=10%` je Profilfall) ist noch offen.
 
 Details: `docs/PROJECT_STRUCTURE.md`, `docs/PROJECT_CONTRACT_SNAPSHOT.md`, `docs/SESSION_HANDOFF.md`

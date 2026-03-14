@@ -11,6 +11,7 @@ function assert(cond, msg) {
 const store = createStore(manifest, { reducer, simStep: simStepPatch });
 store.dispatch({ type: "SET_SEED", payload: "ownership-1" });
 store.dispatch({ type: "GEN_WORLD" });
+store.dispatch({ type: "SET_PLACEMENT_COST", payload: { enabled: false } });
 
 let s = store.getState();
 const playerLid = s.meta.playerLineageId;
