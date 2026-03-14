@@ -32,6 +32,26 @@ function patchPlayerCells(store, cells) {
   });
 }
 
+function patchPlayerEnergy(store, energyPerCell = 5) {
+  const state = store.getState();
+  const E = new Float32Array(state.world.E);
+  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+  for (let i = 0; i < E.length; i++) {
+    if ((Number(state.world.alive[i]) | 0) !== 1) continue;
+    if ((Number(state.world.lineageId[i]) | 0) !== playerLineageId) continue;
+    E[i] = energyPerCell;
+  }
+  store.dispatch({
+    type: "APPLY_BUFFERED_SIM_STEP",
+    payload: {
+      patches: [
+        { op: "set", path: "/world/E", value: E },
+        { op: "set", path: "/sim/playerEnergyStored", value: energyPerCell * 4 },
+      ],
+    },
+  });
+}
+
 function createInfraCommitStore(seed, presetId = "river_delta") {
   const store = createStore(manifest, { reducer, simStep: simStepPatch });
   store.dispatch({ type: "SET_SEED", payload: seed });
@@ -86,12 +106,13 @@ function createInfraCommitStore(seed, presetId = "river_delta") {
     { x: minX - 1, y: minY },
   ];
   patchPlayerCells(store, pathCells);
+  patchPlayerEnergy(store, 6);
   store.dispatch({
     type: "APPLY_BUFFERED_SIM_STEP",
     payload: {
       patches: [
         { op: "set", path: "/sim/playerDNA", value: 80 },
-        { op: "set", path: "/sim/playerEnergyStored", value: 20 },
+        { op: "set", path: "/sim/playerEnergyStored", value: 24 },
       ],
     },
   });

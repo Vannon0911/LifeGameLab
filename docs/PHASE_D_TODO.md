@@ -92,6 +92,7 @@ Zweck: Infrastruktur und aktive Sicht/Fog-Regeln nach stabiler DNA-Zone.
 ### D8 Finalisierung
 - [ ] technische Notizen / Changelog aktualisieren
 - [ ] TODO-/Implementierungsstatus aktualisieren
+- [ ] Versioning-/LLM-Gates am Phase-D-Ende nachziehen (`llm-preflight classify/ack/check`, `LLM_ENTRY`-Sync falls noetig)
 - [ ] Scope-Check: kein Pattern-/Zone-/Tech-Grossumbau
 
 ## Zielzustand nach Phase D
