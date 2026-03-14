@@ -4,11 +4,11 @@ Zweck: Infrastruktur und aktive Sicht/Fog-Regeln nach stabiler DNA-Zone.
 
 ## Status
 
-- Phase D ist aktiv; D1 ist abgeschlossen.
-- D2-D8 bleiben offen.
-- Nicht in D1 enthalten:
-  - kein Infrastruktur-Bau-Produktivcode
+- Phase D ist aktiv; D1 und D2 sind abgeschlossen.
+- D3-D8 bleiben offen.
+- Nicht in D2 enthalten:
   - kein aktives Fog-Produktivcode
+  - keine CPU-Informationsumschaltung
   - keine UI-/Renderer-Umschaltung
 
 ## Zielbild
@@ -151,4 +151,5 @@ phaseD: {
 - `BEGIN_INFRA_BUILD` wechselt in einen semantischen Pfadmodus statt Brush-/Zone-Paint.
 - `BUILD_INFRA_PATH` erlaubt nur zusammenhaengende, lebende, player-owned Netzpfade mit Anker an Kern, DNA oder bestehendem Link.
 - `CONFIRM_INFRA_PATH` committed erst dann nach `world.link`, verbraucht DNA- und Energiekosten deterministisch und setzt `infrastructureUnlocked=true`.
+- Leerer `CONFIRM_INFRA_PATH` gilt als expliziter Exit aus dem Pfadmodus, startet den Run wieder und laesst Netzwerk- sowie Ressourcenwerte unveraendert.
 - Sicht/Fog, CPU-Informationsgating und UI bleiben bewusst offen fuer D3-D6.
