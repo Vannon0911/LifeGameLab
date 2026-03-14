@@ -18,5 +18,4 @@
 
 ## Nicht in diesem Release geloest
 - Keine numerische Doctrine-/Tech-Rebalance.
-- Kein kompletter Truth-Lauf im Rahmen dieses Release-Wrap-ups.
 - Kein Director-/DevBalance-Ausbau fuer den Standard-Run.
