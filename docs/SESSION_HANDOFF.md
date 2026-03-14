@@ -9,9 +9,14 @@
 - Vollsuite grün: `npm test`
 - Determinismus grün: long, per-tick und interaction traces
 - Core-, SIM-, Dataflow- und Pfadhygiene-Gates grün
-- Wrapper-Ban im SIM-Runtime-Pfad aktiv: `src/game/sim/sim.js` entfernt
+- SIM-Kompatibilität konservativ: `src/game/sim/sim.js` ist jetzt dünner Reexport auf `step.js` (keine Legacy-Signatur, kein Runtime-Backcompat-Wrapper)
 - String-/ID-Contract zentralisiert in `src/game/contracts/ids.js`
+- Contract intern modularisiert unter `src/project/contract/*`; `src/project/project.manifest.js` bleibt Fassade
+- Reducer-Struktur modularisiert: aktive Implementierung in `src/game/sim/reducer/index.js`, kompatibler Entry bleibt `src/game/sim/reducer.js`
+- neue LLM-Schicht außerhalb des Kernels unter `src/project/llm/*`
 - neue Contract-Tests aktiv:
+  - `tests/test-contract-facade.mjs`
+  - `tests/test-llm-contract.mjs`
   - `tests/test-string-contract.mjs`
   - `tests/test-dataflow-contract.mjs`
   - `tests/test-wrapper-ban.mjs`
@@ -38,6 +43,6 @@
 
 - Perf-Ziel aus Implementierungsplan schließen: `>=10%` Verbesserung je Profilfall (`tools/profile-core.mjs`) ist noch nicht erreicht
 - Render-/Benchmark-Abnahme nachziehen (Main/Worker-Phasenwerte dokumentieren)
-- weiteren Reducer-Abbau nach `src/game/sim/playerActions.js` fortsetzen
+- weiteren Reducer-Abbau in `src/game/sim/reducer/index.js` fortsetzen
 - visuelle Energie-/Flow-Layer ausarbeiten
 - Missions-, Unlock- und Synergie-FX im Canvas weiter verdichten, damit der Produkt-Loop noch weniger nach Kontrollpanel und stärker nach Spiel wirkt

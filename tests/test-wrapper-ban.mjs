@@ -9,7 +9,13 @@ function assert(cond, msg) {
 
 const root = path.resolve(".");
 const wrapperFile = path.join(root, "src/game/sim/sim.js");
-assert(!fs.existsSync(wrapperFile), "wrapper file src/game/sim/sim.js must be removed");
+if (fs.existsSync(wrapperFile)) {
+  const text = fs.readFileSync(wrapperFile, "utf8");
+  assert(
+    /^\s*\/\/.*\n\s*export\s+\{\s*simStep\s*\}\s+from\s+["']\.\/step\.js["'];?\s*$/m.test(text),
+    "src/game/sim/sim.js must stay a thin compatibility reexport to ./step.js"
+  );
+}
 
 const roots = ["src", "tests", "tools"];
 const forbiddenPatterns = [
@@ -45,4 +51,4 @@ for (const relRoot of roots) {
 }
 
 assert(offenders.length === 0, `wrapper/backcompat references found:\n${offenders.join("\n")}`);
-console.log("WRAPPER_BAN_OK no sim wrapper or legacy signature references");
+console.log("WRAPPER_BAN_OK no legacy wrapper/backcompat references");
