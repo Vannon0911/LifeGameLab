@@ -1,0 +1,75 @@
+{
+  "text": {
+    "tick": 0,
+    "running": false,
+    "tool": "observe",
+    "stage": 2,
+    "dna": 0,
+    "playerAlive": 39,
+    "cpuAlive": 43,
+    "energyNet": 9.439484353768824,
+    "clusterRatio": 1,
+    "networkRatio": 0,
+    "techs": [],
+    "synergies": [],
+    "runIdentity": {
+      "winMode": "supremacy",
+      "doctrine": "equilibrium",
+      "doctrineTradeoff": "Ausgleich zwischen Tempo und Stabilitaet."
+    },
+    "status": {
+      "risk": "stable",
+      "goal": "harvest_secure",
+      "structure": "colony_core",
+      "commandScore": 0.6600000000000001,
+      "splitReady": false,
+      "expansionWork": 0,
+      "nextExpandCost": 120
+    },
+    "advisor": {
+      "bottleneckPrimary": "survival_core",
+      "reasonCodes": [
+        "network_ratio_low"
+      ],
+      "nextAction": "densify_core",
+      "nextLever": "relevant_tech",
+      "recommendedZone": "nexus",
+      "recommendedOverlay": "territory"
+    },
+    "winProgress": {
+      "mode": "supremacy",
+      "progress": 0,
+      "target": 200,
+      "blockerCode": "crisis_active",
+      "blockerDetail": "Krisenengpass blockiert den Siegpfad."
+    },
+    "benchmark": {
+      "isRunning": false,
+      "phase": "idle",
+      "frames": 0,
+      "targetFrames": 360,
+      "lastReport": null
+    },
+    "risk": "stable",
+    "mission": "harvest_secure",
+    "structure": "colony_core",
+    "doctrine": "equilibrium"
+  },
+  "perf": {
+    "fpsEma": 35.26,
+    "frameMsEma": 28.36,
+    "renderMsEma": 100.29,
+    "quality": 2,
+    "renderEvery": 1,
+    "dprCap": 1.45,
+    "maxSimStepsPerFrame": 3,
+    "maxSimFrameBudgetMs": 7.5,
+    "maxCatchupMs": 130,
+    "stepBufferSize": 0,
+    "offscreenMode": "main",
+    "offscreenAuto": false,
+    "tick": 0,
+    "grid": "32x32",
+    "cells": 1024
+  }
+}
