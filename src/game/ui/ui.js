@@ -288,6 +288,7 @@ export class UI {
   _bindControls() {
     const speedForGrid = (w, h) => {
       const m = Math.max(w, h);
+      if (m <= 16) return 2;
       if (m >= 144) return 2; if (m >= 120) return 2;
       if (m >= 96)  return 3; if (m >= 72)  return 3;
       if (m >= 64)  return 4; if (m >= 48)  return 5;
@@ -296,12 +297,30 @@ export class UI {
     this._speedForGrid = speedForGrid;
 
     const togglePlay = () => {
-      const running = !!this._store.getState().sim.running;
+      const state = this._store.getState();
+      if (String(state?.sim?.runPhase || "") === "genesis_setup") {
+        this._setActionFeedback({
+          ok: false,
+          message: "Genesis-Setup aktiv: erst vier Founder setzen und Gründung bestätigen.",
+          hint: "Tool: Founder Place · Ziel: 4/4 zusammenhängend im Startfenster.",
+        });
+        return;
+      }
+      const running = !!state.sim.running;
       this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:!running } });
     };
 
     this._btnPlay.addEventListener("click", togglePlay);
     this._btnStep.addEventListener("click", () => {
+      const state = this._store.getState();
+      if (String(state?.sim?.runPhase || "") === "genesis_setup") {
+        this._setActionFeedback({
+          ok: false,
+          message: "Step ist im Genesis-Setup gesperrt.",
+          hint: "Setze vier Founder und bestätige die Gründung.",
+        });
+        return;
+      }
       if (this._store.getState().sim.running)
         this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:false } });
       this._dispatch({ type:"SIM_STEP", payload:{ force:true } });
@@ -456,6 +475,7 @@ export class UI {
     const zone = ZONE_TYPES.find((entry) => entry.id === this._activeZoneType);
     const map = {
       observe: "Beobachtung",
+      founder_place: "Founder setzen",
       cell_harvest: "DNA-Ernte",
       split_place: "Split-Seed 4x4",
       zone_paint: zone ? `Zone: ${zone.label}` : "Zone",
@@ -475,6 +495,7 @@ export class UI {
       label: map[mode] || mode,
       detail:
         mode === BRUSH_MODE.OBSERVE ? "Autonomes Wachstum läuft selbst. Dein Einfluss liegt in Prioritäten, Evolution und Split-Seeds." :
+        mode === BRUSH_MODE.FOUNDER_PLACE ? "Setze bis zu vier Founder im linken Startfenster. Eigene Founder können vor Bestätigung entfernt werden." :
         mode === BRUSH_MODE.SPLIT_PLACE ? "Ein Klick setzt einen neuen 4x4-Cluster als strategischen Seed." :
         mode === BRUSH_MODE.CELL_HARVEST ? "Ein Klick erntet eine eigene Zelle für DNA." :
         mode === BRUSH_MODE.ZONE_PAINT && zone ? zone.desc : "",
@@ -523,7 +544,7 @@ export class UI {
 	      const energyNet = Number(sim.playerEnergyNet || 0);
 	      const commandScore = deriveCommandScore(sim);
 	      const doctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
-	      const influencePhase = getInfluencePhase(playerStage, advisorModel.status.commandScore);
+	      const influencePhase = getInfluencePhase(playerStage, advisorModel.status.commandScore, sim.runPhase);
 	      const goalState = getGoalState(advisorModel);
 	      const structureState = getStructureState(advisorModel.status.structure);
 	      const riskState = getRiskState(advisorModel.status.risk);
@@ -581,6 +602,39 @@ export class UI {
 	      alertCard.appendChild(el("div", "nx-note", `${bottleneckState.title}: ${bottleneckState.detail}`));
 	      alertCard.appendChild(el("div", "nx-note", `Reason-Codes: ${(advisorModel.advisor.reasonCodes || []).join(", ") || "none"}`));
 	      container.appendChild(alertCard);
+
+      if (String(sim.runPhase || "") === "genesis_setup") {
+        const founderCard = el("section", "nx-card");
+        founderCard.appendChild(el("div", "nx-card-title", "Genesis: Gründung"));
+        founderCard.appendChild(el("div", "nx-note", "Setze vier zusammenhängende Founder im linken Startfenster und bestätige danach die Gründung."));
+        const founderCount = el("div", "nx-active-tool");
+        founderCount.append(
+          el("div", "nx-active-tool-label", "Founder"),
+          el("div", "nx-active-tool-copy", `${Number(sim.founderPlaced || 0)}/${Number(sim.founderBudget || 4)}`)
+        );
+        founderCard.appendChild(founderCount);
+        const founderActions = el("div", "nx-chip-grid");
+        const brushBtn = el("button", "nx-btn nx-btn-ghost", "Founder-Brush");
+        brushBtn.addEventListener("click", () => {
+          this._dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
+          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+        });
+        const confirmBtn = el("button", "nx-btn nx-btn-primary", "Gründung bestätigen");
+        confirmBtn.addEventListener("click", () => {
+          this._dispatch(
+            { type: "CONFIRM_FOUNDATION", payload: {} },
+            {
+              ok: "Gründung bestätigt. Run gestartet.",
+              blocked: "Gründung blockiert.",
+              hint: "Erforderlich: exakt 4 eigene, zusammenhängende Founder im Startfenster.",
+            }
+          );
+          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+        });
+        founderActions.append(brushBtn, confirmBtn);
+        founderCard.appendChild(founderActions);
+        container.appendChild(founderCard);
+      }
 
 	      const missionCard = el("section", "nx-card nx-card-mission");
 	      missionCard.appendChild(el("div", "nx-card-title", "Aktuelle Mission"));
@@ -707,7 +761,7 @@ export class UI {
       const playerMemory = getPlayerMemory(state);
       const playerStage = Number(sim.playerStage || 1);
       const commandScore = deriveCommandScore(sim);
-      const influencePhase = getInfluencePhase(playerStage, commandScore);
+      const influencePhase = getInfluencePhase(playerStage, commandScore, sim.runPhase);
       const currentDoctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
 
       const activeCard = el("section","nx-card");
@@ -1128,7 +1182,6 @@ export class UI {
       }
       preset.addEventListener("change", () => {
         this._dispatch({ type: "SET_WORLD_PRESET", payload: { presetId: preset.value } });
-        this._dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
         queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
       });
       presetRow.appendChild(preset);
@@ -1155,7 +1208,7 @@ export class UI {
       const sizeRow = el("div","nx-row"); sizeRow.append(el("span","nx-label","Größe"));
       const size = document.createElement("select"); size.className="nx-select";
       size.setAttribute("aria-label", "Weltgröße wählen (startet Simulation neu)");
-      [[32,32],[48,48],[64,64],[72,72],[96,96],[120,120],[144,144]].forEach(([w,h]) => {
+      [[16,16],[32,32],[48,48],[64,64],[72,72],[96,96],[120,120],[144,144]].forEach(([w,h]) => {
         const o=document.createElement("option"); o.value=`${w}x${h}`; o.textContent=`${w}×${h}`;
         if (w===meta.gridW&&h===meta.gridH) o.selected=true;
         size.appendChild(o);
@@ -1165,7 +1218,6 @@ export class UI {
         this._dispatch({ type:"SET_SPEED", payload:this._speedForGrid(w,h) });
         this._dispatch({ type:"SET_SIZE", payload:{w,h} });
         this._dispatch({ type:"GEN_WORLD" });
-        this._dispatch({ type:"TOGGLE_RUNNING", payload:{running:true} });
         queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
       });
       sizeRow.append(size);
@@ -1200,7 +1252,7 @@ export class UI {
       const size = document.createElement("select");
       size.className = "nx-select";
       size.setAttribute("aria-label", "Weltgröße wählen");
-      [[32,32],[48,48],[64,64],[72,72],[96,96],[120,120],[144,144]].forEach(([w,h]) => {
+      [[16,16],[32,32],[48,48],[64,64],[72,72],[96,96],[120,120],[144,144]].forEach(([w,h]) => {
         const option = document.createElement("option");
         option.value = `${w}x${h}`;
         option.textContent = `${w}×${h}`;
@@ -1652,6 +1704,25 @@ export class UI {
       );
       return;
     }
+    if (mode === BRUSH_MODE.FOUNDER_PLACE) {
+      if (!start) return;
+      const idx = wy * state.meta.gridW + wx;
+      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+      const isOwnFounder =
+        (Number(state.world?.alive?.[idx] || 0) | 0) === 1 &&
+        (Number(state.world?.lineageId?.[idx] || 0) | 0) === playerLineageId &&
+        (Number(state.world?.founderMask?.[idx] || 0) | 0) === 1 &&
+        String(state.sim?.runPhase || "") === "genesis_setup";
+      this._dispatch(
+        { type:"PLACE_CELL", payload:{ x:wx, y:wy, remove:isOwnFounder } },
+        {
+          ok: isOwnFounder ? "Founder entfernt." : "Founder platziert.",
+          blocked: "Founder-Aktion blockiert.",
+          hint: "Nur im Startfenster, maximal 4 Founder, vor Bestätigung entfernbar.",
+        }
+      );
+      return;
+    }
     if (mode === BRUSH_MODE.CELL_ADD || mode === BRUSH_MODE.CELL_REMOVE) {
       if (!start) return;
       this._dispatch(
@@ -1690,6 +1761,10 @@ export class UI {
   // ── SYNC (every frame) ──────────────────────────────────
   sync(state) {
     const { meta, sim } = state;
+    const inGenesisSetup = String(sim.runPhase || "") === "genesis_setup";
+    if (inGenesisSetup && String(meta.brushMode || BRUSH_MODE.OBSERVE) !== BRUSH_MODE.FOUNDER_PLACE) {
+      this._dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
+    }
     const running    = sim.running;
     const playerDNA  = Number(sim.playerDNA   || 0);
     const playerStage= Number(sim.playerStage || 1);

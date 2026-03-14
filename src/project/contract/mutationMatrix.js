@@ -1,5 +1,6 @@
 export const mutationMatrix = {
-  GEN_WORLD: ["/meta/worldPresetId", "/meta/physics", "/meta/playerLineageId", "/meta/cpuLineageId", "/world/", "/world/actionMap", "/sim/"],
+  GEN_WORLD: ["/meta/worldPresetId", "/meta/physics", "/meta/gameMode", "/meta/playerLineageId", "/meta/cpuLineageId", "/world/", "/world/actionMap", "/sim/"],
+  CONFIRM_FOUNDATION: ["/sim/runPhase", "/sim/running"],
   TOGGLE_RUNNING: ["/sim/running"],
   SIM_STEP: ["/meta/globalLearning", "/meta/gridW", "/meta/gridH", "/world/", "/sim/"],
   SET_SPEED: ["/meta/speed"],
@@ -13,7 +14,7 @@ export const mutationMatrix = {
   SET_GLOBAL_LEARNING: ["/meta/globalLearning", "/world/globalLearning"],
   RESET_GLOBAL_LEARNING: ["/meta/globalLearning", "/world/globalLearning", "/world/lineageMemory"],
   PAINT_BRUSH: ["/world/L", "/world/R", "/world/W", "/world/Sat"],
-  PLACE_CELL: ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/sim/playerDNA"],
+  PLACE_CELL: ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/world/founderMask", "/sim/playerDNA", "/sim/founderPlaced"],
   PLACE_SPLIT_CLUSTER: ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/sim/playerDNA"],
   DEV_BALANCE_RUN_AI: ["/meta/devMutationVault", "/world/devMutationVault", "/world/devAiLast", "/world/lineageMemory", "/world/trait", "/world/hue"],
   APPLY_BUFFERED_SIM_STEP: ["/meta/globalLearning", "/meta/gridW", "/meta/gridH", "/world/", "/sim/"],

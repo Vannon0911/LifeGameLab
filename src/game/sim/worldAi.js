@@ -2,6 +2,7 @@ import { clamp } from "./shared.js";
 import { hashMix32 } from "../../core/kernel/rng.js";
 import { TRAIT_DEFAULT } from "./life.data.js";
 import { TRAITS } from "./constants.js";
+import { GAME_MODE, normalizeGameMode } from "../contracts/ids.js";
 
 const WORLD_AI_RESEED_COOLDOWN = 90;
 
@@ -65,9 +66,16 @@ function seedFoundersIfEmpty(world, tick) {
   return placed;
 }
 
-export function applyWorldAi(world, tick) {
-  const foundersPlaced = seedFoundersIfEmpty(world, tick);
+export function applyWorldAi(world, tick, options = {}) {
+  const gameMode = normalizeGameMode(options?.gameMode, GAME_MODE.GENESIS);
+  const foundersPlaced = gameMode === GAME_MODE.LAB_AUTORUN
+    ? seedFoundersIfEmpty(world, tick)
+    : 0;
   const gov = getBalanceGovernor(world);
-  world.worldAiAudit = { tick, mode: "start+plants", foundersPlaced, governor: { plants: gov.plants } };
+  world.worldAiAudit = {
+    tick,
+    mode: gameMode === GAME_MODE.LAB_AUTORUN ? "lab_start+plants" : "genesis_plants_only",
+    foundersPlaced,
+    governor: { plants: gov.plants },
+  };
 }
-

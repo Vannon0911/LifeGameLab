@@ -3,6 +3,7 @@ import { mutationMatrix } from "./mutationMatrix.js";
 
 const DISPATCH_SOURCES = Object.freeze({
   GEN_WORLD: ["src/app/main.js", "src/game/ui/ui.js"],
+  CONFIRM_FOUNDATION: ["src/game/ui/ui.js"],
   TOGGLE_RUNNING: ["src/app/main.js", "src/game/ui/ui.js"],
   SIM_STEP: ["src/app/main.js", "src/game/ui/ui.js"],
   SET_SPEED: ["src/game/ui/ui.js"],

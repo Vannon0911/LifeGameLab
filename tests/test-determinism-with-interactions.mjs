@@ -3,6 +3,7 @@ startEvidenceCase("test-determinism-with-interactions.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
+import { GAME_MODE } from "../src/game/contracts/ids.js";
 import { createSignatureSnapshot, explainHashMismatch, sha256Hex } from "./support/determinismDiff.mjs";
 import { closeDanglingHandles } from "./support/handleCleanup.mjs";
 
@@ -16,7 +17,7 @@ function buildScenario(seed) {
       // boot
       { type: "SET_SEED", payload: seed },
       { type: "SET_SIZE", payload: { w: 32, h: 32 } },
-      { type: "GEN_WORLD" },
+      { type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } },
       { type: "TOGGLE_RUNNING", payload: { running: true } },
 
       // some pure sim ticks

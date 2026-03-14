@@ -5,6 +5,7 @@
 import { TRAIT_DEFAULT, TRAIT_COUNT } from "./life.data.js";
 import { hashString, rng01 } from "../../core/kernel/rng.js";
 import { BIOME_IDS, getWorldPreset, normalizeWorldPresetId } from "./worldPresets.js";
+import { GAME_MODE, normalizeGameMode } from "../contracts/ids.js";
 
 function clamp01(value) {
   return value < 0 ? 0 : value > 1 ? 1 : value;
@@ -252,8 +253,10 @@ function capInitialPlantCoverage(state, maxRatio = 0.14) {
   for (let i = 0; i < state.P.length; i++) state.P[i] = clamp01(Number(state.P[i] || 0) * scale);
 }
 
-export function generateWorld(w, h, seedStr, phy, presetId = "river_delta") {
+export function generateWorld(w, h, seedStr, phy, presetId = "river_delta", options = {}) {
   const normalizedPresetId = normalizeWorldPresetId(presetId);
+  const gameMode = normalizeGameMode(options?.gameMode, GAME_MODE.GENESIS);
+  const seedLineages = gameMode === GAME_MODE.LAB_AUTORUN;
   const preset = getWorldPreset(normalizedPresetId);
   const seedBase = hashString(`${seedStr || "life-seed"}:${normalizedPresetId}`);
   const descriptor = makeWorldDescriptor(seedBase, preset);
@@ -285,6 +288,9 @@ export function generateWorld(w, h, seedStr, phy, presetId = "river_delta") {
     born: new Uint8Array(N),
     died: new Uint8Array(N),
     actionMap: new Uint8Array(N),
+    founderMask: new Uint8Array(N),
+    visibility: new Uint8Array(N),
+    explored: new Uint8Array(N),
     biomeId: new Int8Array(N),
     lineageThreatMemory: {},
     lineageDefenseReadiness: {},
@@ -297,7 +303,9 @@ export function generateWorld(w, h, seedStr, phy, presetId = "river_delta") {
   deriveBaseFields(state, preset, seedBase);
   placePlants(state, phy, preset, seedBase);
   capInitialPlantCoverage(state);
-  placeClusters(state, buildSpawnClusters(state, preset), seedBase);
+  if (seedLineages) {
+    placeClusters(state, buildSpawnClusters(state, preset), seedBase);
+  }
   state.superId.fill(-1);
   return state;
 }

@@ -43,11 +43,14 @@ export const simGate = {
       lineageDefenseReadiness: { type: "object" },
       clusterAttackState: { type: "object" },
       zoneMap: { type: "ta", ctor: "Int8Array", len: "N" },
+      founderMask: { type: "ta", ctor: "Uint8Array", len: "N" },
+      visibility: { type: "ta", ctor: "Uint8Array", len: "N" },
+      explored: { type: "ta", ctor: "Uint8Array", len: "N" },
     },
   },
   sim: {
     keys: [
-      "tick", "running", "aliveCount", "aliveRatio", "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
+      "tick", "running", "runPhase", "founderBudget", "founderPlaced", "aliveCount", "aliveRatio", "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
       "meanNutrientField", "meanToxinField", "meanSaturationField", "meanPlantField", "meanBiochargeField", "meanWaterField",
       "plantTileRatio", "dominantHueRatio", "lineageDiversity", "evolutionStageMean", "evolutionStageMax",
       "networkRatio", "clusterRatio", "birthsLastStep", "deathsLastStep", "mutationsLastStep",

@@ -1,5 +1,10 @@
 import { clamp } from "./shared.js";
 
+export const START_WINDOWS_DEFAULT = Object.freeze({
+  player: Object.freeze({ x0: 0.08, y0: 0.30, x1: 0.28, y1: 0.70 }),
+  cpu: Object.freeze({ x0: 0.72, y0: 0.30, x1: 0.92, y1: 0.70 }),
+});
+
 export const WORLD_PRESET_IDS = Object.freeze([
   "river_delta",
   "dry_basin",
@@ -33,6 +38,7 @@ export const WORLD_PRESETS = Object.freeze({
     lightBias: 0.00,
     fertilityBias: 0.08,
     plantBoost: 0.10,
+    startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 1.02,
       T_survive: 0.92,
@@ -52,6 +58,7 @@ export const WORLD_PRESETS = Object.freeze({
     lightBias: 0.10,
     fertilityBias: -0.10,
     plantBoost: -0.08,
+    startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 1.16,
       U_base: 1.08,
@@ -70,6 +77,7 @@ export const WORLD_PRESETS = Object.freeze({
     lightBias: -0.04,
     fertilityBias: 0.14,
     plantBoost: 0.18,
+    startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 0.94,
       T_survive: 0.96,
@@ -87,6 +95,19 @@ export function normalizeWorldPresetId(value, fallback = "river_delta") {
 
 export function getWorldPreset(value) {
   return WORLD_PRESETS[normalizeWorldPresetId(value)];
+}
+
+export function getStartWindowRange(windowDef, w, h) {
+  const x0 = Math.max(0, Math.min(w, Math.floor(Number(windowDef?.x0 || 0) * w)));
+  const x1 = Math.max(0, Math.min(w, Math.ceil(Number(windowDef?.x1 || 0) * w)));
+  const y0 = Math.max(0, Math.min(h, Math.floor(Number(windowDef?.y0 || 0) * h)));
+  const y1 = Math.max(0, Math.min(h, Math.ceil(Number(windowDef?.y1 || 0) * h)));
+  return { x0, x1, y0, y1 };
+}
+
+export function isTileInStartWindow(x, y, w, h, windowDef) {
+  const range = getStartWindowRange(windowDef, w, h);
+  return x >= range.x0 && x <= (range.x1 - 1) && y >= range.y0 && y <= (range.y1 - 1);
 }
 
 export function applyPresetPhysicsOverrides(basePhysics, presetId) {

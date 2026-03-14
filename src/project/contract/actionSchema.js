@@ -1,5 +1,6 @@
 export const actionSchema = {
-  GEN_WORLD: { type: "object", shape: {} },
+  GEN_WORLD: { type: "object", shape: { gameMode: { type: "string" } } },
+  CONFIRM_FOUNDATION: { type: "object", shape: {} },
   TOGGLE_RUNNING: { type: "object", shape: { running: { type: "boolean" } } },
   SIM_STEP: { type: "object", shape: { force: { type: "boolean" } } },
   SET_SPEED: { type: "number" },
