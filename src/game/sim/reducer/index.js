@@ -12,11 +12,8 @@ import { clamp, cloneTypedArray, paintCircle } from "../shared.js";
 import {
   BRUSH_MODE,
   GAME_RESULT,
-  OVERLAY_MODE,
   WIN_MODE,
-  WIN_MODE_SELECTABLE,
   isBrushMode,
-  isOverlayMode,
 } from "../../contracts/ids.js";
 import {
   handleBuyEvolution,
@@ -49,6 +46,7 @@ import {
 } from "./worldRules.js";
 import { applyWinConditions, applyGoalCode } from "./winConditions.js";
 import { handleDevBalanceRunAi } from "./cpuActions.js";
+import { buildSetOverlayPatches, buildSetWinModePatches } from "./controlActions.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
@@ -360,17 +358,14 @@ export function reducer(state, action, { rng }) {
     }
 
     case "SET_WIN_MODE": {
-      const mode = typeof action.payload?.winMode === "string" ? action.payload.winMode : WIN_MODE.SUPREMACY;
-      if (!WIN_MODE_SELECTABLE.includes(mode)) return [];
-      const patches = [{ op: "set", path: "/sim/winMode", value: mode }];
+      const patches = buildSetWinModePatches(action);
+      if (!patches.length) return [];
       assertSimPatchesAllowed(manifest, state, "SET_WIN_MODE", patches);
       return patches;
     }
 
     case "SET_OVERLAY": {
-      const ov = String(action.payload || OVERLAY_MODE.NONE);
-      if (!isOverlayMode(ov)) return [];
-      return [{ op: "set", path: "/meta/activeOverlay", value: ov }];
+      return buildSetOverlayPatches(action);
     }
 
     case "SET_PLACEMENT_COST": {

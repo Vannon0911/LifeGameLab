@@ -1,0 +1,45 @@
+export const TEST_SUITES = Object.freeze({
+  quick: [
+    "tests/test-buffered-step.mjs",
+    "tests/test-contract-facade.mjs",
+    "tests/test-core-gates.mjs",
+    "tests/test-dataflow-contract.mjs",
+    "tests/test-faction-metrics.mjs",
+    "tests/test-interaction-gates.mjs",
+    "tests/test-interactions.mjs",
+    "tests/test-layer-split.mjs",
+    "tests/test-llm-contract.mjs",
+    "tests/test-manifest-dataflow.mjs",
+    "tests/test-path-hygiene.mjs",
+    "tests/test-player-action-ownership.mjs",
+    "tests/test-raw-string-guard.mjs",
+    "tests/test-sim-gate.mjs",
+    "tests/test-sim-modules.mjs",
+    "tests/test-smoke.mjs",
+    "tests/test-string-contract.mjs",
+    "tests/test-ui-contract.mjs",
+    "tests/test-ui-strategy-contract.mjs",
+    "tests/test-version-traceability.mjs",
+    "tests/test-wrapper-ban.mjs",
+  ],
+  truth: [
+    "tests/test-drift-negative-order.mjs",
+    "tests/test-determinism-long.mjs",
+    "tests/test-determinism-per-tick.mjs",
+    "tests/test-determinism-with-interactions.mjs",
+    "tests/test-divergence.mjs",
+    "tests/test-gameplay-loop.mjs",
+    "tests/test-invariants.mjs",
+    "tests/test-split-security-gate.mjs",
+    "tests/test-stability.mjs",
+  ],
+  stress: [
+    "tools/redteam-stress-master.mjs",
+  ],
+});
+
+export const TEST_BUDGETS_MS = Object.freeze({
+  quick: 60_000,
+  truth: 220_000,
+  stress: 30_000,
+});

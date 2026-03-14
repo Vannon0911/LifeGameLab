@@ -2,7 +2,6 @@
 // Simulation Step Orchestrator (module-friendly)
 // ============================================================
 
-import { TRAIT_DEFAULT } from "./life.data.js";
 import { clamp } from "./shared.js";
 import { TRAITS } from "./constants.js";
 import { applyCorpseRelease } from "./resources.js";
@@ -11,54 +10,7 @@ import { updateLineageMemory, pruneLineageMemory, mutateNewbornByEnvironment } f
 import { prepareStepBuffers } from "./buffers.js";
 import { forNeighbours8 } from "./neighbors.js";
 import { runFieldPhase, runFinalizePopulationPhase, runWorldSystemsPhase } from "./stepPhases.js";
-import { DOCTRINE_BY_ID } from "../techTree.js";
-
-const tH = (tr, i) => Number(tr[i * TRAITS + 0]) || TRAIT_DEFAULT[0];
-const tU = (tr, i) => Number(tr[i * TRAITS + 1]) || TRAIT_DEFAULT[1];
-const tTs = (tr, i) => Number(tr[i * TRAITS + 2]) || TRAIT_DEFAULT[2];
-const tTb = (tr, i) => Number(tr[i * TRAITS + 3]) || TRAIT_DEFAULT[3];
-const tCb = (tr, i) => Number(tr[i * TRAITS + 4]) || TRAIT_DEFAULT[4];
-
-function buildLineageRuntime(mem) {
-  const doctrine = DOCTRINE_BY_ID[String(mem?.doctrine || "equilibrium")] || DOCTRINE_BY_ID.equilibrium;
-  const techs = new Set(Array.isArray(mem?.techs) ? mem.techs.map(String) : []);
-  const synergies = new Set(Array.isArray(mem?.synergies) ? mem.synergies.map(String) : []);
-
-  let energyMul = Number(doctrine.effects?.energyIn || 1);
-  let upkeepMul = Number(doctrine.effects?.upkeep || 1);
-  let birthMul = Number(doctrine.effects?.birth || 1);
-  let survivalBonus = Number(doctrine.effects?.survival || 0);
-  let linkMul = Number(doctrine.effects?.link || 1);
-  let toxinMul = Number(doctrine.effects?.toxin || 1);
-
-  if (techs.has("light_harvest")) energyMul *= 1.10;
-  if (techs.has("nutrient_harvest")) energyMul *= 1.06;
-  if (techs.has("toxin_resist")) toxinMul *= 1.12;
-  if (techs.has("reserve_buffer")) upkeepMul *= 0.93;
-  if (techs.has("cooperative_network")) linkMul *= 1.16;
-  if (techs.has("reproductive_spread")) birthMul *= 1.20;
-  if (techs.has("defensive_shell")) survivalBonus += 0.05;
-  if (techs.has("nomadic_adapt")) energyMul *= 1.04;
-  if (techs.has("hybrid_mixer")) energyMul *= 1.04;
-  if (techs.has("fortress_homeostasis")) upkeepMul *= 0.94;
-  if (techs.has("scavenger_loop")) toxinMul *= 1.10;
-  if (techs.has("symbiotic_bloom")) birthMul *= 1.08;
-  if (techs.has("mutation_diversify")) survivalBonus += 0.02;
-
-  if (synergies.has("photon_mesh")) {
-    energyMul *= 1.05;
-    linkMul *= 1.08;
-  }
-  if (synergies.has("split_bloom")) birthMul *= 1.14;
-  if (synergies.has("fortress_grid")) survivalBonus += 0.05;
-  if (synergies.has("toxin_recycling")) toxinMul *= 1.12;
-  if (synergies.has("bloom_protocol")) {
-    energyMul *= 1.05;
-    birthMul *= 1.08;
-  }
-
-  return { energyMul, upkeepMul, birthMul, survivalBonus, linkMul, toxinMul, techs, synergies };
-}
+import { buildLineageRuntime, clampScarcityByNutrient, traitAt } from "./stepRuntime.js";
 
 export function simStep(world, phy, tick) {
   const { w, h, alive, E, L, R, W, P, hue, lineageId, trait } = world;
@@ -86,7 +38,7 @@ export function simStep(world, phy, tick) {
   let sumTotalEIn  = 0;
   let sumPlayerR   = 0, sumTotalR = 0;
 
-  const fieldPhase = runFieldPhase(world, phy, tick, tH);
+  const fieldPhase = runFieldPhase(world, phy, tick, traitAt.h);
   sumR = fieldPhase.sumR;
   sumW = fieldPhase.sumW;
   sumSat = fieldPhase.sumSat;
@@ -121,7 +73,7 @@ export function simStep(world, phy, tick) {
       hue[i] = 0;   // CPU = Red
     }
 
-    const scarcity = clamp(0.5 - clamp(R[i], 0, 1), 0, 0.5) * 2;
+    const scarcity = clampScarcityByNutrient(R[i]);
     const zone = zoneMap ? (zoneMap[i] | 0) : 0;
     const nexusBonus = zone === 4 ? 1.2 : 1.0;   // NEXUS: +20% Energie-Einkommen
     const bufferMult = zone === 2 ? 0.8 : 1.0;   // BUFFER: -20% Upkeep
@@ -145,14 +97,14 @@ export function simStep(world, phy, tick) {
                             neighbours >= 6 ? 0.11 :
                             neighbours >= 4 ? 0.04 : 0;
 // P4: Loading Metabolism — Energy flows instead of jumps
-const energyPotIn = (L[i] * tH(trait, i) + R[i] * phy.R_uptake * phy.R_yieldE) * nexusBonus;
+const energyPotIn = (L[i] * traitAt.h(trait, i) + R[i] * phy.R_uptake * phy.R_yieldE) * nexusBonus;
 const clusterDrive = clamp((world.clusterField?.[i] || 0) * runtime.linkMul, 0, 1);
 const transferRate = 0.22 + clusterDrive * 0.03;
 const energyIn = energyPotIn * transferRate * runtime.energyMul;
 
-const scarcity2 = clamp(0.5 - clamp(R[i], 0, 1), 0, 0.5) * 2;
+const scarcity2 = clampScarcityByNutrient(R[i]);
 const upkeepVal =
-  (tU(trait, i) * phy.U_base +
+  (traitAt.u(trait, i) * phy.U_base +
   (W[i] * phy.W_penaltySurvive) / Math.max(0.65, runtime.toxinMul) +
   (link[i] || 0) * (phy.costNetwork || 0) / Math.max(0.7, runtime.linkMul) +
   clamp(E[i] / Math.max(0.001, phy.Emax), 0, 1) * (phy.costActivity || 0) +
@@ -163,7 +115,7 @@ E[i] = clamp(E[i] + energyIn - upkeepVal, 0, phy.Emax);
 
 // P4: Smoothed Toxins (Loading Toxin Pressure)
 const wGenPot = clamp(Number(phy.W_gen ?? 0.008), 0, 0.08);
-const activity = clamp(0.35 + tU(trait, i) * 0.9 + (E[i] / Math.max(0.001, phy.Emax)) * 0.4, 0, 2);
+const activity = clamp(0.35 + traitAt.u(trait, i) * 0.9 + (E[i] / Math.max(0.001, phy.Emax)) * 0.4, 0, 2);
 const wTarget = wGenPot * activity;
 const wTransfer = 0.18 / Math.max(0.8, runtime.toxinMul); // Resistances slow toxin buildup
 W[i] = clamp(W[i] + wTarget * wTransfer, 0, 1);
@@ -194,7 +146,7 @@ W[i] = clamp(W[i] + wTarget * wTransfer, 0, 1);
       diversitySampled++;
     }
 
-    const minL = Math.max(0.01, tTs(trait, i) * phy.T_survive - runtime.survivalBonus * 0.05);
+    const minL = Math.max(0.01, traitAt.ts(trait, i) * phy.T_survive - runtime.survivalBonus * 0.05);
     const isolated = neighbours < 1;
     const minEnergyToLive = Math.max(0.004, 0.01 - runtime.survivalBonus * 0.05);
     const toxinKillThreshold = Math.min(0.98, 0.90 + runtime.survivalBonus * 0.40 + (runtime.toxinMul - 1) * 0.10);
@@ -211,10 +163,10 @@ W[i] = clamp(W[i] + wTarget * wTransfer, 0, 1);
 
     updateLineageMemory(world, i, 1, tick);
     const birthWastePenalty = clamp((W[i] * (phy.W_penaltyBirth || 0)) / Math.max(0.75, runtime.toxinMul), 0, 0.25);
-    const birthCostThreshold = Math.max(0.08, (tCb(trait, i) * phy.C_birth_base + birthWastePenalty) * (1 - runtime.survivalBonus * 0.25));
+    const birthCostThreshold = Math.max(0.08, (traitAt.cb(trait, i) * phy.C_birth_base + birthWastePenalty) * (1 - runtime.survivalBonus * 0.25));
     
     // P4: Accumulating Births ("Loading")
-    if (E[i] > birthCostThreshold && L[i] > tTb(trait, i) * phy.T_birth) {
+    if (E[i] > birthCostThreshold && L[i] > traitAt.tb(trait, i) * phy.T_birth) {
       forNeighbours8(i, w, h, (j) => {
         if (alive[j] !== 0 || totalBirths >= 100) return;
         if (zoneMap && (zoneMap[j] | 0) === 5) return;
