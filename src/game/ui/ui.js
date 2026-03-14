@@ -96,6 +96,54 @@ function getInfluencePhase(stage, commandScore) {
   return "Beobachten";
 }
 
+function getRiskState(sim) {
+  const toxin = Number(sim?.meanToxinField || 0);
+  const energyNet = Number(sim?.playerEnergyNet || 0);
+  const playerAlive = Number(sim?.playerAliveCount || 0);
+  if (playerAlive === 0 && Number(sim?.tick || 0) > 5) {
+    return { id: "collapse", label: "Kollaps", chip: "☠ Kollaps", color: "var(--red)" };
+  }
+  if (energyNet < -2.2) {
+    return { id: "critical", label: "Kritisch", chip: "⚠ Kritisch", color: "var(--red)" };
+  }
+  if (toxin > 0.3) {
+    return { id: "toxic", label: "Toxisch", chip: "☣ Toxisch", color: "var(--orange)" };
+  }
+  if (energyNet < 0.45) {
+    return { id: "unstable", label: "Instabil", chip: "◌ Instabil", color: "var(--gold)" };
+  }
+  return { id: "stable", label: "Stabil", chip: "● Stabil", color: "var(--green)" };
+}
+
+function getGoalState(sim, doctrine) {
+  const stage = Number(sim?.playerStage || 1);
+  const harvested = Number(sim?.totalHarvested || 0);
+  const playerAlive = Number(sim?.playerAliveCount || 0);
+  const commandScore = deriveCommandScore(sim);
+  if (playerAlive <= 0) {
+    return { title: "Linie retten", short: "Reset oder neue Welt", detail: "Die aktive Linie ist kollabiert. Starte neu oder sichere zuerst wieder einen tragfähigen Kern." };
+  }
+  if (stage <= 1) {
+    return { title: "Erstes Cluster stabilisieren", short: `Stabilisiere ${Math.max(18, playerAlive + 8)} Zellen`, detail: "Halte den ersten Kern am Leben, sammle DNA und vermeide negative Energiebilanzen." };
+  }
+  const nextThreshold = stage < STAGE_THRESHOLDS.length ? STAGE_THRESHOLDS[stage] : null;
+  if (nextThreshold != null && harvested < nextThreshold) {
+    return { title: `Stage ${stage + 1} erreichen`, short: `${harvested}/${nextThreshold} DNA-Ernten`, detail: "Ernte gezielt und halte den Cluster kompakt, bis der nächste Entwicklungsschub frei wird." };
+  }
+  if (commandScore < 0.18) {
+    return { title: "Clusterstärke aufbauen", short: `${Math.round(commandScore * 100)}/18 Command`, detail: "Verdichte Kerne und Netzwerke, damit neue Techs und Split-Seeds zuverlässig greifen." };
+  }
+  return { title: `${doctrine?.label || "Directive"} ausspielen`, short: doctrine?.label || "Directive", detail: "Die Linie ist stabil genug. Nutze Doctrine, Synergien und später Split-Seeds für den nächsten Durchbruch." };
+}
+
+function getStructureState(sim) {
+  const clusterRatio = Number(sim?.clusterRatio || 0);
+  const networkRatio = Number(sim?.networkRatio || 0);
+  if (clusterRatio >= 0.56) return { tier: "Koloniekern", short: "dichte Biomodule", detail: "Mehrere reife Kerne tragen die Linie. Split und Synergien wirken sichtbar." };
+  if (clusterRatio >= 0.28 || networkRatio >= 0.22) return { tier: "Biomodul", short: "2x2-Cluster entstehen", detail: "Die Linie verlässt die Einzelzellenphase. Verdichtete 2x2-Strukturen tragen das Wachstum." };
+  return { tier: "Einzelzellen", short: "primitive Membranen", detail: "Die Kolonie besteht noch überwiegend aus einzelnen Zellen. Wachstum ist fragil und lokal." };
+}
+
 export class UI {
   constructor(store, canvas) {
     this._store = store;
@@ -176,16 +224,16 @@ export class UI {
     this._stageChipWrap = el("div", "nx-kpi");
     this._dangerChipWrap = el("div", "nx-kpi");
     this._goalChipWrap = el("div", "nx-kpi nx-kpi-goal");
-    this._dnaLabel = el("span", "nx-kpi-label", "DNA");
-    this._energyLabel = el("span", "nx-kpi-label", "Netto");
-    this._stageLabel = el("span", "nx-kpi-label", "Stage");
-    this._dangerLabel = el("span", "nx-kpi-label", "Gefahr");
-    this._goalLabel = el("span", "nx-kpi-label", "Ziel");
-    this._dnaChip    = el("span", "nx-chip nx-chip-dna",    "🧬 0.0");
-    this._energyChip = el("span", "nx-chip nx-chip-energy", "⚡ +0.0");
-    this._stageChip  = el("span", "nx-chip nx-chip-stage",  "⬢ S1");
-    this._dangerChip = el("span", "nx-chip nx-chip-danger", "☣ stabil");
-    this._goalChip   = el("span", "nx-chip nx-chip-goal",   "🎯 Kolonie");
+    this._dnaLabel = el("span", "nx-kpi-label", "Kolonie");
+    this._energyLabel = el("span", "nx-kpi-label", "DNA");
+    this._stageLabel = el("span", "nx-kpi-label", "Risiko");
+    this._dangerLabel = el("span", "nx-kpi-label", "Directive");
+    this._goalLabel = el("span", "nx-kpi-label", "Mission");
+    this._dnaChip    = el("span", "nx-chip nx-chip-player", "◉ 0");
+    this._energyChip = el("span", "nx-chip nx-chip-dna",    "🧬 0.0");
+    this._stageChip  = el("span", "nx-chip nx-chip-danger", "● Stabil");
+    this._dangerChip = el("span", "nx-chip nx-chip-energy", "◎ Beobachten");
+    this._goalChip   = el("span", "nx-chip nx-chip-goal",   "🎯 Ersten Kern sichern");
     this._dnaChipWrap.append(this._dnaLabel, this._dnaChip);
     this._energyChipWrap.append(this._energyLabel, this._energyChip);
     this._stageChipWrap.append(this._stageLabel, this._stageChip);
@@ -336,7 +384,7 @@ export class UI {
       if (forceReset || !PANEL_BY_KEY[this._activeContext]) this._activeContext = "status";
       this._renderPanelBody(this._sidebarBody, this._store.getState());
     } else if (forceReset) {
-      this._activeContext = null;
+      this._activeContext = "status";
       this._sidebarBody.innerHTML = "";
       this._sheet.classList.add("hidden");
       this._sheetBackdrop.classList.add("hidden");
@@ -381,7 +429,6 @@ export class UI {
     this._sheet.classList.add("hidden");
     this._sheetBackdrop.classList.add("hidden");
     document.getElementById("app")?.classList.remove("is-panel-open");
-    this._activeContext = null;
     this._updateContextButtons();
   }
 
@@ -423,10 +470,15 @@ export class UI {
       split_place: "Split-Seed 4x4",
       zone_paint: zone ? `Zone: ${zone.label}` : "Zone",
       light: "Licht +",
+      paint_light: "Licht +",
       light_remove: "Licht -",
+      paint_light_remove: "Licht -",
       nutrient: "Nährstoffe +",
+      paint_nutrient: "Nährstoffe +",
       toxin: "Toxine +",
+      paint_toxin: "Toxine +",
       saturation_reset: "Reset",
+      paint_reset: "Reset",
     };
     return {
       mode,
@@ -451,10 +503,10 @@ export class UI {
       const eyebrow = el("div", "nx-panel-eyebrow", isDesktop() ? "Mission Control" : "Control Room");
       const title = el("h2", "nx-panel-title", panelMeta.title);
       const summaryMap = {
-        status: "Lage, Energie und Siegpfad der laufenden Kolonie.",
-        evolution: "DNA investieren, Stufen lesen und Spezialisierungen planen.",
-        tools: "Zellen platzieren, Zonen setzen und die Sandbox direkt formen.",
-        systems: "Weltparameter, Render-Modi und Runtime-Optionen steuern.",
+        status: "Lagebild, Risiko und Missionsfokus der aktiven Kolonie.",
+        evolution: "Ein fokussierter Aufstiegspfad statt eine lange Einkaufsliste.",
+        tools: "Wenige spürbare Eingriffe für eine Linie, die primär selbst wächst.",
+        systems: "Spieloptionen vorn, Labor und Benchmark getrennt dahinter.",
       };
       const copy = el("p", "nx-panel-copy", summaryMap[ctx] || "");
       hero.append(eyebrow, title, copy);
@@ -472,6 +524,9 @@ export class UI {
       const doctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
       const influencePhase = getInfluencePhase(playerStage, commandScore);
       const splitUnlocked = this._hasSplitUnlock(state);
+      const goalState = getGoalState(sim, doctrine);
+      const structureState = getStructureState(sim);
+      const riskState = getRiskState(sim);
 
       const mkBar = (pct, cls, label) => {
         const wrap = el("div", "nx-bar-wrap");
@@ -493,13 +548,13 @@ export class UI {
 
       let statusText = "Kolonie beobachtet ihr Umfeld. Autonomes Wachstum hat Vorrang.";
       let statusColor = "var(--cyan)";
-      if (playerAlive === 0 && sim.tick > 10) {
+      if (riskState.id === "collapse") {
         statusText = "Kolonie kollabiert. Die aktuelle Linie hat keine tragfähigen Cluster mehr.";
         statusColor = "var(--red)";
-      } else if (energyNet < -2) {
+      } else if (riskState.id === "critical") {
         statusText = "Energie kippt ins Minus. Priorität auf Sparen oder Reservekern setzen.";
         statusColor = "var(--red)";
-      } else if (toxin > 0.30) {
+      } else if (riskState.id === "toxic") {
         statusText = "Toxinlast steigt. Detox oder Schutzhülle werden relevant.";
         statusColor = "var(--orange)";
       } else if (commandScore >= 0.18) {
@@ -516,6 +571,17 @@ export class UI {
       alertCard.appendChild(el("div", "nx-note", "Die Kolonie wächst selbst. Du setzt nur Prioritäten, Freischaltungen und neue Startcluster."));
       container.appendChild(alertCard);
 
+      const missionCard = el("section", "nx-card nx-card-mission");
+      missionCard.appendChild(el("div", "nx-card-title", "Aktuelle Mission"));
+      missionCard.appendChild(el("div", "nx-mission-title", goalState.title));
+      missionCard.appendChild(el("div", "nx-mission-copy", goalState.detail));
+      missionCard.append(
+        mkMetric("Mission", goalState.short, "nx-mono nx-val-pos"),
+        mkMetric("Risiko", riskState.label, riskState.id === "stable" ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
+        mkMetric("Struktur", structureState.tier)
+      );
+      container.appendChild(missionCard);
+
       const commandCard = el("section", "nx-card");
       commandCard.appendChild(el("div", "nx-card-title", "Kommandoraum"));
       const commandHero = el("div", "nx-active-tool");
@@ -528,6 +594,7 @@ export class UI {
         mkMetric("Command-Score", `${Math.round(commandScore * 100)} / 100`, "nx-mono nx-val-pos"),
         mkBar(commandScore, "nx-bar-stage", "Command-Score"),
         mkMetric("Priorität", doctrine.label),
+        mkMetric("Fingerprint", doctrine.visualTag || doctrine.summary || doctrine.label),
         mkMetric("Split", splitUnlocked ? "bereit" : "gesperrt", splitUnlocked ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
         mkMetric("Clusterstärke", `${Math.round(Number(sim.clusterRatio || 0) * 100)}%`),
         mkMetric("Netzwerk", `${Math.round(Number(sim.networkRatio || 0) * 100)}%`),
@@ -562,7 +629,7 @@ export class UI {
         mkMetric("Aktiver Siegpfad", String(sim.winMode || "supremacy"))
       );
       progressCard.append(
-        el("div", "nx-note", `Phase ${influencePhase}: weitere Eingriffe schalten sich über Stage und Clusterstärke frei.`),
+        el("div", "nx-note", `${structureState.detail} Phase ${influencePhase}: weitere Eingriffe schalten sich über Stage und Clusterstärke frei.`),
         mkBar(Math.min(1, Number(sim.energySupremacyTicks || 0) / 200), "nx-bar-light", "Suprematie-Fortschritt"),
         mkBar(Math.min(1, Number(sim.stockpileTicks || 0) / 200), "nx-bar-nutrient", "Territorium-Fortschritt"),
         mkBar(Math.min(1, Number(sim.efficiencyTicks || 0) / 100), "nx-bar-stage", "Effizienz-Fortschritt")
@@ -829,11 +896,12 @@ export class UI {
       const playerMemory = getPlayerMemory(state);
       const unlockedTechs = new Set(Array.isArray(playerMemory?.techs) ? playerMemory.techs.map(String) : []);
       const unlockedSynergies = new Set(Array.isArray(playerMemory?.synergies) ? playerMemory.synergies.map(String) : []);
+      const visibleStages = new Set([Math.max(1, playerStage - 1), playerStage, Math.min(5, playerStage + 1)]);
 
       const infoCard = el("section", "nx-card");
       infoCard.appendChild(el("div", "nx-card-title", "Tech-Kern"));
       infoCard.append(
-        el("div", "nx-note", "Evo ist jetzt ein echter Kommandopfad: erst Stoffwechsel, dann Cluster, dann Synergien."),
+        el("div", "nx-note", "Evo ist ein Aufstiegspfad. Sichtbar bleiben nur der aktuelle Ring, der nächste Ring und die gerade entstehenden Synergien."),
         el("div", "nx-stat-row", null)
       );
       infoCard.lastChild.append(el("span", "nx-label", `Stage S${playerStage}`), el("span", "nx-mono nx-val-pos", `🧬 ${playerDNA.toFixed(1)} DNA`));
@@ -848,6 +916,7 @@ export class UI {
       container.appendChild(infoCard);
 
       for (let stage = 1; stage <= 5; stage++) {
+        if (!visibleStages.has(stage)) continue;
         const stageNodes = TECH_TREE.filter((node) => node.stage === stage);
         const stageWrap = el("section", `nx-tech-stage${playerStage < stage ? " is-locked" : ""}`);
         stageWrap.appendChild(el("div", "nx-tech-stage-label", `Stage ${stage}`));
@@ -889,6 +958,13 @@ export class UI {
         }
         stageWrap.appendChild(grid);
         container.appendChild(stageWrap);
+      }
+
+      if (playerStage < 5) {
+        const nextCard = el("section", "nx-card");
+        nextCard.appendChild(el("div", "nx-card-title", "Spätere Pfade"));
+        nextCard.appendChild(el("div", "nx-note", `Stage ${Math.min(5, playerStage + 2)}+ bleibt komprimiert, bis deine Linie dort wirklich Optionen hat.`));
+        container.appendChild(nextCard);
       }
 
       const synergyCard = el("section", "nx-card");
@@ -1087,7 +1163,7 @@ export class UI {
     if (ctx === "systems") {
       const worldCard = el("section","nx-card");
       worldCard.setAttribute("aria-labelledby", "systems-world-title");
-      const worldTitle = el("div", "nx-card-title", "Welt & Render");
+      const worldTitle = el("div", "nx-card-title", "Spielraum");
       worldTitle.id = "systems-world-title";
       worldCard.appendChild(worldTitle);
 
@@ -1143,9 +1219,9 @@ export class UI {
       worldCard.appendChild(renderRow);
 
       const gl = meta.globalLearning || { enabled:true, strength:0.42 };
-      const learnCard = el("section","nx-card");
+      const learnCard = el("section","nx-card nx-card-lab");
       learnCard.setAttribute("aria-labelledby", "systems-learning-title");
-      const learnTitle = el("div", "nx-card-title", "Lernen");
+      const learnTitle = el("div", "nx-card-title", "Lab: Lernen");
       learnTitle.id = "systems-learning-title";
       learnCard.appendChild(learnTitle);
 
@@ -1171,7 +1247,7 @@ export class UI {
       // ARIA & Accessibility Settings
       const accCard = el("section", "nx-card");
       accCard.setAttribute("aria-labelledby", "systems-acc-title");
-      const accTitle = el("div", "nx-card-title", "Barrierefreiheit");
+      const accTitle = el("div", "nx-card-title", "Zugang & Darstellung");
       accTitle.id = "systems-acc-title";
       accCard.appendChild(accTitle);
 
@@ -1204,9 +1280,9 @@ export class UI {
       accCard.appendChild(offRow);
 
       const benchState = this._getBenchmarkState();
-      const benchCard = el("section", "nx-card");
+      const benchCard = el("section", "nx-card nx-card-lab");
       benchCard.setAttribute("aria-labelledby", "systems-benchmark-title");
-      const benchTitle = el("div", "nx-card-title", "Benchmark");
+      const benchTitle = el("div", "nx-card-title", "Lab: Benchmark");
       benchTitle.id = "systems-benchmark-title";
       benchCard.appendChild(benchTitle);
       const benchStatus = benchState?.isRunning
@@ -1248,9 +1324,9 @@ export class UI {
       }
       accCard.appendChild(benchCard);
 
-      const phyCard = el("section","nx-card");
+      const phyCard = el("section","nx-card nx-card-lab");
       phyCard.setAttribute("aria-labelledby", "systems-physics-title");
-      const physicsTitle = el("div", "nx-card-title", "Kern-Parameter");
+      const physicsTitle = el("div", "nx-card-title", "Lab: Kern-Parameter");
       physicsTitle.id = "systems-physics-title";
       phyCard.appendChild(physicsTitle);
 
@@ -1464,6 +1540,11 @@ export class UI {
     const energyNet  = Number(sim.playerEnergyNet || 0);
     const season     = Number(sim.seasonPhase || 0);
     const playerAlive= Number(sim.playerAliveCount || 0);
+    const playerMemory = getPlayerMemory(state);
+    const doctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
+    const goalState = getGoalState(sim, doctrine);
+    const riskState = getRiskState(sim);
+    const structureState = getStructureState(sim);
     const seasonIcon = season<0.25?"🌱":season<0.5?"☀":season<0.75?"🍂":"❄";
 
     // Topbar play btn
@@ -1473,40 +1554,22 @@ export class UI {
     this._tickChip.textContent   = `t${sim.tick}`;
     this._aliveChip.textContent  = `alive ${sim.aliveCount}`;
     this._playerChip.textContent = `p ${playerAlive}`;
-    this._dnaChip.textContent    = `🧬 ${playerDNA.toFixed(1)}`;
-    this._stageChip.textContent  = `⬢ S${playerStage}`;
-    this._energyChip.textContent = `⚡ ${fmtSign(energyNet,1)}`;
+    this._dnaChip.textContent    = `◉ ${playerAlive}`;
+    this._energyChip.textContent = `🧬 ${playerDNA.toFixed(1)}`;
+    this._stageChip.textContent  = riskState.chip;
     this._seasonChip.textContent = `${seasonIcon} ${(season*100).toFixed(0)}%`;
-    this._energyChip.style.color = energyNet>=0 ? "var(--green)" : "var(--red)";
+    this._stageChip.style.color = riskState.color;
+    this._stageChip.style.borderColor = riskState.color;
 
-    // UI-GAME-02: Strategy HUD sync — Danger
-    const toxin   = Number(sim.meanToxinField   || 0);
     const netSign = energyNet >= 0;
-
-    // Danger chip logic (Lagebericht)
-    const isPoisoned = toxin > 0.30;
-    const isStarving = energyNet < -3 && playerAlive > 0;
-    const isExtinct  = playerAlive === 0 && sim.tick > 5;
-    const isUnstable = energyNet < 0.5 && !isStarving && !isExtinct;
-
-    let dangerMsg = "☣ stabil";
-    let dangerColor = "var(--green)";
-    if (isExtinct) { dangerMsg = "☠ Kollaps"; dangerColor = "var(--red)"; }
-    else if (isStarving) { dangerMsg = "⚠ Kritisch"; dangerColor = "var(--red)"; }
-    else if (isPoisoned) { dangerMsg = "☣ Toxisch"; dangerColor = "var(--orange)"; }
-    else if (isUnstable) { dangerMsg = "⚙ instabil"; dangerColor = "var(--yellow)"; }
-
-    this._dangerChip.textContent = dangerMsg;
-    this._dangerChip.style.color = dangerColor;
-
-    // UI-GAME-02: Strategy HUD sync — Goal
-    this._goalChip.textContent = sim.goal || "🎯 Kolonie";
+    this._dangerChip.textContent = `◎ ${doctrine.label}`;
+    this._goalChip.textContent = `🎯 ${goalState.short}`;
 
     // UI-GAME-01: Canvas-HUD sync — Reduced to Trend arrow
     this._hudEnergyArrow.textContent = netSign ? "▲" : "▼";
     this._hudEnergyVal.textContent   = `${netSign ? "+" : ""}${energyNet.toFixed(1)} ⚡`;
     this._hudEnergy.style.color      = netSign ? "var(--green)" : "var(--red)";
-    this._hudTool.textContent = `Tool: ${this._getActiveToolMeta(state).label}`;
+    this._hudTool.textContent = `${structureState.tier} · ${this._getActiveToolMeta(state).label}`;
 
     this._dockPlayBtn.classList.toggle("running", !!running);
     this._dockPlayBtn.querySelector(".nx-dock-icon").textContent = running ? "⏸" : "▶";

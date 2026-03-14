@@ -1,14 +1,10 @@
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
-import crypto from "node:crypto";
+import { createSignatureSnapshot, explainHashMismatch, sha256Hex } from "./support/determinismDiff.mjs";
 
 const SEEDS = ["det-1", "det-2", "det-3"];
 const TICKS = 300;
-
-function sha256Hex(s) {
-  return crypto.createHash("sha256").update(String(s)).digest("hex");
-}
 
 function runTrace(seed, ticks) {
   const store = createStore(manifest, { reducer, simStep: simStepPatch });
@@ -18,13 +14,13 @@ function runTrace(seed, ticks) {
 
   const hashes = [];
   // tick 0 signature (post bootstrap, pre first step)
-  hashes.push(sha256Hex(store.getSignatureMaterial()));
+  hashes.push(createSignatureSnapshot(store.getSignatureMaterial()));
   for (let t = 1; t <= ticks; t++) {
     store.dispatch({ type: "SIM_STEP", payload: { force: true } });
-    hashes.push(sha256Hex(store.getSignatureMaterial()));
+    hashes.push(createSignatureSnapshot(store.getSignatureMaterial()));
   }
   // digest of the whole per-tick sequence (useful as a compact proof artifact)
-  const traceDigest = sha256Hex(hashes.join("\n"));
+  const traceDigest = sha256Hex(hashes.map((entry) => entry.sha256).join("\n"));
   return { hashes, traceDigest };
 }
 
@@ -35,10 +31,14 @@ for (const seed of SEEDS) {
 
   let ok = true;
   for (let t = 0; t <= TICKS; t++) {
-    if (a.hashes[t] !== b.hashes[t]) {
-      console.error(`[determinism-per-tick] ${seed}: FAIL at tick ${t}`);
-      console.error(`a=${a.hashes[t]}`);
-      console.error(`b=${b.hashes[t]}`);
+    if (a.hashes[t].sha256 !== b.hashes[t].sha256) {
+      for (const line of explainHashMismatch({
+        suite: "determinism-per-tick",
+        seed,
+        pointLabel: `tick ${t}`,
+        left: a.hashes[t],
+        right: b.hashes[t],
+      })) console.error(line);
       ok = false;
       break;
     }
