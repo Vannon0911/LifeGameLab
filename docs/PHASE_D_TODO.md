@@ -45,11 +45,16 @@ Zweck: Infrastruktur und aktive Sicht/Fog-Regeln nach stabiler DNA-Zone.
   - `node tests/test-string-contract.mjs`
 
 ### D2 Infrastruktur-Bauen
-- [ ] Pfad-Build semantisch statt Brush
-- [ ] legale Tiles definieren
-- [ ] Commit auf `world.link`
-- [ ] Energie-/DNA-Kosten
-- [ ] Tests + Doku aktualisieren
+- [x] Pfad-Build semantisch statt Brush
+- [x] legale Tiles definieren
+- [x] Commit auf `world.link`
+- [x] Energie-/DNA-Kosten
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-begin-infra-build.mjs`
+  - `node tests/test-build-infra-path.mjs`
+  - `node tests/test-confirm-infra-path.mjs`
+  - `node tools/run-test-suite.mjs quick`
 
 ### D3 Sicht-/Fog-System
 - [ ] Sicht durch Kernzone
@@ -138,3 +143,11 @@ phaseD: {
 - `phaseD`-Presetbasis fuer Kosten und Sichtweiten ist angelegt.
 - `CONFIRM_DNA_ZONE` zieht die D1-Kostenbasis bereits deterministisch aus dem Preset nach.
 - Infrastruktur-Bau, Sicht/Fog-Logik, UI und Renderer bleiben bewusst fuer D2-D6 offen.
+
+## D2-Abschluss
+
+- Infrastruktur nutzt jetzt einen eigenen Staging-Pfad ueber `world.infraCandidateMask`.
+- `BEGIN_INFRA_BUILD` wechselt in einen semantischen Pfadmodus statt Brush-/Zone-Paint.
+- `BUILD_INFRA_PATH` erlaubt nur zusammenhaengende, lebende, player-owned Netzpfade mit Anker an Kern, DNA oder bestehendem Link.
+- `CONFIRM_INFRA_PATH` committed erst dann nach `world.link`, verbraucht DNA- und Energiekosten deterministisch und setzt `infrastructureUnlocked=true`.
+- Sicht/Fog, CPU-Informationsgating und UI bleiben bewusst offen fuer D3-D6.
