@@ -38,6 +38,25 @@ Deterministisches Zell-Strategieprodukt: autonome Kolonieentwicklung, fokussiert
 | --- | --- |
 | ![Tools Panel](docs/assets/lifegamelab-panel-tools.png) | ![Systems Panel](docs/assets/lifegamelab-panel-systems.png) |
 
+## Viewport-Vergleich (Playwright)
+
+Automatisch erstellt am **14.03.2026** via Playwright gegen `http://127.0.0.1:8080/`.
+
+| Desktop 1536x960 | Mobile 390x844 |
+| --- | --- |
+| ![Desktop 1536 Home](docs/assets/compare-desktop-1536x960-home.png) | ![Mobile 390 Home](docs/assets/compare-mobile-390x844-home.png) |
+
+| Desktop Tools | Mobile Tools |
+| --- | --- |
+| ![Desktop Tools](docs/assets/compare-desktop-1536x960-werkzeuge.png) | ![Mobile Tools](docs/assets/compare-mobile-390x844-werkzeuge.png) |
+
+| Desktop Evolution | Mobile Systeme |
+| --- | --- |
+| ![Desktop Evolution](docs/assets/compare-desktop-1536x960-evolution.png) | ![Mobile Systeme](docs/assets/compare-mobile-390x844-systeme.png) |
+
+Vollständige Capture-Matrix (alle Größen/Ansichten):
+- [docs/GITHUB_MEDIA_INDEX.md](docs/GITHUB_MEDIA_INDEX.md)
+
 ## Schnellstart
 
 ```bash
