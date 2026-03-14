@@ -1,6 +1,6 @@
-# LifeGameLab v2.5.0
+# LifeGameLab v2.6.0
 
-![Version](https://img.shields.io/badge/version-2.5.0-0ea5e9)
+![Version](https://img.shields.io/badge/version-2.6.0-0ea5e9)
 ![Tests](https://img.shields.io/badge/tests-npm%20test-green)
 ![Determinismus](https://img.shields.io/badge/sim-deterministisch-22c55e)
 
@@ -176,7 +176,7 @@ npm run test:stress
 
 - Contract-/Gate-Haertung ist umgesetzt und testgruen.
 - `Phase A-C` leben auf Codebasis: `Foundation -> Core -> DNA -> Run`.
-- `Phase D` ist gestartet; Contract-/State-Basis und semantischer Infrastruktur-Staging-Pfad sind angelegt.
+- `Phase D` ist gestartet; D1/D2 sind auf Codebasis umgesetzt, inklusive semantischem Infrastruktur-Staging-Pfad und leerem Confirm-Exit ohne Ressourcenkosten.
 - Sicht/Fog, CPU-Informationsgating, kanonisches Zonensystem, Pattern-Engine, Tech-Rework und RC-Haertung sind noch nicht fertig.
 - Performance-Ziel aus dem letzten groesseren Implementierungsplan ist weiter offen.
 
