@@ -1,7 +1,7 @@
 # MASTER_CHANGE_LOG
 
 Reproduzierbar generierter Commit-Changelog (Source of Truth: Git-Historie).
-Release-Version: v2.6.0
+Release-Version: v2.7.0
 Policy: append-only.
 
 ## Reproduzierbarkeit
@@ -1127,4 +1127,3 @@ Policy: append-only.
 - diffstat: +101 / -33 / files 1
 - files:
   - `README.md`
-
