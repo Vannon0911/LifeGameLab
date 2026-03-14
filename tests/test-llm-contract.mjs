@@ -13,11 +13,50 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
+function assertContains(text, needle, msg) {
+  assert(text.includes(needle), msg);
+}
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
+
 const suiteRunner = fs.readFileSync(path.join(root, "tools", "run-test-suite.mjs"), "utf8");
-assert(suiteRunner.includes("llm-preflight.mjs"), "suite preflight wiring missing");
-assert(suiteRunner.includes('"check"') || suiteRunner.includes("'check'"), "suite preflight check mode missing");
+assertContains(suiteRunner, "llm-preflight.mjs", "suite preflight wiring missing");
+assertContains(suiteRunner, "--paths", "suite preflight must classify task by paths");
+assertContains(suiteRunner, '"check"', "suite preflight check mode missing");
+
+const allRunner = fs.readFileSync(path.join(root, "tools", "run-all-tests.mjs"), "utf8");
+assertContains(allRunner, "llm-preflight.mjs", "run-all-tests preflight wiring missing");
+assertContains(allRunner, "--paths", "run-all-tests preflight must classify task by paths");
+
+const preflightScript = fs.readFileSync(path.join(root, "tools", "llm-preflight.mjs"), "utf8");
+assertContains(preflightScript, "classify", "preflight classify command missing");
+assertContains(preflightScript, "requiredEntrySha256", "task entry hash check missing");
+assertContains(preflightScript, "Ambiguous task classification", "ambiguous task guard missing");
+assertContains(preflightScript, "Task classification requires '--paths", "paths-required guard missing");
+
+const protocolFiles = [
+  "docs/START_HERE.md",
+  "docs/LLM_OPERATING_PROTOCOL.md",
+  "docs/llm/ui/UI_TASK_ENTRY.md",
+  "docs/llm/sim/SIM_TASK_ENTRY.md",
+  "docs/llm/contracts/CONTRACT_TASK_ENTRY.md",
+  "docs/llm/testing/TESTING_TASK_ENTRY.md",
+  "docs/llm/versioning/VERSIONING_TASK_ENTRY.md",
+];
+for (const rel of protocolFiles) {
+  const text = fs.readFileSync(path.join(root, rel), "utf8");
+  assertContains(text, "LESEN", `${rel} missing LESEN phase`);
+  assertContains(text, "PRUEFEN", `${rel} missing PRUEFEN phase`);
+  assertContains(text, "SCHREIBEN", `${rel} missing SCHREIBEN phase`);
+  assertContains(text, "DOKU", `${rel} missing DOKU phase`);
+}
+
+const mandatoryReading = fs.readFileSync(path.join(root, "MANDATORY_READING.md"), "utf8");
+assertContains(mandatoryReading, "docs/START_HERE.md", "MANDATORY_READING must redirect to START_HERE");
+
+const masterLog = fs.readFileSync(path.join(root, "docs/MASTER_CHANGE_LOG.md"), "utf8");
+assertContains(masterLog, "Fallback", "MASTER_CHANGE_LOG fallback policy missing");
 
 const sync = assertLlmGateSync(manifest);
 assert(sync.policySource === "docs/LLM_ENTRY.md", "LLM policy source drift");

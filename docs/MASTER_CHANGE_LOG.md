@@ -3,6 +3,9 @@
 Reproduzierbar generierter Commit-Changelog (Source of Truth: Git-Historie).
 Release-Version: v2.5.0
 Policy: append-only.
+Operative Nutzung: globale Gesamtansicht/Fallback.
+Nicht als Standardreferenz fuer operative Taskarbeit verwenden.
+Operativ zuerst task-spezifische Doku gemaess Task-Entry nutzen.
 
 ## Reproduzierbarkeit
 - Generator: `node tools/generate-master-changelog.mjs`

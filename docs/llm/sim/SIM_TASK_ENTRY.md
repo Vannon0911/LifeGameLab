@@ -1,12 +1,31 @@
 # Sim Task Entry
 
-Pflicht vor Sim-/Reducer-Aenderungen:
+## Pflichtzyklus
+LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 
+## LESEN (pflicht)
 1. `docs/LLM_ENTRY.md`
-2. `src/game/sim/reducer/index.js`
-3. `src/game/sim/worldgen.js`
-4. `src/game/sim/step.js`
-5. `src/game/sim/stepPhases.js`
-6. `src/game/sim/stepRuntime.js`
+2. `docs/LLM_OPERATING_PROTOCOL.md`
+3. diese Datei
+4. `src/game/sim/reducer/index.js`
+5. `src/game/sim/worldgen.js`
+6. `src/game/sim/step.js`
+7. `src/game/sim/stepPhases.js`
+8. `src/game/sim/stepRuntime.js`
 
-Regel: deterministische Reihenfolge und Patch-only Contract bleiben unveraendert.
+## PRUEFEN (pflicht, vor Schreiben/Test)
+- `node tools/llm-preflight.mjs check --paths src/game/sim/,src/project/project.logic.js`
+
+## SCHREIBEN (pflicht)
+- Kein Schreiben ohne `docs/LLM_ENTRY.md` + passenden Task-Entry.
+- Kein Test ohne passendes Ack.
+- Kein Taskwechsel ohne neue Klassifikation + neues Ack.
+- Nur SIM-/Reducer-Scope.
+- Kein UI-/CONTRACT-Scope-Mix ohne neuen Subtask mit eigener Klassifikation.
+
+## DOKU (pflicht)
+- Zuerst SIM-spezifische Doku.
+- `docs/MASTER_CHANGE_LOG.md` nur globale Fallback-Ansicht.
+
+## Taskregel
+Deterministische Reihenfolge und Patch-only Contract bleiben unveraendert.
