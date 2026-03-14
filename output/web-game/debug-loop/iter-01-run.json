@@ -1,0 +1,85 @@
+{
+  "text": {
+    "tick": 64,
+    "running": true,
+    "tool": "observe",
+    "stage": 2,
+    "dna": 0,
+    "playerAlive": 64,
+    "cpuAlive": 47,
+    "energyNet": 0.5618036640333246,
+    "clusterRatio": 0.954954954954955,
+    "networkRatio": 0.22522522522522523,
+    "techs": [],
+    "synergies": [],
+    "runIdentity": {
+      "winMode": "supremacy",
+      "doctrine": "equilibrium",
+      "doctrineTradeoff": "Ausgleich zwischen Tempo und Stabilitaet."
+    },
+    "status": {
+      "risk": "stable",
+      "goal": "harvest_secure",
+      "structure": "colony_core",
+      "commandScore": 0.6942342342342344,
+      "splitReady": false,
+      "expansionWork": 52.33166504894644,
+      "nextExpandCost": 200
+    },
+    "advisor": {
+      "bottleneckPrimary": "territory_scaling",
+      "bottleneckSecondary": "win_push",
+      "reasonCodes": [
+        "expansion_work_ready"
+      ],
+      "nextAction": "wait_and_advance_time",
+      "nextLever": "territory_expand",
+      "recommendedZone": "nexus",
+      "recommendedOverlay": "territory"
+    },
+    "winProgress": {
+      "mode": "supremacy",
+      "progress": 60,
+      "target": 200,
+      "blockerCode": "maintain_advantage",
+      "blockerDetail": "Vorsprung halten, bis der Zaehler voll ist."
+    },
+    "benchmark": {
+      "isRunning": false,
+      "phase": "idle",
+      "frames": 0,
+      "targetFrames": 360,
+      "lastReport": null
+    },
+    "risk": "stable",
+    "mission": "harvest_secure",
+    "structure": "colony_core",
+    "doctrine": "equilibrium"
+  },
+  "perf": {
+    "fpsEma": 14.65,
+    "frameMsEma": 68.28,
+    "renderMsEma": 27.07,
+    "quality": 1,
+    "renderEvery": 1,
+    "dprCap": 1.25,
+    "maxSimStepsPerFrame": 3,
+    "maxSimFrameBudgetMs": 7.5,
+    "maxCatchupMs": 130,
+    "stepBufferSize": 0,
+    "offscreenMode": "main",
+    "offscreenAuto": false,
+    "tick": 64,
+    "grid": "32x32",
+    "cells": 1024
+  },
+  "loop": {
+    "requestedSpeed": 24,
+    "appliedSpeed": 24,
+    "started": true,
+    "advanced": {
+      "steps": 48,
+      "tick": 51
+    }
+  }
+}
