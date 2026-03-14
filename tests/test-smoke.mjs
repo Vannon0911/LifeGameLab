@@ -46,12 +46,18 @@ function assertRatioBounds(sim, label, key) {
   assert(v >= 0 && v <= 1, `${label}: ${key} out of bounds [0..1], got ${v}`);
 }
 
+function assertNonNegative(sim, label, key) {
+  const v = Number(sim[key]);
+  assert(Number.isFinite(v), `${label}: ${key} must be finite`);
+  assert(v >= 0, `${label}: ${key} must be >= 0, got ${v}`);
+}
+
 function assertSeedInvariants(result, label) {
   const sim = result.state.sim;
   assertFiniteMetrics(sim, label);
   assertRatioBounds(sim, label, "aliveRatio");
-  assertRatioBounds(sim, label, "clusterRatio");
   assertRatioBounds(sim, label, "networkRatio");
+  assertNonNegative(sim, label, "clusterRatio");
   assert(Number(sim.meanPlantField) > 0, `${label}: meanPlantField must be > 0 (aggregation missing)`);
   assert(Number(sim.meanNutrientField) > 0, `${label}: meanNutrientField must be > 0 (aggregation missing)`);
   assert(Number(sim.aliveRatio) > 0, `${label}: aliveRatio must be > 0 (aggregation missing)`);

@@ -50,7 +50,7 @@ function runPreflight(args) {
 }
 
 {
-  const ambiguous = runPreflight(["classify", "--paths", "tests/,src/game/ui/ui.js"]);
+  const ambiguous = runPreflight(["classify", "--paths", "tests/test-smoke.mjs,src/game/ui/ui.js"]);
   assert(ambiguous.status !== 0, `ambiguous classify should fail, got status=${ambiguous.status}`);
   assertContains(
     ambiguous.stderr,
