@@ -20,3 +20,4 @@ Original prompt: Implement the LifeGameLab V1 Freeze-Handover with fixed Main-Ru
 - 2026-03-14: UI auf `lage/eingriffe/evolution/welt/labor` umgezogen; Main-Run nutzt `HARVEST_PULSE`, `PRUNE_CLUSTER`, `RECYCLE_PATCH`, `SEED_SPREAD`, Labor kapselt Render-/Overlay-/Brush-Diagnose.
 - 2026-03-14: Freeze-Doku und fokussierte Tests hinzugefuegt (`docs/SESSION_HANDOFF.md`, `tests/test-freeze-contract.mjs`, `tests/test-freeze-progression.mjs`, `tests/test-world-presets-determinism.mjs`).
 - 2026-03-14: Offene Punkte fuer Nacharbeit: Advisor-Texte und Rest-Legacy in `ui.js` weiter ausduennen, Playwright-Smoke fuer neue Panels wiederholen, groessere Truth-Suite nach Freeze-Refactor komplett durchlaufen lassen.
+- 2026-03-14: Repo-eigener Playwright-Debug-Loop hinzugefuegt (`tools/playwright-debug-loop.mjs`, `docs/PLAYWRIGHT_DEBUG_LOOP.md`, `npm run debug:playwright`): setzt nach Start `ticks/s` hoch und loescht Browserdaten vor jedem Close.
