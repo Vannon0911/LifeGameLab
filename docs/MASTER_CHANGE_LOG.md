@@ -76,5 +76,17 @@ Dieser Log rekonstruiert die Evolution der Codebasis bis zum aktuellen v2.3.0 Re
 - **Text-State:** `window.render_game_to_text` liefert zusätzlich `risk`, `mission` und `structure`, damit Browser- und LLM-Entry dieselbe Produktlogik sehen.
 - **Cleanup:** reine Browser-Artefakte aus `output/` wurden nach der Abnahme wieder entfernt; offene uncommittete Testarbeit in `tests/test-determinism-*.mjs` und `tests/support/` blieb bewusst unberührt.
 
+## Nachtrag — 2026-03-14: Gate-Strict String/Dataflow-Hardening + Wrapper-Verbot
+- **Wrapper-Ban umgesetzt:** `src/game/sim/sim.js` (Back-Compat-Reexport) entfernt; Simulation bindet direkt an `src/game/sim/step.js`.
+- **Contract-Signatur gehärtet:** `simStepPatch` akzeptiert nur noch `simStepPatch(state, action, ctx)` mit `action.type === "SIM_STEP"`.
+- **String-SoT zentralisiert:** neue kanonische IDs in `src/game/contracts/ids.js` für `winMode`, `gameResult`, `goal`, `overlay`, `brushMode` inkl. Normalisierung/Derivation.
+- **Drift-Fix:** `stockpile` bleibt Contract-ID; frühere Ergebnis-Drift auf `territory` in der Sim-Result-Setzung wurde korrigiert.
+- **Reducer-Gates härter:** ungültige `SET_BRUSH`-/`SET_OVERLAY`-/`SET_WIN_MODE`-Werte werden deterministisch verworfen statt still übernommen.
+- **Dataflow-Doku konkretisiert:** `manifest.dataflow.actions[*]` enthält jetzt explizite `writes` plus `dispatchSources` statt generischer Placeholder-Texte.
+- **UX-Intensivierung fokussiert:** UI liefert direkte Action-Feedbacks (ausgeführt/blockiert) und Gate-Hinweise mit nächstem Schritt in Status/Tools/Evolution.
+- **Neue Contract-Tests:** `tests/test-string-contract.mjs`, `tests/test-dataflow-contract.mjs`, `tests/test-wrapper-ban.mjs`.
+- **Verifikation:** `npm test` weiterhin vollständig grün (inkl. Redteam), plus Einzelchecks auf neue Contract-Tests grün.
+- **Performance-Status (ehrlich):** 10%-Ziel je Profilfall ist noch offen; letzter Nachweis aus `node tools/profile-core.mjs` zeigt `4.154 / 5.481 / 9.003 ms_per_tick` für `32² / 64² / 96²`.
+
 ---
 *Ende der aktuell rekonstruierten und append-only geführten Historie.*

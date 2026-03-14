@@ -1,3 +1,11 @@
+import {
+  BRUSH_MODE,
+  GAME_RESULT,
+  GOAL_CODE,
+  OVERLAY_MODE,
+  WIN_MODE,
+} from "../game/contracts/ids.js";
+
 export const SCHEMA_VERSION = 2;
 export const APP_VERSION    = "2.3.0";   // Major = Schema, Minor = Feature, Patch = Bugfix
 
@@ -75,10 +83,10 @@ export const stateSchema = {
         gridW: { type: "number", default: 32 },
         gridH: { type: "number", default: 32 },
         speed: { type: "number", default: 4 },
-        brushMode: { type: "string", default: "observe" },
+        brushMode: { type: "string", default: BRUSH_MODE.OBSERVE },
         brushRadius: { type: "number", default: 3 },
         renderMode: { type: "string", default: "combined" },
-        activeOverlay: { type: "string", default: "none" },
+        activeOverlay: { type: "string", default: OVERLAY_MODE.NONE },
         physics: { type: "object", shape: {}, allowUnknown: true },
         ui: {
           type: "object",
@@ -158,10 +166,10 @@ export const stateSchema = {
         lossStreakTicks:      { type: "number", default: 0 },
         stockpileTicks:       { type: "number", default: 0 },
         cpuEnergyIn:          { type: "number", default: 0 },
-        gameResult:           { type: "string",  default: "" },
-        winMode:              { type: "string",  default: "supremacy" },
+        gameResult:           { type: "string",  default: GAME_RESULT.NONE },
+        winMode:              { type: "string",  default: WIN_MODE.SUPREMACY },
         gameEndTick:          { type: "number", default: 0 },
-        goal:                 { type: "string", default: "" }
+        goal:                 { type: "string", default: GOAL_CODE.HARVEST_SECURE }
       }
     }
   }
@@ -223,13 +231,46 @@ export const mutationMatrix = {
   RUN_BENCHMARK: [],
 };
 
+const DISPATCH_SOURCES = Object.freeze({
+  GEN_WORLD: ["src/app/main.js", "src/game/ui/ui.js"],
+  TOGGLE_RUNNING: ["src/app/main.js", "src/game/ui/ui.js"],
+  SIM_STEP: ["src/app/main.js", "src/game/ui/ui.js"],
+  SET_SPEED: ["src/game/ui/ui.js"],
+  SET_SEED: [],
+  SET_SIZE: ["src/app/main.js", "src/game/ui/ui.js"],
+  SET_RENDER_MODE: ["src/game/ui/ui.js"],
+  SET_PHYSICS: ["src/game/ui/ui.js"],
+  SET_BRUSH: ["src/game/ui/ui.js"],
+  SET_UI: ["src/app/main.js", "src/game/ui/ui.js"],
+  SET_GLOBAL_LEARNING: ["src/game/ui/ui.js"],
+  RESET_GLOBAL_LEARNING: ["src/game/ui/ui.js"],
+  PAINT_BRUSH: ["src/game/ui/ui.js"],
+  PLACE_CELL: ["src/game/ui/ui.js"],
+  PLACE_SPLIT_CLUSTER: ["src/game/ui/ui.js"],
+  DEV_BALANCE_RUN_AI: ["src/app/main.js"],
+  APPLY_BUFFERED_SIM_STEP: ["src/app/main.js"],
+  HARVEST_CELL: ["src/game/ui/ui.js"],
+  SET_ZONE: ["src/game/ui/ui.js"],
+  BUY_EVOLUTION: ["src/game/ui/ui.js"],
+  SET_PLAYER_DOCTRINE: ["src/game/ui/ui.js"],
+  SET_WIN_MODE: ["src/game/ui/ui.js"],
+  SET_OVERLAY: ["src/game/ui/ui.js"],
+  SET_PLACEMENT_COST: ["src/game/ui/ui.js"],
+  RUN_BENCHMARK: ["src/game/ui/ui.js"],
+});
 
 
 export const dataflow = {
-  actions: Object.fromEntries(Object.keys(actionSchema).map((type) => [type, {
-    summary: `contract for ${type.toLowerCase()}`,
-    contracts: { actionSchema: type, mutationMatrix: type }
-  }]))
+  actions: Object.fromEntries(Object.keys(actionSchema).map((type) => {
+    const writes = Array.isArray(mutationMatrix[type]) ? [...mutationMatrix[type]] : [];
+    const dispatchSources = Array.isArray(DISPATCH_SOURCES[type]) ? [...DISPATCH_SOURCES[type]] : [];
+    return [type, {
+      summary: `Action ${type} with manifest-gated writes`,
+      contracts: { actionSchema: type, mutationMatrix: type },
+      writes,
+      dispatchSources,
+    }];
+  })),
 };
 
 export const manifest = {

@@ -3,13 +3,23 @@
 // ============================================================
 
 import { generateWorld } from "./worldgen.js";
-import { simStep }       from "./sim.js";
+import { simStep }       from "./step.js";
 import { PHYSICS_DEFAULT } from "../../core/kernel/physics.js";
 import { hashString, rng01 } from "../../core/kernel/rng.js";
 import { TRAIT_COUNT, TRAIT_DEFAULT } from "./life.data.js";
 import { manifest } from "../../project/project.manifest.js";
 import { assertSimPatchesAllowed } from "./gate.js";
 import { clamp, cloneTypedArray, defaultLineageMemory, paintCircle, renormTraits, wrapHue } from "./shared.js";
+import {
+  BRUSH_MODE,
+  GAME_RESULT,
+  GOAL_CODE,
+  WIN_MODE,
+  WIN_MODE_SELECTABLE,
+  deriveGoalCode,
+  isBrushMode,
+  isOverlayMode,
+} from "../contracts/ids.js";
 import {
   handleBuyEvolution,
   handleHarvestCell,
@@ -51,6 +61,10 @@ const WORLD_KEYS = [
   "zoneMap",
 ];
 
+const WORLD_SIM_STEP_KEYS = WORLD_KEYS.filter(
+  (k) => k !== "baseSat" && k !== "zoneMap" && k !== "superId" && k !== "actionMap" && k !== "born" && k !== "died"
+);
+
 const SIM_KEYS = [
   "tick", "running",
   "aliveCount", "aliveRatio",
@@ -86,10 +100,13 @@ const UI_KEYS = new Set([
 
 const PHYSICS_KEYS = new Set(Object.keys(PHYSICS_DEFAULT || {}));
 
-function pushKeysPatches(patches, obj, keys, prefix) {
+function pushKeysPatches(patches, obj, keys, prefix, prevObj = null) {
   const src = obj && typeof obj === "object" ? obj : {};
+  const prev = prevObj && typeof prevObj === "object" ? prevObj : null;
   for (const k of keys) {
-    if (src[k] !== undefined) patches.push({ op: "set", path: `${prefix}/${k}`, value: src[k] });
+    if (src[k] === undefined) continue;
+    if (prev && Object.is(prev[k], src[k])) continue;
+    patches.push({ op: "set", path: `${prefix}/${k}`, value: src[k] });
   }
 }
 
@@ -468,7 +485,7 @@ export function makeInitialState() {
       gridW:       32,
       gridH:       32,
       speed:       4,
-      brushMode:   "observe",
+      brushMode:   BRUSH_MODE.OBSERVE,
       brushRadius: 3,
       renderMode:  "combined",
       physics:     { ...PHYSICS_DEFAULT },
@@ -500,13 +517,13 @@ export function makeInitialState() {
       remoteAttacksLastStep: 0, remoteAttackKillsLastStep: 0, defenseActivationsLastStep: 0, resourceStolenLastStep: 0,
       expansionCount: 0, lastExpandTick: -99999, expansionWork: 0, nextExpandCost: 120,
       stockpileTicks: 0,
-      winMode: "supremacy",
-      gameResult: "", gameEndTick: 0,
+      winMode: WIN_MODE.SUPREMACY,
+      gameResult: GAME_RESULT.NONE, gameEndTick: 0,
     },
   };
 }
 
-// V4 Wrapper for Simulation Logic
+// Simulation bridge: clone mutable world buffers, then run step orchestrator.
 function runWorldSimV4(world, meta, sim, rng) {
   // Core contract: simulation must not mutate store-owned state.
   // Store deep-freeze does not protect TypedArray elements, so we must clone any
@@ -632,6 +649,7 @@ export function reducer(state, action, { rng }) {
       const patches = [];
       const src = (action.payload && typeof action.payload === "object") ? action.payload : {};
       if (typeof src.brushMode === "string" && src.brushMode.length > 0) {
+        if (!isBrushMode(src.brushMode)) return [];
         patches.push({ op: "set", path: "/meta/brushMode", value: src.brushMode });
       }
       if (src.brushRadius !== undefined) {
@@ -859,9 +877,8 @@ export function reducer(state, action, { rng }) {
     }
 
     case "SET_WIN_MODE": {
-      const mode = typeof action.payload?.winMode === "string" ? action.payload.winMode : "supremacy";
-      const allowed = ["supremacy", "stockpile", "efficiency"];
-      if (!allowed.includes(mode)) return [];
+      const mode = typeof action.payload?.winMode === "string" ? action.payload.winMode : WIN_MODE.SUPREMACY;
+      if (!WIN_MODE_SELECTABLE.includes(mode)) return [];
       const patches = [{ op: "set", path: "/sim/winMode", value: mode }];
       assertSimPatchesAllowed(manifest, state, "SET_WIN_MODE", patches);
       return patches;
@@ -869,8 +886,7 @@ export function reducer(state, action, { rng }) {
 
     case "SET_OVERLAY": {
       const ov = String(action.payload || "none");
-      const allowed = ["none", "energy", "toxin", "nutrient", "territory", "conflict"];
-      if (!allowed.includes(ov)) return [];
+      if (!isOverlayMode(ov)) return [];
       return [{ op: "set", path: "/meta/activeOverlay", value: ov }];
     }
 
@@ -886,16 +902,11 @@ export function reducer(state, action, { rng }) {
   }
 }
 
-export function simStepPatch(state, actionOrCtx, ctx) {
-  // Supports both call signatures:
-  //   simStepPatch(state, action, ctx)   — used by store.js (LLM_ENTRY standard)
-  //   simStepPatch(state, ctx)            — legacy direct call
-  const action =
-    actionOrCtx && typeof actionOrCtx === "object" && typeof actionOrCtx.type === "string"
-      ? actionOrCtx
-      : { type: "SIM_STEP", payload: {} };
-  const resolvedCtx = ctx || (action === actionOrCtx ? {} : (actionOrCtx || {}));
-  const rngStreams = resolvedCtx?.rng;
+export function simStepPatch(state, action, ctx) {
+  if (!action || typeof action !== "object" || action.type !== "SIM_STEP") {
+    throw new Error("simStepPatch requires action { type: 'SIM_STEP', payload }");
+  }
+  const rngStreams = ctx?.rng;
 
   if (!state.world) return [];
   const force = !!action.payload?.force;
@@ -933,10 +944,10 @@ export function simStepPatch(state, actionOrCtx, ctx) {
     patches.push({ op: "set", path: "/meta/gridW", value: expandedWorld.w });
     patches.push({ op: "set", path: "/meta/gridH", value: expandedWorld.h });
     // Drift hardening: only patch known world keys.
-    pushKeysPatches(patches, expandedWorld, WORLD_KEYS, "/world");
+    pushKeysPatches(patches, expandedWorld, WORLD_KEYS, "/world", state.world);
   } else {
     // Drift hardening: only patch known world keys.
-    pushKeysPatches(patches, worldMutable, WORLD_KEYS, "/world");
+    pushKeysPatches(patches, worldMutable, WORLD_SIM_STEP_KEYS, "/world", state.world);
   }
 
   patches.push({ op: "set", path: "/meta/globalLearning", value: nextLearning });
@@ -959,7 +970,7 @@ export function simStepPatch(state, actionOrCtx, ctx) {
       : Number(state.sim.cpuEnergyIn || 0);
     simOut.cpuEnergyIn = cpuEIn;
 
-    const winMode = String(state.sim.winMode || "supremacy");
+    const winMode = String(state.sim.winMode || WIN_MODE.SUPREMACY);
 
     // --- Win mode 1: Energy Supremacy — pEIn > cpuEIn × 1.5 for 200 ticks
     let supTicks = Number(state.sim.energySupremacyTicks || 0);
@@ -983,24 +994,25 @@ export function simStepPatch(state, actionOrCtx, ctx) {
     if (pENet < -5 && pAlive > 0) { lossStreak++; } else { lossStreak = Math.max(0, lossStreak - 1); }
     simOut.lossStreakTicks = lossStreak;
 
-    let gameResult = "";
+    let gameResult = GAME_RESULT.NONE;
     let resolvedWinMode = "";
 
     if (pAlive === 0 && currentTick > 20) {
-      gameResult = "loss";
-      resolvedWinMode = "extinction";
+      gameResult = GAME_RESULT.LOSS;
+      resolvedWinMode = WIN_MODE.EXTINCTION;
     } else if (lossStreak >= 150) {
-      gameResult = "loss";
-      resolvedWinMode = "energy_collapse";
-    } else if (winMode === "supremacy" && supTicks >= 200) {
-      gameResult = "win";
-      resolvedWinMode = "supremacy";
-    } else if (winMode === "stockpile" && stockTicks >= 200) {
-      gameResult = "win";
-      resolvedWinMode = "territory";
-    } else if (winMode === "efficiency" && effTicks >= 100) {
-      gameResult = "win";
-      resolvedWinMode = "efficiency";
+      gameResult = GAME_RESULT.LOSS;
+      resolvedWinMode = WIN_MODE.ENERGY_COLLAPSE;
+    } else if (winMode === WIN_MODE.SUPREMACY && supTicks >= 200) {
+      gameResult = GAME_RESULT.WIN;
+      resolvedWinMode = WIN_MODE.SUPREMACY;
+    } else if (winMode === WIN_MODE.STOCKPILE && stockTicks >= 200) {
+      gameResult = GAME_RESULT.WIN;
+      // Keep contract id stable; UI labels this mode as territorial dominance.
+      resolvedWinMode = WIN_MODE.STOCKPILE;
+    } else if (winMode === WIN_MODE.EFFICIENCY && effTicks >= 100) {
+      gameResult = GAME_RESULT.WIN;
+      resolvedWinMode = WIN_MODE.EFFICIENCY;
     }
 
     if (gameResult) {
@@ -1023,26 +1035,12 @@ export function simStepPatch(state, actionOrCtx, ctx) {
   }
   // ── /P5 ──────────────────────────────────────────────────────────────────
 
-  // ── P1: Goal Logic — UI strategy coaching ─────────────────────────────────
-  const pDNA       = Number(simOut.playerDNA       || 0);
-  const pStage     = Number(simOut.playerStage     || 1);
-  const pAlive     = Number(simOut.playerAliveCount  || 0);
-  const pENet      = Number(simOut.playerEnergyNet   || 0);
-  const meanTox    = Number(simOut.meanToxinField    || 0);
-  const dnaCost    = pStage * 5;
-
-  let goal = "🎯 Ernte sichern";
-  if (pAlive === 0 && currentTick > 5) goal = "☠ Ausgelöscht";
-  else if (pENet < -3 && pAlive > 0) goal = "🎯 Überleben: Energie!";
-  else if (meanTox > 0.30)           goal = "🎯 Überleben: Toxin!";
-  else if (pDNA >= dnaCost)          goal = "🎯 Evolution bereit";
-  else if (pAlive < 12)              goal = "🎯 Wachstum";
-  else if (pENet > 8)                goal = "🎯 Expansion";
-  simOut.goal = goal;
+  // ── P1: Goal signal (canonical ID for UI + hooks) ───────────────────────
+  simOut.goal = deriveGoalCode(simOut, currentTick) || GOAL_CODE.HARVEST_SECURE;
   // ── /P1 ──────────────────────────────────────────────────────────────────
 
   // Drift hardening: only patch known sim keys.
-  pushKeysPatches(patches, simOut, SIM_KEYS, "/sim");
+  pushKeysPatches(patches, simOut, SIM_KEYS, "/sim", state.sim);
   assertSimPatchesAllowed(manifest, state, "SIM_STEP", patches);
   return patches;
 }

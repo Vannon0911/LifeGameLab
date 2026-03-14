@@ -8,6 +8,16 @@ import {
   deriveCommandScore,
   hasRequiredTechs,
 } from "../techTree.js";
+import {
+  BRUSH_MODE,
+  GOAL_CODE,
+  OVERLAY_MODE,
+  OVERLAY_MODE_VALUES,
+  WIN_MODE,
+  WIN_MODE_RESULT_LABEL,
+  deriveRiskCode,
+  normalizeGoalCode,
+} from "../contracts/ids.js";
 
 // ============================================================
 // UI — Mobile-First Web App v2.1
@@ -97,43 +107,33 @@ function getInfluencePhase(stage, commandScore) {
 }
 
 function getRiskState(sim) {
-  const toxin = Number(sim?.meanToxinField || 0);
-  const energyNet = Number(sim?.playerEnergyNet || 0);
-  const playerAlive = Number(sim?.playerAliveCount || 0);
-  if (playerAlive === 0 && Number(sim?.tick || 0) > 5) {
-    return { id: "collapse", label: "Kollaps", chip: "☠ Kollaps", color: "var(--red)" };
-  }
-  if (energyNet < -2.2) {
-    return { id: "critical", label: "Kritisch", chip: "⚠ Kritisch", color: "var(--red)" };
-  }
-  if (toxin > 0.3) {
-    return { id: "toxic", label: "Toxisch", chip: "☣ Toxisch", color: "var(--orange)" };
-  }
-  if (energyNet < 0.45) {
-    return { id: "unstable", label: "Instabil", chip: "◌ Instabil", color: "var(--gold)" };
-  }
-  return { id: "stable", label: "Stabil", chip: "● Stabil", color: "var(--green)" };
+  const id = deriveRiskCode(sim);
+  if (id === "collapse") return { id, label: "Kollaps", chip: "☠ Kollaps", color: "var(--red)" };
+  if (id === "critical") return { id, label: "Kritisch", chip: "⚠ Kritisch", color: "var(--red)" };
+  if (id === "toxic") return { id, label: "Toxisch", chip: "☣ Toxisch", color: "var(--orange)" };
+  if (id === "unstable") return { id, label: "Instabil", chip: "◌ Instabil", color: "var(--gold)" };
+  return { id, label: "Stabil", chip: "● Stabil", color: "var(--green)" };
 }
 
 function getGoalState(sim, doctrine) {
   const stage = Number(sim?.playerStage || 1);
   const harvested = Number(sim?.totalHarvested || 0);
-  const playerAlive = Number(sim?.playerAliveCount || 0);
   const commandScore = deriveCommandScore(sim);
-  if (playerAlive <= 0) {
-    return { title: "Linie retten", short: "Reset oder neue Welt", detail: "Die aktive Linie ist kollabiert. Starte neu oder sichere zuerst wieder einen tragfähigen Kern." };
-  }
-  if (stage <= 1) {
-    return { title: "Erstes Cluster stabilisieren", short: `Stabilisiere ${Math.max(18, playerAlive + 8)} Zellen`, detail: "Halte den ersten Kern am Leben, sammle DNA und vermeide negative Energiebilanzen." };
-  }
-  const nextThreshold = stage < STAGE_THRESHOLDS.length ? STAGE_THRESHOLDS[stage] : null;
-  if (nextThreshold != null && harvested < nextThreshold) {
-    return { title: `Stage ${stage + 1} erreichen`, short: `${harvested}/${nextThreshold} DNA-Ernten`, detail: "Ernte gezielt und halte den Cluster kompakt, bis der nächste Entwicklungsschub frei wird." };
-  }
+  const goalCode = normalizeGoalCode(sim?.goal || GOAL_CODE.HARVEST_SECURE);
+  const map = {
+    [GOAL_CODE.EXTINCT]: { title: "Linie retten", short: "Reset oder neue Welt", detail: "Die aktive Linie ist kollabiert. Starte neu oder sichere zuerst wieder einen tragfähigen Kern." },
+    [GOAL_CODE.SURVIVE_ENERGY]: { title: "Energie stabilisieren", short: "Netto wieder positiv", detail: "Reduziere Upkeep, stärke Cluster oder aktiviere defensive Prioritäten." },
+    [GOAL_CODE.SURVIVE_TOXIN]: { title: "Toxin-Druck brechen", short: "Detox priorisieren", detail: "Leite die Linie in robuste Bereiche oder nutze Resistenz-/Buffer-Pfade." },
+    [GOAL_CODE.EVOLUTION_READY]: { title: "Evolution auslösen", short: "Tech jetzt kaufen", detail: "DNA reicht für den nächsten Durchbruch. Nutze den Ring mit der höchsten Hebelwirkung." },
+    [GOAL_CODE.GROWTH]: { title: "Erstes Cluster stabilisieren", short: `Stabilisiere ${Math.max(18, Number(sim?.playerAliveCount || 0) + 8)} Zellen`, detail: "Halte den Kern am Leben, sammle DNA und vermeide negative Energiebilanzen." },
+    [GOAL_CODE.EXPANSION]: { title: "Expansion starten", short: doctrine?.label || "Directive", detail: "Die Linie ist stabil genug. Nutze Doctrine, Synergien und Split-Seeds für den nächsten Schub." },
+    [GOAL_CODE.HARVEST_SECURE]: { title: `Stage ${Math.min(5, stage + 1)} vorbereiten`, short: `${harvested} DNA-Ernten`, detail: "Ernte gezielt und halte den Cluster kompakt, bis der nächste Entwicklungsschub frei wird." },
+  };
+  if (map[goalCode]) return map[goalCode];
   if (commandScore < 0.18) {
     return { title: "Clusterstärke aufbauen", short: `${Math.round(commandScore * 100)}/18 Command`, detail: "Verdichte Kerne und Netzwerke, damit neue Techs und Split-Seeds zuverlässig greifen." };
   }
-  return { title: `${doctrine?.label || "Directive"} ausspielen`, short: doctrine?.label || "Directive", detail: "Die Linie ist stabil genug. Nutze Doctrine, Synergien und später Split-Seeds für den nächsten Durchbruch." };
+  return { title: doctrine?.label || "Directive", short: doctrine?.label || "Directive", detail: "Die Linie ist stabil genug. Nutze Doctrine, Synergien und Split-Seeds für den nächsten Durchbruch." };
 }
 
 function getStructureState(sim) {
@@ -160,6 +160,7 @@ export class UI {
     this._lastStage       = 1;
     this._lastGameEndTick = 0;
     this._layoutDesktop = isDesktop();
+    this._actionFeedback = null;
 
     this._build();
     queueMicrotask(() => this._bindControls());
@@ -176,7 +177,65 @@ export class UI {
     this._canvas.id = "cv";
     this._bindCanvasPaint();
   }
-  _dispatch(action) { this._store.dispatch(action); }
+  _dispatch(action, feedback = null) {
+    const before = this._store.getDoc().revisionCount | 0;
+    this._store.dispatch(action);
+    const after = this._store.getDoc().revisionCount | 0;
+    const changed = after > before;
+    if (feedback) {
+      this._setActionFeedback({
+        ok: changed,
+        message: changed ? feedback.ok : feedback.blocked,
+        hint: feedback.hint || "",
+      });
+    }
+    return changed;
+  }
+
+  _setActionFeedback(payload) {
+    this._actionFeedback = {
+      ok: !!payload?.ok,
+      message: String(payload?.message || ""),
+      hint: String(payload?.hint || ""),
+      at: Date.now(),
+    };
+    if (this._actionFeedback.message) {
+      this._announce(this._actionFeedback.message, this._actionFeedback.ok ? 2 : 1);
+    }
+  }
+
+  _getGateFeedback(state) {
+    const playerMemory = getPlayerMemory(state);
+    const playerStage = Number(state?.sim?.playerStage || 1);
+    const commandScore = deriveCommandScore(state?.sim || {});
+    const splitTech = Array.isArray(playerMemory?.techs) && playerMemory.techs.includes("cluster_split");
+    const splitUnlocked = !!playerMemory?.splitUnlock && splitTech;
+    const out = [];
+    if (!splitUnlocked) {
+      out.push({
+        key: "split",
+        level: "warn",
+        text: "Split-Seed gesperrt: Tech 'Split-Kern' fehlt.",
+        next: "Nächster Schritt: Stage 2 erreichen und den Cluster-Split im Evolution-Panel kaufen.",
+      });
+    } else if (commandScore < 0.22) {
+      out.push({
+        key: "split-command",
+        level: "warn",
+        text: "Split-Seed ist freigeschaltet, aber Clusterstärke ist noch niedrig.",
+        next: `Nächster Schritt: Command auf mindestens 22 bringen (aktuell ${Math.round(commandScore * 100)}).`,
+      });
+    }
+    if (playerStage < 2 && commandScore < 0.10) {
+      out.push({
+        key: "zones",
+        level: "info",
+        text: "Territoriums-Zonen sind noch nicht effektiv.",
+        next: "Nächster Schritt: Erst stabilen Kern aufbauen, danach Zone-Paint für Harvest/Buffer nutzen.",
+      });
+    }
+    return out;
+  }
 
   _announce(message, level = 1) { // level 1: critical, 2: all
     if (!this._announcer || !message || typeof message !== "string") return;
@@ -468,7 +527,7 @@ export class UI {
   }
 
   _getActiveToolMeta(state) {
-    const mode = String(state?.meta?.brushMode || "observe");
+    const mode = String(state?.meta?.brushMode || BRUSH_MODE.OBSERVE);
     const zone = ZONE_TYPES.find((entry) => entry.id === this._activeZoneType);
     const map = {
       observe: "Beobachtung",
@@ -490,10 +549,10 @@ export class UI {
       mode,
       label: map[mode] || mode,
       detail:
-        mode === "observe" ? "Autonomes Wachstum läuft selbst. Dein Einfluss liegt in Prioritäten, Evolution und Split-Seeds." :
-        mode === "split_place" ? "Ein Klick setzt einen neuen 4x4-Cluster als strategischen Seed." :
-        mode === "cell_harvest" ? "Ein Klick erntet eine eigene Zelle für DNA." :
-        mode === "zone_paint" && zone ? zone.desc : "",
+        mode === BRUSH_MODE.OBSERVE ? "Autonomes Wachstum läuft selbst. Dein Einfluss liegt in Prioritäten, Evolution und Split-Seeds." :
+        mode === BRUSH_MODE.SPLIT_PLACE ? "Ein Klick setzt einen neuen 4x4-Cluster als strategischen Seed." :
+        mode === BRUSH_MODE.CELL_HARVEST ? "Ein Klick erntet eine eigene Zelle für DNA." :
+        mode === BRUSH_MODE.ZONE_PAINT && zone ? zone.desc : "",
     };
   }
 
@@ -518,6 +577,15 @@ export class UI {
       hero.append(eyebrow, title, copy);
       container.appendChild(hero);
     }
+    const isFeedbackFresh = this._actionFeedback && (Date.now() - this._actionFeedback.at) < 8000;
+    if (isFeedbackFresh) {
+      const fb = el("section", "nx-card");
+      fb.appendChild(el("div", "nx-card-title", this._actionFeedback.ok ? "Aktion ausgeführt" : "Aktion blockiert"));
+      const msg = el("div", this._actionFeedback.ok ? "nx-note nx-val-pos" : "nx-note nx-val-neg", this._actionFeedback.message);
+      fb.appendChild(msg);
+      if (this._actionFeedback.hint) fb.appendChild(el("div", "nx-note", this._actionFeedback.hint));
+      container.appendChild(fb);
+    }
 
     // ── STATUS (Lagebericht) ────────────────────────────────
     if (ctx === "status") {
@@ -533,6 +601,7 @@ export class UI {
       const goalState = getGoalState(sim, doctrine);
       const structureState = getStructureState(sim);
       const riskState = getRiskState(sim);
+      const gateFeedback = this._getGateFeedback(state);
 
       const mkBar = (pct, cls, label) => {
         const wrap = el("div", "nx-bar-wrap");
@@ -632,7 +701,7 @@ export class UI {
         mkMetric("Stage", `S${playerStage}`, "nx-mono nx-chip-stage"),
         mkMetric("DNA", `🧬 ${fmt(Number(sim.playerDNA || 0), 1)}`),
         mkMetric("Ernten", String(Number(sim.totalHarvested || 0))),
-        mkMetric("Aktiver Siegpfad", String(sim.winMode || "supremacy"))
+        mkMetric("Aktiver Siegpfad", WIN_MODE_RESULT_LABEL[String(sim.winMode || WIN_MODE.SUPREMACY)] || String(sim.winMode || WIN_MODE.SUPREMACY))
       );
       progressCard.append(
         el("div", "nx-note", `${structureState.detail} Phase ${influencePhase}: weitere Eingriffe schalten sich über Stage und Clusterstärke frei.`),
@@ -642,21 +711,37 @@ export class UI {
       );
       container.appendChild(progressCard);
 
+      if (gateFeedback.length) {
+        const gateCard = el("section", "nx-card");
+        gateCard.appendChild(el("div", "nx-card-title", "Gate-Check"));
+        for (const item of gateFeedback) {
+          const row = el("div", "nx-stat-row nx-stat-row-col");
+          row.appendChild(el("span", item.level === "warn" ? "nx-label nx-val-neg" : "nx-label", item.text));
+          row.appendChild(el("span", "nx-note", item.next));
+          gateCard.appendChild(row);
+        }
+        container.appendChild(gateCard);
+      }
+
       const ovCard = el("section", "nx-card");
       ovCard.appendChild(el("div", "nx-card-title", "Scanner"));
       const ovGrid = el("div", "nx-chip-grid");
-      for (const ov of [
-        { id:"none", label:"Normal" },
-        { id:"energy", label:"Energie" },
-        { id:"toxin", label:"Toxine" },
-        { id:"nutrient", label:"Nährstoffe" },
-        { id:"territory", label:"Besitz" },
-        { id:"conflict", label:"Konflikt" },
-      ]) {
-        const btn = el("button", `nx-btn nx-btn-ghost ${meta.activeOverlay === ov.id ? "is-active" : ""}`, ov.label);
-        btn.setAttribute("aria-pressed", meta.activeOverlay === ov.id);
+      const overlayLabels = {
+        [OVERLAY_MODE.NONE]: "Normal",
+        [OVERLAY_MODE.ENERGY]: "Energie",
+        [OVERLAY_MODE.TOXIN]: "Toxine",
+        [OVERLAY_MODE.NUTRIENT]: "Nährstoffe",
+        [OVERLAY_MODE.TERRITORY]: "Besitz",
+        [OVERLAY_MODE.CONFLICT]: "Konflikt",
+      };
+      for (const overlayId of OVERLAY_MODE_VALUES) {
+        const btn = el("button", `nx-btn nx-btn-ghost ${meta.activeOverlay === overlayId ? "is-active" : ""}`, overlayLabels[overlayId] || overlayId);
+        btn.setAttribute("aria-pressed", meta.activeOverlay === overlayId);
         btn.addEventListener("click", () => {
-          this._dispatch({ type:"SET_OVERLAY", payload: ov.id });
+          this._dispatch(
+            { type:"SET_OVERLAY", payload: overlayId },
+            { ok: `Scanner auf ${overlayLabels[overlayId] || overlayId} gesetzt.`, blocked: "Scanner konnte nicht umgeschaltet werden.", hint: "Nächster Schritt: prüfe aktive Panel- und Spielzustände." }
+          );
           queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
         });
         ovGrid.appendChild(btn);
@@ -676,6 +761,7 @@ export class UI {
       const influencePhase = getInfluencePhase(playerStage, commandScore);
       const currentDoctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
       const zoneUnlocked = playerStage >= 2 || commandScore >= 0.10;
+      const gateFeedback = this._getGateFeedback(state);
 
       const activeCard = el("section","nx-card");
       activeCard.appendChild(el("div", "nx-card-title", "Aktiver Eingriff"));
@@ -687,6 +773,15 @@ export class UI {
       activeCard.appendChild(activeHero);
       activeCard.appendChild(el("div", "nx-note", `Phase ${influencePhase}. Priorität ${currentDoctrine.label} steuert die Linie permanent.`));
       container.appendChild(activeCard);
+
+      if (gateFeedback.length) {
+        const gateCard = el("section", "nx-card");
+        gateCard.appendChild(el("div", "nx-card-title", "Werkzeug-Gates"));
+        for (const item of gateFeedback) {
+          gateCard.appendChild(el("div", "nx-note", `${item.text} ${item.next}`));
+        }
+        container.appendChild(gateCard);
+      }
 
       const doctrineCard = el("section","nx-card");
       doctrineCard.appendChild(el("div", "nx-card-title", "Priorität"));
@@ -702,7 +797,14 @@ export class UI {
           el("span", "nx-doctrine-copy", doctrine.summary)
         );
         card.addEventListener("click", () => {
-          this._dispatch({ type:"SET_PLAYER_DOCTRINE", payload:{ doctrineId: doctrine.id } });
+          this._dispatch(
+            { type:"SET_PLAYER_DOCTRINE", payload:{ doctrineId: doctrine.id } },
+            {
+              ok: `Priorität auf ${doctrine.label} gesetzt.`,
+              blocked: `${doctrine.label} ist noch gesperrt.`,
+              hint: `Nächster Schritt: Stage ${doctrine.unlockStage} erreichen.`,
+            }
+          );
           queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
         });
         doctrineGrid.appendChild(card);
@@ -731,7 +833,10 @@ export class UI {
         row.append(left, el("span", isActive ? "nx-badge-active" : "nx-badge", act.tag));
         const trigger = () => {
           if (act.locked) return;
-          this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:act.id } });
+          this._dispatch(
+            { type:"SET_BRUSH", payload:{ brushMode:act.id } },
+            { ok: `${act.label} aktiviert.`, blocked: `${act.label} bleibt gesperrt.`, hint: act.locked ? "Nächster Schritt: Gate im Status-Panel erfüllen." : "" }
+          );
           queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
         };
         row.addEventListener("click", trigger);
@@ -745,7 +850,7 @@ export class UI {
       zoneCard.appendChild(el("div", "nx-card-title", "Zonentyp"));
 
       for (const z of ZONE_TYPES) {
-        const isActive = this._activeZoneType === z.id && meta.brushMode === "zone_paint";
+        const isActive = this._activeZoneType === z.id && meta.brushMode === BRUSH_MODE.ZONE_PAINT;
         const row = el("div",`nx-zone-row${isActive ?" nx-zone-active":""}${!zoneUnlocked ? " nx-archetype-locked" : ""}`);
         row.append(el("span","nx-zone-name",`${z.label}`), el("span","nx-zone-desc",z.desc));
         row.style.cursor="pointer";
@@ -758,7 +863,10 @@ export class UI {
         const trigger = () => {
           if (!zoneUnlocked) return;
           this._activeZoneType=z.id;
-          this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:"zone_paint" } });
+          this._dispatch(
+            { type:"SET_BRUSH", payload:{ brushMode:BRUSH_MODE.ZONE_PAINT } },
+            { ok: `${z.label}-Zone aktiv.`, blocked: "Zone-Pinsel konnte nicht aktiviert werden.", hint: "Nächster Schritt: Stage/Command-Gate prüfen." }
+          );
           queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
         };
         row.addEventListener("click", trigger);
@@ -784,7 +892,10 @@ export class UI {
         brush.appendChild(o);
       });
       brush.addEventListener("change", () => {
-        this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:brush.value } });
+        this._dispatch(
+          { type:"SET_BRUSH", payload:{ brushMode:brush.value } },
+          { ok: `Laborpinsel ${brush.value} aktiv.`, blocked: "Laborpinsel wurde vom Brush-Gate abgewiesen.", hint: "Nächster Schritt: nur erlaubte Brush-Modi verwenden." }
+        );
         queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
       });
       sRow.append(el("span", "nx-label", "Umwelt-Pinsel"), brush);
@@ -807,7 +918,14 @@ export class UI {
       costToggle.setAttribute("aria-label", `Platzierungs-Kosten ${meta.placementCostEnabled ? "deaktivieren" : "aktivieren"}`);
       costToggle.setAttribute("aria-pressed", meta.placementCostEnabled);
       costToggle.addEventListener("click", () => {
-        this._dispatch({ type:"SET_PLACEMENT_COST", payload:{ enabled:!meta.placementCostEnabled } });
+        this._dispatch(
+          { type:"SET_PLACEMENT_COST", payload:{ enabled:!meta.placementCostEnabled } },
+          {
+            ok: !meta.placementCostEnabled ? "Platzierungskosten aktiviert." : "Platzierungskosten deaktiviert.",
+            blocked: "Kostenumschaltung wurde blockiert.",
+            hint: "",
+          }
+        );
         queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
       });
       costRow.append(el("span", "nx-label", "Platzierungs-Kosten (0.5 DNA)"), costToggle);
@@ -903,6 +1021,28 @@ export class UI {
       const unlockedTechs = new Set(Array.isArray(playerMemory?.techs) ? playerMemory.techs.map(String) : []);
       const unlockedSynergies = new Set(Array.isArray(playerMemory?.synergies) ? playerMemory.synergies.map(String) : []);
       const visibleStages = new Set([Math.max(1, playerStage - 1), playerStage, Math.min(5, playerStage + 1)]);
+      const gateHints = [];
+      for (const tech of TECH_TREE) {
+        if (unlockedTechs.has(tech.id)) continue;
+        if (tech.stage > playerStage + 1) continue;
+        const cost = 5 * Math.max(1, Number(tech.stage || 1));
+        if (playerStage < tech.stage) {
+          gateHints.push(`Stage-Gate: ${tech.label} ab S${tech.stage}.`);
+          continue;
+        }
+        if (!hasRequiredTechs(unlockedTechs, tech.requires)) {
+          gateHints.push(`Prereq-Gate: ${tech.label} benötigt ${tech.requires.join(", ")}.`);
+          continue;
+        }
+        if (commandScore + 1e-9 < Number(tech.commandReq || 0)) {
+          gateHints.push(`Command-Gate: ${tech.label} braucht ${Math.round((tech.commandReq || 0) * 100)} Command.`);
+          continue;
+        }
+        if (playerDNA < cost) {
+          gateHints.push(`DNA-Gate: ${tech.label} kostet ${cost} DNA.`);
+          continue;
+        }
+      }
 
       const infoCard = el("section", "nx-card");
       infoCard.appendChild(el("div", "nx-card-title", "Tech-Kern"));
@@ -920,6 +1060,14 @@ export class UI {
       cmdRow.appendChild(cmdBar);
       infoCard.appendChild(cmdRow);
       container.appendChild(infoCard);
+
+      if (gateHints.length) {
+        const gateCard = el("section", "nx-card");
+        gateCard.appendChild(el("div", "nx-card-title", "Evolution-Gates"));
+        const uniq = [...new Set(gateHints)].slice(0, 3);
+        for (const hint of uniq) gateCard.appendChild(el("div", "nx-note", hint));
+        container.appendChild(gateCard);
+      }
 
       for (let stage = 1; stage <= 5; stage++) {
         if (!visibleStages.has(stage)) continue;
@@ -957,7 +1105,14 @@ export class UI {
           const btn = el("button", `nx-btn nx-btn-evolve${canBuy ? "" : " nx-btn-disabled"}`, stateText);
           btn.disabled = !canBuy;
           btn.addEventListener("click", () => {
-            this._dispatch({ type: "BUY_EVOLUTION", payload: { archetypeId: tech.id } });
+            this._dispatch(
+              { type: "BUY_EVOLUTION", payload: { archetypeId: tech.id } },
+              {
+                ok: `${tech.label} integriert.`,
+                blocked: `${tech.label} konnte nicht freigeschaltet werden.`,
+                hint: "Nächster Schritt: DNA, Stage, Prereqs und Command-Score prüfen.",
+              }
+            );
           });
           card.appendChild(btn);
           grid.appendChild(card);
@@ -1104,7 +1259,7 @@ export class UI {
 
           const trigger = () => {
             this._activeZoneType=z.id;
-            this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:"zone_paint" } });
+            this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:BRUSH_MODE.ZONE_PAINT } });
             this._renderPanelBody(container, this._store.getState());
           };
           row.addEventListener("click", trigger);
@@ -1353,12 +1508,12 @@ export class UI {
 
     // ── SIEG (Pfad & Blocker) ───────────────────────────────
     if (ctx === "sieg") {
-      const currentMode = String(sim.winMode || "supremacy");
+      const currentMode = String(sim.winMode || WIN_MODE.SUPREMACY);
       const playerStage = Number(sim.playerStage || 1);
       const WIN_MODES = [
-        { id:"supremacy", label:"Energie-Suprematie", desc:"Dominanz: EIn > CPU × 1.5", req:"Stage 2 benötigt", stage:2 },
-        { id:"stockpile",  label:"Territorial-Dominanz", desc:"Pop-Vorteil: Pop > CPU × 1.5", req:"Stage 3 benötigt", stage:3 },
-        { id:"efficiency", label:"Effizienz-Meister", desc:"Kontrolle: E/Zelle > 0.18", req:"Stage 4 benötigt", stage:4 },
+        { id: WIN_MODE.SUPREMACY, label:"Energie-Suprematie", desc:"Dominanz: EIn > CPU × 1.5", req:"Stage 2 benötigt", stage:2 },
+        { id: WIN_MODE.STOCKPILE, label:"Territorial-Dominanz", desc:"Pop-Vorteil: Pop > CPU × 1.5", req:"Stage 3 benötigt", stage:3 },
+        { id: WIN_MODE.EFFICIENCY, label:"Effizienz-Meister", desc:"Kontrolle: E/Zelle > 0.18", req:"Stage 4 benötigt", stage:4 },
       ];
 
       const modeCard = el("section","nx-card");
@@ -1386,7 +1541,10 @@ export class UI {
         if (!isLocked) {
           if (isActive) row.appendChild(el("span","nx-val-pos","✓"));
           const trigger = () => {
-            this._dispatch({ type:"SET_WIN_MODE", payload:{ winMode:m.id } });
+            this._dispatch(
+              { type:"SET_WIN_MODE", payload:{ winMode:m.id } },
+              { ok: `Siegpfad ${m.label} aktiv.`, blocked: "Siegpfad konnte nicht gesetzt werden.", hint: "Nächster Schritt: Stage-Gate prüfen." }
+            );
             queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
           };
           row.addEventListener("click", trigger);
@@ -1423,9 +1581,9 @@ export class UI {
       };
 
       progCard.append(
-        mkProg("Suprematie", supTicks,  200, "nx-bar-light", currentMode==="supremacy", modeLocked && currentMode==="supremacy" ? "Stage zu niedrig" : null),
-        mkProg("Territorium", stockTicks, 200, "nx-bar-nutrient", currentMode==="stockpile", modeLocked && currentMode==="stockpile" ? "Stage zu niedrig" : null),
-        mkProg("Effizienz",  effTicks,  100, "nx-bar-nutrient", currentMode==="efficiency", modeLocked && currentMode==="efficiency" ? "Stage zu niedrig" : null),
+        mkProg("Suprematie", supTicks,  200, "nx-bar-light", currentMode===WIN_MODE.SUPREMACY, modeLocked && currentMode===WIN_MODE.SUPREMACY ? "Stage zu niedrig" : null),
+        mkProg("Territorium", stockTicks, 200, "nx-bar-nutrient", currentMode===WIN_MODE.STOCKPILE, modeLocked && currentMode===WIN_MODE.STOCKPILE ? "Stage zu niedrig" : null),
+        mkProg("Effizienz",  effTicks,  100, "nx-bar-nutrient", currentMode===WIN_MODE.EFFICIENCY, modeLocked && currentMode===WIN_MODE.EFFICIENCY ? "Stage zu niedrig" : null),
         mkProg("Kollaps-Risiko", lossStreak, 150, "nx-bar-loss", true, null),
       );
 
@@ -1438,8 +1596,7 @@ export class UI {
 
   _showGameOverlay(sim) {
     const isWin = sim.gameResult === "win";
-    const modeLbl = { supremacy:"Energie-Suprematie", stockpile:"Energie-Depot",
-      efficiency:"Effizienz-Meister", extinction:"Ausrottung", energy_collapse:"Energie-Kollaps" }[sim.winMode] || sim.winMode;
+    const modeLbl = WIN_MODE_RESULT_LABEL[sim.winMode] || sim.winMode;
     const inner = this._gameOverlayInner;
     inner.innerHTML = "";
     const icon  = el("div","nx-go-icon",  isWin?"🏆":"☠");
@@ -1494,21 +1651,33 @@ export class UI {
     if (wx<0||wy<0||wx>=state.meta.gridW||wy>=state.meta.gridH) return;
     const mode = state.meta.brushMode;
     const radius = state.meta.brushRadius || 3;
-    if (mode === "observe") return;
-    if (mode === "cell_harvest") {
+    if (mode === BRUSH_MODE.OBSERVE) return;
+    if (mode === BRUSH_MODE.CELL_HARVEST) {
       if (!start) return;
-      this._dispatch({ type:"HARVEST_CELL", payload:{ x:wx, y:wy } }); return;
+      this._dispatch(
+        { type:"HARVEST_CELL", payload:{ x:wx, y:wy } },
+        { ok: "DNA-Ernte ausgeführt.", blocked: "Ernte blockiert.", hint: "Nächster Schritt: eigene Zelle wählen und Mindestpopulation halten." }
+      );
+      return;
     }
-    if (mode === "zone_paint") {
+    if (mode === BRUSH_MODE.ZONE_PAINT) {
       this._dispatch({ type:"SET_ZONE", payload:{ x:wx, y:wy, radius, zoneType:this._activeZoneType } }); return;
     }
-    if (mode === "split_place") {
+    if (mode === BRUSH_MODE.SPLIT_PLACE) {
       if (!start) return;
-      this._dispatch({ type:"PLACE_SPLIT_CLUSTER", payload:{ x:wx, y:wy } }); return;
+      this._dispatch(
+        { type:"PLACE_SPLIT_CLUSTER", payload:{ x:wx, y:wy } },
+        { ok: "Split-Seed gesetzt.", blocked: "Split-Seed blockiert.", hint: "Nächster Schritt: Split-Tech, Command-Score und freie 4x4-Zone prüfen." }
+      );
+      return;
     }
-    if (mode === "cell_add" || mode === "cell_remove") {
+    if (mode === BRUSH_MODE.CELL_ADD || mode === BRUSH_MODE.CELL_REMOVE) {
       if (!start) return;
-      this._dispatch({ type:"PLACE_CELL", payload:{ x:wx, y:wy, remove:mode==="cell_remove" } }); return;
+      this._dispatch(
+        { type:"PLACE_CELL", payload:{ x:wx, y:wy, remove:mode===BRUSH_MODE.CELL_REMOVE } },
+        { ok: mode===BRUSH_MODE.CELL_REMOVE ? "Zelle entfernt." : "Zelle platziert.", blocked: "Zellaktion blockiert.", hint: "Nächster Schritt: Besitz/Gate und DNA-Kosten prüfen." }
+      );
+      return;
     }
     this._dispatch({ type:"PAINT_BRUSH", payload:{ x:wx, y:wy, radius, mode } });
   }
