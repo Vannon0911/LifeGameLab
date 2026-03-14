@@ -113,6 +113,106 @@ function hasAdjacentMarkedTile(mask, idx, w, h) {
   return false;
 }
 
+function hasAdjacentMarkedTile4(mask, idx, w, h) {
+  if (!mask || !ArrayBuffer.isView(mask)) return false;
+  const x = idx % w;
+  const y = (idx / w) | 0;
+  const neighbors = [
+    [x - 1, y],
+    [x + 1, y],
+    [x, y - 1],
+    [x, y + 1],
+  ];
+  for (const [xx, yy] of neighbors) {
+    if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+    const j = yy * w + xx;
+    if ((Number(mask[j]) | 0) === 1) return true;
+  }
+  return false;
+}
+
+function areIndicesConnected4(indices, w, h) {
+  if (indices.length === 0) return false;
+  const set = new Set(indices);
+  const seen = new Set([indices[0]]);
+  const queue = [indices[0]];
+  while (queue.length > 0) {
+    const idx = queue.shift();
+    const x = idx % w;
+    const y = (idx / w) | 0;
+    const neighbors = [
+      [x - 1, y],
+      [x + 1, y],
+      [x, y - 1],
+      [x, y + 1],
+    ];
+    for (const [xx, yy] of neighbors) {
+      if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+      const j = yy * w + xx;
+      if (!set.has(j) || seen.has(j)) continue;
+      seen.add(j);
+      queue.push(j);
+    }
+  }
+  return seen.size === indices.length;
+}
+
+function isMarked(mask, idx) {
+  return !!mask && ArrayBuffer.isView(mask) && ((Number(mask[idx]) | 0) === 1);
+}
+
+function countAlivePlayerInfraCells(world, playerLineageId) {
+  return countAlivePlayerMaskedCells(world?.link, world, playerLineageId);
+}
+
+function getInfraCandidateMask(world, size) {
+  if (world?.infraCandidateMask && ArrayBuffer.isView(world.infraCandidateMask)) {
+    return cloneTypedArray(world.infraCandidateMask);
+  }
+  return new Uint8Array(size);
+}
+
+function isAlivePlayerOwnedTile(world, idx, playerLineageId) {
+  return (Number(world?.alive?.[idx] || 0) | 0) === 1
+    && (Number(world?.lineageId?.[idx] || 0) | 0) === (playerLineageId | 0);
+}
+
+function touchesCommittedInfraAnchor(world, idx, w, h) {
+  return isMarked(world?.coreZoneMask, idx)
+    || isMarked(world?.dnaZoneMask, idx)
+    || Number(world?.link?.[idx] || 0) > 0
+    || hasAdjacentMarkedTile4(world?.coreZoneMask, idx, w, h)
+    || hasAdjacentMarkedTile4(world?.dnaZoneMask, idx, w, h)
+    || hasAdjacentMarkedTile4(world?.link, idx, w, h);
+}
+
+function getInfraStartCosts(sim) {
+  const unlockCostDNA = Math.max(0, Number(sim?.nextInfraUnlockCostDNA || 0));
+  const buildCostDNA = Math.max(0, Number(sim?.infraBuildCostDNA || 0));
+  const buildCostEnergy = Math.max(0, Number(sim?.infraBuildCostEnergy || 0));
+  return {
+    energy: buildCostEnergy,
+    dna: buildCostDNA + (sim?.infrastructureUnlocked ? 0 : unlockCostDNA),
+  };
+}
+
+function spendPlayerEnergyFromCells(world, playerLineageId, amount) {
+  const required = Math.max(0, Number(amount || 0));
+  if (required <= 0) return world?.E ? cloneTypedArray(world.E) : null;
+  if (!world?.E || !world?.alive || !world?.lineageId) return null;
+  const nextE = cloneTypedArray(world.E);
+  let remaining = required;
+  for (let i = 0; i < nextE.length && remaining > 1e-9; i++) {
+    if (!isAlivePlayerOwnedTile(world, i, playerLineageId)) continue;
+    const available = Math.max(0, Number(nextE[i] || 0));
+    if (available <= 0) continue;
+    const spend = Math.min(available, remaining);
+    nextE[i] = available - spend;
+    remaining -= spend;
+  }
+  return remaining > 1e-6 ? null : nextE;
+}
+
 function canConfirmFoundation(state) {
   if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return false;
   if (state.sim.runPhase !== RUN_PHASE.GENESIS_SETUP) return false;
@@ -711,8 +811,11 @@ export function reducer(state, action, { rng }) {
       const phaseD = getWorldPreset(state.meta.worldPresetId)?.phaseD || {};
       const infraBuildCostEnergy = Math.max(0, Number(phaseD.infraBuildCostEnergy || 0));
       const infraBuildCostDNA = Math.max(0, Number(phaseD.infraBuildCostDNA || 0));
+      const infraCandidateMask = getInfraCandidateMask(world, w * h);
+      infraCandidateMask.fill(0);
       const patches = [
         { op: "set", path: "/world/dnaZoneMask", value: cloneTypedArray(world.dnaZoneMask) },
+        { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
         { op: "set", path: "/sim/dnaZoneCommitted", value: true },
         { op: "set", path: "/sim/unlockedZoneTier", value: 2 },
         { op: "set", path: "/sim/nextZoneUnlockKind", value: "INFRA" },
@@ -732,15 +835,108 @@ export function reducer(state, action, { rng }) {
       return patches;
     }
 
-    case "BEGIN_INFRA_BUILD":
-    case "BUILD_INFRA_PATH":
-    case "CONFIRM_INFRA_PATH":
-      return [];
+    case "BEGIN_INFRA_BUILD": {
+      if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return [];
+      if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
+      if (!state.sim.dnaZoneCommitted) return [];
+      if (String(state.sim.nextZoneUnlockKind || "") !== "INFRA") return [];
+      if (String(state.sim.infraBuildMode || "") !== "") return [];
+      const startCosts = getInfraStartCosts(state.sim);
+      if (Number(state.sim.playerDNA || 0) + 1e-9 < startCosts.dna) return [];
+      if (Number(state.sim.playerEnergyStored || 0) + 1e-9 < startCosts.energy) return [];
+      const tileCount = Number(state.world?.w || state.meta.gridW || 0) * Number(state.world?.h || state.meta.gridH || 0);
+      const infraCandidateMask = getInfraCandidateMask(state.world, tileCount);
+      infraCandidateMask.fill(0);
+      const patches = [
+        { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
+        { op: "set", path: "/sim/infraBuildMode", value: "path" },
+        { op: "set", path: "/sim/running", value: false },
+      ];
+      assertSimPatchesAllowed(manifest, state, action.type, patches);
+      return patches;
+    }
+
+    case "BUILD_INFRA_PATH": {
+      if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return [];
+      if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
+      if (String(state.sim.infraBuildMode || "") !== "path") return [];
+      const world = state.world;
+      if (!world?.alive || !world?.lineageId || !world?.link) return [];
+      const w = Number(world.w || state.meta.gridW || 0) | 0;
+      const h = Number(world.h || state.meta.gridH || 0) | 0;
+      const x = Number(action.payload?.x) | 0;
+      const y = Number(action.payload?.y) | 0;
+      if (x < 0 || y < 0 || x >= w || y >= h) return [];
+      const idx = y * w + x;
+      const remove = !!action.payload?.remove;
+      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+      const infraCandidateMask = getInfraCandidateMask(world, w * h);
+      if ((Number(infraCandidateMask[idx]) | 0) === 1) {
+        if (!remove) return [];
+        infraCandidateMask[idx] = 0;
+        const patches = [{ op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask }];
+        assertSimPatchesAllowed(manifest, state, action.type, patches);
+        return patches;
+      }
+      if (remove) return [];
+      if (!isAlivePlayerOwnedTile(world, idx, playerLineageId)) return [];
+      if (Number(world.link[idx] || 0) > 0) return [];
+      const touchesAnchor = touchesCommittedInfraAnchor(world, idx, w, h);
+      const touchesCandidate = hasAdjacentMarkedTile4(infraCandidateMask, idx, w, h);
+      if (!touchesAnchor && !touchesCandidate) return [];
+      infraCandidateMask[idx] = 1;
+      const patches = [{ op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask }];
+      assertSimPatchesAllowed(manifest, state, action.type, patches);
+      return patches;
+    }
+
+    case "CONFIRM_INFRA_PATH": {
+      if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return [];
+      if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
+      if (String(state.sim.infraBuildMode || "") !== "path") return [];
+      const world = state.world;
+      if (!world?.alive || !world?.lineageId || !world?.link) return [];
+      const w = Number(world.w || state.meta.gridW || 0) | 0;
+      const h = Number(world.h || state.meta.gridH || 0) | 0;
+      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+      const infraCandidateMask = getInfraCandidateMask(world, w * h);
+      const candidateIndices = collectMaskIndices(infraCandidateMask);
+      if (!candidateIndices.length) return [];
+      if (!areIndicesConnected4(candidateIndices, w, h)) return [];
+      let touchesAnchor = false;
+      for (const idx of candidateIndices) {
+        if (!isAlivePlayerOwnedTile(world, idx, playerLineageId)) return [];
+        if (Number(world.link[idx] || 0) > 0) return [];
+        if (!touchesAnchor && touchesCommittedInfraAnchor(world, idx, w, h)) touchesAnchor = true;
+      }
+      if (!touchesAnchor) return [];
+      const startCosts = getInfraStartCosts(state.sim);
+      if (Number(state.sim.playerDNA || 0) + 1e-9 < startCosts.dna) return [];
+      if (Number(state.sim.playerEnergyStored || 0) + 1e-9 < startCosts.energy) return [];
+      const nextE = spendPlayerEnergyFromCells(world, playerLineageId, startCosts.energy);
+      if (!nextE) return [];
+      const link = cloneTypedArray(world.link);
+      for (const idx of candidateIndices) link[idx] = 1;
+      infraCandidateMask.fill(0);
+      const patches = [
+        { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
+        { op: "set", path: "/world/link", value: link },
+        { op: "set", path: "/world/E", value: nextE },
+        { op: "set", path: "/sim/playerDNA", value: Math.max(0, Number(state.sim.playerDNA || 0) - startCosts.dna) },
+        { op: "set", path: "/sim/playerEnergyStored", value: Math.max(0, Number(state.sim.playerEnergyStored || 0) - startCosts.energy) },
+        { op: "set", path: "/sim/infrastructureUnlocked", value: true },
+        { op: "set", path: "/sim/infraBuildMode", value: "" },
+        { op: "set", path: "/sim/running", value: true },
+      ];
+      assertSimPatchesAllowed(manifest, state, action.type, patches);
+      return patches;
+    }
 
     case "TOGGLE_RUNNING": {
       const running = action.payload?.running ?? !state.sim.running;
       if (!state.world && running) return [];
       if (running && state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
+      if (running && String(state.sim.infraBuildMode || "") !== "") return [];
       const patches = [{ op: "set", path: "/sim/running", value: running }];
       assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
@@ -1020,13 +1216,17 @@ export function simStepPatch(state, action, ctx) {
   const nextZoneUnlockCostEnergy = Math.max(0, Number(state.sim.nextZoneUnlockCostEnergy || 0));
   const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
   const alivePlayerCoreCells = countAlivePlayerCoreCells(worldMutable, playerLineageId);
+  const alivePlayerInfraCells = countAlivePlayerInfraCells(worldMutable, playerLineageId);
   if (Number(state.sim.unlockedZoneTier || 0) >= 1) {
     simOut.zoneUnlockProgress = nextZoneUnlockCostEnergy > 0
       ? clamp(Number(simOut.playerEnergyStored || 0) / nextZoneUnlockCostEnergy, 0, 1)
       : 0;
-    simOut.coreEnergyStableTicks = Number(simOut.playerEnergyNet || 0) > 0 && alivePlayerCoreCells > 0
-      ? (Number(state.sim.coreEnergyStableTicks || 0) + 1)
-      : 0;
+  simOut.coreEnergyStableTicks = Number(simOut.playerEnergyNet || 0) > 0 && alivePlayerCoreCells > 0
+    ? (Number(state.sim.coreEnergyStableTicks || 0) + 1)
+    : 0;
+  simOut.networkRatio = (alivePlayerCoreCells + alivePlayerInfraCells) > 0
+    ? alivePlayerInfraCells / Math.max(1, alivePlayerCoreCells + alivePlayerInfraCells)
+    : Number(simOut.networkRatio || 0);
   }
   if (state.sim.dnaZoneCommitted) {
     const preset = getWorldPreset(state.meta.worldPresetId);
