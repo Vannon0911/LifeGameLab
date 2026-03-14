@@ -1,0 +1,40 @@
+{
+  "ui": {
+    "triggerPrefixes": [
+      "src/game/ui/",
+      "src/project/ui.js",
+      "src/game/render/"
+    ],
+    "requiredEntry": "docs/llm/ui/UI_TASK_ENTRY.md"
+  },
+  "sim": {
+    "triggerPrefixes": [
+      "src/game/sim/",
+      "src/project/project.logic.js"
+    ],
+    "requiredEntry": "docs/llm/sim/SIM_TASK_ENTRY.md"
+  },
+  "contracts": {
+    "triggerPrefixes": [
+      "src/project/contract/",
+      "src/core/kernel/"
+    ],
+    "requiredEntry": "docs/llm/contracts/CONTRACT_TASK_ENTRY.md"
+  },
+  "testing": {
+    "triggerPrefixes": [
+      "tests/",
+      "tools/run-test-suite.mjs",
+      "tools/run-all-tests.mjs"
+    ],
+    "requiredEntry": "docs/llm/testing/TESTING_TASK_ENTRY.md"
+  },
+  "versioning": {
+    "triggerPrefixes": [
+      "package.json",
+      "src/project/contract/manifest.js",
+      "docs/VERSIONING_BY_UPDATE_SIZE.md"
+    ],
+    "requiredEntry": "docs/llm/versioning/VERSIONING_TASK_ENTRY.md"
+  }
+}
