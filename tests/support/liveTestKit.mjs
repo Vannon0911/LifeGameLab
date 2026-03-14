@@ -21,9 +21,14 @@ export function startEvidenceCase(caseName) {
   console.log(`[EVIDENCE] case=${name} phase=start`);
 
   process.once("exit", (code) => finish(code === 0 ? "ok" : "fail", `exitCode=${code}`));
-  process.once("uncaughtException", (err) => finish("fail", `uncaught=${String(err?.message || err)}`));
-  process.once("unhandledRejection", (reason) => finish("fail", `unhandled=${String(reason?.message || reason)}`));
+  process.once("uncaughtException", (err) => {
+    process.exitCode = 1;
+    finish("fail", `uncaught=${String(err?.message || err)}`);
+  });
+  process.once("unhandledRejection", (reason) => {
+    process.exitCode = 1;
+    finish("fail", `unhandled=${String(reason?.message || reason)}`);
+  });
 
   return { finish };
 }
-
