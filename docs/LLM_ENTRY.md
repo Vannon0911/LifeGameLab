@@ -18,6 +18,10 @@ Dieses Repository ist ein deterministisches Contract-System. Jede Aenderung muss
 12. `src/project/ui.js`
 13. `src/game/ui/ui.js`
 14. `src/app/main.js`
+15. `src/game/sim/stepPhases.js`
+16. `src/game/ui/ui.constants.js`
+17. `src/game/ui/ui.model.js`
+18. `src/app/runtime/publicApi.js`
 
 ## Harte Invarianten
 - State nur ueber `dispatch()` + Patches.
@@ -32,3 +36,7 @@ Dieses Repository ist ein deterministisches Contract-System. Jede Aenderung muss
 - Pfadhygiene intakt
 - Doku und Code synchron
 - `npm test` gruen
+
+## Zusätzliche Pflichtchecks bei Sim/UI-Refactors
+- `node tests/test-drift-negative-order.mjs`
+- `node tests/test-determinism-long.mjs`

@@ -1,9 +1,356 @@
 # MASTER_CHANGE_LOG
 
-## Changelog-Policy
-Append-only. Keine rueckwirkende Umschreibung historischer Eintraege.
+Reproduzierbar generierter Commit-Changelog (Source of Truth: Git-Historie).
+Release-Version: v2.3.0
+Policy: append-only.
 
-## 2026-03-14
-- Doku auf LLM_ENTRY-basierte Betriebsdokumentation neu aufgebaut.
-- Alte Dokuinhalte wurden konsolidiert und ersetzt.
-- Fokus auf Invarianten, Contract-Gates, Determinismus und messbare Verifikation.
+## Reproduzierbarkeit
+- Generator: `node tools/generate-master-changelog.mjs`
+- Basis (v1-Fallback): `646658e186d0beb7e6183a7448037a4a9f086768`
+- Commit-Anzahl: 11
+- Reihenfolge: `git rev-list --reverse HEAD`
+
+## Commit-Ledger Seit v1
+
+### 2026-03-14 646658e
+- hash: `646658e186d0beb7e6183a7448037a4a9f086768`
+- author: Vannon0911
+- subject: Initial commit
+- diffstat: +9523 / -0 / files 77
+- files:
+  - `.gitignore`
+  - `MANDATORY_READING.md`
+  - `README.md`
+  - `docs/BUGFIX_LOG.md`
+  - `docs/LLM_ENTRY.md`
+  - `docs/LLM_OPERATING_PROTOCOL.md`
+  - `docs/MASTER_CHANGE_LOG.md`
+  - `docs/NAMING_BASELINE.md`
+  - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+  - `docs/PROJECT_STRUCTURE.md`
+  - `docs/SCOPE_BASELINE.md`
+  - `docs/SESSION_HANDOFF.md`
+  - `docs/START_HERE.md`
+  - `docs/TASK_SEQUENCE.md`
+  - `index.html`
+  - `package.json`
+  - `src/app/main.js`
+  - `src/core/kernel/hash32.js`
+  - `src/core/kernel/patches.js`
+  - `src/core/kernel/persistence.js`
+  - `src/core/kernel/physics.js`
+  - `src/core/kernel/rng.js`
+  - `src/core/kernel/schema.js`
+  - `src/core/kernel/stableStringify.js`
+  - `src/core/kernel/store.js`
+  - `src/core/runtime/simStepBuffer.js`
+  - `src/game/render/render.worker.js`
+  - `src/game/render/renderer.js`
+  - `src/game/sim/buffers.js`
+  - `src/game/sim/conflict.js`
+  - `src/game/sim/constants.js`
+  - `src/game/sim/damping.js`
+  - `src/game/sim/fields.js`
+  - `src/game/sim/gate.js`
+  - `src/game/sim/life.data.js`
+  - `src/game/sim/lineage.js`
+  - `src/game/sim/neighbors.js`
+  - `src/game/sim/network.js`
+  - `src/game/sim/plants.js`
+  - `src/game/sim/reducer.js`
+  - `src/game/sim/resources.js`
+  - `src/game/sim/shared.js`
+  - `src/game/sim/sim.js`
+  - `src/game/sim/step.js`
+  - `src/game/sim/worldAi.js`
+  - `src/game/sim/worldgen.js`
+  - `src/game/ui/ui.js`
+  - `src/project/project.logic.js`
+  - `src/project/project.manifest.js`
+  - `src/project/renderer.js`
+  - `src/project/ui.js`
+  - `styles.css`
+  - `tests/test-buffered-step.mjs`
+  - `tests/test-core-gates.mjs`
+  - `tests/test-determinism-long.mjs`
+  - `tests/test-determinism-per-tick.mjs`
+  - `tests/test-determinism-with-interactions.mjs`
+  - `tests/test-divergence.mjs`
+  - `tests/test-faction-metrics.mjs`
+  - `tests/test-gameplay-loop.mjs`
+  - `tests/test-interaction-gates.mjs`
+  - `tests/test-interactions.mjs`
+  - `tests/test-invariants.mjs`
+  - `tests/test-layer-split.mjs`
+  - `tests/test-manifest-dataflow.mjs`
+  - `tests/test-path-hygiene.mjs`
+  - `tests/test-player-action-ownership.mjs`
+  - `tests/test-sim-gate.mjs`
+  - `tests/test-sim-modules.mjs`
+  - `tests/test-smoke.mjs`
+  - `tests/test-stability.mjs`
+  - `tests/test-ui-contract.mjs`
+  - `tests/test-version-traceability.mjs`
+  - `tools/debug-ui.mjs`
+  - `tools/profile-core.mjs`
+  - `tools/redteam-stress-master.mjs`
+  - `tools/run-all-tests.mjs`
+
+### 2026-03-14 34e8a03
+- hash: `34e8a03e30da6054f0e83046dbd11def559bf078`
+- author: Vannon0911
+- subject: Polish GitHub presentation
+- diffstat: +67 / -33 / files 8
+- files:
+  - `README.md`
+  - `docs/assets/lifegamelab-home.png`
+  - `favicon.svg`
+  - `index.html`
+  - `progress.md`
+  - `src/app/main.js`
+  - `src/game/ui/ui.js`
+  - `tests/test-version-traceability.mjs`
+
+### 2026-03-14 b610a92
+- hash: `b610a9240b84c8d3080805c9973bfb883cfd0f4a`
+- author: Vannon0911
+- subject: major dektop Update
+- diffstat: +1721 / -418 / files 14
+- files:
+  - `docs/MASTER_CHANGE_LOG.md`
+  - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+  - `docs/SESSION_HANDOFF.md`
+  - `progress.md`
+  - `src/app/main.js`
+  - `src/game/sim/reducer.js`
+  - `src/game/sim/shared.js`
+  - `src/game/sim/step.js`
+  - `src/game/techTree.js`
+  - `src/game/ui/ui.js`
+  - `src/project/project.manifest.js`
+  - `styles.css`
+  - `tests/test-gameplay-loop.mjs`
+  - `tests/test-ui-strategy-contract.mjs`
+
+### 2026-03-14 d884a94
+- hash: `d884a94d67caeeaa77f9ea751d7700d3c11dcfba`
+- author: Vannon0911
+- subject: Harden split gate and sync verification docs
+- diffstat: +780 / -529 / files 11
+- files:
+  - `docs/MASTER_CHANGE_LOG.md`
+  - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+  - `docs/SESSION_HANDOFF.md`
+  - `progress.md`
+  - `src/game/sim/playerActions.js`
+  - `src/game/sim/reducer.js`
+  - `src/game/sim/shared.js`
+  - `src/game/ui/ui.js`
+  - `tests/test-gameplay-loop.mjs`
+  - `tests/test-path-hygiene.mjs`
+  - `tests/test-split-security-gate.mjs`
+
+### 2026-03-14 415eaa6
+- hash: `415eaa6572cda2f7b3bb3e69f934ef5d80e97282`
+- author: Vannon0911
+- subject: rework ui GBase
+- diffstat: +552 / -193 / files 17
+- files:
+  - `README.md`
+  - `docs/MASTER_CHANGE_LOG.md`
+  - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+  - `docs/SESSION_HANDOFF.md`
+  - `docs/assets/lifegamelab-desktop-status.png`
+  - `docs/assets/lifegamelab-home.png`
+  - `docs/assets/lifegamelab-mobile-control.png`
+  - `docs/assets/lifegamelab-mobile-sheet.png`
+  - `progress.md`
+  - `src/app/main.js`
+  - `src/game/render/renderer.js`
+  - `src/game/ui/ui.js`
+  - `styles.css`
+  - `tests/support/determinismDiff.mjs`
+  - `tests/test-determinism-long.mjs`
+  - `tests/test-determinism-per-tick.mjs`
+  - `tests/test-determinism-with-interactions.mjs`
+
+### 2026-03-14 fc74f56
+- hash: `fc74f56e5fbb0805fe2aad76ef6300f786b02b0c`
+- author: Vannon0911
+- subject: Performance Work in progress build is instable
+- diffstat: +530 / -128 / files 74
+- files:
+  - `docs/LLM_ENTRY.md`
+  - `output/playwright/perf-raster/00-baseline.png`
+  - `output/playwright/perf-raster/032-state-after-fix-v2.png`
+  - `output/playwright/perf-raster/032-state-after-fix-v3.png`
+  - `output/playwright/perf-raster/032-state-after-fix.png`
+  - `output/playwright/perf-raster/032-state.png`
+  - `output/playwright/perf-raster/048-state-after-fix-v2.png`
+  - `output/playwright/perf-raster/048-state-after-fix-v3.png`
+  - `output/playwright/perf-raster/048-state-after-fix.png`
+  - `output/playwright/perf-raster/048-state.png`
+  - `output/playwright/perf-raster/064-pointer-zone-after-fix-v2.png`
+  - `output/playwright/perf-raster/064-pointer-zone-after-fix-v3.png`
+  - `output/playwright/perf-raster/064-pointer-zone-after-fix.png`
+  - `output/playwright/perf-raster/064-state-after-fix-v2.png`
+  - `output/playwright/perf-raster/064-state-after-fix-v3.png`
+  - `output/playwright/perf-raster/064-state-after-fix.png`
+  - `output/playwright/perf-raster/064-state.png`
+  - `output/playwright/perf-raster/072-state-after-fix-v2.png`
+  - `output/playwright/perf-raster/072-state-after-fix-v3.png`
+  - `output/playwright/perf-raster/072-state-after-fix.png`
+  - `output/playwright/perf-raster/072-state.png`
+  - `output/playwright/perf-raster/096-state-after-fix-v2.png`
+  - `output/playwright/perf-raster/096-state-after-fix-v3.png`
+  - `output/playwright/perf-raster/096-state-after-fix.png`
+  - `output/playwright/perf-raster/096-state.png`
+  - `output/playwright/perf-raster/120-state-after-fix-v2.png`
+  - `output/playwright/perf-raster/120-state-after-fix-v3.png`
+  - `output/playwright/perf-raster/120-state-after-fix.png`
+  - `output/playwright/perf-raster/120-state.png`
+  - `output/playwright/perf-raster/144-state-after-fix-v2.png`
+  - `output/playwright/perf-raster/144-state-after-fix-v3.png`
+  - `output/playwright/perf-raster/144-state-after-fix.png`
+  - `output/playwright/perf-raster/144-state.png`
+  - `output/playwright/perf-raster/logs/console-before-fix.log`
+  - `output/playwright/perf-raster/logs/console-final-v3.log`
+  - `output/playwright/perf-raster/logs/console-panels-v3.log`
+  - `output/playwright/perf-raster/panel-evolution-v3.png`
+  - `output/playwright/perf-raster/panel-status-v3.png`
+  - `output/playwright/perf-raster/panel-systems-v3.png`
+  - `output/playwright/perf-raster/panel-tools-v3.png`
+  - `progress.md`
+  - `src/app/main.js`
+  - `src/core/runtime/simStepBuffer.js`
+  - `src/game/render/render.worker.js`
+  - `src/game/render/renderer.js`
+  - `src/game/sim/buffers.js`
+  - `src/game/sim/reducer.js`
+  - `src/game/sim/worldgen.js`
+  - `src/game/ui/ui.js`
+  - `src/project/project.manifest.js`
+  - `tests/support/liveTestKit.mjs`
+  - `tests/test-buffered-step.mjs`
+  - `tests/test-core-gates.mjs`
+  - `tests/test-determinism-long.mjs`
+  - `tests/test-determinism-per-tick.mjs`
+  - `tests/test-determinism-with-interactions.mjs`
+  - `tests/test-divergence.mjs`
+  - `tests/test-faction-metrics.mjs`
+  - `tests/test-gameplay-loop.mjs`
+  - `tests/test-interaction-gates.mjs`
+  - `tests/test-interactions.mjs`
+  - `tests/test-invariants.mjs`
+  - `tests/test-layer-split.mjs`
+  - `tests/test-manifest-dataflow.mjs`
+  - `tests/test-path-hygiene.mjs`
+  - `tests/test-player-action-ownership.mjs`
+  - `tests/test-sim-gate.mjs`
+  - `tests/test-sim-modules.mjs`
+  - `tests/test-smoke.mjs`
+  - `tests/test-split-security-gate.mjs`
+  - `tests/test-stability.mjs`
+  - `tests/test-ui-contract.mjs`
+  - `tests/test-ui-strategy-contract.mjs`
+  - `tests/test-version-traceability.mjs`
+
+### 2026-03-14 188fc3c
+- hash: `188fc3c28c954f09f063524261f68a14e214ecb2`
+- author: Vannon0911
+- subject: Enforce gate-strict contracts, remove sim wrapper, and refresh docs/README assets
+- diffstat: +757 / -201 / files 18
+- files:
+  - `README.md`
+  - `docs/BUGFIX_LOG.md`
+  - `docs/MASTER_CHANGE_LOG.md`
+  - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+  - `docs/SESSION_HANDOFF.md`
+  - `docs/assets/lifegamelab-panel-evolution.png`
+  - `docs/assets/lifegamelab-panel-status.png`
+  - `docs/assets/lifegamelab-panel-systems.png`
+  - `docs/assets/lifegamelab-panel-tools.png`
+  - `src/app/main.js`
+  - `src/game/contracts/ids.js`
+  - `src/game/sim/reducer.js`
+  - `src/game/sim/sim.js`
+  - `src/game/ui/ui.js`
+  - `src/project/project.manifest.js`
+  - `tests/test-dataflow-contract.mjs`
+  - `tests/test-string-contract.mjs`
+  - `tests/test-wrapper-ban.mjs`
+
+### 2026-03-14 fb3ac5b
+- hash: `fb3ac5bce4bea32e0ab09af9e7fd2df2fa67dede`
+- author: Vannon0911
+- subject: Modularize contract/llm/reducer architecture and sync docs
+- diffstat: +1616 / -1373 / files 28
+- files:
+  - `docs/LLM_ENTRY.md`
+  - `docs/MASTER_CHANGE_LOG.md`
+  - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+  - `docs/SESSION_HANDOFF.md`
+  - `progress.md`
+  - `src/app/main.js`
+  - `src/game/sim/reducer.js`
+  - `src/game/sim/reducer/cpuActions.js`
+  - `src/game/sim/reducer/index.js`
+  - `src/game/sim/reducer/metrics.js`
+  - `src/game/sim/reducer/techTreeOps.js`
+  - `src/game/sim/reducer/winConditions.js`
+  - `src/game/sim/reducer/worldRules.js`
+  - `src/game/sim/sim.js`
+  - `src/project/contract/actionSchema.js`
+  - `src/project/contract/dataflow.js`
+  - `src/project/contract/manifest.js`
+  - `src/project/contract/mutationMatrix.js`
+  - `src/project/contract/simGate.js`
+  - `src/project/contract/stateSchema.js`
+  - `src/project/llm/commandAdapter.js`
+  - `src/project/llm/gateSync.js`
+  - `src/project/llm/policy.js`
+  - `src/project/llm/readModel.js`
+  - `src/project/project.manifest.js`
+  - `tests/test-contract-facade.mjs`
+  - `tests/test-llm-contract.mjs`
+  - `tests/test-wrapper-ban.mjs`
+
+### 2026-03-14 f8aa3a2
+- hash: `f8aa3a20537d891849a4714a2eaf1c807ca39d4f`
+- author: Vannon0911
+- subject: ui fix
+- diffstat: +126 / -55 / files 4
+- files:
+  - `src/app/main.js`
+  - `src/game/render/renderer.js`
+  - `src/game/ui/ui.js`
+  - `styles.css`
+
+### 2026-03-14 fc43a8d
+- hash: `fc43a8de6d59c8797f7915ff5a9d1f0d0c6d1c03`
+- author: Vannon0911
+- subject: quickfix
+- diffstat: +10 / -2 / files 1
+- files:
+  - `src/app/main.js`
+
+### 2026-03-14 32915a6
+- hash: `32915a65276690a1d2ef49b0180ae4b2a09314ff`
+- author: Vannon0911
+- subject: Doku fix
+- diffstat: +171 / -606 / files 13
+- files:
+  - `MANDATORY_READING.md`
+  - `docs/BUGFIX_LOG.md`
+  - `docs/LLM_ENTRY.md`
+  - `docs/LLM_OPERATING_PROTOCOL.md`
+  - `docs/MASTER_CHANGE_LOG.md`
+  - `docs/NAMING_BASELINE.md`
+  - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+  - `docs/PROJECT_STRUCTURE.md`
+  - `docs/SCOPE_BASELINE.md`
+  - `docs/SESSION_HANDOFF.md`
+  - `docs/START_HERE.md`
+  - `docs/TASK_SEQUENCE.md`
+  - `progress.md`
+

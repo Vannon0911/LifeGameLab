@@ -10,8 +10,8 @@ import { UI }                from "../project/ui.js";
 import { hashString }        from "../core/kernel/rng.js";
 import { createSimStepBuffer } from "../core/runtime/simStepBuffer.js";
 import { createLlmCommandAdapter } from "../project/llm/commandAdapter.js";
-import { renderLlmReadModelAsText } from "../project/llm/readModel.js";
 import { assertLlmGateSync } from "../project/llm/gateSync.js";
+import { registerPublicApi } from "./runtime/publicApi.js";
 
 function getCookie(name) {
   const safeName = String(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -955,34 +955,22 @@ function runUiSync() {
   }
 }
 
+const publicApi = registerPublicApi({
+  windowObj: window,
+  store,
+  benchmark: Benchmark,
+  runOneSimStep,
+  runRender,
+  runUiSync,
+  publishPerfStats,
+  perfBudget: PerfBudget,
+});
 function renderGameToText() {
-  return renderLlmReadModelAsText(
-    store.getState(),
-    typeof Benchmark.getSnapshot === "function" ? Benchmark.getSnapshot() : null
-  );
+  return publicApi.renderGameToText();
 }
-
 async function advanceTime(ms = 1000) {
-  const duration = Math.max(0, Number(ms) || 0);
-  const speed = Math.max(1, Number(store.getState().meta.speed || 1));
-  const steps = Math.max(1, Math.round((duration / 1000) * speed));
-  for (let i = 0; i < steps; i++) {
-    runOneSimStep({ force: true, useBuffer: false });
-  }
-  runRender({
-    quality: PerfBudget.quality,
-    dprCap: PerfBudget.dprCap,
-    fps: PerfBudget.fpsEma,
-    frameMs: PerfBudget.frameMsEma,
-    renderMs: PerfBudget.renderMsEma,
-    targetMinFps: PerfBudget.targetMinFps,
-    targetMaxFps: PerfBudget.targetMaxFps,
-  });
-  runUiSync();
-  publishPerfStats();
-  return { steps, tick: Number(store.getState().sim.tick || 0) };
+  return publicApi.advanceTime(ms);
 }
-
 window.render_game_to_text = renderGameToText;
 window.advanceTime = advanceTime;
 publishPerfStats();
