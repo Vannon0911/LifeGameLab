@@ -1,225 +1,258 @@
 // ============================================================
-// World Generation — procedural world algorithm (no presets)
+// World Generation — preset-bound, deterministic world pipeline
 // ============================================================
 
 import { TRAIT_DEFAULT, TRAIT_COUNT } from "./life.data.js";
-import { rng01, hashString } from "../../core/kernel/rng.js";
+import { hashString, rng01 } from "../../core/kernel/rng.js";
+import { BIOME_IDS, getWorldPreset, normalizeWorldPresetId } from "./worldPresets.js";
+
+function clamp01(value) {
+  return value < 0 ? 0 : value > 1 ? 1 : value;
+}
 
 function gauss(cx, cy, x, y, sigma, amp) {
-  const dx = x - cx, dy = y - cy;
+  const dx = x - cx;
+  const dy = y - cy;
   return amp * Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
 }
 
-function makeWorldDescriptor(seedBase) {
+function makeWorldDescriptor(seedBase, preset) {
   let s = 1;
   const f = () => rng01(seedBase, s++);
-
-  const hotspotCount = 2 + Math.floor(f() * 4); // 2..5
+  const hotspotCount = 2 + Math.floor(f() * 3);
   const hotspots = [];
   for (let i = 0; i < hotspotCount; i++) {
     hotspots.push({
       cx: 0.10 + f() * 0.80,
       cy: 0.10 + f() * 0.80,
-      sigma: 0.06 + f() * 0.16,
-      amp: 1.2 + f() * 2.2,
+      sigma: 0.05 + f() * 0.12,
+      amp: 0.80 + f() * 1.00 + (preset.fertilityBias || 0),
     });
   }
 
-  const bandCount = Math.floor(f() * 3); // 0..2
-  const bands = [];
-  for (let i = 0; i < bandCount; i++) {
-    bands.push({
-      axis: f() > 0.5 ? "x" : "y",
-      pos: 0.08 + f() * 0.84,
-      width: 0.07 + f() * 0.22,
-      amp: 0.6 + f() * 1.8,
+  const channel = {
+    sx: 0.06 + f() * 0.12,
+    sy: 0.16 + f() * 0.22,
+    ex: 0.72 + f() * 0.20,
+    ey: 0.68 + f() * 0.18,
+    width: 0.05 + f() * 0.04,
+  };
+
+  const oases = [];
+  const oasisCount = preset.id === "dry_basin" ? 3 : preset.id === "wet_meadow" ? 2 : 1;
+  for (let i = 0; i < oasisCount; i++) {
+    oases.push({
+      cx: 0.12 + f() * 0.76,
+      cy: 0.12 + f() * 0.76,
+      sigma: 0.05 + f() * 0.08,
+      amp: 0.18 + f() * 0.20,
     });
   }
-
-  const clusterCount = 2 + Math.floor(f() * 4); // 2..5
-  const clusters = [];
-  for (let i = 0; i < clusterCount; i++) {
-    clusters.push({
-      cx: 0.10 + f() * 0.80,
-      cy: 0.10 + f() * 0.80,
-      r: 2 + Math.floor(f() * 3),
-      hue: Math.floor(f() * 360),
-    });
-  }
-
-  return { hotspots, bands, clusters };
+  return { hotspots, channel, oases };
 }
 
-function buildLightField(w, h, descriptor) {
-  const L = new Float32Array(w * h);
-  const base = 0.10;
-
-  for (let j = 0; j < h; j++) {
-    for (let i = 0; i < w; i++) {
-      let v = base;
-      const nx = i / Math.max(1, w - 1);
-      const ny = j / Math.max(1, h - 1);
-
-      for (const hs of descriptor.hotspots) {
-        v += gauss(hs.cx, hs.cy, nx, ny, hs.sigma, hs.amp * 0.45);
-      }
-
-      for (const b of descriptor.bands) {
-        const pos = b.axis === "x" ? nx : ny;
-        const d = Math.abs(pos - b.pos) / (b.width * 0.5);
-        if (d < 1) v += b.amp * 0.45 * (1 - d * d);
-      }
-
-      L[j * w + i] = Math.min(1, Math.max(0, v));
-    }
-  }
-
-  return L;
+function distanceToSegment(nx, ny, sx, sy, ex, ey) {
+  const dx = ex - sx;
+  const dy = ey - sy;
+  const len2 = dx * dx + dy * dy || 1;
+  const t = Math.max(0, Math.min(1, ((nx - sx) * dx + (ny - sy) * dy) / len2));
+  const px = sx + t * dx;
+  const py = sy + t * dy;
+  const rx = nx - px;
+  const ry = ny - py;
+  return Math.sqrt(rx * rx + ry * ry);
 }
 
-function clustersFromLight(L, w, h, count) {
-  const ranked = new Array(L.length);
-  for (let i = 0; i < L.length; i++) ranked[i] = i;
-  ranked.sort((a, b) => L[b] - L[a]);
-
-  const out = [];
-  const minDist = Math.max(4, Math.round(Math.min(w, h) * 0.10));
-  const minDist2 = minDist * minDist;
-  for (let r = 0; r < ranked.length && out.length < count; r++) {
-    const idx = ranked[r];
-    const x = idx % w;
-    const y = (idx / w) | 0;
-    let ok = true;
-    for (let k = 0; k < out.length; k++) {
-      const px = Math.round(out[k].cx * (w - 1));
-      const py = Math.round(out[k].cy * (h - 1));
-      const dx = x - px;
-      const dy = y - py;
-      if (dx * dx + dy * dy < minDist2) {
-        ok = false;
-        break;
-      }
+function buildLightField(w, h, descriptor, preset) {
+  const out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const nx = x / Math.max(1, w - 1);
+      const ny = y / Math.max(1, h - 1);
+      let value = 0.10 + (preset.lightBias || 0);
+      for (const hotspot of descriptor.hotspots) value += gauss(hotspot.cx, hotspot.cy, nx, ny, hotspot.sigma, hotspot.amp * 0.34);
+      if (preset.id === "dry_basin") value += (1 - ny) * 0.16 + Math.abs(nx - 0.5) * 0.08;
+      if (preset.id === "wet_meadow") value += 0.03 - Math.abs(nx - 0.5) * 0.02;
+      out[y * w + x] = clamp01(value);
     }
-    if (!ok) continue;
-    out.push({
-      cx: x / Math.max(1, w - 1),
-      cy: y / Math.max(1, h - 1),
-      r: 2,
-      hue: (out.length * 137.5) % 360,
-    });
   }
   return out;
 }
 
-function buildSpawnClusters(descriptor, L, w, h) {
-  const bright = clustersFromLight(L, w, h, 2);
-  const leftBright = clustersFromLight(
-    L.map((v, idx) => ((idx % w) < (w * 0.45) ? v : -1)),
-    w, h, 1
-  )[0];
-  const rightBright = clustersFromLight(
-    L.map((v, idx) => ((idx % w) > (w * 0.55) ? v : -1)),
-    w, h, 1
-  )[0];
-  const spawn = [];
-  // Opposing founder lineages are always seeded on opposite sides.
-  if (leftBright && rightBright) {
-    spawn.push({ cx: leftBright.cx, cy: leftBright.cy, r: 3, hue: 0 });
-    spawn.push({ cx: rightBright.cx, cy: rightBright.cy, r: 3, hue: 0 });
+function buildWaterField(w, h, descriptor, preset, seedBase) {
+  const out = new Float32Array(w * h);
+  let stream = 2000;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const nx = x / Math.max(1, w - 1);
+      const ny = y / Math.max(1, h - 1);
+      const idx = y * w + x;
+      let water = Math.max(0, 0.08 + (preset.waterBias || 0));
+
+      const d = distanceToSegment(nx, ny, descriptor.channel.sx, descriptor.channel.sy, descriptor.channel.ex, descriptor.channel.ey);
+      const corridor = Math.max(0, 1 - d / Math.max(0.001, descriptor.channel.width));
+      water += corridor * corridor * (0.52 + (preset.waterSpread || 0.5) * 0.35);
+
+      if (preset.id === "river_delta") {
+        const fan = Math.max(0, 1 - Math.abs(nx - 0.82) / 0.20) * Math.max(0, 1 - Math.abs(ny - 0.76) / 0.18);
+        water += fan * (preset.waterFan || 0.2);
+      }
+
+      for (const oasis of descriptor.oases) {
+        water += gauss(oasis.cx, oasis.cy, nx, ny, oasis.sigma, oasis.amp);
+      }
+
+      if (preset.id === "dry_basin") {
+        water *= 0.52 + rng01(seedBase, stream++) * 0.10;
+      } else if (preset.id === "wet_meadow") {
+        water += 0.10 + 0.08 * Math.sin((nx + ny) * Math.PI * 2);
+      }
+      out[idx] = clamp01(water);
+    }
   }
-  // Exactly two founders at start.
-  if (spawn.length < 2 && bright.length >= 2) {
-    spawn.push({ cx: bright[0].cx, cy: bright[0].cy, r: 3, hue: 0 });
-    spawn.push({ cx: bright[1].cx, cy: bright[1].cy, r: 3, hue: 0 });
+  return out;
+}
+
+function assignBiome(light, water, fertility, xRatio, yRatio) {
+  const stagnation = clamp01(water * (1 - light) * 1.2 + (1 - fertility) * 0.25);
+  if (stagnation > 0.52 && water > 0.35) return BIOME_IDS.toxic_marsh;
+  if (water > 0.62) return light < 0.34 ? BIOME_IDS.wet_forest : BIOME_IDS.riverlands;
+  if (water < 0.10 && light > 0.44) return BIOME_IDS.barren_flats;
+  if (water < 0.18) return BIOME_IDS.dry_plains;
+  if (fertility > 0.46 && water > 0.30 && (yRatio > 0.42 || xRatio > 0.32)) return BIOME_IDS.wet_forest;
+  return BIOME_IDS.riverlands;
+}
+
+function deriveBaseFields(state, preset, seedBase) {
+  const { w, h, L, water, baseSat, Sat, biomeId } = state;
+  let stream = 5000;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const nx = x / Math.max(1, w - 1);
+      const ny = y / Math.max(1, h - 1);
+      const idx = y * w + x;
+      const moisture = Number(water[idx] || 0);
+      const light = Number(L[idx] || 0);
+      let fertility =
+        0.10 +
+        moisture * 0.46 +
+        (1 - Math.abs(nx - 0.5)) * 0.06 +
+        (preset.fertilityBias || 0) +
+        rng01(seedBase, stream++) * 0.06;
+      if (preset.id === "dry_basin") fertility -= light * 0.08;
+      if (preset.id === "wet_meadow") fertility += 0.06;
+      fertility = clamp01(fertility);
+      baseSat[idx] = fertility;
+      Sat[idx] = fertility;
+      biomeId[idx] = assignBiome(light, moisture, fertility, nx, ny);
+    }
   }
-  if (spawn.length === 1) {
-    spawn.push({ cx: 0.75, cy: 0.75, r: 3, hue: 0 });
+}
+
+function buildSpawnClusters(state, preset) {
+  const score = new Float32Array(state.L.length);
+  for (let i = 0; i < score.length; i++) {
+    score[i] = Number(state.L[i] || 0) * 0.55 + Number(state.water[i] || 0) * 0.45 + Number(state.baseSat[i] || 0) * 0.35;
   }
-  return spawn;
+  const ranked = [...score.keys()].sort((a, b) => score[b] - score[a]);
+  const picks = [];
+  for (const idx of ranked) {
+    const x = idx % state.w;
+    const y = (idx / state.w) | 0;
+    if (x > state.w * 0.46 && x < state.w * 0.54) continue;
+    let farEnough = true;
+    for (const pick of picks) {
+      const dx = x - pick.x;
+      const dy = y - pick.y;
+      if (dx * dx + dy * dy < 36) {
+        farEnough = false;
+        break;
+      }
+    }
+    if (!farEnough) continue;
+    picks.push({ x, y });
+    if (picks.length >= 2) break;
+  }
+  if (picks.length < 2) picks.push({ x: Math.floor(state.w * 0.75), y: Math.floor(state.h * 0.65) });
+  return picks.map((pick, index) => ({
+    x: pick.x,
+    y: pick.y,
+    r: preset.id === "wet_meadow" ? 3 : 2,
+    lineageId: index === 0 ? 1 : 2,
+  }));
 }
 
 function placeClusters(state, clusters, seedBase) {
-  const { w, h } = state;
-  let stream = 5000;
-
-  for (let ci = 0; ci < clusters.length; ci++) {
-    const cl = clusters[ci];
-    // Deterministic founder IDs: first cluster = 1 (player), second = 2 (cpu).
-    // Higher clusters get hash-based IDs starting above 2.
-    const founderLineage = ci < 2 ? (ci + 1) : ((hashString(`founder:${cl.cx}:${cl.cy}:${cl.r}`) >>> 0) || (ci + 3));
-    const cx = Math.round(cl.cx * (w - 1));
-    const cy = Math.round(cl.cy * (h - 1));
-    const r = cl.r || 3;
-
-    for (let dy = -r; dy <= r; dy++) {
-      for (let dx = -r; dx <= r; dx++) {
-        if (dx * dx + dy * dy > r * r) continue;
-        const x = cx + dx, y = cy + dy;
-        if (x < 0 || x >= w || y < 0 || y >= h) continue;
-        if (rng01(seedBase, stream++) > 0.78) continue;
-
-        const idx = y * w + x;
-        state.alive[idx] = 1;
-        state.E[idx] = 0.32 + rng01(seedBase, stream++) * 0.28; // survival-focused start energy
-        state.age[idx] = Math.floor(rng01(seedBase, stream++) * 120);
-        state.reserve[idx] = 0.05 + rng01(seedBase, stream++) * 0.12;
-        state.hue[idx] = 0;
-        state.lineageId[idx] = founderLineage;
-
-        const o = idx * TRAIT_COUNT;
-        for (let t = 0; t < TRAIT_COUNT; t++) {
-          state.trait[o + t] = TRAIT_DEFAULT[t];
-        }
-      }
-    }
-  }
-}
-
-function placePlants(state, phy, seedBase) {
-  const { w, h, plantKind } = state;
-  const density = phy.plantCloudDensity || 0.82;
-  const count = Math.round(w * h * 0.05 * density);
   let stream = 9000;
+  for (const cluster of clusters) {
+    for (let dy = -cluster.r; dy <= cluster.r; dy++) {
+      for (let dx = -cluster.r; dx <= cluster.r; dx++) {
+        if (dx * dx + dy * dy > cluster.r * cluster.r) continue;
+        const x = cluster.x + dx;
+        const y = cluster.y + dy;
+        if (x < 0 || y < 0 || x >= state.w || y >= state.h) continue;
+        if (rng01(seedBase, stream++) > 0.78) continue;
+        const idx = y * state.w + x;
+        state.alive[idx] = 1;
+        state.E[idx] = 0.26 + rng01(seedBase, stream++) * 0.34;
+        state.reserve[idx] = 0.06 + rng01(seedBase, stream++) * 0.10;
+        state.age[idx] = Math.floor(rng01(seedBase, stream++) * 80);
+        state.lineageId[idx] = cluster.lineageId;
+        state.hue[idx] = cluster.lineageId === 1 ? 210 : 0;
+        const o = idx * TRAIT_COUNT;
+        for (let t = 0; t < TRAIT_COUNT; t++) state.trait[o + t] = TRAIT_DEFAULT[t];
+      }
+    }
+  }
+}
 
-  for (let k = 0; k < count; k++) {
-    const x = Math.floor(rng01(seedBase, stream++) * w);
-    const y = Math.floor(rng01(seedBase, stream++) * h);
-    const r = 1 + Math.floor(rng01(seedBase, stream++) * 3);
-    const peak = 0.38 + rng01(seedBase, stream++) * 0.52;
-
-    for (let dy = -r; dy <= r; dy++) {
-      for (let dx = -r; dx <= r; dx++) {
-        const d2 = dx * dx + dy * dy;
-        if (d2 > r * r) continue;
-        const px = x + dx, py = y + dy;
-        if (px < 0 || px >= w || py < 0 || py >= h) continue;
-        const t = 1 - Math.sqrt(d2) / Math.max(1, r);
-        const idx = py * w + px;
-        state.P[idx] = Math.min(1, state.P[idx] + peak * t * t);
-        state.R[idx] = Math.min(1, state.R[idx] + peak * t * 0.45);
-        state.Sat[idx] = Math.min(1, state.Sat[idx] + peak * t * 0.10);
-        if (plantKind[idx] === 0) {
-          plantKind[idx] = rng01(seedBase, stream++) > 0.5 ? 1 : -1; // +1 toxic, -1 detox
+function placePlants(state, phy, preset, seedBase) {
+  const count = Math.round(state.w * state.h * (0.032 + (preset.plantBoost || 0) * 0.04 + (phy.plantCloudDensity || 0.82) * 0.014));
+  let stream = 12000;
+  for (let n = 0; n < count; n++) {
+    const x = Math.floor(rng01(seedBase, stream++) * state.w);
+    const y = Math.floor(rng01(seedBase, stream++) * state.h);
+    const idx = y * state.w + x;
+    const biome = Number(state.biomeId[idx] || 0);
+    const water = Number(state.water[idx] || 0);
+    const radius = biome === BIOME_IDS.wet_forest ? 3 : biome === BIOME_IDS.riverlands ? 2 : 1;
+    const peak = clamp01(0.14 + water * 0.44 + (biome === BIOME_IDS.dry_plains ? 0.06 : 0.12));
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        if (dx * dx + dy * dy > radius * radius) continue;
+        const xx = x + dx;
+        const yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= state.w || yy >= state.h) continue;
+        const ii = yy * state.w + xx;
+        const falloff = 1 - Math.sqrt(dx * dx + dy * dy) / Math.max(1, radius);
+        state.P[ii] = clamp01(Number(state.P[ii] || 0) + peak * falloff * 0.75);
+        state.R[ii] = clamp01(Number(state.R[ii] || 0) + peak * falloff * 0.28);
+        state.B[ii] = clamp01(Number(state.B[ii] || 0) + peak * falloff * 0.08);
+        if (state.plantKind[ii] === 0) {
+          state.plantKind[ii] = biome === BIOME_IDS.toxic_marsh ? 1 : -1;
         }
       }
     }
   }
 }
 
-export function generateWorld(w, h, seedStr, phy) {
-  const seedBase = hashString(seedStr || "life-seed");
-  const descriptor = makeWorldDescriptor(seedBase);
+export function generateWorld(w, h, seedStr, phy, presetId = "river_delta") {
+  const normalizedPresetId = normalizeWorldPresetId(presetId);
+  const preset = getWorldPreset(normalizedPresetId);
+  const seedBase = hashString(`${seedStr || "life-seed"}:${normalizedPresetId}`);
+  const descriptor = makeWorldDescriptor(seedBase, preset);
   const N = w * h;
 
   const state = {
-    w, h,
-    // Deterministic monotonic lineage allocator (initialized after seeding founders).
-    nextLineageId: 1,
+    w,
+    h,
+    nextLineageId: 3,
     alive: new Uint8Array(N),
     E: new Float32Array(N),
-    L: buildLightField(w, h, descriptor),
+    L: new Float32Array(N),
     R: new Float32Array(N),
     W: new Float32Array(N),
+    water: new Float32Array(N),
     Sat: new Float32Array(N),
     baseSat: new Float32Array(N),
     P: new Float32Array(N),
@@ -236,94 +269,18 @@ export function generateWorld(w, h, seedStr, phy) {
     born: new Uint8Array(N),
     died: new Uint8Array(N),
     actionMap: new Uint8Array(N),
+    biomeId: new Int8Array(N),
     lineageThreatMemory: {},
     lineageDefenseReadiness: {},
     clusterAttackState: {},
+    presetId: normalizedPresetId,
   };
 
-  // ── Terrain-Basemap: baseSat räumlich variabel (MasterPlan §04) ──────────
-  // Fluss:      baseSat 0.65–0.90  — viel Wasser, Pflanzenpresse
-  // Wüste:      baseSat 0.02–0.06  — viel Licht, Durst-Upkeep
-  // Feuchtwiese:baseSat 0.35–0.50  — Gleichgewicht, begehrt
-  // Standard:   baseSat 0.14–0.24
-  let stream = 3000;
-  const terrainSeed = seedBase ^ 0xdeadbeef;
-  // 1–2 Fluss-Linien (diagonal oder horizontal)
-  const riverCount = 1 + (rng01(terrainSeed, 1) > 0.5 ? 1 : 0);
-  const rivers = [];
-  for (let r = 0; r < riverCount; r++) {
-    rivers.push({
-      cx: 0.15 + rng01(terrainSeed, 10 + r * 3) * 0.70,
-      cy: 0.15 + rng01(terrainSeed, 11 + r * 3) * 0.70,
-      dx: -0.5 + rng01(terrainSeed, 12 + r * 3),   // Richtungsvektor
-      dy: -0.5 + rng01(terrainSeed, 13 + r * 3),
-      width: 0.04 + rng01(terrainSeed, 14 + r * 3) * 0.06,
-    });
-  }
-  // 0–2 Wüsten-Cluster
-  const desertCount = Math.floor(rng01(terrainSeed, 20) * 3);
-  const deserts = [];
-  for (let d = 0; d < desertCount; d++) {
-    deserts.push({
-      cx: 0.10 + rng01(terrainSeed, 30 + d * 2) * 0.80,
-      cy: 0.10 + rng01(terrainSeed, 31 + d * 2) * 0.80,
-      r:  0.12 + rng01(terrainSeed, 32 + d * 2) * 0.14,
-    });
-  }
-  for (let j = 0; j < h; j++) {
-    for (let i = 0; i < w; i++) {
-      const nx = i / Math.max(1, w - 1);
-      const ny = j / Math.max(1, h - 1);
-      const idx = j * w + i;
-      let base = 0.14 + rng01(seedBase, stream++) * 0.10; // Standard 0.14..0.24
-
-      // Fluss-Einfluss: Abstand zu Fluss-Linie (Punkt-auf-Linie)
-      for (const rv of rivers) {
-        const ex = nx - rv.cx, ey = ny - rv.cy;
-        const len = Math.sqrt(rv.dx * rv.dx + rv.dy * rv.dy) || 1;
-        const t = Math.max(0, Math.min(1, (ex * rv.dx + ey * rv.dy) / (len * len)));
-        const px = rv.cx + t * rv.dx - nx;
-        const py = rv.cy + t * rv.dy - ny;
-        const dist = Math.sqrt(px * px + py * py);
-        if (dist < rv.width * 2.5) {
-          const strength = Math.max(0, 1 - dist / (rv.width * 2.5));
-          const riverVal = 0.65 + rng01(seedBase, stream++) * 0.25; // 0.65..0.90
-          base = base + (riverVal - base) * strength * strength;
-        }
-      }
-
-      // Wüsten-Einfluss
-      for (const ds of deserts) {
-        const dx2 = nx - ds.cx, dy2 = ny - ds.cy;
-        const dist = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-        if (dist < ds.r) {
-          const strength = Math.max(0, 1 - dist / ds.r);
-          const desertVal = 0.02 + rng01(seedBase, stream++) * 0.04; // 0.02..0.06
-          base = base + (desertVal - base) * strength * strength;
-        }
-      }
-
-      // Feuchtwiese: mittleres baseSat-Band zwischen Fluss und Standard → entsteht automatisch
-      // durch Interpolation; explizit erhöhen wenn zwischen 0.25 und 0.45
-      if (base > 0.25 && base < 0.45) base += rng01(seedBase, stream++) * 0.05;
-
-      state.baseSat[idx] = Math.max(0.02, Math.min(0.92, base));
-      state.Sat[idx] = state.baseSat[idx];
-    }
-  }
-
-  const spawnClusters = buildSpawnClusters(descriptor, state.L, w, h);
-  placePlants(state, phy, seedBase);
-  placeClusters(state, spawnClusters, seedBase);
+  state.L = buildLightField(w, h, descriptor, preset);
+  state.water = buildWaterField(w, h, descriptor, preset, seedBase);
+  deriveBaseFields(state, preset, seedBase);
+  placePlants(state, phy, preset, seedBase);
+  placeClusters(state, buildSpawnClusters(state, preset), seedBase);
   state.superId.fill(-1);
-
-  // Initialize nextLineageId above the max existing lineageId to avoid collisions.
-  let maxLid = 0;
-  for (let i = 0; i < state.lineageId.length; i++) {
-    const lid = Number(state.lineageId[i]) >>> 0;
-    if (lid > maxLid) maxLid = lid;
-  }
-  state.nextLineageId = (maxLid + 1) >>> 0;
-
   return state;
 }

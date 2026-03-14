@@ -13,14 +13,14 @@ import { runFieldPhase, runFinalizePopulationPhase, runWorldSystemsPhase } from 
 import { buildLineageRuntime, clampScarcityByNutrient, traitAt } from "./stepRuntime.js";
 
 export function simStep(world, phy, tick) {
-  const { w, h, alive, E, L, R, W, P, hue, lineageId, trait } = world;
+  const { w, h, alive, E, L, R, W, P, hue, lineageId, trait, water } = world;
   const zoneMap = world.zoneMap;  // Int8Array — 0=none 1=HARVEST 2=BUFFER 3=DEFENSE 4=NEXUS 5=QUARANTINE
   const N = w * h;
   const { Sat, reserve, age, actionMap } = prepareStepBuffers(world, N);
   const B = world.B;
   const link = world.link;
 
-  let sumR = 0, sumW = 0, sumSat = 0, sumP = 0, sumB = 0;
+  let sumR = 0, sumW = 0, sumSat = 0, sumP = 0, sumB = 0, sumWater = 0;
   let plantTiles = 0;
   let aliveCount = 0, sumLAlive = 0, sumEAlive = 0, sumReserveAlive = 0;
   let linkedAlive = 0, clusteredAlive = 0;
@@ -49,6 +49,7 @@ export function simStep(world, phy, tick) {
 
   const worldPhase = runWorldSystemsPhase(world, phy, tick);
   const plantsPrunedLastStep = worldPhase.plantsPrunedLastStep;
+  for (let i = 0; i < N; i++) sumWater += Number(water?.[i] || 0);
 
   let totalBirths = 0, totalDeaths = 0, totalMutations = 0;
   const remote = runRemoteClusterAttacks(world, phy, tick, actionMap) || { attacks: 0, kills: 0, stolen: 0, defAct: 0 };
@@ -233,6 +234,7 @@ W[i] = clamp(W[i] + wTarget * wTransfer, 0, 1);
     meanSaturationField: sumSat * invN,
     meanPlantField: sumP * invN,
     meanBiochargeField: sumB * invN,
+    meanWaterField: sumWater * invN,
     plantTileRatio: plantTiles * invN,
     dominantHueRatio,
     meanLAlive: sumLAlive * invAlive,

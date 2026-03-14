@@ -3,12 +3,12 @@ import { PHYSICS_DEFAULT } from "../../../core/kernel/physics.js";
 export const WORLD_KEYS = [
   "w", "h",
   "nextLineageId",
-  "alive", "E", "L", "R", "W",
+  "alive", "E", "L", "R", "W", "water",
   "Sat", "baseSat",
   "P", "B", "plantKind",
   "reserve", "link",
   "superId", "clusterField",
-  "hue", "lineageId", "trait", "age",
+  "hue", "lineageId", "trait", "age", "biomeId",
   "born", "died",
   "actionMap",
   "balanceGovernor",
@@ -25,7 +25,7 @@ export const WORLD_KEYS = [
 ];
 
 export const WORLD_SIM_STEP_KEYS = WORLD_KEYS.filter(
-  (k) => k !== "baseSat" && k !== "zoneMap" && k !== "superId" && k !== "actionMap" && k !== "born" && k !== "died"
+  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "superId" && k !== "actionMap" && k !== "born" && k !== "died"
 );
 
 export const SIM_KEYS = [
@@ -33,6 +33,7 @@ export const SIM_KEYS = [
   "aliveCount", "aliveRatio",
   "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
   "meanNutrientField", "meanToxinField", "meanSaturationField", "meanPlantField", "meanBiochargeField",
+  "meanWaterField",
   "plantTileRatio", "dominantHueRatio",
   "lineageDiversity",
   "evolutionStageMean", "evolutionStageMax",
@@ -46,6 +47,8 @@ export const SIM_KEYS = [
   "playerEnergyIn", "playerEnergyOut", "playerEnergyNet", "playerEnergyStored",
   "lightShare", "nutrientShare", "seasonPhase",
   "playerDNA", "totalHarvested", "playerStage",
+  "stageProgressScore", "harvestYieldTotal", "pruneYieldTotal", "recycleYieldTotal", "seedYieldTotal",
+  "stabilityScore", "ecologyScore", "activeBiomeCount",
   "energySupremacyTicks", "efficiencyTicks", "lossStreakTicks", "stockpileTicks",
   "cpuEnergyIn", "gameResult", "winMode", "gameEndTick", "goal",
 ];

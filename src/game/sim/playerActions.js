@@ -342,11 +342,6 @@ export function handleHarvestCell(state, action) {
   energyNext[idx] = 0;
 
   const newTotalHarvested = Number(state.sim.totalHarvested || 0) + 1;
-  const STAGE_THRESHOLDS = [0, 5, 15, 30, 60];
-  let newStage = playerStage;
-  for (let s = 2; s <= 5; s++) {
-    if (newTotalHarvested >= STAGE_THRESHOLDS[s - 1] && s > newStage) newStage = s;
-  }
 
   const patches = [
     { op: "set", path: "/sim/playerDNA", value: Number(state.sim.playerDNA || 0) + dnaYield },
@@ -354,9 +349,6 @@ export function handleHarvestCell(state, action) {
     { op: "set", path: "/world/alive", value: aliveNext },
     { op: "set", path: "/world/E", value: energyNext },
   ];
-  if (newStage !== playerStage) {
-    patches.push({ op: "set", path: "/sim/playerStage", value: newStage });
-  }
   assertSimPatchesAllowed(manifest, state, action.type, patches);
   return patches;
 }
