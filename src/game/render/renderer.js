@@ -864,16 +864,20 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) 
 }
 
 // Draw tactical grid lines so tile boundaries stay legible on mobile + dense maps.
-function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0) {
+function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0, detailMode = "auto") {
+  if (detailMode === "minimal") return;
   if (lodLevel > 0) return;
   // On dense grids show a lightweight macro-grid, so raster remains readable.
   if (tilePx < 18) {
     if (tilePx < 3) return;
     ctx.save();
-    const minorEvery = tilePx >= 10 ? 1 : 2;
+    const focused = detailMode === "focused";
+    const minorEvery = focused ? 1 : (tilePx >= 10 ? 1 : 2);
     const majorEvery = tilePx >= 8 ? 8 : 12;
     ctx.lineWidth = 1;
-    ctx.strokeStyle = tilePx >= 10 ? "rgba(198,224,255,0.26)" : "rgba(198,224,255,0.18)";
+    ctx.strokeStyle = tilePx >= 10
+      ? (focused ? "rgba(198,224,255,0.22)" : "rgba(198,224,255,0.26)")
+      : (focused ? "rgba(198,224,255,0.15)" : "rgba(198,224,255,0.18)");
     for (let x = offX, c = 0; x <= offX + imageW; x += tilePx, c++) {
       if (c % minorEvery !== 0) continue;
       ctx.beginPath();
@@ -888,7 +892,7 @@ function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0) {
       ctx.lineTo(offX + imageW, y + 0.5);
       ctx.stroke();
     }
-    ctx.strokeStyle = "rgba(255,205,132,0.34)";
+    ctx.strokeStyle = focused ? "rgba(255,205,132,0.28)" : "rgba(255,205,132,0.34)";
     for (let x = offX, c = 0; x <= offX + imageW; x += tilePx, c++) {
       if (c % majorEvery !== 0) continue;
       ctx.beginPath();
@@ -907,9 +911,10 @@ function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0) {
     return;
   }
   ctx.save();
+  const focused = detailMode === "focused";
   const small = tilePx < 22;
-  const minorStep = 1;
-  const minorAlpha = small ? 0.04 : 0.06;
+  const minorStep = focused ? 1 : 1;
+  const minorAlpha = focused ? (small ? 0.03 : 0.05) : (small ? 0.04 : 0.06);
   const majorEvery = 10;
   ctx.strokeStyle = `rgba(188,255,231,${minorAlpha})`;
   ctx.lineWidth = 1;
@@ -1195,6 +1200,9 @@ export function drawFrame(ctx, state, perf = {}) {
   const { world, meta, sim } = state;
   const { w, h } = world;
   const quality = clamp((perf?.quality ?? 3) | 0, 0, 3);
+  const detailMode = String(meta?.ui?.renderDetailMode || "auto");
+  const userFocused = detailMode === "focused";
+  const userMinimal = detailMode === "minimal";
   const CW = Number.isFinite(perf?.CW) && perf.CW > 0 ? perf.CW : Math.max(1, Number(ctx?.canvas?.width || 1));
   const CH = Number.isFinite(perf?.CH) && perf.CH > 0 ? perf.CH : Math.max(1, Number(ctx?.canvas?.height || 1));
   const cells = w * h;
@@ -1207,8 +1215,8 @@ export function drawFrame(ctx, state, perf = {}) {
   const offY   = Math.floor((CH - imageH) / 2);
   const isHeavyGrid = cells >= 96 * 96;
   const isHugeGrid = cells >= 120 * 120;
-  const tactical = quality <= 1 || isHugeGrid;
-  const balanced = quality === 2 || isHeavyGrid;
+  const tactical = userMinimal || quality <= 1 || isHugeGrid;
+  const balanced = !userFocused && (quality === 2 || isHeavyGrid);
   const overlayActive = String(meta?.activeOverlay || OVERLAY_MODE.NONE) !== OVERLAY_MODE.NONE;
 
   // Composite to main canvas
@@ -1220,21 +1228,21 @@ export function drawFrame(ctx, state, perf = {}) {
   drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality);
 
   // Overlays
-  if (!overlayActive && !tactical && quality >= 3 && lod.level <= 1) drawFieldHotspots(ctx, world, offX, offY, tilePx);
-  if (!overlayActive && quality >= 1 && lod.level <= 2 && !isHugeGrid) drawClusterOverlay(ctx, world, offX, offY, tilePx);
+  if (!overlayActive && !tactical && (quality >= 3 || userFocused) && lod.level <= 1) drawFieldHotspots(ctx, world, offX, offY, tilePx);
+  if (!overlayActive && quality >= 1 && lod.level <= 2 && !isHugeGrid && !userMinimal) drawClusterOverlay(ctx, world, offX, offY, tilePx);
   
   // Always show Birth Charge Nodes for visual feedback of cell creation
   if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawBirthChargeNodes(ctx, world, offX, offY, tilePx, sim?.tick || 0);
 
   if (quality >= 1 && lod.level <= 2) drawActionOverlay(ctx, world, meta, offX, offY, tilePx);
-  if (!overlayActive && !isHugeGrid && quality >= 1 && lod.level <= 2) drawLightShadowOverlay(ctx, world, meta, offX, offY, tilePx);
-  if (!overlayActive && !balanced && quality >= 2 && lod.level <= 2) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim);
+  if (!overlayActive && !isHugeGrid && quality >= 1 && lod.level <= 2 && !userMinimal) drawLightShadowOverlay(ctx, world, meta, offX, offY, tilePx);
+  if (!overlayActive && !balanced && (quality >= 2 || userFocused) && lod.level <= 2 && !userMinimal) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim);
   if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, sim?.tick || 0);
   drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality);
-  if (!overlayActive && !balanced && quality >= 3 && lod.level <= 1) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
-  if (!overlayActive && !tactical && quality >= 1 && !isHugeGrid) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
+  if (!overlayActive && !balanced && (quality >= 3 || userFocused) && lod.level <= 1 && !userMinimal) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
+  if (!overlayActive && !tactical && quality >= 1 && !isHugeGrid && !userMinimal) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawZoneOverlay(ctx, world, offX, offY, tilePx);
-  if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level);
+  if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level, detailMode);
   if (quality >= 1 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);
 
   return { tilePx, offX, offY, dpr: perf.dpr, quality, lod };

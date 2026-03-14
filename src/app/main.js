@@ -343,6 +343,7 @@ const RenderManager = {
       Number(ui.showBiochargeOverlay || 0),
       Number(ui.showRemoteAttackOverlay ?? 1),
       Number(ui.showDefenseOverlay ?? 1),
+      String(ui.renderDetailMode || "auto"),
       this.shouldUseOffscreen(state) ? 1 : 0,
     ].join("|");
   },
@@ -643,7 +644,8 @@ RuntimeHooks.onStructuralChange = (type, action) => {
       Object.prototype.hasOwnProperty.call(action?.payload || {}, "offscreenEnabled") ||
       Object.prototype.hasOwnProperty.call(action?.payload || {}, "showBiochargeOverlay") ||
       Object.prototype.hasOwnProperty.call(action?.payload || {}, "showRemoteAttackOverlay") ||
-      Object.prototype.hasOwnProperty.call(action?.payload || {}, "showDefenseOverlay")
+      Object.prototype.hasOwnProperty.call(action?.payload || {}, "showDefenseOverlay") ||
+      Object.prototype.hasOwnProperty.call(action?.payload || {}, "renderDetailMode")
     ));
   if (shouldFlush) {
     stepBuffer.stop();
@@ -772,6 +774,17 @@ function tunePerformance(state) {
     PerfBudget.maxSimStepsPerFrame = 3;
     PerfBudget.maxSimFrameBudgetMs = 7.5;
     PerfBudget.maxCatchupMs = 130;
+  }
+
+  const detailMode = String(state?.meta?.ui?.renderDetailMode || "auto");
+  if (detailMode === "focused") {
+    PerfBudget.quality = Math.max(2, PerfBudget.quality);
+    PerfBudget.renderEvery = Math.min(PerfBudget.renderEvery, 2);
+    PerfBudget.dprCap = Math.max(PerfBudget.dprCap, isHeavyGrid ? 1.25 : 1.45);
+  } else if (detailMode === "minimal") {
+    PerfBudget.quality = 1;
+    PerfBudget.renderEvery = Math.max(PerfBudget.renderEvery, isHeavyGrid ? 3 : 2);
+    PerfBudget.dprCap = Math.min(PerfBudget.dprCap, 1.15);
   }
 }
 

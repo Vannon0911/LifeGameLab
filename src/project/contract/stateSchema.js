@@ -32,6 +32,7 @@ export const stateSchema = {
             showRemoteAttackOverlay: { type: "boolean", default: true },
             showDefenseOverlay: { type: "boolean", default: true },
             offscreenEnabled: { type: "boolean", default: false },
+            renderDetailMode: { type: "string", default: "auto" },
             ariaLevel: { type: "number", default: 1 },
           },
         },
