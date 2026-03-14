@@ -1,6 +1,6 @@
 # PROJECT_CONTRACT_SNAPSHOT
 
-**APP_VERSION:** 2.3.0
+**APP_VERSION:** 2.4.0
 
 ## Contract-Status
 - Manifest-first aktiv
@@ -14,6 +14,9 @@
 - UI-DOM-/Feedback-Helfer in `ui.dom.js` und `ui.feedback.js` extrahiert
 - Public Browser API aus `main.js` in `src/app/runtime/publicApi.js` extrahiert (kompatible Hooks bleiben)
 - Runtime-Helfer aus `main.js` in `src/app/runtime/worldStateLog.js`, `reportUtils.js`, `bootStatus.js`
+- Deterministisches Advisor-Read-Model als gemeinsame Source of Truth fuer `render_game_to_text`, HUD und Statuspanel
+- Main-Run-Defaults: Placement Cost standardmaessig an, Global Learning standardmaessig aus, Win-Mode nach Tick 0 fixiert
+- Renderer respektiert `meta.activeOverlay` als echte Diagnoseansicht fuer Energie, Toxin, Naehrstoffe, Territorium und Konflikt
 
 ## Kernmodule
 - `src/project/contract/*`
@@ -37,5 +40,5 @@
 ## Offene Schwerpunkte
 - Performance-Profiling und Reduktion von Render-/Sim-Hotspots
 - weitere Entmonolithisierung im Sim-Reducer
-- visuelle Feedback-Dichte im Gameplay erhoehen
+- visuelle Feedback-Dichte im Gameplay weiter schaerfen
 - Hotspot-Messung siehe `docs/PERF_HOTSPOTS.md`

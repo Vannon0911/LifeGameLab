@@ -16,6 +16,7 @@ function mkStore(seed = "interact-1") {
 }
 
 const store = mkStore();
+store.dispatch({ type: "SET_PLACEMENT_COST", payload: { enabled: false } });
 
 // SET_UI must not be placebo.
 store.dispatch({ type: "SET_UI", payload: { showBiochargeOverlay: true, expertMode: true } });
