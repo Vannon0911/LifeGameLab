@@ -1,6 +1,7 @@
 import { startEvidenceCase } from "./support/liveTestKit.mjs";
 startEvidenceCase("test-freeze-contract.mjs");
 import { manifest } from "../src/project/project.manifest.js";
+import { WORLD_PRESET_IDS, getWorldPreset } from "../src/game/sim/worldPresets.js";
 import { GAME_MODE, RUN_PHASE } from "../src/game/contracts/ids.js";
 
 function assert(cond, msg) {
@@ -16,6 +17,9 @@ const requiredActions = [
   "START_DNA_ZONE_SETUP",
   "TOGGLE_DNA_ZONE_CELL",
   "CONFIRM_DNA_ZONE",
+  "BEGIN_INFRA_BUILD",
+  "BUILD_INFRA_PATH",
+  "CONFIRM_INFRA_PATH",
   "SET_WORLD_PRESET",
   "HARVEST_PULSE",
   "PRUNE_CLUSTER",
@@ -43,6 +47,10 @@ for (const key of [
   "zone2PlacementBudget",
   "dnaZoneCommitted",
   "nextInfraUnlockCostDNA",
+  "infrastructureUnlocked",
+  "infraBuildMode",
+  "infraBuildCostEnergy",
+  "infraBuildCostDNA",
   "cpuBootstrapDone",
   "meanWaterField",
   "stageProgressScore",
@@ -62,6 +70,7 @@ assert(worldKeys.biomeId?.ctor === "Int8Array", "world.biomeId missing or wrong 
 assert(worldKeys.founderMask?.ctor === "Uint8Array", "world.founderMask missing or wrong type");
 assert(worldKeys.coreZoneMask?.ctor === "Uint8Array", "world.coreZoneMask missing or wrong type");
 assert(worldKeys.dnaZoneMask?.ctor === "Uint8Array", "world.dnaZoneMask missing or wrong type");
+assert(worldKeys.infraCandidateMask?.ctor === "Uint8Array", "world.infraCandidateMask missing or wrong type");
 assert(worldKeys.visibility?.ctor === "Uint8Array", "world.visibility missing or wrong type");
 assert(worldKeys.explored?.ctor === "Uint8Array", "world.explored missing or wrong type");
 
@@ -78,6 +87,19 @@ assert(manifest.stateSchema?.shape?.sim?.shape?.zone2Unlocked?.default === false
 assert(manifest.stateSchema?.shape?.sim?.shape?.zone2PlacementBudget?.default === 0, "sim.zone2PlacementBudget default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.dnaZoneCommitted?.default === false, "sim.dnaZoneCommitted default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.nextInfraUnlockCostDNA?.default === 0, "sim.nextInfraUnlockCostDNA default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.infrastructureUnlocked?.default === false, "sim.infrastructureUnlocked default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.infraBuildMode?.default === "", "sim.infraBuildMode default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.infraBuildCostEnergy?.default === 0, "sim.infraBuildCostEnergy default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.infraBuildCostDNA?.default === 0, "sim.infraBuildCostDNA default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.cpuBootstrapDone?.default === 0, "sim.cpuBootstrapDone default drift");
+
+for (const presetId of WORLD_PRESET_IDS) {
+  const preset = getWorldPreset(presetId);
+  assert(Number(preset?.phaseD?.infraBuildCostEnergy || 0) > 0, `${presetId} phaseD.infraBuildCostEnergy missing`);
+  assert(Number(preset?.phaseD?.infraBuildCostDNA || 0) > 0, `${presetId} phaseD.infraBuildCostDNA missing`);
+  assert(Number(preset?.phaseD?.visionRadiusCore || 0) >= 1, `${presetId} phaseD.visionRadiusCore missing`);
+  assert(Number(preset?.phaseD?.visionRadiusDNA || 0) >= 1, `${presetId} phaseD.visionRadiusDNA missing`);
+  assert(Number(preset?.phaseD?.visionRadiusInfra || 0) >= 1, `${presetId} phaseD.visionRadiusInfra missing`);
+}
 
 console.log("FREEZE_CONTRACT_OK phase-a contract surface is bound");

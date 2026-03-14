@@ -120,6 +120,7 @@ export function expandWorldPreserve(world, step = 1) {
   next.zoneMap = copy1(world.zoneMap || new Int8Array(oldN), Int8Array);
   next.coreZoneMask = copy1(world.coreZoneMask || new Uint8Array(oldN), Uint8Array);
   next.dnaZoneMask = copy1(world.dnaZoneMask || new Uint8Array(oldN), Uint8Array);
+  next.infraCandidateMask = copy1(world.infraCandidateMask || new Uint8Array(oldN), Uint8Array);
   next.hue = copy1(world.hue || new Float32Array(oldN), Float32Array);
   next.lineageId = copy1(world.lineageId || new Uint32Array(oldN), Uint32Array);
   next.age = copy1(world.age || new Uint16Array(oldN), Uint16Array);

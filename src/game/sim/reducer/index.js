@@ -448,7 +448,7 @@ export function makeInitialState() {
     world: null,
     sim: {
       tick: 0, running: false, runPhase: RUN_PHASE.GENESIS_SETUP, founderBudget: 4, founderPlaced: 0,
-      unlockedZoneTier: 0, nextZoneUnlockKind: "", nextZoneUnlockCostEnergy: 0, zoneUnlockProgress: 0, coreEnergyStableTicks: 0, zone2Unlocked: false, zone2PlacementBudget: 0, dnaZoneCommitted: false, nextInfraUnlockCostDNA: 0, cpuBootstrapDone: 0,
+      unlockedZoneTier: 0, nextZoneUnlockKind: "", nextZoneUnlockCostEnergy: 0, zoneUnlockProgress: 0, coreEnergyStableTicks: 0, zone2Unlocked: false, zone2PlacementBudget: 0, dnaZoneCommitted: false, nextInfraUnlockCostDNA: 0, infrastructureUnlocked: false, infraBuildMode: "", infraBuildCostEnergy: 0, infraBuildCostDNA: 0, cpuBootstrapDone: 0,
       aliveCount: 0, aliveRatio: 0,
       meanLAlive: 0, meanEnergyAlive: 0, meanReserveAlive: 0,
       meanNutrientField: 0, meanToxinField: 0, meanSaturationField: 0, meanPlantField: 0,
@@ -708,6 +708,9 @@ export function reducer(state, action, { rng }) {
       if (!touchesCore) return [];
       if (!areFounderTilesConnected8(selectedIndices, w, h)) return [];
       const nextInfraUnlockCostDNA = Math.max(0, Number(getWorldPreset(state.meta.worldPresetId)?.phaseC?.nextInfraUnlockCostDNA || 0));
+      const phaseD = getWorldPreset(state.meta.worldPresetId)?.phaseD || {};
+      const infraBuildCostEnergy = Math.max(0, Number(phaseD.infraBuildCostEnergy || 0));
+      const infraBuildCostDNA = Math.max(0, Number(phaseD.infraBuildCostDNA || 0));
       const patches = [
         { op: "set", path: "/world/dnaZoneMask", value: cloneTypedArray(world.dnaZoneMask) },
         { op: "set", path: "/sim/dnaZoneCommitted", value: true },
@@ -717,6 +720,10 @@ export function reducer(state, action, { rng }) {
         { op: "set", path: "/sim/zoneUnlockProgress", value: 0 },
         { op: "set", path: "/sim/coreEnergyStableTicks", value: 0 },
         { op: "set", path: "/sim/nextInfraUnlockCostDNA", value: nextInfraUnlockCostDNA },
+        { op: "set", path: "/sim/infrastructureUnlocked", value: false },
+        { op: "set", path: "/sim/infraBuildMode", value: "" },
+        { op: "set", path: "/sim/infraBuildCostEnergy", value: infraBuildCostEnergy },
+        { op: "set", path: "/sim/infraBuildCostDNA", value: infraBuildCostDNA },
         { op: "set", path: "/sim/zone2PlacementBudget", value: 0 },
         { op: "set", path: "/sim/runPhase", value: RUN_PHASE.RUN_ACTIVE },
         { op: "set", path: "/sim/running", value: true },
@@ -724,6 +731,11 @@ export function reducer(state, action, { rng }) {
       assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
+
+    case "BEGIN_INFRA_BUILD":
+    case "BUILD_INFRA_PATH":
+    case "CONFIRM_INFRA_PATH":
+      return [];
 
     case "TOGGLE_RUNNING": {
       const running = action.payload?.running ?? !state.sim.running;
