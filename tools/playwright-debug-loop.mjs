@@ -9,6 +9,13 @@ const DEFAULT_PLAYWRIGHT_MODULE = path.join(
   "playwright",
   "index.mjs"
 );
+const PANEL_FLOW = [
+  { key: "lage", buttonName: "Lage Panel öffnen" },
+  { key: "eingriffe", buttonName: "Eingriffe Panel öffnen" },
+  { key: "evolution", buttonName: "Evolution Panel öffnen" },
+  { key: "welt", buttonName: "Welt Panel öffnen" },
+  { key: "labor", buttonName: "Labor Panel öffnen" },
+];
 
 function parseArgs(argv) {
   const args = {
@@ -155,6 +162,19 @@ async function capture(page, outPath) {
   });
 }
 
+async function capturePanelRaster(page, outDir, prefix) {
+  const panels = [];
+  for (const panel of PANEL_FLOW) {
+    const button = page.getByRole("button", { name: panel.buttonName });
+    await button.click();
+    await page.waitForTimeout(180);
+    const panelPath = path.join(outDir, `${prefix}-panel-${panel.key}.png`);
+    await capture(page, panelPath);
+    panels.push(panelPath);
+  }
+  return panels;
+}
+
 async function main() {
   const args = parseArgs(process.argv);
   ensureDir(args.outDir);
@@ -198,6 +218,7 @@ async function main() {
         const advanced = await advance(page, args.advanceMs);
         await page.waitForTimeout(args.settleMs);
         const running = await readState(page);
+        const panelRaster = await capturePanelRaster(page, args.outDir, prefix);
 
         await capture(page, path.join(args.outDir, `${prefix}-run.png`));
         fs.writeFileSync(path.join(args.outDir, `${prefix}-run.json`), JSON.stringify({
@@ -207,6 +228,7 @@ async function main() {
             appliedSpeed,
             started,
             advanced,
+            panelRaster,
           },
         }, null, 2));
         fs.writeFileSync(path.join(args.outDir, `${prefix}-console.json`), JSON.stringify(consoleLog, null, 2));
@@ -218,6 +240,7 @@ async function main() {
           tick: Number(running?.text?.tick || 0),
           running: !!running?.text?.running,
           playerAlive: Number(running?.text?.playerAlive || 0),
+          rasterPanels: panelRaster.length,
           consoleErrors: consoleLog.filter((entry) => entry.type === "error" || entry.type === "pageerror").length,
         });
       } finally {
@@ -232,6 +255,7 @@ async function main() {
 
   fs.writeFileSync(path.join(args.outDir, "summary.json"), JSON.stringify(runSummary, null, 2));
   console.log(JSON.stringify({ ok: true, outDir: args.outDir, runs: runSummary }, null, 2));
+  process.exit(0);
 }
 
 main().catch((err) => {
