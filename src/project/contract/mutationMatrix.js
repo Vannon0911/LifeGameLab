@@ -40,6 +40,7 @@ export const mutationMatrix = {
   ],
   CONFIRM_DNA_ZONE: [
     "/world/dnaZoneMask",
+    "/world/infraCandidateMask",
     "/sim/dnaZoneCommitted",
     "/sim/unlockedZoneTier",
     "/sim/nextZoneUnlockKind",
