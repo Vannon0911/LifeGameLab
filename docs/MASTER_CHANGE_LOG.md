@@ -67,5 +67,14 @@ Dieser Log rekonstruiert die Evolution der Codebasis bis zum aktuellen v2.3.0 Re
 - **Cleanup:** leere Legacy-Pfade und der verschachtelte Altcontainer wurden entfernt; `tests/test-path-hygiene.mjs` erzwingt jetzt deren echte Abwesenheit.
 - **Modularisierung:** spielernahe Reducer-Handler wurden nach `src/game/sim/playerActions.js` ausgelagert; gemeinsame Hilfen `cloneTypedArray` und `paintCircle` leben in `src/game/sim/shared.js`.
 
+## Nachtrag — 2026-03-14: Rework Plan v3 umgesetzt und Doku bereinigt
+- **UX-Flow:** Mobile-Sheet sitzt jetzt oberhalb des Docks statt darüber; Dock-Wechsel bei offenem Sheet ist im Browser verifiziert und blockiert nicht mehr.
+- **Produkt-HUD:** obere Leiste priorisiert jetzt `Kolonie`, `DNA`, `Risiko`, `Directive` und `Mission`; alte Dashboard-Semantik wurde reduziert.
+- **Panel-IA:** `Status` kommuniziert Mission, Risiko und Strukturreife; `Evolution` ist auf aktuellen und nächsten Ring fokussiert; `Systeme` trennt `Spielraum` von `Lab`-Blöcken wie Benchmark und Kernparametern.
+- **Rendering:** Weltpalette auf kontrolliertes Petrol-/Gruen-/Toxin-System umgestellt, Grid deutlich entschärft, doctrine-getönte Link-/Cluster-Lesbarkeit erhöht.
+- **Strukturgrammatik:** stabile `2x2`-Formationen werden jetzt als Biomodule mit gemeinsamer Hülle und Kern dargestellt; dichte Kolonien lesen sich sichtbar als reifere Kerne statt als lose Punktwolken.
+- **Text-State:** `window.render_game_to_text` liefert zusätzlich `risk`, `mission` und `structure`, damit Browser- und LLM-Entry dieselbe Produktlogik sehen.
+- **Cleanup:** reine Browser-Artefakte aus `output/` wurden nach der Abnahme wieder entfernt; offene uncommittete Testarbeit in `tests/test-determinism-*.mjs` und `tests/support/` blieb bewusst unberührt.
+
 ---
 *Ende der aktuell rekonstruierten und append-only geführten Historie.*
