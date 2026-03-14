@@ -88,5 +88,14 @@ Dieser Log rekonstruiert die Evolution der Codebasis bis zum aktuellen v2.3.0 Re
 - **Verifikation:** `npm test` weiterhin vollständig grün (inkl. Redteam), plus Einzelchecks auf neue Contract-Tests grün.
 - **Performance-Status (ehrlich):** 10%-Ziel je Profilfall ist noch offen; letzter Nachweis aus `node tools/profile-core.mjs` zeigt `4.154 / 5.481 / 9.003 ms_per_tick` für `32² / 64² / 96²`.
 
+## Nachtrag — 2026-03-14: Konservative Keeper-Umstrukturierung (Contract/LLM/Reducer)
+- **Kernel isoliert:** `src/core/kernel/*` unverändert als einziger Keeper belassen.
+- **Contract-Split:** `src/project/contract/{stateSchema,actionSchema,mutationMatrix,simGate,dataflow,manifest}.js` eingeführt; `src/project/project.manifest.js` bleibt kompatible Fassade.
+- **LLM-Split:** `src/project/llm/{policy,readModel,commandAdapter,gateSync}.js` eingeführt; keine Kernel- oder State-Erweiterung, nur Read-Model und Action-Adapter.
+- **Reducer-Split:** aktive Reducer-Implementierung nach `src/game/sim/reducer/index.js` verlagert; `src/game/sim/reducer.js` als Reexport erhalten.
+- **Domänenmodule:** neue Reducer-Module `metrics.js`, `worldRules.js`, `winConditions.js`, `techTreeOps.js`, `cpuActions.js`.
+- **SIM-Pfad kompatibel:** `src/game/sim/sim.js` als dünner Reexport auf `step.js` wiederhergestellt, ohne Legacy-Signaturen.
+- **Neue Tests:** `tests/test-contract-facade.mjs`, `tests/test-llm-contract.mjs`; `tests/test-wrapper-ban.mjs` auf Thin-Reexport-Regel gehärtet.
+
 ---
 *Ende der aktuell rekonstruierten und append-only geführten Historie.*
