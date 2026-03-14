@@ -1,8 +1,10 @@
 import {
   BRUSH_MODE,
+  GAME_MODE,
   GAME_RESULT,
   GOAL_CODE,
   OVERLAY_MODE,
+  RUN_PHASE,
   WIN_MODE,
 } from "../../game/contracts/ids.js";
 
@@ -13,14 +15,15 @@ export const stateSchema = {
       type: "object",
       shape: {
         seed: { type: "string", default: "life-light" },
-        gridW: { type: "number", default: 32 },
-        gridH: { type: "number", default: 32 },
-        speed: { type: "number", default: 4 },
+        gridW: { type: "number", default: 16 },
+        gridH: { type: "number", default: 16 },
+        speed: { type: "number", default: 2 },
         brushMode: { type: "string", default: BRUSH_MODE.OBSERVE },
         brushRadius: { type: "number", default: 3 },
         renderMode: { type: "string", default: "combined" },
         activeOverlay: { type: "string", default: OVERLAY_MODE.NONE },
         worldPresetId: { type: "string", default: "river_delta" },
+        gameMode: { type: "string", default: GAME_MODE.GENESIS },
         physics: { type: "object", shape: {}, allowUnknown: true },
         ui: {
           type: "object",
@@ -70,6 +73,9 @@ export const stateSchema = {
       shape: {
         tick: { type: "number", default: 0 },
         running: { type: "boolean", default: false },
+        runPhase: { type: "string", default: RUN_PHASE.GENESIS_SETUP },
+        founderBudget: { type: "number", default: 4 },
+        founderPlaced: { type: "number", default: 0 },
         aliveCount: { type: "number", default: 0 },
         aliveRatio: { type: "number", default: 0 },
         meanLAlive: { type: "number", default: 0 },

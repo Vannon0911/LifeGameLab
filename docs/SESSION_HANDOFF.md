@@ -34,6 +34,7 @@
 - `seededStartPhysics()` in `src/game/sim/reducer/index.js` wird nicht neu gebaut. Presets erweitern Startphysik nur ueber Config-Overrides.
 - `globalLearning` und `mergeWorldLearningIntoBank()` in `src/game/sim/reducer/techTreeOps.js` bleiben adaptive CPU-Basis und werden nicht ersetzt.
 - `expandWorldPreserve()` in `src/game/sim/reducer/worldRules.js` muss im `copy1`-Block `world.water` und `world.biomeId` mitfuehren.
+- Phase A bleibt contract-first: `GAME_MODE`, `RUN_PHASE`, `BRUSH_MODE.FOUNDER_PLACE`, `CONFIRM_FOUNDATION`, `meta.gameMode`, `sim.runPhase`, `sim.founderBudget`, `sim.founderPlaced`, `world.founderMask`, `world.visibility` und `world.explored` muessen zuerst in IDs, State, Gates und Metrics verankert werden, bevor Worldgen, Runtime oder UI darauf umgestellt werden.
 
 ## Progression und Main-Run-Interaktionen
 - `HARVEST_CELL`, rohe Brush-Modi, Diagnose-Controls und direkte Paint-Interaktionen bleiben technisch kompatibel, aber nur fuer `labor`.

@@ -3,6 +3,7 @@ startEvidenceCase("test-smoke.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
+import { GAME_MODE } from "../src/game/contracts/ids.js";
 
 const SEEDS = ["smoke-a", "smoke-b", "smoke-c", "smoke-d"];
 const TICKS = 100;
@@ -29,7 +30,7 @@ function snapshotState(state) {
 function runSeed(seed) {
   const store = createStore(manifest, { reducer, simStep: simStepPatch });
   store.dispatch({ type: "SET_SEED", payload: seed });
-  store.dispatch({ type: "GEN_WORLD" });
+  store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
   store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
   const checkpoints = new Map();
   for (let t = 0; t < TICKS; t++) {

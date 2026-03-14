@@ -1,6 +1,7 @@
 import {
   GAME_RESULT,
   GOAL_CODE,
+  RUN_PHASE,
   WIN_MODE,
   deriveGoalCode,
 } from "../../contracts/ids.js";
@@ -65,6 +66,7 @@ export function applyWinConditions(state, simOut, currentTick) {
       simOut.winMode = resolvedWinMode;
       simOut.gameEndTick = currentTick;
       simOut.running = false;
+      simOut.runPhase = RUN_PHASE.RESULT;
     }
   } else {
     simOut.gameResult = state.sim.gameResult;
@@ -75,6 +77,7 @@ export function applyWinConditions(state, simOut, currentTick) {
     simOut.lossStreakTicks = state.sim.lossStreakTicks;
     simOut.stockpileTicks = state.sim.stockpileTicks;
     simOut.cpuEnergyIn = state.sim.cpuEnergyIn;
+    simOut.runPhase = RUN_PHASE.RESULT;
   }
 }
 

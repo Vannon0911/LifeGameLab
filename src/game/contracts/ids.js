@@ -26,6 +26,28 @@ export const GAME_RESULT = Object.freeze({
   LOSS: "loss",
 });
 
+export const GAME_MODE = Object.freeze({
+  GENESIS: "genesis",
+  LAB_AUTORUN: "lab_autorun",
+});
+
+export const GAME_MODE_VALUES = Object.freeze([
+  GAME_MODE.GENESIS,
+  GAME_MODE.LAB_AUTORUN,
+]);
+
+export const RUN_PHASE = Object.freeze({
+  GENESIS_SETUP: "genesis_setup",
+  RUN_ACTIVE: "run_active",
+  RESULT: "result",
+});
+
+export const RUN_PHASE_VALUES = Object.freeze([
+  RUN_PHASE.GENESIS_SETUP,
+  RUN_PHASE.RUN_ACTIVE,
+  RUN_PHASE.RESULT,
+]);
+
 export const OVERLAY_MODE = Object.freeze({
   NONE: "none",
   ENERGY: "energy",
@@ -46,6 +68,7 @@ export const OVERLAY_MODE_VALUES = Object.freeze([
 
 export const BRUSH_MODE = Object.freeze({
   OBSERVE: "observe",
+  FOUNDER_PLACE: "founder_place",
   SPLIT_PLACE: "split_place",
   CELL_HARVEST: "cell_harvest",
   ZONE_PAINT: "zone_paint",
@@ -60,6 +83,7 @@ export const BRUSH_MODE = Object.freeze({
 
 export const BRUSH_MODE_VALUES = Object.freeze([
   BRUSH_MODE.OBSERVE,
+  BRUSH_MODE.FOUNDER_PLACE,
   BRUSH_MODE.SPLIT_PLACE,
   BRUSH_MODE.CELL_HARVEST,
   BRUSH_MODE.ZONE_PAINT,
@@ -107,6 +131,8 @@ const SETS = {
   winAny: new Set(Object.values(WIN_MODE)),
   goal: new Set(GOAL_CODE_VALUES),
   result: new Set(Object.values(GAME_RESULT)),
+  gameMode: new Set(GAME_MODE_VALUES),
+  runPhase: new Set(RUN_PHASE_VALUES),
 };
 
 export function isBrushMode(value) {
@@ -125,6 +151,14 @@ export function isWinMode(value) {
   return SETS.winAny.has(String(value || ""));
 }
 
+export function isGameMode(value) {
+  return SETS.gameMode.has(String(value || ""));
+}
+
+export function isRunPhase(value) {
+  return SETS.runPhase.has(String(value || ""));
+}
+
 export function normalizeBrushMode(value, fallback = BRUSH_MODE.OBSERVE) {
   const v = String(value || "");
   return SETS.brush.has(v) ? v : fallback;
@@ -133,6 +167,16 @@ export function normalizeBrushMode(value, fallback = BRUSH_MODE.OBSERVE) {
 export function normalizeOverlayMode(value, fallback = OVERLAY_MODE.NONE) {
   const v = String(value || "");
   return SETS.overlay.has(v) ? v : fallback;
+}
+
+export function normalizeGameMode(value, fallback = GAME_MODE.GENESIS) {
+  const v = String(value || "");
+  return SETS.gameMode.has(v) ? v : fallback;
+}
+
+export function normalizeRunPhase(value, fallback = RUN_PHASE.GENESIS_SETUP) {
+  const v = String(value || "");
+  return SETS.runPhase.has(v) ? v : fallback;
 }
 
 export function normalizeGoalCode(value, fallback = GOAL_CODE.HARVEST_SECURE) {

@@ -22,14 +22,17 @@ export const WORLD_KEYS = [
   "lineageDefenseReadiness",
   "clusterAttackState",
   "zoneMap",
+  "founderMask",
+  "visibility",
+  "explored",
 ];
 
 export const WORLD_SIM_STEP_KEYS = WORLD_KEYS.filter(
-  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "superId" && k !== "actionMap" && k !== "born" && k !== "died"
+  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "superId" && k !== "actionMap" && k !== "born" && k !== "died" && k !== "founderMask" && k !== "visibility" && k !== "explored"
 );
 
 export const SIM_KEYS = [
-  "tick", "running",
+  "tick", "running", "runPhase", "founderBudget", "founderPlaced",
   "aliveCount", "aliveRatio",
   "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
   "meanNutrientField", "meanToxinField", "meanSaturationField", "meanPlantField", "meanBiochargeField",

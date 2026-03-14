@@ -4,6 +4,7 @@ import { createStore } from "../src/core/kernel/store.js";
 import { manifest } from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
 import {
+  GAME_MODE,
   GAME_RESULT,
   GOAL_CODE_VALUES,
   OVERLAY_MODE,
@@ -17,7 +18,7 @@ function assert(cond, msg) {
 }
 
 const store = createStore(manifest, { reducer, simStep: simStepPatch });
-store.dispatch({ type: "GEN_WORLD" });
+store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
 store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
 
 assert(store.getState().sim.winMode === WIN_MODE.SUPREMACY, "default winMode drift");

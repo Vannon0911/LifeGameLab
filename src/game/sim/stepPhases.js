@@ -71,10 +71,10 @@ export function runFieldPhase(world, phy, tick, traitHarvestFn) {
   };
 }
 
-export function runWorldSystemsPhase(world, phy, tick) {
+export function runWorldSystemsPhase(world, phy, tick, options = {}) {
   applyPlantLifecycle(world, phy, tick);
   const plantsPrunedLastStep = enforcePlantTileCap(world);
-  applyWorldAi(world, tick);
+  applyWorldAi(world, tick, options);
   applyDynamicDamping(world);
   computeClusterAndLinks(world, phy);
   return { plantsPrunedLastStep };
@@ -105,4 +105,3 @@ export function runFinalizePopulationPhase(world, phy) {
     cpuAliveCount,
   };
 }
-

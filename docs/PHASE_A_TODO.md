@@ -1,0 +1,408 @@
+# Phase A TODO
+
+Zweck: Abbruch-sichere Arbeitsliste fuer den Genesis-Start ohne Auto-Founder.
+
+## Status
+
+- [x] A1 Enums / State / Contracts
+  - `GAME_MODE`, `RUN_PHASE`, `BRUSH_MODE.FOUNDER_PLACE`
+  - `meta.gameMode`
+  - `sim.runPhase`, `sim.founderBudget`, `sim.founderPlaced`
+  - `world.founderMask`, `world.visibility`, `world.explored`
+  - Contracts / Gates / Metrics / fokussierte Contract-Tests
+  - Verifiziert mit:
+    - `node tests/test-freeze-contract.mjs`
+    - `node tests/test-sim-gate.mjs`
+    - `node tests/test-contract-facade.mjs`
+    - `node tests/test-dataflow-contract.mjs`
+    - `node tests/test-ui-strategy-contract.mjs`
+    - `node tests/test-string-contract.mjs`
+    - `node tests/test-interactions.mjs`
+- [x] A2 Worldgen / Bootstrap
+  - `GEN_WORLD(payload?)` optional um `{ gameMode }` erweitern
+  - `generateWorld(..., { gameMode })`
+  - `GENESIS` ohne Player-/CPU-Cluster
+  - `LAB_AUTORUN` mit Legacy-Seed
+  - Verifiziert mit:
+    - `node tests/test-bootstrap-gen-world.mjs`
+    - `node tests/test-sim-modules.mjs`
+    - `node tests/test-freeze-contract.mjs`
+    - `node tests/test-dataflow-contract.mjs`
+    - `node tests/test-sim-gate.mjs`
+    - `node tests/test-string-contract.mjs`
+- [x] A3 World AI
+  - `seedFoundersIfEmpty()` nur in `LAB_AUTORUN`
+  - keine Auto-Founder im Standardmodus
+  - Verifiziert mit:
+    - `node tests/test-sim-modules.mjs`
+    - `node tests/test-bootstrap-gen-world.mjs`
+    - `node tests/test-freeze-contract.mjs`
+- [x] A4 Runtime-Gating
+  - `shouldAdvanceSimulation(state)`
+  - `SIM_STEP` / `APPLY_BUFFERED_SIM_STEP` in `GENESIS_SETUP` und `RESULT` blockieren
+  - `TOGGLE_RUNNING(true)` in Genesis als No-Op
+  - Verifiziert mit:
+    - `node tests/test-bootstrap-gen-world.mjs`
+    - `node tests/test-buffered-step.mjs`
+    - `node tests/test-layer-split.mjs`
+    - `npm run test:quick`
+- [x] A5 StartWindows
+  - alle Presets mit hart normierten `startWindows.player/cpu`
+  - halb offene Rechteck-Regel zentral implementieren
+  - Verifiziert mit:
+    - `node tests/test-world-start-windows.mjs`
+    - `npm run test:quick`
+- [x] A6 Founder-Placement
+  - `PLACE_CELL` in `GENESIS_SETUP` auf Founder-Placement umbiegen
+  - max. 4 Founder, Removal vor Confirm, keine DNA-Kosten
+  - Verifiziert mit:
+    - `node tests/test-founder-placement.mjs`
+    - `npm run test:quick`
+- [x] A7 `CONFIRM_FOUNDATION`
+  - genau 4 Founder validieren
+  - Alive / Owner / FounderMask / Startfenster / eine 8er-Komponente
+  - `RUN_ACTIVE` + `running=true`
+  - Verifiziert mit:
+    - `node tests/test-confirm-foundation.mjs`
+    - `npm run test:quick`
+- [x] A8 Genesis-Actions sperren
+  - `PLACE_SPLIT_CLUSTER`
+  - `SET_ZONE`
+  - `HARVEST_CELL`
+  - `BUY_EVOLUTION`
+  - `HARVEST_PULSE`
+  - `PRUNE_CLUSTER`
+  - `RECYCLE_PATCH`
+  - `SEED_SPREAD`
+  - Verifiziert mit:
+    - `node tests/test-genesis-action-gates.mjs`
+    - `npm run test:quick`
+- [x] A9 Caller trennen
+  - Standard-Reset-Caller auf `GEN_WORLD()`
+  - Lab-/Legacy-Caller auf `GEN_WORLD({ gameMode: LAB_AUTORUN })` + `TOGGLE_RUNNING(true)`
+  - Verifiziert mit:
+    - `npm run test:quick`
+- [x] A10 UI-Minimum
+  - `FOUNDER_PLACE` als Genesis-Brush
+  - Founder-Zaehler
+  - Button `Gruendung bestaetigen`
+  - Play/Step-Genesis-Hinweis
+  - `getInfluencePhase()` -> `Gruenden`
+  - Verifiziert mit:
+    - `node tests/test-genesis-ui-minimum.mjs`
+    - `npm run test:quick`
+- [x] A11 Result-Phase
+  - `applyWinConditions()` setzt `runPhase=RESULT`
+  - `RESULT` blockiert Step / Placement / Confirm
+  - Verifiziert mit:
+    - `node tests/test-result-phase.mjs`
+    - `npm run test:quick`
+- [x] A12 Finalisierung
+  - Smokes sauber zwischen Standard und `LAB_AUTORUN` trennen
+  - Doku / technische Notizen / Changelog aktualisieren
+  - Scope-Check: kein Phase-B-Code
+  - Verifiziert mit:
+    - `npm run test:quick`
+    - `npm run test:truth`
+    - `npm run test:stress`
+
+## Harte Nicht-Ziele
+
+- kein `GENESIS_ZONE`
+- kein CPU-Spawn nach Founder-Bestaetigung
+- kein Fog-Rendering
+- keine aktive Fuellung von `visibility` / `explored`
+- keine neue Zone-Semantik
+- keine Pattern-Engine
+- kein Tech-Tree-Rework
+- kein oeffentliches `SET_GAME_MODE`
+
+---
+
+# Phase B TODO
+
+Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenfolge.
+
+## Status
+
+### B1 Contract-/State-Basis
+- [ ] `RUN_PHASE.GENESIS_ZONE` einfuehren
+- [ ] `world.coreZoneMask` ergaenzen
+- [ ] `sim.unlockedZoneTier` ergaenzen
+- [ ] `sim.nextZoneUnlockKind` ergaenzen
+- [ ] `sim.nextZoneUnlockCostEnergy` ergaenzen
+- [ ] `sim.zoneUnlockProgress` ergaenzen
+- [ ] `sim.coreEnergyStableTicks` ergaenzen
+- [ ] `sim.cpuBootstrapDone` ergaenzen
+- [ ] `CONFIRM_CORE_ZONE` Action ergaenzen
+- [ ] Contracts/Gates/Metrics/Assertions updaten
+- [ ] Tests + Doku aktualisieren
+- Details:
+  - Ziel: reine Contract-/State-Basis fuer Energiekern + Unlock-Meter ohne Gameplay-Rework.
+  - Dateien:
+    - `src/game/contracts/ids.js`
+    - `src/game/sim/reducer/index.js`
+    - `src/project/contract/stateSchema.js`
+    - `src/project/contract/actionSchema.js`
+    - `src/project/contract/mutationMatrix.js`
+    - `src/project/contract/dataflow.js`
+    - `src/project/contract/simGate.js`
+    - `src/game/sim/reducer/metrics.js`
+    - `src/game/sim/gate.js` (oder aktueller Ort von `assertSimPatchesAllowed()`)
+  - Abnahme:
+    - Build laeuft.
+    - Enums/Action/State-Felder vollstaendig im Contract registriert.
+    - `world.coreZoneMask` ist im World-State vorhanden.
+    - Keine neue allgemeine Zone-Semantik eingefuehrt.
+  - Tests:
+    - Contract-/Schema-Tests fuer neue Keys + `CONFIRM_CORE_ZONE`.
+    - Patch-Assertion fuer `coreZoneMask`.
+  - Doku:
+    - TODO/Plan + technische Notiz "Phase B Contract-Basis".
+  - Nicht-Ziele:
+    - kein `ZONE_ROLE`-System, kein `zoneMap`-Rework, kein Kernel-Angriff.
+
+### B2 Foundation -> Genesis Zone
+- [ ] `CONFIRM_FOUNDATION` fuehrt nach `GENESIS_ZONE` statt `RUN_ACTIVE`
+- [ ] `running` bleibt `false`
+- [ ] Founder werden gesperrt
+- [ ] Tests + Doku aktualisieren
+- Details:
+  - Ziel: Founder-Bestaetigung startet den Run nicht mehr direkt.
+  - Dateien:
+    - `src/game/sim/reducer/index.js`
+    - `src/game/sim/playerActions.js`
+    - ggf. UI-Bindings nur falls zwingend fuer den neuen Zwischenzustand.
+  - Abnahme:
+    - Nach `CONFIRM_FOUNDATION`: `runPhase=GENESIS_ZONE`, `running=false`.
+    - Kein CPU-Spawn, kein Sim-Fortschritt.
+    - Founder bleiben bestehen und sind eingefroren.
+    - `coreZoneMask` bleibt leer.
+  - Tests:
+    - `CONFIRM_FOUNDATION -> GENESIS_ZONE`.
+    - `running` bleibt `false`.
+    - `coreZoneMask` bleibt leer.
+  - Doku:
+    - Founder-Flow-Text auf "Foundation -> Genesis Zone -> Core Confirm" umstellen.
+  - Nicht-Ziele:
+    - kein Ueberspringen nach `RUN_ACTIVE`.
+
+### B3 Energiekern bestaetigen
+- [ ] `CONFIRM_CORE_ZONE` validiert Founder-Komponente
+- [ ] `coreZoneMask` aus Founder-Komponente erzeugen
+- [ ] `unlockedZoneTier = 1` setzen
+- [ ] `nextZoneUnlockKind = "DNA"` setzen
+- [ ] `nextZoneUnlockCostEnergy` aus Preset lesen
+- [ ] `zoneUnlockProgress = 0` setzen
+- [ ] Tests + Doku aktualisieren
+- Details:
+  - Ziel: bestaetigte Founder-Komponente wird exakt erster Energiekern.
+  - Erfolg nur wenn:
+    - `runPhase===GENESIS_ZONE`
+    - genau 4 Founder, alle alive, player-owned, `founderMask===1`
+    - genau eine 8-neighbor-Komponente
+    - `coreZoneMask` noch leer
+  - Erfolgseffekt:
+    - Founder-Komponente nach `world.coreZoneMask` kopieren
+    - `sim.unlockedZoneTier=1`
+    - `sim.nextZoneUnlockKind="DNA"`
+    - `sim.nextZoneUnlockCostEnergy` aus Preset
+    - `sim.zoneUnlockProgress=0`
+    - `sim.coreEnergyStableTicks=0`
+  - Dateien:
+    - `src/game/sim/reducer/index.js`
+    - `src/game/sim/playerActions.js` (oder neuer klarer Handler)
+    - `src/game/sim/worldPresets.js`
+  - Abnahme:
+    - `coreZoneMask` markiert bitgenau nur Founder-Komponente.
+    - Keine DNA-Zone, kein `zoneMap`-Pfad angeruehrt.
+  - Tests:
+    - erfolgreicher Kern-Commit
+    - inkonsistenter/leerer Kern blockiert
+    - bitgenaue Maskenpruefung
+  - Doku:
+    - Energiekern-Regel + Validierungsbedingungen dokumentieren.
+  - Nicht-Ziele:
+    - keine Pattern-Semantik, keine neue Zonenlogik.
+
+### B4 CPU-Bootstrap
+- [ ] Standardmodus: CPU erst nach `CONFIRM_CORE_ZONE` spawnen
+- [ ] deterministischen Spawn-Helfer bauen/extrahieren
+- [ ] `cpuBootstrapDone` gegen Doppelseed absichern
+- [ ] Tests + Doku aktualisieren
+- Details:
+  - Ziel: CPU im Standardmodus genau einmal und deterministisch nach Kernbestaetigung.
+  - Regeln:
+    - Lab/Legacy-Seed bleibt unveraendert.
+    - Trigger nur bei erfolgreichem `CONFIRM_CORE_ZONE`.
+    - Spawn in `startWindows.cpu`, deterministisch ueber `(seed, worldPresetId)`.
+    - danach `sim.cpuBootstrapDone=true`.
+  - Dateien:
+    - `src/game/sim/worldAi.js`
+    - `src/game/sim/worldgen.js` (oder reiner Spawn-Helfer)
+    - `src/game/sim/reducer/index.js`
+    - `src/game/sim/worldPresets.js`
+  - Abnahme:
+    - vor Kernbestaetigung keine CPU im Standardmodus
+    - nach Kernbestaetigung genau ein Spawn
+    - kein Doppelseed bei wiederholten Dispatches
+  - Tests:
+    - CPU fehlt vor `CONFIRM_CORE_ZONE`
+    - CPU erscheint danach
+    - Spawn deterministisch
+    - `cpuBootstrapDone` blockiert Doppelspawn
+  - Doku:
+    - CPU-Bootstrap als Einmalpfad in Phase B dokumentieren.
+  - Nicht-Ziele:
+    - keine laufende CPU-KI-Aenderung, kein KI-Rework.
+
+### B5 DNA-Unlock-Meter
+- [ ] `zoneUnlockProgress` aus bestehender Energie ableiten
+- [ ] `coreEnergyStableTicks` zaehlen
+- [ ] keine neue Ressource einfuehren
+- [ ] Tests + Doku aktualisieren
+- Details:
+  - Ziel: sofort sichtbares Progress-Ziel fuer Zone 2 (`DNA`) ohne neue Oekonomie.
+  - Minimalmodell:
+    - `zoneUnlockProgress = clamp(playerEnergyStored / nextZoneUnlockCostEnergy, 0, 1)`
+    - `coreEnergyStableTicks++`, wenn:
+      - `playerEnergyNet > 0`
+      - mindestens 1 lebende Player-Zelle in `coreZoneMask`
+    - sonst `coreEnergyStableTicks=0`
+  - Dateien:
+    - `src/game/sim/reducer/index.js`
+    - `src/game/sim/reducer/metrics.js`
+    - ggf. `src/game/sim/reducer/progression.js` nur bei minimalem Bridge-Code
+  - Abnahme:
+    - Meter reagiert deterministisch auf bestehende Energie-Metriken.
+    - keine neue Ressource, kein Stage-Rewire.
+  - Tests:
+    - Fortschritt `0` bei leerer/instabiler Energie
+    - Fortschritt steigt mit `playerEnergyStored`
+    - stabile Ticks zaehlen korrekt
+  - Doku:
+    - Unlock-Meter-Regel + Tick-Bedingungen dokumentieren.
+  - Nicht-Ziele:
+    - keine DNA-Zone-Freischaltung in Phase B.
+
+### B6 Genesis-Zone-Gates
+- [ ] `PLACE_CELL` in `GENESIS_ZONE` blockieren
+- [ ] `PLACE_SPLIT_CLUSTER` in `GENESIS_ZONE` blockieren
+- [ ] `SET_ZONE` in `GENESIS_ZONE` blockieren
+- [ ] `HARVEST_CELL` in `GENESIS_ZONE` blockieren
+- [ ] `BUY_EVOLUTION` in `GENESIS_ZONE` blockieren
+- [ ] `HARVEST_PULSE` in `GENESIS_ZONE` blockieren
+- [ ] `PRUNE_CLUSTER` in `GENESIS_ZONE` blockieren
+- [ ] `RECYCLE_PATCH` in `GENESIS_ZONE` blockieren
+- [ ] `SEED_SPREAD` in `GENESIS_ZONE` blockieren
+- [ ] `SIM_STEP/APPLY_BUFFERED_SIM_STEP/TOGGLE_RUNNING` in `GENESIS_ZONE` blockieren
+- [ ] Tests + Doku aktualisieren
+- Details:
+  - Ziel: `GENESIS_ZONE` ist harte Zwischenphase ohne versteckten Run.
+  - Einzige erlaubte Aktion in `GENESIS_ZONE`: `CONFIRM_CORE_ZONE`.
+  - Dateien:
+    - `src/game/sim/reducer/index.js`
+    - `src/game/sim/playerActions.js`
+    - `src/game/sim/mainRunActions.js`
+    - `src/game/sim/step.js`
+  - Abnahme:
+    - alle gelisteten Legacy-/Run-Actions in `GENESIS_ZONE` liefern `[]` bzw. No-Op.
+    - `TOGGLE_RUNNING(true)` bleibt ohne Fortschritt.
+  - Tests:
+    - jede gesperrte Action mindestens einmal absichern.
+  - Doku:
+    - Action-Gates-Tabelle um `GENESIS_ZONE` erweitern.
+  - Nicht-Ziele:
+    - kein "verkleidetes RUN_ACTIVE".
+
+### B7 UI-Minimum
+- [ ] Founder-Komponente in `GENESIS_ZONE` hervorheben
+- [ ] Button `Energiekern bestaetigen` einbauen
+- [ ] Play/Step in `GENESIS_ZONE` deaktivieren oder Hinweis
+- [ ] Influence-Phase auf Kernzone/Energiekern setzen
+- [ ] DNA-Unlock-Meter nach Kernbestaetigung anzeigen
+- [ ] Tests + Doku aktualisieren
+- Details:
+  - Ziel: Flow ist im UI als absichtlicher Startschritt klar sichtbar.
+  - In `GENESIS_ZONE`:
+    - Founder-Komponente visuell hervorheben
+    - Text/Button "Energiekern bestaetigen"
+    - Play/Step deaktiviert oder klarer Hinweis
+    - `getInfluencePhase()` zeigt Kernzone/Energiekern
+  - In `RUN_ACTIVE` nach Kernconfirm:
+    - Anzeige "Zone 2: DNA"
+    - Progress-Meter fuer `zoneUnlockProgress`
+    - `coreEnergyStableTicks` nur falls sauber platzierbar
+  - Dateien:
+    - `src/game/ui/ui.js`
+    - `src/game/ui/ui.model.js`
+    - `src/game/ui/ui.constants.js`
+    - ggf. `src/game/ui/ui.dom.js`
+    - ggf. `src/game/ui/ui.feedback.js`
+  - Abnahme:
+    - Nutzer versteht: Founder bestaetigt -> Kern bestaetigen -> Energie fuer DNA sammeln.
+  - Tests:
+    - `GENESIS_ZONE` Button/Hinweis
+    - Play/Step deaktiviert
+    - Unlock-Meter nach Kernbestaetigung
+    - Influence-Phase korrekt
+  - Doku:
+    - Phase-B-UI-Flow aktualisieren.
+  - Nicht-Ziele:
+    - keine DNA-Zonen-UI, kein Tech-Panel-Umbau.
+
+### B8 Caller/Smokes
+- [ ] Standard-Smokes um zweiten Confirm ergaenzen
+- [ ] Foundation->Core->Run Flow absichern
+- [ ] Lab-/Recovery-/Benchmark-Pfade gegen Regression pruefen
+- [ ] Tests + Doku aktualisieren
+- Details:
+  - Ziel: vorhandene Boot-/Reset-/Smoke-Pfade bleiben stabil.
+  - Regeln:
+    - Standard-Caller bleiben in `GENESIS_SETUP`.
+    - Lab-/Benchmark-/Recovery bleiben auf Lab-Pfad.
+    - Smokes mit altem Startsignal muessen jetzt nacheinander dispatchen:
+      - `CONFIRM_FOUNDATION`
+      - `CONFIRM_CORE_ZONE`
+  - Dateien:
+    - `src/app/main.js`
+    - `src/game/ui/ui.js`
+    - betroffene Smoke-/Gameplay-Tests
+  - Abnahme:
+    - kein stiller Autostart
+    - kein Smoke haengt wegen fehlendem zweitem Confirm
+    - Lab weiter kompatibel
+  - Tests:
+    - Standardflow `Genesis -> Foundation -> Core -> Run`
+    - Lab bleibt unveraendert explizit startbar
+  - Doku:
+    - Caller-/Smoke-Tabelle aktualisieren.
+  - Nicht-Ziele:
+    - keine neue Runtime-Pfadfamilie.
+
+### B9 Finalisierung
+- [ ] technische Notizen / Changelog aktualisieren
+- [ ] TODO-/Implementierungsstatus aktualisieren
+- [ ] Scope-Check: kein Pattern/Fog/Tech/Zone-Grossumbau
+- Details:
+  - Ziel: Phase B nur mit belegbarer Vollstaendigkeit abschliessen.
+  - Pflicht pro Ticket:
+    - Tests angepasst/erganzt
+    - TODO/Patchlog/Implementierungsstatus aktualisiert
+    - technische Doku + Smokes aktuell
+  - Gesamt-Abnahme:
+    - `CONFIRM_FOUNDATION` startet nicht mehr direkt den Run
+    - `GENESIS_ZONE` als echte Zwischenphase
+    - `CONFIRM_CORE_ZONE` stempelt Founder-Komponente nach `coreZoneMask`
+    - CPU-Bootstrap erst nach Kernconfirm, genau einmal deterministisch
+    - Unlock-Meter sichtbar (`unlockedZoneTier=1`, DNA-Ziel vorhanden)
+    - `GENESIS_ZONE` blockiert Altaktionen + Sim-Fortschritt
+    - Standard-Smokes mit 2 Confirms, Lab unveraendert
+  - Harte Scope-Bestaetigung:
+    - keine Pattern-Engine
+    - kein Fog-Rendering
+    - kein Tech-Tree-Rework
+    - kein allgemeines Zonen-Rework
+    - keine Auto-Expansion
+    - keine CPU-Logik jenseits einmaligem Bootstrap
+    - keine Kernel-Aenderung

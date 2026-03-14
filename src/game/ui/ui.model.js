@@ -12,7 +12,8 @@ export function getPlayerMemory(state) {
   return state?.world?.lineageMemory?.[playerLineageId] || null;
 }
 
-export function getInfluencePhase(stage, commandScore) {
+export function getInfluencePhase(stage, commandScore, runPhase = "") {
+  if (String(runPhase || "") === "genesis_setup") return "Gruenden";
   if (stage >= 4 && commandScore >= 0.28) return "Kommandieren";
   if (stage >= 2 && commandScore >= 0.12) return "Lenken";
   return "Beobachten";
