@@ -52,62 +52,100 @@ Zweck: DNA-Zone als echter zweiter Spielschritt nach stabilem Energiekern.
   - `node tests/test-string-contract.mjs`
 
 ### C2 DNA-Setup starten
-- [ ] `START_DNA_ZONE_SETUP` nur bei vollem DNA-Meter
-- [ ] `RUN_ACTIVE -> DNA_ZONE_SETUP`
-- [ ] `running=false`
-- [ ] `zone2Unlocked=true`
-- [ ] Placement-Budget aus Preset
-- [ ] Tests + Doku aktualisieren
+- [x] `START_DNA_ZONE_SETUP` nur bei vollem DNA-Meter
+- [x] `RUN_ACTIVE -> DNA_ZONE_SETUP`
+- [x] `running=false`
+- [x] `zone2Unlocked=true`
+- [x] Placement-Budget aus Preset
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-start-dna-zone-setup.mjs`
+  - `node tests/test-sim-gate.mjs`
+  - `node tools/run-test-suite.mjs quick`
 
 ### C3 DNA-Placement
-- [ ] nur alive + player-owned
-- [ ] Overlap mit `coreZoneMask` blockieren
-- [ ] max 4 Tiles
-- [ ] Adjazenzregel `touch_core_or_owned`
-- [ ] Removal vor Confirm
-- [ ] Tests + Doku aktualisieren
+- [x] nur alive + player-owned
+- [x] Overlap mit `coreZoneMask` blockieren
+- [x] max 4 Tiles
+- [x] Adjazenzregel `touch_core_or_owned`
+- [x] Removal vor Confirm
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-toggle-dna-zone-cell.mjs`
+  - `node tools/run-test-suite.mjs quick`
 
 ### C4 DNA-Commit
-- [ ] `CONFIRM_DNA_ZONE` validiert Komponente/Ownership/Adjazenz/Budget
-- [ ] `dnaZoneMask` committen
-- [ ] `dnaZoneCommitted=true`
-- [ ] `unlockedZoneTier=2`
-- [ ] `nextZoneUnlockKind=INFRA`
-- [ ] `nextInfraUnlockCostDNA` aus Preset
-- [ ] `RUN_ACTIVE + running=true`
-- [ ] Tests + Doku aktualisieren
+- [x] `CONFIRM_DNA_ZONE` validiert Komponente/Ownership/Adjazenz/Budget
+- [x] `dnaZoneMask` committen
+- [x] `dnaZoneCommitted=true`
+- [x] `unlockedZoneTier=2`
+- [x] `nextZoneUnlockKind=INFRA`
+- [x] `nextInfraUnlockCostDNA` aus Preset
+- [x] `RUN_ACTIVE + running=true`
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-confirm-dna-zone.mjs`
+  - `node tests/test-sim-gate.mjs`
+  - `node tools/run-test-suite.mjs quick`
 
 ### C5 Passive DNA-Erzeugung
-- [ ] committed DNA-Zone erhoeht `playerDNA` deterministisch
-- [ ] keine neue Ressource
-- [ ] `dnaYieldScale` aus Preset optional
-- [ ] Tests + Doku aktualisieren
+- [x] committed DNA-Zone erhoeht `playerDNA` deterministisch
+- [x] keine neue Ressource
+- [x] `dnaYieldScale` aus Preset optional
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-confirm-dna-zone.mjs`
+  - `node tools/run-test-suite.mjs quick`
 
 ### C6 DNA-Setup-Gates
-- [ ] Main-Run-Actions blockieren
-- [ ] `SIM_STEP`/`APPLY_BUFFERED_SIM_STEP`/`TOGGLE_RUNNING` blockieren
-- [ ] `PLACE_CELL` blockieren
-- [ ] Tests + Doku aktualisieren
+- [x] Main-Run-Actions blockieren
+- [x] `SIM_STEP`/`APPLY_BUFFERED_SIM_STEP`/`TOGGLE_RUNNING` blockieren
+- [x] `PLACE_CELL` blockieren
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-dna-zone-setup-gates.mjs`
+  - `node tools/run-test-suite.mjs quick`
 
 ### C7 UI-Minimum
-- [ ] Status `DNA-Zone setzen`
-- [ ] Placement-Zaehler `0/4`
-- [ ] Button `DNA-Zone bestaetigen`
-- [ ] Play/Step deaktivieren oder Hinweis
-- [ ] Post-Commit: `Zone 2 aktiv`
-- [ ] `Naechster Unlock: Infrastruktur`
-- [ ] Tests + Doku aktualisieren
+- [x] Status `DNA-Zone setzen`
+- [x] Placement-Zaehler `0/4`
+- [x] Button `DNA-Zone bestaetigen`
+- [x] Play/Step deaktivieren oder Hinweis
+- [x] Post-Commit: `Zone 2 aktiv`
+- [x] `Naechster Unlock: Infrastruktur`
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-genesis-ui-minimum.mjs`
+  - `node tests/test-ui-contract.mjs`
+  - `node tools/run-test-suite.mjs quick`
 
 ### C8 Caller/Smokes
-- [ ] Standard-Smokes um DNA-Schritt ergaenzen
-- [ ] `Foundation -> Core -> DNA -> Run` absichern
-- [ ] Lab-/Recovery-/Benchmark-Pfade gegen Regression pruefen
-- [ ] Tests + Doku aktualisieren
+- [x] Standard-Smokes um DNA-Schritt ergaenzen
+- [x] `Foundation -> Core -> DNA -> Run` absichern
+- [x] Lab-/Recovery-/Benchmark-Pfade gegen Regression pruefen
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-standard-dna-flow.mjs`
+  - `node tests/test-main-runtime-callers.mjs`
+  - `node tools/run-test-suite.mjs quick`
 
 ### C9 Finalisierung
-- [ ] technische Notizen / Changelog aktualisieren
-- [ ] TODO-/Implementierungsstatus aktualisieren
-- [ ] Scope-Check: kein Infrastruktur-/Pattern-/Fog-/Tech-Rework
+- [x] technische Notizen / Changelog aktualisieren
+- [x] TODO-/Implementierungsstatus aktualisieren
+- [x] Scope-Check: kein Infrastruktur-/Pattern-/Fog-/Tech-Rework
+
+## Phase-C-Abschluss
+
+- [x] `C1` Contract-/State-Basis
+- [x] `C2` DNA-Setup starten
+- [x] `C3` DNA-Placement
+- [x] `C4` DNA-Commit
+- [x] `C5` Passive DNA-Erzeugung
+- [x] `C6` DNA-Setup-Gates
+- [x] `C7` UI-Minimum
+- [x] `C8` Caller/Smokes
+- [x] `C9` Finalisierung
+- Phase C ist damit fachlich und prozessual abgeschlossen.
 
 ## Zielzustand nach Phase C
 
