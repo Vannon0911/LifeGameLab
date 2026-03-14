@@ -9,6 +9,12 @@
 - Vollsuite grün: `npm test`
 - Determinismus grün: long, per-tick und interaction traces
 - Core-, SIM-, Dataflow- und Pfadhygiene-Gates grün
+- Wrapper-Ban im SIM-Runtime-Pfad aktiv: `src/game/sim/sim.js` entfernt
+- String-/ID-Contract zentralisiert in `src/game/contracts/ids.js`
+- neue Contract-Tests aktiv:
+  - `tests/test-string-contract.mjs`
+  - `tests/test-dataflow-contract.mjs`
+  - `tests/test-wrapper-ban.mjs`
 - Browser-Check für UI/UX und Strategy-Contract grün; `window.render_game_to_text` und `window.advanceTime` vorhanden
 - Rework v3 steht:
   - Mobile-Sheet blockiert das Dock nicht mehr
@@ -30,7 +36,8 @@
 
 ## Nächste sinnvolle Schritte
 
-- Win-Bedingungen für Release-Build reaktivieren
+- Perf-Ziel aus Implementierungsplan schließen: `>=10%` Verbesserung je Profilfall (`tools/profile-core.mjs`) ist noch nicht erreicht
+- Render-/Benchmark-Abnahme nachziehen (Main/Worker-Phasenwerte dokumentieren)
 - weiteren Reducer-Abbau nach `src/game/sim/playerActions.js` fortsetzen
 - visuelle Energie-/Flow-Layer ausarbeiten
 - Missions-, Unlock- und Synergie-FX im Canvas weiter verdichten, damit der Produkt-Loop noch weniger nach Kontrollpanel und stärker nach Spiel wirkt
