@@ -27,9 +27,58 @@ import {
   normalizeRunPhase,
 } from "../contracts/ids.js";
 import { getWorldPreset, isTileInStartWindow } from "./worldPresets.js";
+import { hasAdjacentCommittedInfra4, isCommittedInfraValue } from "./infra.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
+}
+
+function hasFogVisibility(world) {
+  return !!world?.visibility && ArrayBuffer.isView(world.visibility);
+}
+
+function isCurrentlyVisibleTile(world, idx) {
+  if (!hasFogVisibility(world)) return true;
+  return (Number(world?.visibility?.[idx] || 0) | 0) === 1;
+}
+
+function isReachAnchorTile(world, idx, w, h) {
+  return (Number(world?.coreZoneMask?.[idx] || 0) | 0) === 1
+    || (Number(world?.dnaZoneMask?.[idx] || 0) | 0) === 1
+    || isCommittedInfraValue(world?.link?.[idx])
+    || hasAdjacentCommittedInfra4(world?.link, idx, w, h)
+    || (
+      !!world?.coreZoneMask
+      && ArrayBuffer.isView(world.coreZoneMask)
+      && (() => {
+        const x = idx % w;
+        const y = (idx / w) | 0;
+        const neighbors = [
+          [x - 1, y],
+          [x + 1, y],
+          [x, y - 1],
+          [x, y + 1],
+        ];
+        for (const [xx, yy] of neighbors) {
+          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+          const j = yy * w + xx;
+          if ((Number(world.coreZoneMask[j]) | 0) === 1) return true;
+          if ((Number(world?.dnaZoneMask?.[j] || 0) | 0) === 1) return true;
+        }
+        return false;
+      })()
+    );
+}
+
+function hasVisibleReachAnchor(world, indices, w, h) {
+  let visible = false;
+  let anchored = false;
+  for (const idx of indices) {
+    if (!visible && isCurrentlyVisibleTile(world, idx)) visible = true;
+    if (!anchored && isReachAnchorTile(world, idx, w, h)) anchored = true;
+    if (visible && anchored) return true;
+  }
+  return false;
 }
 
 function findPlayerTraitSource({ alive, lineageId, playerLineageId, idx, w, h }) {
@@ -364,6 +413,9 @@ export function handlePlaceSplitCluster(state, action) {
 
   const totalCost = 16 * costPerCell;
   if (costEnabled && playerDNA < totalCost) return [];
+  if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) === GAME_MODE.GENESIS) {
+    if (!hasVisibleReachAnchor(world, cells, w, h)) return [];
+  }
 
   let placed = 0;
   for (const idx of cells) {
@@ -468,6 +520,15 @@ export function handleSetZone(state, action) {
   const radius = Math.max(1, Math.min(64, Number(action.payload?.radius) | 0));
   const zoneType = Math.max(0, Math.min(5, Number(action.payload?.zoneType) | 0));
   if (x < 0 || y < 0 || x >= w || y >= h) return [];
+
+  const touched = [];
+  paintCircle({
+    w, h, x, y, radius,
+    cb: (idx) => { touched.push(idx); },
+  });
+  if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) === GAME_MODE.GENESIS) {
+    if (!hasVisibleReachAnchor(world, touched, w, h)) return [];
+  }
 
   const zoneMap = cloneTypedArray(world.zoneMap);
   paintCircle({
