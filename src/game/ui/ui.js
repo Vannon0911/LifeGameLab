@@ -14,6 +14,7 @@ import {
   GAME_RESULT,
   OVERLAY_MODE,
   OVERLAY_MODE_VALUES,
+  RUN_PHASE,
   WIN_MODE,
   WIN_MODE_RESULT_LABEL,
 } from "../contracts/ids.js";
@@ -298,11 +299,20 @@ export class UI {
 
     const togglePlay = () => {
       const state = this._store.getState();
-      if (String(state?.sim?.runPhase || "") === "genesis_setup") {
+      const runPhase = String(state?.sim?.runPhase || "");
+      if (runPhase === RUN_PHASE.GENESIS_SETUP) {
         this._setActionFeedback({
           ok: false,
           message: "Genesis-Setup aktiv: erst vier Founder setzen und Gründung bestätigen.",
           hint: "Tool: Founder Place · Ziel: 4/4 zusammenhängend im Startfenster.",
+        });
+        return;
+      }
+      if (runPhase === RUN_PHASE.GENESIS_ZONE) {
+        this._setActionFeedback({
+          ok: false,
+          message: "Genesis-Zone aktiv: erst Energiekern bestaetigen.",
+          hint: "Founder sind fixiert. Bestaetige jetzt den Energiekern, erst danach startet der Run.",
         });
         return;
       }
@@ -313,11 +323,20 @@ export class UI {
     this._btnPlay.addEventListener("click", togglePlay);
     this._btnStep.addEventListener("click", () => {
       const state = this._store.getState();
-      if (String(state?.sim?.runPhase || "") === "genesis_setup") {
+      const runPhase = String(state?.sim?.runPhase || "");
+      if (runPhase === RUN_PHASE.GENESIS_SETUP) {
         this._setActionFeedback({
           ok: false,
           message: "Step ist im Genesis-Setup gesperrt.",
           hint: "Setze vier Founder und bestätige die Gründung.",
+        });
+        return;
+      }
+      if (runPhase === RUN_PHASE.GENESIS_ZONE) {
+        this._setActionFeedback({
+          ok: false,
+          message: "Step ist in der Genesis-Zone gesperrt.",
+          hint: "Ohne bestaetigten Energiekern gibt es keinen aktiven Lauf.",
         });
         return;
       }
@@ -576,7 +595,13 @@ export class UI {
 
 	      let statusText = "Kolonie beobachtet ihr Umfeld. Autonomes Wachstum hat Vorrang.";
 	      let statusColor = "var(--cyan)";
-	      if (advisorModel.advisor.bottleneckPrimary === "collapse") {
+	      if (String(sim.runPhase || "") === RUN_PHASE.GENESIS_SETUP) {
+	        statusText = "Genesis-Setup aktiv. Vier zusammenhaengende Founder im Startfenster bilden die Gruendung.";
+	        statusColor = "var(--gold)";
+	      } else if (String(sim.runPhase || "") === RUN_PHASE.GENESIS_ZONE) {
+	        statusText = "Genesis-Zone aktiv. Die Founder sind fixiert, der Energiekern muss jetzt explizit bestaetigt werden.";
+	        statusColor = "var(--gold)";
+	      } else if (advisorModel.advisor.bottleneckPrimary === "collapse") {
 	        statusText = "Kolonie kollabiert. Die aktive Linie hat keine tragfaehige Struktur mehr.";
 	        statusColor = "var(--red)";
 	      } else if (advisorModel.advisor.bottleneckPrimary === "energy") {
@@ -603,7 +628,7 @@ export class UI {
 	      alertCard.appendChild(el("div", "nx-note", `Reason-Codes: ${(advisorModel.advisor.reasonCodes || []).join(", ") || "none"}`));
 	      container.appendChild(alertCard);
 
-      if (String(sim.runPhase || "") === "genesis_setup") {
+      if (String(sim.runPhase || "") === RUN_PHASE.GENESIS_SETUP) {
         const founderCard = el("section", "nx-card");
         founderCard.appendChild(el("div", "nx-card-title", "Genesis: Gründung"));
         founderCard.appendChild(el("div", "nx-note", "Setze vier zusammenhängende Founder im linken Startfenster und bestätige danach die Gründung."));
@@ -624,7 +649,7 @@ export class UI {
           this._dispatch(
             { type: "CONFIRM_FOUNDATION", payload: {} },
             {
-              ok: "Gründung bestätigt. Run gestartet.",
+              ok: "Gründung bestätigt. Genesis-Zone aktiv, Energiekern wartet.",
               blocked: "Gründung blockiert.",
               hint: "Erforderlich: exakt 4 eigene, zusammenhängende Founder im Startfenster.",
             }
@@ -634,6 +659,38 @@ export class UI {
         founderActions.append(brushBtn, confirmBtn);
         founderCard.appendChild(founderActions);
         container.appendChild(founderCard);
+      }
+      if (String(sim.runPhase || "") === RUN_PHASE.GENESIS_ZONE) {
+        const founderTiles = Array.isArray(state?.world?.founderMask)
+          ? state.world.founderMask.reduce((sum, value) => sum + ((Number(value || 0) | 0) === 1 ? 1 : 0), 0)
+          : 0;
+        const coreCard = el("section", "nx-card");
+        coreCard.appendChild(el("div", "nx-card-title", "Genesis-Zone: Energiekern"));
+        coreCard.appendChild(el("div", "nx-note", "Die Gruendung ist fixiert. Bestaetige jetzt den Energiekern; erst danach geht der Lauf explizit in RUN_ACTIVE."));
+        const coreCandidate = el("div", "nx-active-tool");
+        coreCandidate.append(
+          el("div", "nx-active-tool-label", "Kernkandidat"),
+          el("div", "nx-active-tool-copy", `${founderTiles} Founder-Kacheln fixiert`)
+        );
+        coreCard.appendChild(coreCandidate);
+        const coreHint = el("div", "nx-note", "Play und Step bleiben gesperrt, bis `CONFIRM_CORE_ZONE` erfolgreich war.");
+        coreCard.appendChild(coreHint);
+        const coreActions = el("div", "nx-chip-grid");
+        const confirmCoreBtn = el("button", "nx-btn nx-btn-primary", "Energiekern bestaetigen");
+        confirmCoreBtn.addEventListener("click", () => {
+          this._dispatch(
+            { type: "CONFIRM_CORE_ZONE", payload: {} },
+            {
+              ok: "Energiekern bestaetigt. Run aktiv.",
+              blocked: "Energiekern blockiert.",
+              hint: "Erforderlich: exakt die bestaetigte Founder-Komponente als gueltiger Kernkandidat.",
+            }
+          );
+          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+        });
+        coreActions.append(confirmCoreBtn);
+        coreCard.appendChild(coreActions);
+        container.appendChild(coreCard);
       }
 
 	      const missionCard = el("section", "nx-card nx-card-mission");
@@ -690,7 +747,7 @@ export class UI {
       energyCard.appendChild(mixGrid);
       container.appendChild(energyCard);
 
-	      const progressCard = el("section", "nx-card");
+      const progressCard = el("section", "nx-card");
 	      progressCard.appendChild(el("div", "nx-card-title", "Siegpfad & Ausbau"));
 	      progressCard.append(
 	        mkMetric("Stage", `S${playerStage}`, "nx-mono nx-chip-stage"),
@@ -709,6 +766,19 @@ export class UI {
 	        mkBar(Math.min(1, Number(sim.efficiencyTicks || 0) / 100), "nx-bar-stage", "Effizienz-Fortschritt")
 	      );
 	      container.appendChild(progressCard);
+      if (Number(sim.unlockedZoneTier || 0) >= 1 && String(sim.nextZoneUnlockKind || "") === "DNA") {
+        const unlockProgress = Math.max(0, Math.min(1, Number(sim.zoneUnlockProgress || 0)));
+        const unlockCard = el("section", "nx-card");
+        unlockCard.appendChild(el("div", "nx-card-title", "Zone 2: DNA"));
+        unlockCard.appendChild(el("div", "nx-note", "Der Energiekern ist aktiv. Fortschritt tickt aus gespeicherter Energie und stabilen Kernticks."));
+        unlockCard.append(
+          mkMetric("Unlock-Fortschritt", `${Math.round(unlockProgress * 100)}%`, unlockProgress >= 1 ? "nx-mono nx-val-pos" : "nx-mono"),
+          mkMetric("Zielkosten", fmt(Number(sim.nextZoneUnlockCostEnergy || 0), 2)),
+          mkMetric("Stabile Kernticks", String(Number(sim.coreEnergyStableTicks || 0)))
+        );
+        unlockCard.appendChild(mkBar(unlockProgress, "nx-bar-stage", "DNA-Unlock-Fortschritt"));
+        container.appendChild(unlockCard);
+      }
 
       const timeCard = el("section", "nx-card");
       timeCard.appendChild(el("div", "nx-card-title", "Zeitfenster"));
@@ -1761,7 +1831,9 @@ export class UI {
   // ── SYNC (every frame) ──────────────────────────────────
   sync(state) {
     const { meta, sim } = state;
-    const inGenesisSetup = String(sim.runPhase || "") === "genesis_setup";
+    const runPhase = String(sim.runPhase || "");
+    const inGenesisSetup = runPhase === RUN_PHASE.GENESIS_SETUP;
+    const inGenesisZone = runPhase === RUN_PHASE.GENESIS_ZONE;
     if (inGenesisSetup && String(meta.brushMode || BRUSH_MODE.OBSERVE) !== BRUSH_MODE.FOUNDER_PLACE) {
       this._dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
     }
@@ -1799,15 +1871,31 @@ export class UI {
     this._stageChip.style.borderColor = riskState.color;
 
     const netSign = energyNet >= 0;
-    this._dangerChip.textContent = `◎ ${winModeState.label}`;
-    this._goalChip.textContent = `🎯 ${bottleneckState.title}`;
-    this._goalChip.title = `${goalState.title}: ${goalState.detail}`;
+    if (inGenesisSetup) {
+      this._dangerChip.textContent = "◎ Gruenden";
+      this._goalChip.textContent = "🎯 4 Founder setzen";
+      this._goalChip.title = "Genesis-Setup: Vier zusammenhaengende Founder im Startfenster setzen und Gruendung bestaetigen.";
+    } else if (inGenesisZone) {
+      this._dangerChip.textContent = "◎ Energiekern";
+      this._goalChip.textContent = "🎯 Kern bestaetigen";
+      this._goalChip.title = "Genesis-Zone: Founder sind fixiert. Bestaetige jetzt den Energiekern fuer RUN_ACTIVE.";
+    } else {
+      this._dangerChip.textContent = `◎ ${winModeState.label}`;
+      this._goalChip.textContent = `🎯 ${bottleneckState.title}`;
+      this._goalChip.title = `${goalState.title}: ${goalState.detail}`;
+    }
 
     // UI-GAME-01: Canvas-HUD sync — Reduced to Trend arrow
     this._hudEnergyArrow.textContent = netSign ? "▲" : "▼";
     this._hudEnergyVal.textContent   = `${netSign ? "+" : ""}${energyNet.toFixed(1)} ⚡`;
     this._hudEnergy.style.color      = netSign ? "var(--green)" : "var(--red)";
-    this._hudTool.textContent = `${doctrine.label}: ${advisorModel.runIdentity.doctrineTradeoff} | Hebel: ${nextLeverState.label}`;
+    if (inGenesisSetup) {
+      this._hudTool.textContent = "Genesis-Setup | Founder Place: 4/4 zusammenhaengend im Startfenster";
+    } else if (inGenesisZone) {
+      this._hudTool.textContent = "Genesis-Zone | Energiekern bestaetigen, dann startet RUN_ACTIVE";
+    } else {
+      this._hudTool.textContent = `${doctrine.label}: ${advisorModel.runIdentity.doctrineTradeoff} | Hebel: ${nextLeverState.label}`;
+    }
 
     this._dockPlayBtn.classList.toggle("running", !!running);
     this._dockPlayBtn.querySelector(".nx-dock-icon").textContent = running ? "⏸" : "▶";
