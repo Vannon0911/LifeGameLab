@@ -1235,7 +1235,7 @@ export function simStepPatch(state, action, ctx) {
     simOut.playerDNA = Number(simOut.playerDNA || 0) + alivePlayerDnaCells * 0.1 * dnaYieldScale;
   }
   Object.assign(simOut, deriveStageState(worldMutable, simOut, state.meta));
-  applyGoalCode(simOut, currentTick);
+  applyGoalCode(state, simOut, currentTick);
 
   // Drift hardening: only patch known sim keys.
   pushKeysPatches(patches, simOut, SIM_KEYS, "/sim", state.sim);

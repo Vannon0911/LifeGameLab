@@ -9,9 +9,13 @@ import {
   normalizeGoalCode,
 } from "../../game/contracts/ids.js";
 import {
+  countDiscoveredPatternClasses,
   DOCTRINE_BY_ID,
   TECH_TREE,
   deriveCommandScore,
+  evaluateRunRequirements,
+  getDiscoveredPatternClasses,
+  getPatternBonusMap,
   hasRequiredTechs,
   normalizeTechArray,
 } from "../../game/techTree.js";
@@ -88,6 +92,20 @@ export const WIN_MODE_LABELS = Object.freeze({
   [WIN_MODE.EFFICIENCY]: WIN_MODE_RESULT_LABEL[WIN_MODE.EFFICIENCY],
   [WIN_MODE.EXTINCTION]: WIN_MODE_RESULT_LABEL[WIN_MODE.EXTINCTION],
   [WIN_MODE.ENERGY_COLLAPSE]: WIN_MODE_RESULT_LABEL[WIN_MODE.ENERGY_COLLAPSE],
+  [WIN_MODE.CORE_COLLAPSE]: WIN_MODE_RESULT_LABEL[WIN_MODE.CORE_COLLAPSE],
+  [WIN_MODE.VISION_BREAK]: WIN_MODE_RESULT_LABEL[WIN_MODE.VISION_BREAK],
+  [WIN_MODE.NETWORK_DECAY]: WIN_MODE_RESULT_LABEL[WIN_MODE.NETWORK_DECAY],
+});
+
+export const RUN_REQUIREMENT_LABELS = Object.freeze({
+  dna_zone_committed: "DNA-Zone bestaetigen",
+  infrastructure_unlocked: "Infrastruktur aktivieren",
+  pattern_classes: "mehr Pattern entdecken",
+  network_ratio: "Netzwerkdichte erhoehen",
+  expansion_count: "Expansionen bestaetigen",
+  expansion_progress: "Expansionsarbeit vorantreiben",
+  defense_pattern: "Defense/Pattern-Bonus aufbauen",
+  pattern_bonus: "Pattern-Bonus aktivieren",
 });
 
 const STRUCTURE_LABELS = Object.freeze({
@@ -180,6 +198,114 @@ function getPlayerMemory(state) {
 
 function getDoctrinePolicy(doctrineId) {
   return DOCTRINE_POLICY[doctrineId] || DOCTRINE_POLICY.equilibrium;
+}
+
+function getZoneMetaEntry(world, zoneId) {
+  const zoneMeta = world?.zoneMeta;
+  if (!zoneMeta || typeof zoneMeta !== "object") return null;
+  if (Array.isArray(zoneMeta)) {
+    return zoneMeta.find((entry) => String(entry?.id ?? entry?.zoneId ?? "") === String(zoneId)) || null;
+  }
+  return zoneMeta[zoneId] || zoneMeta[String(zoneId)] || null;
+}
+
+function normalizeCanonicalRole(roleValue, meta) {
+  const metaRole = String(meta?.role || meta?.zoneRole || "").toLowerCase();
+  if (metaRole) return metaRole;
+  const role = String(roleValue || "").toLowerCase();
+  if (role) return role;
+  const numeric = Number(roleValue);
+  if (!Number.isFinite(numeric)) return "";
+  if (numeric === 1) return "core";
+  if (numeric === 2) return "dna";
+  if (numeric === 3) return "infra";
+  return "";
+}
+
+function zoneBelongsToPlayer(meta, playerLineageId) {
+  if (!meta || typeof meta !== "object") return true;
+  const owner = Number(meta.playerLineageId ?? meta.ownerLineageId ?? meta.lineageId);
+  if (!Number.isFinite(owner) || owner <= 0) return true;
+  return (owner | 0) === (playerLineageId | 0);
+}
+
+function zoneCommitted(meta) {
+  if (!meta || typeof meta !== "object") return true;
+  if (typeof meta.committed === "boolean") return meta.committed;
+  if (typeof meta.active === "boolean") return meta.active;
+  return true;
+}
+
+function zoneVisible(meta, world, idx) {
+  if (meta && typeof meta.visible === "boolean") return meta.visible;
+  return Number(world?.visibility?.[idx] || 0) > 0;
+}
+
+function collectCanonicalRoleFacts(world, roleId, playerLineageId) {
+  const alive = world?.alive;
+  const lineageId = world?.lineageId;
+  const zoneRole = world?.zoneRole;
+  const zoneId = world?.zoneId;
+  if (!alive || !lineageId || !zoneRole || !zoneId) {
+    return {
+      committedZones: 0,
+      totalTiles: 0,
+      alivePlayerTiles: 0,
+      visibleTiles: 0,
+    };
+  }
+
+  const seenZones = new Set();
+  let committedZones = 0;
+  let totalTiles = 0;
+  let alivePlayerTiles = 0;
+  let visibleTiles = 0;
+
+  for (let i = 0; i < alive.length; i++) {
+    const tileZoneId = zoneId[i];
+    const meta = getZoneMetaEntry(world, tileZoneId);
+    const role = normalizeCanonicalRole(zoneRole[i], meta);
+    if (role !== roleId) continue;
+    if (!zoneBelongsToPlayer(meta, playerLineageId) || !zoneCommitted(meta)) continue;
+    totalTiles++;
+    if (zoneVisible(meta, world, i)) visibleTiles++;
+    if ((Number(alive[i]) | 0) === 1 && (Number(lineageId[i]) | 0) === (playerLineageId | 0)) alivePlayerTiles++;
+    const zoneKey = String(tileZoneId);
+    if (!seenZones.has(zoneKey)) {
+      seenZones.add(zoneKey);
+      committedZones++;
+    }
+  }
+
+  return {
+    committedZones,
+    totalTiles,
+    alivePlayerTiles,
+    visibleTiles,
+  };
+}
+
+function summarizeCanonicalZones(state) {
+  const world = state?.world;
+  const playerLineageId = Number(state?.meta?.playerLineageId || 0) | 0;
+  const available = !!(playerLineageId && world?.zoneRole && world?.zoneId);
+  const roles = {
+    core: collectCanonicalRoleFacts(world, "core", playerLineageId),
+    dna: collectCanonicalRoleFacts(world, "dna", playerLineageId),
+    infra: collectCanonicalRoleFacts(world, "infra", playerLineageId),
+  };
+  return {
+    available,
+    roles,
+    committedZones:
+      Number(roles.core.committedZones || 0) +
+      Number(roles.dna.committedZones || 0) +
+      Number(roles.infra.committedZones || 0),
+  };
+}
+
+function hasCanonicalZones(state) {
+  return summarizeCanonicalZones(state).available;
 }
 
 function toClass(severity, hardCritical = false) {
@@ -322,15 +448,20 @@ function pickTechTargets(state, commandScore, doctrinePolicy) {
     if (unlocked.has(tech.id)) continue;
     if (Number(tech.stage || 1) > playerStage) continue;
     if (!hasRequiredTechs(unlocked, tech.requires)) continue;
+    const runGate = evaluateRunRequirements(sim, tech.runRequirements);
     scored.push({
       tech,
       score: scoreTechCandidate(tech, winMode, doctrinePolicy),
+      runGate,
+      cost: 5 * Math.max(1, Number(tech.stage || playerStage || 1)),
+      commandReady: commandScore + 1e-9 >= Number(tech.commandReq || 0),
     });
   }
   scored.sort((a, b) => (b.score - a.score) || a.tech.id.localeCompare(b.tech.id));
-  const buyCandidate = scored.find((entry) => commandScore + 1e-9 >= Number(entry.tech.commandReq || 0)) || null;
-  const commandCandidate = scored.find((entry) => commandScore + 1e-9 < Number(entry.tech.commandReq || 0)) || null;
-  return { buyCandidate, commandCandidate };
+  const buyCandidate = scored.find((entry) => entry.commandReady && entry.runGate.ok) || null;
+  const commandCandidate = scored.find((entry) => !entry.commandReady) || null;
+  const blockedCandidate = scored.find((entry) => entry.commandReady && !entry.runGate.ok) || null;
+  return { buyCandidate, commandCandidate, blockedCandidate };
 }
 
 function buildWinProgress(state, crisisActive) {
@@ -456,6 +587,7 @@ function zoneToOverlay(zoneId) {
 }
 
 function getZoneRecommendation(primary, doctrinePolicy, state) {
+  if (hasCanonicalZones(state)) return "none";
   if (!primary || primary.class === "inactive") return "none";
   if (primary.id === "energy" || primary.id === "collapse") {
     return getZoneCoverage(state, 2) >= 0.35 ? "none" : doctrinePolicy.crisisZone;
@@ -539,6 +671,12 @@ function buildGoalCode(state, techTargets, splitState, territoryScaling) {
   return rawGoal;
 }
 
+function describeRunRequirementFailures(failures) {
+  return Array.isArray(failures)
+    ? failures.map((id) => RUN_REQUIREMENT_LABELS[id] || id)
+    : [];
+}
+
 export function buildAdvisorModel(state, options = {}) {
   const safeState = state && typeof state === "object" ? state : {};
   const sim = safeState.sim || {};
@@ -555,10 +693,17 @@ export function buildAdvisorModel(state, options = {}) {
   const clusterRatio = Number(sim.clusterRatio || 0);
   const networkRatio = Number(sim.networkRatio || 0);
   const playerStage = Number(sim.playerStage || 1);
+  const stageProgressScore = Number(sim.stageProgressScore || 0);
   const stageTargets = getStageTargets(playerStage);
   const expansionRatio = Number(sim.nextExpandCost || 0) > 0 ? Number(sim.expansionWork || 0) / Math.max(1, Number(sim.nextExpandCost || 1)) : 0;
   const aliveRatio = Number(sim.aliveRatio || 0);
   const edgePressure = clamp01(Math.max(0, aliveRatio - 0.58) / 0.16);
+  const patternClasses = getDiscoveredPatternClasses(sim);
+  const patternCount = countDiscoveredPatternClasses(sim);
+  const patternBonuses = getPatternBonusMap(sim);
+  const canonicalZones = summarizeCanonicalZones(safeState);
+  const resultReason = String(sim.gameResult || GAME_RESULT.NONE) === GAME_RESULT.LOSS ? String(sim.winMode || "") : "";
+  const resultReasonLabel = resultReason ? (WIN_MODE_RESULT_LABEL[resultReason] || resultReason) : "";
 
   const collapse = buildBottleneck(
     "collapse",
@@ -727,6 +872,7 @@ export function buildAdvisorModel(state, options = {}) {
   const tool = String(meta.brushMode || BRUSH_MODE.OBSERVE);
   const techs = normalizeTechArray(memory.techs);
   const synergies = normalizeTechArray(memory.synergies);
+  const blockedTechReasons = describeRunRequirementFailures(techTargets.blockedCandidate?.runGate?.failures);
 
   const out = {
     tick: Number(sim.tick || 0),
@@ -745,15 +891,24 @@ export function buildAdvisorModel(state, options = {}) {
       winMode: String(sim.winMode || WIN_MODE.SUPREMACY),
       doctrine: doctrineId,
       doctrineTradeoff: doctrinePolicy.tradeoff,
+      presetId: String(meta.worldPresetId || ""),
     },
     status: {
       risk: riskId,
       goal,
       structure: structureId,
       commandScore,
+      stageProgressScore,
       splitReady: splitState.ready,
       expansionWork: Number(sim.expansionWork || 0),
       nextExpandCost: Number(sim.nextExpandCost || 0),
+      infrastructureUnlocked: !!sim.infrastructureUnlocked,
+      patternCount,
+      patternClasses,
+      patternBonuses,
+      canonicalZones,
+      resultReason,
+      resultReasonLabel,
     },
     advisor: {
       bottleneckPrimary: primary?.id || "none",
@@ -763,6 +918,8 @@ export function buildAdvisorModel(state, options = {}) {
       nextLever,
       recommendedZone,
       recommendedOverlay,
+      blockedTechId: techTargets.blockedCandidate?.tech?.id || "",
+      blockedTechReasons,
     },
     winProgress,
     benchmark: options.benchmark || null,
@@ -788,6 +945,8 @@ export function buildAdvisorModel(state, options = {}) {
       relevantTech: {
         buyCandidate: techTargets.buyCandidate?.tech?.id || null,
         commandCandidate: techTargets.commandCandidate?.tech?.id || null,
+        blockedCandidate: techTargets.blockedCandidate?.tech?.id || null,
+        blockedReasons: techTargets.blockedCandidate?.runGate?.failures || [],
       },
       structureLabel: getStructureLabel(structureId),
     };

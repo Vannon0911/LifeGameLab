@@ -365,4 +365,60 @@ function makeState({
   assert(territoryWins.advisor.bottleneckPrimary === "territory_scaling", `territory should win over weak split, got ${territoryWins.advisor.bottleneckPrimary}`);
 }
 
+{
+  const blockedTechModel = buildAdvisorDebugModel(makeState({
+    doctrine: "conserve",
+    techs: ["nutrient_harvest"],
+    simPatch: {
+      playerStage: 2,
+      playerDNA: 12,
+      clusterRatio: 0.42,
+      networkRatio: 0.12,
+    },
+    metaPatch: {
+      worldPresetId: "dry_basin",
+    },
+  }));
+  assert(blockedTechModel.runIdentity.presetId === "dry_basin", `preset drift: ${blockedTechModel.runIdentity.presetId}`);
+  assert(blockedTechModel.advisor.blockedTechId === "reserve_buffer", `blocked tech drift: ${blockedTechModel.advisor.blockedTechId}`);
+  assert(blockedTechModel.advisor.blockedTechReasons.includes("Infrastruktur aktivieren"), "blocked tech reasons must surface run gate labels");
+}
+
+{
+  const canonicalState = makeState({
+    doctrine: "equilibrium",
+    techs: ["light_harvest", "nutrient_harvest"],
+    simPatch: {
+      playerStage: 3,
+      playerDNA: 20,
+      patternCatalog: [{ id: "line", discovered: true }],
+      patternBonuses: { stability: 0.18 },
+    },
+    worldMutate(world) {
+      const size = world.w * world.h;
+      world.zoneRole = new Array(size).fill("");
+      world.zoneId = new Array(size).fill("");
+      world.zoneMeta = {
+        core_a: { role: "core", committed: true, playerLineageId: 1 },
+        dna_a: { role: "dna", committed: true, playerLineageId: 1 },
+      };
+      for (const idx of PLAYER_CELLS.slice(0, 4)) {
+        world.zoneRole[idx] = "core";
+        world.zoneId[idx] = "core_a";
+      }
+      for (const idx of PLAYER_CELLS.slice(4, 6)) {
+        world.zoneRole[idx] = "dna";
+        world.zoneId[idx] = "dna_a";
+      }
+      world.visibility = new Uint8Array(size);
+      for (const idx of PLAYER_CELLS.slice(0, 6)) world.visibility[idx] = 1;
+    },
+  });
+  const canonicalModel = buildAdvisorDebugModel(canonicalState);
+  assert(canonicalModel.status.patternCount === 1, `pattern count drift: ${canonicalModel.status.patternCount}`);
+  assert(canonicalModel.status.resultReason === "", "result reason must be empty during active run");
+  assert(canonicalModel.status.canonicalZones.available === true, "canonical zone summary should be available");
+  assert(canonicalModel.advisor.recommendedZone === "none", "canonical zones must suppress legacy zone steering");
+}
+
 console.log("ADVISOR_MODEL_OK deterministic primary selection, blocker logic, and policy coloring verified");

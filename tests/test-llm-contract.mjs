@@ -165,6 +165,7 @@ const sampleState = {
     brushMode: "observe",
     playerLineageId: 1,
     cpuLineageId: 2,
+    worldPresetId: "river_delta",
     placementCostEnabled: true,
     activeOverlay: "none",
     physics: { Emax: 3.2 },
@@ -186,6 +187,10 @@ const sampleState = {
     link: new Float32Array(16),
     clusterField: new Float32Array(16),
     actionMap: new Uint8Array(16),
+    zoneRole: ["core", "core", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+    zoneId: ["core_a", "core_a", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+    zoneMeta: { core_a: { role: "core", committed: true, playerLineageId: 1 } },
+    visibility: new Uint8Array([1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
     lineageMemory: { 1: { doctrine: "equilibrium", techs: ["light_harvest"], synergies: [] } },
   },
   sim: {
@@ -198,6 +203,10 @@ const sampleState = {
     playerEnergyNet: -1.5,
     clusterRatio: 0.31,
     networkRatio: 0.10,
+    stageProgressScore: 0.33,
+    infrastructureUnlocked: true,
+    patternCatalog: [{ id: "line", discovered: true }],
+    patternBonuses: { stability: 0.12, dna: 0.05 },
     goal: "harvest_secure",
     lossStreakTicks: 0,
     meanToxinField: 0.2,
@@ -211,7 +220,11 @@ assert(readModel.structure === "biomodule_2x2", "read model structure mismatch")
 assert(readModel.mission === "harvest_secure", "read model goal mismatch");
 assert(readModel.status?.structure === "biomodule_2x2", "status.structure mismatch");
 assert(readModel.status?.goal === "harvest_secure", "status.goal mismatch");
+assert(readModel.status?.patternCount === 1, "status.patternCount mismatch");
+assert(readModel.status?.infrastructureUnlocked === true, "status.infrastructureUnlocked mismatch");
+assert(readModel.status?.canonicalZones?.available === true, "status.canonicalZones mismatch");
 assert(readModel.runIdentity?.doctrine === "equilibrium", "runIdentity.doctrine mismatch");
+assert(readModel.runIdentity?.presetId === "river_delta", "runIdentity.presetId mismatch");
 assert(Array.isArray(readModel.advisor?.reasonCodes), "advisor.reasonCodes missing");
 assert(typeof readModel.advisor?.nextAction === "string", "advisor.nextAction missing");
 assert(readModel.winProgress?.mode === WIN_MODE.SUPREMACY, "winProgress.mode mismatch");

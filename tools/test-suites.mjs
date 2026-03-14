@@ -1,3 +1,11 @@
+import fs from "node:fs";
+
+const PHASE_E_TEST = "tests/test-phase-e-integrity.mjs";
+const PHASE_F_TEST = "tests/test-phase-f-progression-integrity.mjs";
+const phaseIntegrityTruth = [];
+if (fs.existsSync(new URL(`../${PHASE_E_TEST}`, import.meta.url))) phaseIntegrityTruth.push(PHASE_E_TEST);
+if (fs.existsSync(new URL(`../${PHASE_F_TEST}`, import.meta.url))) phaseIntegrityTruth.push(PHASE_F_TEST);
+
 export const TEST_SUITES = Object.freeze({
   quick: [
     "tests/test-bootstrap-gen-world.mjs",
@@ -39,6 +47,7 @@ export const TEST_SUITES = Object.freeze({
     "tests/test-wrapper-ban.mjs",
   ],
   truth: [
+    ...phaseIntegrityTruth,
     "tests/test-drift-negative-order.mjs",
     "tests/test-determinism-long.mjs",
     "tests/test-determinism-per-tick.mjs",

@@ -6,6 +6,106 @@ import {
   deriveGoalCode,
 } from "../../contracts/ids.js";
 
+function getZoneMetaEntry(world, zoneId) {
+  const zoneMeta = world?.zoneMeta;
+  if (!zoneMeta || typeof zoneMeta !== "object") return null;
+  if (Array.isArray(zoneMeta)) {
+    return zoneMeta.find((entry) => String(entry?.id ?? entry?.zoneId ?? "") === String(zoneId)) || null;
+  }
+  return zoneMeta[zoneId] || zoneMeta[String(zoneId)] || null;
+}
+
+function normalizeCanonicalRole(roleValue, meta) {
+  const metaRole = String(meta?.role || meta?.zoneRole || "").toLowerCase();
+  if (metaRole) return metaRole;
+  const role = String(roleValue || "").toLowerCase();
+  if (role) return role;
+  const numeric = Number(roleValue);
+  if (!Number.isFinite(numeric)) return "";
+  if (numeric === 1) return "core";
+  if (numeric === 2) return "dna";
+  if (numeric === 3) return "infra";
+  return "";
+}
+
+function zoneBelongsToPlayer(meta, playerLineageId) {
+  if (!meta || typeof meta !== "object") return true;
+  const owner = Number(meta.playerLineageId ?? meta.ownerLineageId ?? meta.lineageId);
+  if (!Number.isFinite(owner) || owner <= 0) return true;
+  return (owner | 0) === (playerLineageId | 0);
+}
+
+function zoneCommitted(meta) {
+  if (!meta || typeof meta !== "object") return true;
+  if (typeof meta.committed === "boolean") return meta.committed;
+  if (typeof meta.active === "boolean") return meta.active;
+  return true;
+}
+
+function zoneVisible(meta, world, idx) {
+  if (meta && typeof meta.visible === "boolean") return meta.visible;
+  return Number(world?.visibility?.[idx] || 0) > 0;
+}
+
+function collectCanonicalRoleFacts(world, roleId, playerLineageId) {
+  const alive = world?.alive;
+  const lineageId = world?.lineageId;
+  const zoneRole = world?.zoneRole;
+  const zoneId = world?.zoneId;
+  if (!alive || !lineageId || !zoneRole || !zoneId) {
+    return { committedZones: 0, totalTiles: 0, alivePlayerTiles: 0, visibleTiles: 0 };
+  }
+
+  const seenZones = new Set();
+  let committedZones = 0;
+  let totalTiles = 0;
+  let alivePlayerTiles = 0;
+  let visibleTiles = 0;
+
+  for (let i = 0; i < alive.length; i++) {
+    const tileZoneId = zoneId[i];
+    const meta = getZoneMetaEntry(world, tileZoneId);
+    const role = normalizeCanonicalRole(zoneRole[i], meta);
+    if (role !== roleId) continue;
+    if (!zoneBelongsToPlayer(meta, playerLineageId) || !zoneCommitted(meta)) continue;
+    totalTiles++;
+    if (zoneVisible(meta, world, i)) visibleTiles++;
+    if ((Number(alive[i]) | 0) === 1 && (Number(lineageId[i]) | 0) === (playerLineageId | 0)) alivePlayerTiles++;
+    const zoneKey = String(tileZoneId);
+    if (!seenZones.has(zoneKey)) {
+      seenZones.add(zoneKey);
+      committedZones++;
+    }
+  }
+
+  return { committedZones, totalTiles, alivePlayerTiles, visibleTiles };
+}
+
+function deriveCanonicalLoss(state, simOut) {
+  const playerLineageId = Number(state?.meta?.playerLineageId || 0) | 0;
+  if (!playerLineageId || !state?.world?.zoneRole || !state?.world?.zoneId) return "";
+
+  const coreFacts = collectCanonicalRoleFacts(state.world, "core", playerLineageId);
+  if (coreFacts.committedZones > 0 && coreFacts.alivePlayerTiles <= 0) return WIN_MODE.CORE_COLLAPSE;
+
+  const visibleCore = coreFacts.visibleTiles > 0;
+  const dnaFacts = collectCanonicalRoleFacts(state.world, "dna", playerLineageId);
+  if ((dnaFacts.committedZones > 0 || Number(state?.sim?.dnaZoneCommitted || 0) > 0) && !visibleCore && dnaFacts.visibleTiles <= 0) {
+    return WIN_MODE.VISION_BREAK;
+  }
+
+  const infraFacts = collectCanonicalRoleFacts(state.world, "infra", playerLineageId);
+  if (
+    (infraFacts.committedZones > 0 || state?.sim?.infrastructureUnlocked) &&
+    infraFacts.totalTiles > 0 &&
+    (infraFacts.alivePlayerTiles <= 0 || Number(simOut?.networkRatio || state?.sim?.networkRatio || 0) < 0.05)
+  ) {
+    return WIN_MODE.NETWORK_DECAY;
+  }
+
+  return "";
+}
+
 export function applyWinConditions(state, simOut, currentTick) {
   if (!state.sim.gameResult) {
     const pEIn = Number(simOut.playerEnergyIn || 0);
@@ -43,8 +143,12 @@ export function applyWinConditions(state, simOut, currentTick) {
 
     let gameResult = GAME_RESULT.NONE;
     let resolvedWinMode = "";
+    const canonicalLoss = deriveCanonicalLoss(state, simOut);
 
-    if (pAlive === 0 && currentTick > 20) {
+    if (canonicalLoss) {
+      gameResult = GAME_RESULT.LOSS;
+      resolvedWinMode = canonicalLoss;
+    } else if (pAlive === 0 && currentTick > 20) {
       gameResult = GAME_RESULT.LOSS;
       resolvedWinMode = WIN_MODE.EXTINCTION;
     } else if (lossStreak >= 150) {
@@ -81,6 +185,6 @@ export function applyWinConditions(state, simOut, currentTick) {
   }
 }
 
-export function applyGoalCode(simOut, currentTick) {
-  simOut.goal = deriveGoalCode(simOut, currentTick) || GOAL_CODE.HARVEST_SECURE;
+export function applyGoalCode(state, simOut, currentTick) {
+  simOut.goal = deriveGoalCode(simOut, currentTick, state?.meta?.worldPresetId) || GOAL_CODE.HARVEST_SECURE;
 }

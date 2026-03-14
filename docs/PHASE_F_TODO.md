@@ -16,9 +16,12 @@ Zweck: Tech-Tree, Progression und Objectives auf das Rework ausrichten.
 
 ## Zielbild
 
-- Unlock-Quellen werden an DNA, Infrastruktur und Pattern angebunden.
+- Phase F bleibt ein kleiner Post-E-Layer auf bestehender Repo-Wahrheit.
+- Bestehende Tech-IDs, Lane-Strings, Actions und Stores bleiben erhalten.
+- Unlock-Quellen werden additiv an DNA, Infrastruktur, Pattern, Defense und Expansion angebunden.
 - Stage-Progression passt zum Rework statt zu Altmetriken.
 - Objectives, Win und Lose spiegeln den neuen Run sauber.
+- UI / Advisor / Read-Model bleiben eine Wahrheit.
 - Phase F bleibt begrenzt und eroeffnet keinen neuen Content-Berg.
 
 ## Harte Reihenfolge
@@ -30,8 +33,10 @@ Zweck: Tech-Tree, Progression und Objectives auf das Rework ausrichten.
 ## Ticket-Reihenfolge
 
 ### F1 Tech-Tree-Vertrag
-- [ ] neue Lanes einfuehren
-- [ ] alte IDs mappen oder migrieren
+- [ ] bestehende `TECH_TREE`-IDs behalten
+- [ ] bestehende Lane-Strings behalten
+- [ ] additive `runRequirements` pro Tech einfuehren
+- [ ] `BUY_EVOLUTION` als einzigen Kaufpfad behalten
 - [ ] Tests + Doku aktualisieren
 
 ### F2 Unlock-Quellen
@@ -40,12 +45,16 @@ Zweck: Tech-Tree, Progression und Objectives auf das Rework ausrichten.
 - [ ] Pattern anbinden
 - [ ] Defense anbinden
 - [ ] Expansion anbinden
+- [ ] kein zweiter Unlock-Resolver
+- [ ] kein zweiter Unlock-Store
 - [ ] Tests + Doku aktualisieren
 
 ### F3 Stage-Rework
-- [ ] `deriveStageState()` neu kalibrieren
+- [ ] `deriveStageState()` bleibt alleinige Stage-Autoritaet
+- [ ] bestehende Gewichte bleiben
 - [ ] neue Gates
 - [ ] monotone Stage-Progression
+- [ ] Pattern beeinflussen Progression nur ueber `stabilityScore`
 - [ ] Tests + Doku aktualisieren
 
 ### F4 Objectives / Win / Lose
@@ -53,11 +62,16 @@ Zweck: Tech-Tree, Progression und Objectives auf das Rework ausrichten.
 - [ ] Kernkollaps-Lose
 - [ ] Sichtbruch-Lose
 - [ ] Netzzerfall-Lose
+- [ ] `goal` bleibt aktiver Zielcode
+- [ ] `winMode` traegt result-only Loss-Ursache
+- [ ] `applyWinConditions()` bleibt alleiniger Result-Resolver
 - [ ] Tests + Doku aktualisieren
 
 ### F5 UI / Advisor
 - [ ] gleiche Sprache im ganzen Spiel
-- [ ] alte Freeze-Vokabeln entfernen
+- [ ] Pattern-/Zone-/Result-Summaries in bestehende Read-Model-Slots einfuegen
+- [ ] keine zweite JSON-Ansicht
+- [ ] keine zweite strategische Wahrheit
 - [ ] Tests + Doku aktualisieren
 
 ### F6 Post-F-Integritaetstest
@@ -78,11 +92,17 @@ Zweck: Tech-Tree, Progression und Objectives auf das Rework ausrichten.
   - gleiche Unlock-Inputs => identische Progression
   - `playerStage` bleibt monoton
   - neue Unlock-Quellen schlagen durch, Altmetriken alleine nicht
+  - `goal` bleibt Zielcode, `winMode` traegt nur Result-Ursache
   - Objectives/Win/Lose bleiben deterministisch reproduzierbar
 
 ## Harte Nicht-Ziele
 
 - kein neuer Content-Berg
+- keine neue Waehrung
+- kein zweiter Tech-Tree
+- kein zweiter Unlock-Resolver
+- kein zweites Objective-System
+- keine neue Action-Familie
 - keine neue CPU-Architektur
 - kein Renderer-Grundumbau
 - keine Preset-Explosion

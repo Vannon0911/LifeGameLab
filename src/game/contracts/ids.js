@@ -4,6 +4,9 @@ export const WIN_MODE = Object.freeze({
   EFFICIENCY: "efficiency",
   EXTINCTION: "extinction",
   ENERGY_COLLAPSE: "energy_collapse",
+  CORE_COLLAPSE: "core_collapse",
+  VISION_BREAK: "vision_break",
+  NETWORK_DECAY: "network_decay",
 });
 
 export const WIN_MODE_SELECTABLE = Object.freeze([
@@ -18,6 +21,9 @@ export const WIN_MODE_RESULT_LABEL = Object.freeze({
   [WIN_MODE.EFFICIENCY]: "Effizienz-Meister",
   [WIN_MODE.EXTINCTION]: "Ausrottung",
   [WIN_MODE.ENERGY_COLLAPSE]: "Energie-Kollaps",
+  [WIN_MODE.CORE_COLLAPSE]: "Kern-Kollaps",
+  [WIN_MODE.VISION_BREAK]: "Sichtbruch",
+  [WIN_MODE.NETWORK_DECAY]: "Netzzerfall",
 });
 
 export const GAME_RESULT = Object.freeze({
@@ -204,16 +210,30 @@ export function deriveRiskCode(sim) {
   return RISK_CODE.STABLE;
 }
 
-export function deriveGoalCode(simLike, currentTick = Number(simLike?.tick || 0)) {
+export function deriveGoalCode(simLike, currentTick = Number(simLike?.tick || 0), presetId = "") {
   const pDNA = Number(simLike?.playerDNA || 0);
   const pStage = Number(simLike?.playerStage || 1);
   const pAlive = Number(simLike?.playerAliveCount || 0);
   const pENet = Number(simLike?.playerEnergyNet || 0);
+  const networkRatio = Number(simLike?.networkRatio || 0);
+  const infraUnlocked = !!simLike?.infrastructureUnlocked;
+  const playerEnergyStored = Number(simLike?.playerEnergyStored || 0);
   const meanTox = Number(simLike?.meanToxinField || 0);
   const dnaCost = pStage * 5;
+  const normalizedPresetId = String(presetId || simLike?.worldPresetId || "");
   if (pAlive === 0 && currentTick > 5) return GOAL_CODE.EXTINCT;
   if (pENet < -3 && pAlive > 0) return GOAL_CODE.SURVIVE_ENERGY;
   if (meanTox > 0.30) return GOAL_CODE.SURVIVE_TOXIN;
+  if (normalizedPresetId === "river_delta" && infraUnlocked && networkRatio >= 0.18 && pENet > 0) {
+    return GOAL_CODE.EXPANSION;
+  }
+  if (normalizedPresetId === "dry_basin") {
+    return pENet < 1 || playerEnergyStored < 4 ? GOAL_CODE.SURVIVE_ENERGY : GOAL_CODE.HARVEST_SECURE;
+  }
+  if (normalizedPresetId === "wet_meadow") {
+    if (pAlive < 14) return GOAL_CODE.GROWTH;
+    if (pDNA >= dnaCost) return GOAL_CODE.EVOLUTION_READY;
+  }
   if (pDNA >= dnaCost) return GOAL_CODE.EVOLUTION_READY;
   if (pAlive < 12) return GOAL_CODE.GROWTH;
   if (pENet > 8) return GOAL_CODE.EXPANSION;

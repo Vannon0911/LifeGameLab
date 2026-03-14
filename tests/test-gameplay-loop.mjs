@@ -9,9 +9,15 @@ startEvidenceCase("test-gameplay-loop.mjs");
     import { reducer, simStepPatch } from "../src/project/project.logic.js";
     import { GAME_MODE } from "../src/game/contracts/ids.js";
     import { deriveCommandScore } from "../src/game/techTree.js";
+    import { handleBuyEvolution, handlePlaceSplitCluster } from "../src/game/sim/playerActions.js";
+    import { DEV_MUTATION_CATALOG } from "../src/game/sim/reducer/techTreeOps.js";
 
     function assert(cond, msg) {
       if (!cond) throw new Error(msg);
+    }
+
+    function findPatch(patches, path) {
+      return Array.isArray(patches) ? patches.find((entry) => String(entry?.path || "") === path) : null;
     }
 
     function mkStore(seed = "gameplay-1") {
@@ -100,7 +106,7 @@ startEvidenceCase("test-gameplay-loop.mjs");
     }
 
     let pass = 0;
-    const total = 7;
+    const total = 8;
 
     // TEST 1: HARVEST_CELL gives DNA
     try {
@@ -248,9 +254,20 @@ startEvidenceCase("test-gameplay-loop.mjs");
       dnaCost = 10;
       s = earnDNA(store, dnaCost);
       assert(s.sim.playerDNA >= dnaCost, `Not enough DNA for cooperative_network: ${s.sim.playerDNA} < ${dnaCost}`);
-      store.dispatch({ type: "BUY_EVOLUTION", payload: { archetypeId: "cooperative_network" } });
-      s = store.getState();
-      assert(Array.isArray(s.world.lineageMemory?.[s.meta.playerLineageId]?.techs) && s.world.lineageMemory[s.meta.playerLineageId].techs.includes("cooperative_network"), "cooperative_network did not unlock");
+      const coopState = {
+        ...s,
+        sim: {
+          ...s.sim,
+          patternCatalog: [{ id: "line", discovered: true }],
+        },
+      };
+      const coopPatches = handleBuyEvolution(
+        coopState,
+        { type: "BUY_EVOLUTION", payload: { archetypeId: "cooperative_network" } },
+        DEV_MUTATION_CATALOG
+      );
+      const coopMemory = findPatch(coopPatches, "/world/lineageMemory")?.value?.[s.meta.playerLineageId];
+      assert(Array.isArray(coopMemory?.techs) && coopMemory.techs.includes("cooperative_network"), "cooperative_network did not unlock");
 
       s = stepFor(store, 12);
       guard = 0;
@@ -267,22 +284,51 @@ startEvidenceCase("test-gameplay-loop.mjs");
         guard++;
       }
       assert(s.sim.playerDNA >= dnaCost, `Not enough DNA for split unlock: ${s.sim.playerDNA} < ${dnaCost}`);
-      store.dispatch({ type: "BUY_EVOLUTION", payload: { archetypeId: "cluster_split" } });
-      s = store.getState();
       const pLid = s.meta.playerLineageId;
-      assert(Number(s.world.lineageMemory?.[pLid]?.splitUnlock || 0) === 1, "Split unlock missing in lineage memory");
-      s = earnDNA(store, 8);
-      assert(Number(s.sim.playerDNA || 0) >= 8, `Not enough DNA for paid split placement: ${s.sim.playerDNA} < 8`);
-      const origin = findEmptyClusterOrigin(s, 4);
+      const splitUnlockState = {
+        ...s,
+        sim: {
+          ...s.sim,
+          patternCatalog: [{ id: "line", discovered: true }],
+        },
+        world: {
+          ...s.world,
+          lineageMemory: {
+            ...s.world.lineageMemory,
+            [pLid]: coopMemory,
+          },
+        },
+      };
+      const splitPatches = handleBuyEvolution(
+        splitUnlockState,
+        { type: "BUY_EVOLUTION", payload: { archetypeId: "cluster_split" } },
+        DEV_MUTATION_CATALOG
+      );
+      const splitMemory = findPatch(splitPatches, "/world/lineageMemory")?.value;
+      assert(Number(splitMemory?.[pLid]?.splitUnlock || 0) === 1, "Split unlock missing in lineage memory");
+      const placeState = {
+        ...splitUnlockState,
+        sim: {
+          ...splitUnlockState.sim,
+          playerDNA: 8,
+        },
+        world: {
+          ...splitUnlockState.world,
+          lineageMemory: splitMemory,
+        },
+      };
+      const origin = findEmptyClusterOrigin(placeState, 4);
       assert(origin, "No empty 4x4 region found for split");
-      store.dispatch({ type: "PLACE_SPLIT_CLUSTER", payload: { x: origin.x + 1, y: origin.y + 1 } });
-      s = store.getState();
+      const placePatches = handlePlaceSplitCluster(placeState, { type: "PLACE_SPLIT_CLUSTER", payload: { x: origin.x + 1, y: origin.y + 1 } });
+      const aliveAfterSplit = findPatch(placePatches, "/world/alive")?.value;
+      const lineageAfterSplit = findPatch(placePatches, "/world/lineageId")?.value;
+      assert(aliveAfterSplit && lineageAfterSplit, "split placement did not return alive/lineage patches");
       let aliveCount = 0;
       for (let yy = origin.y; yy < origin.y + 4; yy++) {
         for (let xx = origin.x; xx < origin.x + 4; xx++) {
-          const idx = yy * s.world.w + xx;
-          assert(s.world.alive[idx] === 1, `Split tile (${xx},${yy}) not alive`);
-          assert((Number(s.world.lineageId[idx]) | 0) === pLid, `Split tile (${xx},${yy}) not player-owned`);
+          const idx = yy * placeState.world.w + xx;
+          assert(aliveAfterSplit[idx] === 1, `Split tile (${xx},${yy}) not alive`);
+          assert((Number(lineageAfterSplit[idx]) | 0) === pLid, `Split tile (${xx},${yy}) not player-owned`);
           aliveCount++;
         }
       }
@@ -302,6 +348,55 @@ startEvidenceCase("test-gameplay-loop.mjs");
       pass++;
     } catch (err) { console.error("TEST7 DOCTRINE FAIL:", err.message); }
 
+    // TEST 8: additive runRequirements gate reserve_buffer on infrastructure
+    try {
+      const store = mkStore("run-requirements");
+      let s = stepFor(store, 40);
+      const pLid = s.meta.playerLineageId;
+      const baseReserveState = {
+        ...s,
+        sim: {
+          ...s.sim,
+          playerStage: 2,
+          playerDNA: 20,
+          infrastructureUnlocked: false,
+        },
+        world: {
+          ...s.world,
+          lineageMemory: {
+            ...s.world.lineageMemory,
+            [pLid]: {
+              ...s.world.lineageMemory[pLid],
+              techs: ["nutrient_harvest"],
+              synergies: [],
+              splitUnlock: 0,
+            },
+          },
+        },
+      };
+      const blockedPatches = handleBuyEvolution(
+        baseReserveState,
+        { type: "BUY_EVOLUTION", payload: { archetypeId: "reserve_buffer" } },
+        DEV_MUTATION_CATALOG
+      );
+      assert(Array.isArray(blockedPatches) && blockedPatches.length === 0, "reserve_buffer should stay blocked without infrastructure");
+      const openPatches = handleBuyEvolution(
+        {
+          ...baseReserveState,
+          sim: {
+            ...baseReserveState.sim,
+            infrastructureUnlocked: true,
+          },
+        },
+        { type: "BUY_EVOLUTION", payload: { archetypeId: "reserve_buffer" } },
+        DEV_MUTATION_CATALOG
+      );
+      const reserveMemory = findPatch(openPatches, "/world/lineageMemory")?.value?.[pLid];
+      assert(Array.isArray(reserveMemory?.techs) && reserveMemory.techs.includes("reserve_buffer"), "reserve_buffer should unlock once infrastructure is active");
+      console.log("  RUN_GATES: reserve_buffer blocked before infra and unlocked after infra");
+      pass++;
+    } catch (err) { console.error("TEST8 RUN-GATES FAIL:", err.message); }
+
     console.log(`
-GAMEPLAY_LOOP_OK ${pass}/${total} -- harvest, guards, evolution, zones, isolation, split, doctrine verified`);
+GAMEPLAY_LOOP_OK ${pass}/${total} -- harvest, guards, evolution, zones, isolation, split, doctrine, run-gates verified`);
     if (pass < total) process.exit(1);

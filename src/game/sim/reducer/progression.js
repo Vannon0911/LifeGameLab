@@ -1,5 +1,6 @@
 import { deriveRiskCode, RISK_CODE } from "../../contracts/ids.js";
 import { BIOME_IDS } from "../worldPresets.js";
+import { countDiscoveredPatternClasses, getPatternBonusValue } from "../../techTree.js";
 
 function clamp01(value) {
   return value < 0 ? 0 : value > 1 ? 1 : value;
@@ -61,18 +62,25 @@ export function deriveStageState(world, simLike, meta) {
   const clusterRatio = clamp01(Number(simLike?.clusterRatio || 0));
   const playerEnergyNet = Number(simLike?.playerEnergyNet || 0);
   const lineageDiversity = Math.max(0, Number(simLike?.lineageDiversity || 0));
+  const networkRatio = clamp01(Number(simLike?.networkRatio || 0));
+  const infrastructureUnlocked = !!simLike?.infrastructureUnlocked;
   const meanWaterField = clamp01(Number(simLike?.meanWaterField || 0));
   const plantTileRatio = clamp01(Number(simLike?.plantTileRatio || 0));
+  const patternCount = countDiscoveredPatternClasses(simLike);
+  const patternStabilityBonus = clamp01(getPatternBonusValue(simLike, ["stability", "defense"]));
 
   const { activeBiomes } = updateBiomeUsage(world, meta, simLike);
 
   const dnaScore = clamp01(playerDNA / 70);
   const yieldScore = clamp01(totalYield / 56);
   const stabilityScore = clamp01(
-    playerAliveCount / 18 * 0.34 +
-    clusterRatio / 0.20 * 0.28 +
-    clamp01((playerEnergyNet + 2) / 8) * 0.18 +
-    lineageDiversity / 8 * 0.20
+    playerAliveCount / 18 * 0.28 +
+    clusterRatio / 0.20 * 0.22 +
+    clamp01((playerEnergyNet + 2) / 8) * 0.16 +
+    lineageDiversity / 8 * 0.14 +
+    networkRatio / 0.35 * 0.10 +
+    (infrastructureUnlocked ? 1 : 0) * 0.04 +
+    patternStabilityBonus * 0.06
   );
   const ecologyScore = clamp01(
     meanWaterField / 0.25 * 0.35 +
@@ -107,9 +115,9 @@ export function deriveStageState(world, simLike, meta) {
 
   const gates = {
     2: playerAliveCount >= 8 && playerEnergyNet > 0,
-    3: yieldCategories >= 2 && meanWaterField >= 0.10,
-    4: clusterRatio >= 0.12 && activeBiomes >= 2,
-    5: signals60 && risk !== RISK_CODE.COLLAPSE && risk !== RISK_CODE.CRITICAL,
+    3: yieldCategories >= 2 && meanWaterField >= 0.10 && !!simLike?.dnaZoneCommitted,
+    4: clusterRatio >= 0.12 && activeBiomes >= 2 && infrastructureUnlocked,
+    5: signals60 && patternCount >= 1 && patternStabilityBonus > 0 && risk !== RISK_CODE.COLLAPSE && risk !== RISK_CODE.CRITICAL,
   };
   const thresholds = {
     2: 0.22,

@@ -1,12 +1,16 @@
 import { PHYSICS_DEFAULT } from "../../core/kernel/physics.js";
 import { APP_VERSION } from "../../project/project.manifest.js";
-import { buildAdvisorModel } from "../../project/llm/advisorModel.js";
+import {
+  buildAdvisorModel,
+  RUN_REQUIREMENT_LABELS,
+} from "../../project/llm/advisorModel.js";
 import {
   PLAYER_DOCTRINES,
   DOCTRINE_BY_ID,
   TECH_TREE,
   TECH_SYNERGIES,
   deriveCommandScore,
+  evaluateRunRequirements,
   hasRequiredTechs,
 } from "../techTree.js";
 import {
@@ -590,6 +594,24 @@ export class UI {
 	      const overlayState = getOverlayState(advisorModel.advisor.recommendedOverlay);
 	      const winModeState = getWinModeState(advisorModel.runIdentity.winMode);
 	      const gateFeedback = this._getGateFeedback(state);
+        const patternBonuses = advisorModel.status.patternBonuses || {};
+        const patternBonusText = Object.entries(patternBonuses)
+          .filter(([, value]) => Number(value || 0) !== 0)
+          .sort((a, b) => Math.abs(Number(b[1] || 0)) - Math.abs(Number(a[1] || 0)))
+          .map(([key, value]) => `${key} ${fmtSign(Number(value || 0), 2)}`)
+          .join(" · ") || "noch keine aktiven Pattern-Boni";
+        const canonicalZones = advisorModel.status.canonicalZones || { available: false, roles: {} };
+        const canonicalZoneSummary = canonicalZones.available
+          ? ["core", "dna", "infra"]
+              .map((roleId) => {
+                const facts = canonicalZones.roles?.[roleId] || {};
+                return `${roleId}:${Number(facts.committedZones || 0)}/${Number(facts.visibleTiles || 0)}/${Number(facts.alivePlayerTiles || 0)}`;
+              })
+              .join(" · ")
+          : "kanonische Main-Run-Zonen noch nicht verfuegbar";
+        const blockedTechReasons = Array.isArray(advisorModel.advisor.blockedTechReasons)
+          ? advisorModel.advisor.blockedTechReasons.join(", ")
+          : "";
 
 	      const mkBar = (pct, cls, label) => {
         const wrap = el("div", "nx-bar-wrap");
@@ -778,6 +800,10 @@ export class UI {
 	        mkMetric("Netzwerk", `${Math.round(Number(sim.networkRatio || 0) * 100)}%`),
 	        mkMetric("Synergien", String((playerMemory?.synergies || []).length || 0))
 	      );
+        if (advisorModel.advisor.blockedTechId) {
+          commandCard.appendChild(el("div", "nx-note", `Geblockter Tech: ${advisorModel.advisor.blockedTechId}`));
+          commandCard.appendChild(el("div", "nx-note", `Blocker: ${blockedTechReasons || "zusätzliche Run-Gates"}`));
+        }
 	      container.appendChild(commandCard);
 
       const energyCard = el("section", "nx-card");
@@ -802,20 +828,27 @@ export class UI {
 	      progressCard.appendChild(el("div", "nx-card-title", "Siegpfad & Ausbau"));
 	      progressCard.append(
 	        mkMetric("Stage", `S${playerStage}`, "nx-mono nx-chip-stage"),
+	        mkMetric("Stage-Fortschritt", `${Math.round(Number(advisorModel.status.stageProgressScore || 0) * 100)}%`),
 	        mkMetric("DNA", `🧬 ${fmt(Number(sim.playerDNA || 0), 1)}`),
 	        mkMetric("Harvest Yield", fmt(Number(sim.harvestYieldTotal || 0), 1)),
 	        mkMetric("Aktive Biome", String(Number(sim.activeBiomeCount || 0))),
 	        mkMetric("Aktiver Siegpfad", winModeState.label),
 	        mkMetric("Win-Fortschritt", `${advisorModel.winProgress.progress} / ${advisorModel.winProgress.target}`),
-	        mkMetric("Naechste Zone", zoneState.label),
+	        mkMetric(canonicalZones.available ? "Kanonische Zonen" : "Naechste Legacy-Zone", canonicalZones.available ? canonicalZoneSummary : zoneState.label),
         mkMetric("Naechste Labor-Diagnose", overlayState.label)
 	      );
 	      progressCard.append(
 	        el("div", "nx-note", `${structureState.detail} Phase ${influencePhase}: ${advisorModel.winProgress.blockerDetail}`),
+	        el("div", "nx-note", `Preset ${advisorModel.runIdentity.presetId || "default"} · Pattern ${advisorModel.status.patternCount || 0}: ${(advisorModel.status.patternClasses || []).join(", ") || "keine"}`),
+	        el("div", "nx-note", `Pattern-Boni: ${patternBonusText}`),
+	        el("div", "nx-note", `Infra ${advisorModel.status.infrastructureUnlocked ? "aktiv" : "gesperrt"} · ${canonicalZoneSummary}`),
 	        mkBar(Math.min(1, Number(sim.energySupremacyTicks || 0) / 200), "nx-bar-light", "Suprematie-Fortschritt"),
 	        mkBar(Math.min(1, Number(sim.stockpileTicks || 0) / 200), "nx-bar-nutrient", "Territorium-Fortschritt"),
 	        mkBar(Math.min(1, Number(sim.efficiencyTicks || 0) / 100), "nx-bar-stage", "Effizienz-Fortschritt")
 	      );
+        if (advisorModel.status.resultReasonLabel) {
+          progressCard.appendChild(el("div", "nx-note", `Resultatgrund: ${advisorModel.status.resultReasonLabel}`));
+        }
 	      container.appendChild(progressCard);
       if (Number(sim.unlockedZoneTier || 0) >= 1 && String(sim.nextZoneUnlockKind || "") === "DNA") {
         const unlockProgress = Math.max(0, Math.min(1, Number(sim.zoneUnlockProgress || 0)));
@@ -1060,10 +1093,16 @@ export class UI {
       const unlockedSynergies = new Set(Array.isArray(playerMemory?.synergies) ? playerMemory.synergies.map(String) : []);
       const visibleStages = new Set([Math.max(1, playerStage - 1), playerStage, Math.min(5, playerStage + 1)]);
       const gateHints = [];
+      const patternSummary = `${Number(advisorModel.status.patternCount || 0)} Pattern: ${(advisorModel.status.patternClasses || []).join(", ") || "keine"}`;
+      const patternBonusSummary = Object.entries(advisorModel.status.patternBonuses || {})
+        .filter(([, value]) => Number(value || 0) !== 0)
+        .map(([key, value]) => `${key} ${fmtSign(Number(value || 0), 2)}`)
+        .join(" · ") || "noch keine aktiven Pattern-Boni";
       for (const tech of TECH_TREE) {
         if (unlockedTechs.has(tech.id)) continue;
         if (tech.stage > playerStage + 1) continue;
         const cost = 5 * Math.max(1, Number(tech.stage || 1));
+        const runGate = evaluateRunRequirements(sim, tech.runRequirements);
         if (playerStage < tech.stage) {
           gateHints.push(`Stage-Gate: ${tech.label} ab S${tech.stage}.`);
           continue;
@@ -1074,6 +1113,12 @@ export class UI {
         }
         if (commandScore + 1e-9 < Number(tech.commandReq || 0)) {
           gateHints.push(`Command-Gate: ${tech.label} braucht ${Math.round((tech.commandReq || 0) * 100)} Command.`);
+          continue;
+        }
+        if (!runGate.ok) {
+          for (const failure of runGate.failures) {
+            gateHints.push(`Run-Gate: ${tech.label} braucht ${RUN_REQUIREMENT_LABELS[failure] || failure}.`);
+          }
           continue;
         }
         if (playerDNA < cost) {
@@ -1097,6 +1142,9 @@ export class UI {
       cmdBar.appendChild(cmdFill);
       cmdRow.appendChild(cmdBar);
       infoCard.appendChild(cmdRow);
+      infoCard.appendChild(el("div", "nx-note", `Preset ${advisorModel.runIdentity.presetId || "default"} · ${patternSummary}`));
+      infoCard.appendChild(el("div", "nx-note", `Pattern-Boni: ${patternBonusSummary}`));
+      infoCard.appendChild(el("div", "nx-note", `Infra ${advisorModel.status.infrastructureUnlocked ? "aktiv" : "gesperrt"} · Stage-Fortschritt ${Math.round(Number(advisorModel.status.stageProgressScore || 0) * 100)}%`));
       container.appendChild(infoCard);
 
       if (gateHints.length) {
@@ -1119,7 +1167,9 @@ export class UI {
           const stageLocked = playerStage < tech.stage;
           const depReady = hasRequiredTechs(unlockedTechs, tech.requires);
           const commandReady = commandScore + 1e-9 >= Number(tech.commandReq || 0);
-          const canBuy = !owned && !stageLocked && depReady && commandReady && playerDNA >= techCost;
+          const runGate = evaluateRunRequirements(sim, tech.runRequirements);
+          const runGateLabels = runGate.failures.map((id) => RUN_REQUIREMENT_LABELS[id] || id);
+          const canBuy = !owned && !stageLocked && depReady && commandReady && runGate.ok && playerDNA >= techCost;
           const nodeCls = owned ? "is-owned" : canBuy ? "is-ready" : "is-locked";
           const card = el("article", `nx-tech-node ${nodeCls}`);
           const head = el("div", "nx-tech-head");
@@ -1134,10 +1184,14 @@ export class UI {
           card.appendChild(metaRow);
           const reqText = tech.requires.length ? `Benötigt: ${tech.requires.map((id) => TECH_TREE.find((entry) => entry.id === id)?.label || id).join(" + ")}` : "Startknoten";
           card.appendChild(el("div", "nx-note", reqText));
+          if (runGateLabels.length) {
+            card.appendChild(el("div", "nx-note", `Run-Gates: ${runGateLabels.join(", ")}`));
+          }
           const stateText = owned ? "Freigeschaltet" :
             stageLocked ? `Stage ${tech.stage} nötig` :
             !depReady ? "Prereqs fehlen" :
             !commandReady ? "Clusterstärke zu niedrig" :
+            !runGate.ok ? runGateLabels[0] || "Run-Gates fehlen" :
             playerDNA < techCost ? "Zu wenig DNA" :
             "Jetzt integrieren";
           const btn = el("button", `nx-btn nx-btn-evolve${canBuy ? "" : " nx-btn-disabled"}`, stateText);
@@ -1977,7 +2031,7 @@ export class UI {
       this._goalChip.textContent = "🎯 Zone 2 bestaetigen";
       this._goalChip.title = "DNA-Zone-Setup: Waehle gueltige DNA-Kacheln und bestaetige dann Zone 2.";
     } else {
-      this._dangerChip.textContent = `◎ ${winModeState.label}`;
+      this._dangerChip.textContent = `◎ ${advisorModel.status.resultReasonLabel || winModeState.label}`;
       this._goalChip.textContent = `🎯 ${bottleneckState.title}`;
       this._goalChip.title = `${goalState.title}: ${goalState.detail}`;
     }
@@ -2033,7 +2087,7 @@ export class UI {
 
     if (sim.gameResult && sim.gameEndTick === sim.tick && sim.gameEndTick !== this._lastGameEndTick) {
       if (sim.gameResult === GAME_RESULT.WIN) this._announce(`Sieg! (${sim.winMode})`);
-      else if (sim.gameResult === GAME_RESULT.LOSS) this._announce(`Niederlage! (${sim.winMode})`);
+      else if (sim.gameResult === GAME_RESULT.LOSS) this._announce(`Niederlage! (${advisorModel.status.resultReasonLabel || sim.winMode})`);
       this._lastGameEndTick = sim.gameEndTick;
     }
 

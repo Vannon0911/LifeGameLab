@@ -16,6 +16,7 @@ import {
   SYNERGY_BY_ID,
   computeUnlockedSynergies,
   deriveCommandScore,
+  evaluateRunRequirements,
   hasRequiredTechs,
   normalizeTechArray,
 } from "../techTree.js";
@@ -527,6 +528,7 @@ export function handleBuyEvolution(state, action, devMutationCatalog) {
   if (unlocked.has(archetypeId)) return [];
   if (!hasRequiredTechs(unlocked, tech.requires)) return [];
   if (commandScore + 1e-9 < Number(tech.commandReq || 0)) return [];
+  if (!evaluateRunRequirements(state.sim, tech.runRequirements).ok) return [];
 
   unlocked.add(archetypeId);
   currentMemory.techs = [...unlocked].sort();

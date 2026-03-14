@@ -12,6 +12,65 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
+function makeCanonicalState({
+  committedCore = true,
+  visibleCore = true,
+  aliveCore = true,
+  committedDna = false,
+  visibleDna = true,
+  committedInfra = false,
+  aliveInfra = true,
+  infrastructureUnlocked = false,
+  networkRatio = 0.20,
+} = {}) {
+  const size = 6;
+  const alive = new Uint8Array(size);
+  const lineageId = new Uint32Array(size);
+  const visibility = new Uint8Array(size);
+  const zoneRole = new Array(size).fill("");
+  const zoneId = new Array(size).fill("");
+  const zoneMeta = {
+    core_a: { role: "core", committed: committedCore, playerLineageId: 1 },
+    dna_a: { role: "dna", committed: committedDna, playerLineageId: 1 },
+    infra_a: { role: "infra", committed: committedInfra, playerLineageId: 1 },
+  };
+
+  zoneRole[0] = "core";
+  zoneId[0] = "core_a";
+  visibility[0] = visibleCore ? 1 : 0;
+  alive[0] = aliveCore ? 1 : 0;
+  lineageId[0] = aliveCore ? 1 : 0;
+
+  zoneRole[1] = "dna";
+  zoneId[1] = "dna_a";
+  visibility[1] = visibleDna ? 1 : 0;
+  alive[1] = committedDna ? 1 : 0;
+  lineageId[1] = committedDna ? 1 : 0;
+
+  zoneRole[2] = "infra";
+  zoneId[2] = "infra_a";
+  visibility[2] = 1;
+  alive[2] = aliveInfra ? 1 : 0;
+  lineageId[2] = aliveInfra ? 1 : 0;
+
+  return {
+    meta: { playerLineageId: 1 },
+    world: { alive, lineageId, visibility, zoneRole, zoneId, zoneMeta },
+    sim: {
+      gameResult: GAME_RESULT.NONE,
+      winMode: WIN_MODE.SUPREMACY,
+      infrastructureUnlocked,
+      dnaZoneCommitted: committedDna,
+      networkRatio,
+      energySupremacyTicks: 0,
+      stockpileTicks: 0,
+      efficiencyTicks: 0,
+      lossStreakTicks: 0,
+      cpuEnergyIn: 0,
+    },
+  };
+}
+
 // Loss path must set runPhase=RESULT.
 {
   const state = makeInitialState();
@@ -45,6 +104,71 @@ function assert(cond, msg) {
   applyWinConditions({ sim: state.sim }, simOut, 200);
   assert(simOut.gameResult === GAME_RESULT.WIN, "supremacy threshold must resolve to win");
   assert(simOut.runPhase === RUN_PHASE.RESULT, "win must set runPhase=RESULT");
+}
+
+// Canonical core collapse must resolve to result-only loss code.
+{
+  const state = makeCanonicalState({
+    committedCore: true,
+    visibleCore: true,
+    aliveCore: false,
+  });
+  const simOut = {
+    playerAliveCount: 4,
+    playerEnergyNet: 1,
+    playerEnergyIn: 6,
+    cpuAliveCount: 1,
+    cpuEnergyIn: 1,
+  };
+  applyWinConditions(state, simOut, 45);
+  assert(simOut.gameResult === GAME_RESULT.LOSS, "core collapse must resolve to loss");
+  assert(simOut.winMode === WIN_MODE.CORE_COLLAPSE, `expected core_collapse, got ${simOut.winMode}`);
+  assert(simOut.runPhase === RUN_PHASE.RESULT, "core collapse must set result phase");
+}
+
+// Canonical vision break must resolve to result-only loss code.
+{
+  const state = makeCanonicalState({
+    committedCore: true,
+    visibleCore: false,
+    aliveCore: true,
+    committedDna: true,
+    visibleDna: false,
+  });
+  const simOut = {
+    playerAliveCount: 4,
+    playerEnergyNet: 1,
+    playerEnergyIn: 6,
+    cpuAliveCount: 1,
+    cpuEnergyIn: 1,
+  };
+  applyWinConditions(state, simOut, 45);
+  assert(simOut.gameResult === GAME_RESULT.LOSS, "vision break must resolve to loss");
+  assert(simOut.winMode === WIN_MODE.VISION_BREAK, `expected vision_break, got ${simOut.winMode}`);
+}
+
+// Canonical network decay must resolve to result-only loss code.
+{
+  const state = makeCanonicalState({
+    committedCore: true,
+    visibleCore: true,
+    aliveCore: true,
+    committedInfra: true,
+    aliveInfra: false,
+    infrastructureUnlocked: true,
+    networkRatio: 0.02,
+  });
+  const simOut = {
+    playerAliveCount: 4,
+    playerEnergyNet: 1,
+    playerEnergyIn: 6,
+    cpuAliveCount: 1,
+    cpuEnergyIn: 1,
+    networkRatio: 0.02,
+  };
+  applyWinConditions(state, simOut, 45);
+  assert(simOut.gameResult === GAME_RESULT.LOSS, "network decay must resolve to loss");
+  assert(simOut.winMode === WIN_MODE.NETWORK_DECAY, `expected network_decay, got ${simOut.winMode}`);
 }
 
 // RESULT must block placement and confirm.

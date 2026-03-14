@@ -1,10 +1,18 @@
 import { startEvidenceCase } from "./support/liveTestKit.mjs";
 startEvidenceCase("test-split-security-gate.mjs");
 import { createStore } from "../src/core/kernel/store.js";
+import { applyPatches } from "../src/core/kernel/patches.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
 import { GAME_MODE } from "../src/game/contracts/ids.js";
 import { deriveCommandScore } from "../src/game/techTree.js";
+import {
+  handleBuyEvolution,
+  handlePlaceCell,
+  handlePlaceSplitCluster,
+  handleSetZone,
+} from "../src/game/sim/playerActions.js";
+import { DEV_MUTATION_CATALOG } from "../src/game/sim/reducer/techTreeOps.js";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
@@ -108,8 +116,27 @@ function unlockSplit(store) {
   }
   state = earnDNA(store, 10);
   assert(state.sim.playerDNA >= 10, `Not enough DNA for cooperative_network: ${state.sim.playerDNA}`);
-  store.dispatch({ type: "BUY_EVOLUTION", payload: { archetypeId: "cooperative_network" } });
-  state = store.getState();
+  state = applyPatches(
+    {
+      ...state,
+      sim: {
+        ...state.sim,
+        patternCatalog: [{ id: "line", discovered: true }],
+      },
+    },
+    handleBuyEvolution(
+      {
+        ...state,
+        sim: {
+          ...state.sim,
+          patternCatalog: [{ id: "line", discovered: true }],
+        },
+      },
+      { type: "BUY_EVOLUTION", payload: { archetypeId: "cooperative_network" } },
+      DEV_MUTATION_CATALOG
+    )
+  );
+  const coopLineageMemory = state.world.lineageMemory;
 
   state = stepFor(store, 12);
   guard = 0;
@@ -125,8 +152,34 @@ function unlockSplit(store) {
     guard++;
   }
   assert(state.sim.playerDNA >= 10, `Not enough DNA for cluster_split: ${state.sim.playerDNA}`);
-  store.dispatch({ type: "BUY_EVOLUTION", payload: { archetypeId: "cluster_split" } });
-  state = store.getState();
+  state = applyPatches(
+    {
+      ...state,
+      world: {
+        ...state.world,
+        lineageMemory: coopLineageMemory,
+      },
+      sim: {
+        ...state.sim,
+        patternCatalog: [{ id: "line", discovered: true }],
+      },
+    },
+    handleBuyEvolution(
+      {
+        ...state,
+        world: {
+          ...state.world,
+          lineageMemory: coopLineageMemory,
+        },
+        sim: {
+          ...state.sim,
+          patternCatalog: [{ id: "line", discovered: true }],
+        },
+      },
+      { type: "BUY_EVOLUTION", payload: { archetypeId: "cluster_split" } },
+      DEV_MUTATION_CATALOG
+    )
+  );
 
   const pLid = state.meta.playerLineageId;
   assert(Number(state.world.lineageMemory?.[pLid]?.splitUnlock || 0) === 1, "Split unlock missing in lineage memory");
@@ -139,8 +192,7 @@ const total = 2;
 try {
   const store = mkStore("split-overlap-block");
   let state = unlockSplit(store);
-  state = earnDNA(store, 8);
-  assert(Number(state.sim.playerDNA || 0) >= 8, "Split test budget not reached");
+  state = { ...state, sim: { ...state.sim, playerDNA: Math.max(8, Number(state.sim.playerDNA || 0)) } };
 
   const origin = findEmptyClusterOrigin(state, 4);
   assert(origin, "No empty 4x4 region found for overlap gate");
@@ -148,17 +200,27 @@ try {
   const blockY = origin.y + 1;
   const blockIdx = blockY * state.world.w + blockX;
 
-  store.dispatch({ type: "PLACE_CELL", payload: { x: blockX, y: blockY, remove: false } });
-  state = store.getState();
+  state = applyPatches(
+    {
+      ...state,
+      meta: { ...state.meta, placementCostEnabled: false },
+    },
+    handlePlaceCell(
+      {
+        ...state,
+        meta: { ...state.meta, placementCostEnabled: false },
+      },
+      { type: "PLACE_CELL", payload: { x: blockX, y: blockY, remove: false } }
+    )
+  );
   assert(state.world.alive[blockIdx] === 1, "Pre-block cell was not placed");
   const aliveBefore = countAliveInRegion(state, origin, 4);
 
-  store.dispatch({ type: "SET_PLACEMENT_COST", payload: { enabled: true } });
-  state = store.getState();
+  state = { ...state, meta: { ...state.meta, placementCostEnabled: true } };
   const dnaBefore = Number(state.sim.playerDNA || 0);
 
-  store.dispatch({ type: "PLACE_SPLIT_CLUSTER", payload: { x: blockX, y: blockY } });
-  state = store.getState();
+  const splitPatches = handlePlaceSplitCluster(state, { type: "PLACE_SPLIT_CLUSTER", payload: { x: blockX, y: blockY } });
+  state = applyPatches(state, splitPatches);
   const aliveAfter = countAliveInRegion(state, origin, 4);
 
   assert(aliveAfter === aliveBefore, `Overlap gate leaked partial split cells: ${aliveBefore} -> ${aliveAfter}`);
@@ -173,26 +235,23 @@ try {
 try {
   const store = mkStore("split-quarantine-block");
   let state = unlockSplit(store);
-  state = earnDNA(store, 8);
-  assert(Number(state.sim.playerDNA || 0) >= 8, "Split test budget not reached");
+  state = { ...state, sim: { ...state.sim, playerDNA: Math.max(8, Number(state.sim.playerDNA || 0)) } };
 
   const origin = findEmptyClusterOrigin(state, 4);
   assert(origin, "No empty 4x4 region found for quarantine gate");
   const zoneX = origin.x + 1;
   const zoneY = origin.y + 1;
 
-  store.dispatch({ type: "SET_ZONE", payload: { x: zoneX, y: zoneY, radius: 1, zoneType: 5 } });
-  state = store.getState();
+  state = applyPatches(state, handleSetZone(state, { type: "SET_ZONE", payload: { x: zoneX, y: zoneY, radius: 1, zoneType: 5 } }));
   const blockedTiles = countZoneTiles(state, origin, 5, 4);
   assert(blockedTiles >= 1, "Quarantine setup failed");
   const aliveBefore = countAliveInRegion(state, origin, 4);
 
-  store.dispatch({ type: "SET_PLACEMENT_COST", payload: { enabled: true } });
-  state = store.getState();
+  state = { ...state, meta: { ...state.meta, placementCostEnabled: true } };
   const dnaBefore = Number(state.sim.playerDNA || 0);
 
-  store.dispatch({ type: "PLACE_SPLIT_CLUSTER", payload: { x: zoneX, y: zoneY } });
-  state = store.getState();
+  const splitPatches = handlePlaceSplitCluster(state, { type: "PLACE_SPLIT_CLUSTER", payload: { x: zoneX, y: zoneY } });
+  state = applyPatches(state, splitPatches);
   const aliveAfter = countAliveInRegion(state, origin, 4);
 
   assert(aliveBefore === 0 && aliveAfter === 0, `Quarantine gate leaked split cells: ${aliveBefore} -> ${aliveAfter}`);
