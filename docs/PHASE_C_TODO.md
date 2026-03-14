@@ -32,17 +32,24 @@ Zweck: DNA-Zone als echter zweiter Spielschritt nach stabilem Energiekern.
 ## Ticket-Reihenfolge
 
 ### C1 Contract-/State-Basis
-- [ ] `RUN_PHASE.DNA_ZONE_SETUP` einfuehren
-- [ ] `world.dnaZoneMask` ergaenzen
-- [ ] `sim.zone2Unlocked` ergaenzen
-- [ ] `sim.zone2PlacementBudget` ergaenzen
-- [ ] `sim.dnaZoneCommitted` ergaenzen
-- [ ] `sim.nextInfraUnlockCostDNA` ergaenzen
-- [ ] `START_DNA_ZONE_SETUP` ergaenzen
-- [ ] `TOGGLE_DNA_ZONE_CELL` ergaenzen
-- [ ] `CONFIRM_DNA_ZONE` ergaenzen
-- [ ] Contracts/Gates/Metrics/Assertions updaten
-- [ ] Tests + Doku aktualisieren
+- [x] `RUN_PHASE.DNA_ZONE_SETUP` einfuehren
+- [x] `world.dnaZoneMask` ergaenzen
+- [x] `sim.zone2Unlocked` ergaenzen
+- [x] `sim.zone2PlacementBudget` ergaenzen
+- [x] `sim.dnaZoneCommitted` ergaenzen
+- [x] `sim.nextInfraUnlockCostDNA` ergaenzen
+- [x] `START_DNA_ZONE_SETUP` ergaenzen
+- [x] `TOGGLE_DNA_ZONE_CELL` ergaenzen
+- [x] `CONFIRM_DNA_ZONE` ergaenzen
+- [x] Contracts/Gates/Metrics/Assertions updaten
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-freeze-contract.mjs`
+  - `node tests/test-sim-gate.mjs`
+  - `node tests/test-confirm-core-zone.mjs`
+  - `node tests/test-dataflow-contract.mjs`
+  - `node tests/test-manifest-dataflow.mjs`
+  - `node tests/test-string-contract.mjs`
 
 ### C2 DNA-Setup starten
 - [ ] `START_DNA_ZONE_SETUP` nur bei vollem DNA-Meter

@@ -15,6 +15,7 @@ export function getPlayerMemory(state) {
 export function getInfluencePhase(stage, commandScore, runPhase = "") {
   if (String(runPhase || "") === "genesis_setup") return "Gruenden";
   if (String(runPhase || "") === "genesis_zone") return "Energiekern";
+  if (String(runPhase || "") === "dna_zone_setup") return "DNA-Zone";
   if (stage >= 4 && commandScore >= 0.28) return "Kommandieren";
   if (stage >= 2 && commandScore >= 0.12) return "Lenken";
   return "Beobachten";

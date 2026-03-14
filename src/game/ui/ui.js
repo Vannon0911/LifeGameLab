@@ -316,6 +316,14 @@ export class UI {
         });
         return;
       }
+      if (runPhase === RUN_PHASE.DNA_ZONE_SETUP) {
+        this._setActionFeedback({
+          ok: false,
+          message: "DNA-Zone-Setup aktiv: erst DNA-Zone bestaetigen.",
+          hint: "Waehle bis zu vier gueltige DNA-Kacheln und bestaetige dann Zone 2.",
+        });
+        return;
+      }
       const running = !!state.sim.running;
       this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:!running } });
     };
@@ -337,6 +345,14 @@ export class UI {
           ok: false,
           message: "Step ist in der Genesis-Zone gesperrt.",
           hint: "Ohne bestaetigten Energiekern gibt es keinen aktiven Lauf.",
+        });
+        return;
+      }
+      if (runPhase === RUN_PHASE.DNA_ZONE_SETUP) {
+        this._setActionFeedback({
+          ok: false,
+          message: "Step ist im DNA-Zone-Setup gesperrt.",
+          hint: "Zone 2 wird erst nach bestaetigter DNA-Zone wieder aktiv fortgesetzt.",
         });
         return;
       }
@@ -692,6 +708,41 @@ export class UI {
         coreCard.appendChild(coreActions);
         container.appendChild(coreCard);
       }
+      if (String(sim.runPhase || "") === RUN_PHASE.DNA_ZONE_SETUP) {
+        const selectedTiles = ArrayBuffer.isView(state?.world?.dnaZoneMask)
+          ? Array.from(state.world.dnaZoneMask).reduce((sum, value) => sum + ((Number(value || 0) | 0) === 1 ? 1 : 0), 0)
+          : 0;
+        const dnaSetupCard = el("section", "nx-card");
+        dnaSetupCard.appendChild(el("div", "nx-card-title", "DNA-Zone setzen"));
+        dnaSetupCard.appendChild(el("div", "nx-note", "Der Run ist bewusst pausiert. Waehle jetzt bis zu vier eigene, lebende Kacheln angrenzend an den Energiekern und bestaetige dann Zone 2."));
+        const dnaCandidate = el("div", "nx-active-tool");
+        dnaCandidate.append(
+          el("div", "nx-active-tool-label", "Placement-Zaehler"),
+          el("div", "nx-active-tool-copy", `${selectedTiles}/4 DNA-Kacheln gesetzt`)
+        );
+        dnaSetupCard.appendChild(dnaCandidate);
+        dnaSetupCard.append(
+          mkMetric("Restbudget", String(Number(sim.zone2PlacementBudget || 0))),
+          mkMetric("Status", "DNA-Zone setzen", "nx-mono nx-val-pos")
+        );
+        dnaSetupCard.appendChild(el("div", "nx-note", "Play und Step bleiben gesperrt, bis `CONFIRM_DNA_ZONE` erfolgreich war."));
+        const dnaActions = el("div", "nx-chip-grid");
+        const confirmDnaBtn = el("button", "nx-btn nx-btn-primary", "DNA-Zone bestaetigen");
+        confirmDnaBtn.addEventListener("click", () => {
+          this._dispatch(
+            { type: "CONFIRM_DNA_ZONE", payload: {} },
+            {
+              ok: "DNA-Zone bestaetigt. Zone 2 aktiv.",
+              blocked: "DNA-Zone blockiert.",
+              hint: "Erforderlich: genau vier gueltige DNA-Kacheln als zusammenhaengende Komponente.",
+            }
+          );
+          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+        });
+        dnaActions.append(confirmDnaBtn);
+        dnaSetupCard.appendChild(dnaActions);
+        container.appendChild(dnaSetupCard);
+      }
 
 	      const missionCard = el("section", "nx-card nx-card-mission");
 	      missionCard.appendChild(el("div", "nx-card-title", "Aktuelle Mission"));
@@ -777,7 +828,34 @@ export class UI {
           mkMetric("Stabile Kernticks", String(Number(sim.coreEnergyStableTicks || 0)))
         );
         unlockCard.appendChild(mkBar(unlockProgress, "nx-bar-stage", "DNA-Unlock-Fortschritt"));
+        if (unlockProgress >= 1 && !sim.zone2Unlocked) {
+          const unlockActions = el("div", "nx-chip-grid");
+          const startBtn = el("button", "nx-btn nx-btn-primary", "DNA-Zone starten");
+          startBtn.addEventListener("click", () => {
+            this._dispatch(
+              { type: "START_DNA_ZONE_SETUP", payload: {} },
+              {
+                ok: "DNA-Zone-Setup aktiv.",
+                blocked: "DNA-Zone-Setup blockiert.",
+                hint: "Erforderlich: volles DNA-Meter fuer Zone 2.",
+              }
+            );
+            queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+          });
+          unlockActions.appendChild(startBtn);
+          unlockCard.appendChild(unlockActions);
+        }
         container.appendChild(unlockCard);
+      }
+      if (sim.dnaZoneCommitted) {
+        const dnaCommittedCard = el("section", "nx-card");
+        dnaCommittedCard.appendChild(el("div", "nx-card-title", "Zone 2 aktiv"));
+        dnaCommittedCard.appendChild(el("div", "nx-note", "Die DNA-Zone ist bestaetigt und erzeugt jetzt deterministisch DNA im laufenden Run."));
+        dnaCommittedCard.append(
+          mkMetric("Naechster Unlock", "Infrastruktur", "nx-mono nx-val-pos"),
+          mkMetric("DNA-Kosten", fmt(Number(sim.nextInfraUnlockCostDNA || 0), 0))
+        );
+        container.appendChild(dnaCommittedCard);
       }
 
       const timeCard = el("section", "nx-card");
@@ -1793,6 +1871,20 @@ export class UI {
       );
       return;
     }
+    if (String(state.sim?.runPhase || "") === RUN_PHASE.DNA_ZONE_SETUP) {
+      if (!start) return;
+      const idx = wy * state.meta.gridW + wx;
+      const isSelected = (Number(state.world?.dnaZoneMask?.[idx] || 0) | 0) === 1;
+      this._dispatch(
+        { type: "TOGGLE_DNA_ZONE_CELL", payload: { x: wx, y: wy, remove: isSelected } },
+        {
+          ok: isSelected ? "DNA-Kachel entfernt." : "DNA-Kachel gesetzt.",
+          blocked: "DNA-Kachel blockiert.",
+          hint: "Nur lebende eigene Kacheln, nicht im Energiekern, angrenzend an Kern oder DNA-Zone.",
+        }
+      );
+      return;
+    }
     if (mode === BRUSH_MODE.CELL_ADD || mode === BRUSH_MODE.CELL_REMOVE) {
       if (!start) return;
       this._dispatch(
@@ -1834,6 +1926,7 @@ export class UI {
     const runPhase = String(sim.runPhase || "");
     const inGenesisSetup = runPhase === RUN_PHASE.GENESIS_SETUP;
     const inGenesisZone = runPhase === RUN_PHASE.GENESIS_ZONE;
+    const inDnaZoneSetup = runPhase === RUN_PHASE.DNA_ZONE_SETUP;
     if (inGenesisSetup && String(meta.brushMode || BRUSH_MODE.OBSERVE) !== BRUSH_MODE.FOUNDER_PLACE) {
       this._dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
     }
@@ -1879,6 +1972,10 @@ export class UI {
       this._dangerChip.textContent = "◎ Energiekern";
       this._goalChip.textContent = "🎯 Kern bestaetigen";
       this._goalChip.title = "Genesis-Zone: Founder sind fixiert. Bestaetige jetzt den Energiekern fuer RUN_ACTIVE.";
+    } else if (inDnaZoneSetup) {
+      this._dangerChip.textContent = "◎ DNA-Zone";
+      this._goalChip.textContent = "🎯 Zone 2 bestaetigen";
+      this._goalChip.title = "DNA-Zone-Setup: Waehle gueltige DNA-Kacheln und bestaetige dann Zone 2.";
     } else {
       this._dangerChip.textContent = `◎ ${winModeState.label}`;
       this._goalChip.textContent = `🎯 ${bottleneckState.title}`;
@@ -1893,6 +1990,8 @@ export class UI {
       this._hudTool.textContent = "Genesis-Setup | Founder Place: 4/4 zusammenhaengend im Startfenster";
     } else if (inGenesisZone) {
       this._hudTool.textContent = "Genesis-Zone | Energiekern bestaetigen, dann startet RUN_ACTIVE";
+    } else if (inDnaZoneSetup) {
+      this._hudTool.textContent = "DNA-Zone-Setup | DNA-Kacheln waehlen und Zone 2 bestaetigen";
     } else {
       this._hudTool.textContent = `${doctrine.label}: ${advisorModel.runIdentity.doctrineTradeoff} | Hebel: ${nextLeverState.label}`;
     }
