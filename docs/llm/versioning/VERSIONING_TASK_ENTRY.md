@@ -28,3 +28,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 
 ## Taskregel
 Version wird nach Update-Groesse erhoeht und muss in App-Metadaten, Doku und Testbelegen synchron sein.
+
+## Klassifizierungs-Hinweis
+- Phasenplanung und operative LLM-Doku gehoeren zum Versioning-/Governance-Scope.
+- Dazu zaehlen `docs/PHASE_*_TODO.md`, `docs/*HANDOFF*.md`, `docs/*ENTRY*.md` sowie globale Entry-/Protocol-/Matrix-Dokumente.

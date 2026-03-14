@@ -7,8 +7,11 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
+assert(RUN_PHASE.GENESIS_ZONE === "genesis_zone", "RUN_PHASE.GENESIS_ZONE missing or drifted");
+
 const requiredActions = [
   "CONFIRM_FOUNDATION",
+  "CONFIRM_CORE_ZONE",
   "SET_WORLD_PRESET",
   "HARVEST_PULSE",
   "PRUNE_CLUSTER",
@@ -27,6 +30,12 @@ for (const key of [
   "runPhase",
   "founderBudget",
   "founderPlaced",
+  "unlockedZoneTier",
+  "nextZoneUnlockKind",
+  "nextZoneUnlockCostEnergy",
+  "zoneUnlockProgress",
+  "coreEnergyStableTicks",
+  "cpuBootstrapDone",
   "meanWaterField",
   "stageProgressScore",
   "harvestYieldTotal",
@@ -43,6 +52,7 @@ const worldKeys = manifest.simGate?.world?.keys || {};
 assert(worldKeys.water?.ctor === "Float32Array", "world.water missing or wrong type");
 assert(worldKeys.biomeId?.ctor === "Int8Array", "world.biomeId missing or wrong type");
 assert(worldKeys.founderMask?.ctor === "Uint8Array", "world.founderMask missing or wrong type");
+assert(worldKeys.coreZoneMask?.ctor === "Uint8Array", "world.coreZoneMask missing or wrong type");
 assert(worldKeys.visibility?.ctor === "Uint8Array", "world.visibility missing or wrong type");
 assert(worldKeys.explored?.ctor === "Uint8Array", "world.explored missing or wrong type");
 
@@ -50,5 +60,11 @@ assert(manifest.stateSchema?.shape?.meta?.shape?.gameMode?.default === GAME_MODE
 assert(manifest.stateSchema?.shape?.sim?.shape?.runPhase?.default === RUN_PHASE.GENESIS_SETUP, "sim.runPhase default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.founderBudget?.default === 4, "sim.founderBudget default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.founderPlaced?.default === 0, "sim.founderPlaced default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.unlockedZoneTier?.default === 0, "sim.unlockedZoneTier default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.nextZoneUnlockKind?.default === "", "sim.nextZoneUnlockKind default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.nextZoneUnlockCostEnergy?.default === 0, "sim.nextZoneUnlockCostEnergy default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.zoneUnlockProgress?.default === 0, "sim.zoneUnlockProgress default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.coreEnergyStableTicks?.default === 0, "sim.coreEnergyStableTicks default drift");
+assert(manifest.stateSchema?.shape?.sim?.shape?.cpuBootstrapDone?.default === 0, "sim.cpuBootstrapDone default drift");
 
 console.log("FREEZE_CONTRACT_OK phase-a contract surface is bound");

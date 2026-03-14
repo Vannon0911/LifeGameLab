@@ -8,6 +8,7 @@ import {
   GAME_RESULT,
   GOAL_CODE_VALUES,
   OVERLAY_MODE,
+  RUN_PHASE,
   WIN_MODE,
   WIN_MODE_RESULT_LABEL,
   WIN_MODE_SELECTABLE,
@@ -27,6 +28,7 @@ assert(typeof store.getState().sim.goal === "string", "default goal missing");
 assert(store.getState().meta.placementCostEnabled === true, "placement cost default drift");
 assert(store.getState().meta.activeOverlay === OVERLAY_MODE.NONE, "activeOverlay default drift");
 assert(store.getState().meta.globalLearning?.enabled === false, "global learning default drift");
+assert(RUN_PHASE.GENESIS_ZONE === "genesis_zone", "RUN_PHASE.GENESIS_ZONE contract id drift");
 
 const sigA = store.getSignature();
 store.dispatch({ type: "SET_BRUSH", payload: { brushMode: "INVALID_MODE" } });

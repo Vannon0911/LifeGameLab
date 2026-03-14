@@ -4,6 +4,7 @@ export const TEST_SUITES = Object.freeze({
     "tests/test-advisor-model.mjs",
     "tests/test-buffered-step.mjs",
     "tests/test-contract-facade.mjs",
+    "tests/test-confirm-core-zone.mjs",
     "tests/test-core-gates.mjs",
     "tests/test-dataflow-contract.mjs",
     "tests/test-faction-metrics.mjs",

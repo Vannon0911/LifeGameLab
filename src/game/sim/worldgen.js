@@ -4,7 +4,7 @@
 
 import { TRAIT_DEFAULT, TRAIT_COUNT } from "./life.data.js";
 import { hashString, rng01 } from "../../core/kernel/rng.js";
-import { BIOME_IDS, getWorldPreset, normalizeWorldPresetId } from "./worldPresets.js";
+import { BIOME_IDS, getStartWindowRange, getWorldPreset, normalizeWorldPresetId } from "./worldPresets.js";
 import { GAME_MODE, normalizeGameMode } from "../contracts/ids.js";
 
 function clamp01(value) {
@@ -253,6 +253,54 @@ function capInitialPlantCoverage(state, maxRatio = 0.14) {
   for (let i = 0; i < state.P.length; i++) state.P[i] = clamp01(Number(state.P[i] || 0) * scale);
 }
 
+export function seedDeterministicBootstrapCluster(world, seedStr, windowDef, lineageId = 2) {
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  if (w <= 0 || h <= 0 || !windowDef) return [];
+  const range = getStartWindowRange(windowDef, w, h);
+  const candidates = [];
+  for (let y = range.y0; y <= range.y1 - 2; y++) {
+    for (let x = range.x0; x <= range.x1 - 2; x++) {
+      const indices = [
+        y * w + x,
+        y * w + (x + 1),
+        (y + 1) * w + x,
+        (y + 1) * w + (x + 1),
+      ];
+      if (indices.some((idx) => (Number(world.alive?.[idx] || 0) | 0) === 1)) continue;
+      candidates.push(indices);
+    }
+  }
+  if (!candidates.length) return [];
+
+  const seedBase = hashString(`${seedStr || "life-seed"}:cpu-bootstrap:${w}x${h}`);
+  let bestIndices = candidates[0];
+  let bestScore = -1;
+  for (let i = 0; i < candidates.length; i++) {
+    const score = rng01(seedBase, i + 1);
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndices = candidates[i];
+    }
+  }
+
+  for (const idx of bestIndices) {
+    world.alive[idx] = 1;
+    world.E[idx] = 0.42;
+    world.reserve[idx] = 0.12;
+    world.link[idx] = 0;
+    world.lineageId[idx] = lineageId >>> 0;
+    world.hue[idx] = lineageId === 2 ? 0 : 210;
+    world.age[idx] = 0;
+    if (world.born) world.born[idx] = 1;
+    if (world.died) world.died[idx] = 0;
+    if (world.W) world.W[idx] = Math.max(0, Math.min(1, Number(world.W[idx] || 0) * 0.5));
+    const o = idx * TRAIT_COUNT;
+    for (let t = 0; t < TRAIT_COUNT; t++) world.trait[o + t] = TRAIT_DEFAULT[t];
+  }
+  return bestIndices;
+}
+
 export function generateWorld(w, h, seedStr, phy, presetId = "river_delta", options = {}) {
   const normalizedPresetId = normalizeWorldPresetId(presetId);
   const gameMode = normalizeGameMode(options?.gameMode, GAME_MODE.GENESIS);
@@ -288,6 +336,7 @@ export function generateWorld(w, h, seedStr, phy, presetId = "river_delta", opti
     born: new Uint8Array(N),
     died: new Uint8Array(N),
     actionMap: new Uint8Array(N),
+    coreZoneMask: new Uint8Array(N),
     founderMask: new Uint8Array(N),
     visibility: new Uint8Array(N),
     explored: new Uint8Array(N),
