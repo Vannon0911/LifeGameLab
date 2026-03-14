@@ -1,6 +1,6 @@
-# LifeGameLab v2.4.0
+# LifeGameLab v2.5.0
 
-![Version](https://img.shields.io/badge/version-2.4.0-0ea5e9)
+![Version](https://img.shields.io/badge/version-2.5.0-0ea5e9)
 ![Tests](https://img.shields.io/badge/tests-npm%20test-green)
 ![Determinismus](https://img.shields.io/badge/sim-deterministisch-22c55e)
 
