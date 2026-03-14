@@ -33,6 +33,7 @@
 - `node tests/test-path-hygiene.mjs`
 - `node tools/redteam-stress-master.mjs`
 - `npm test`
+- `npm run test:full`
 - `npm run test:quick`
 - `npm run test:truth`
 - `npm run test:stress`

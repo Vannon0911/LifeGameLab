@@ -11,7 +11,8 @@ Ziel: Lange Determinismuslaeufe sind bewusst teuer und kein Defekt.
 - `npm run test:quick`
 - `npm run test:truth`
 - `npm run test:stress`
-- `npm test` (quick + truth + stress)
+- `npm test` (quick only; truth/stress explizit oder per full)
+- `npm run test:full` (quick + truth + stress)
 
 ## Laufzeitbudgets (Stand: 2026-03-14)
 - `quick`: Budget 60s, beobachtet ~7s
