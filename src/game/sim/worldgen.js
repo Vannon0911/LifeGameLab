@@ -338,6 +338,7 @@ export function generateWorld(w, h, seedStr, phy, presetId = "river_delta", opti
     actionMap: new Uint8Array(N),
     coreZoneMask: new Uint8Array(N),
     dnaZoneMask: new Uint8Array(N),
+    infraCandidateMask: new Uint8Array(N),
     founderMask: new Uint8Array(N),
     visibility: new Uint8Array(N),
     explored: new Uint8Array(N),

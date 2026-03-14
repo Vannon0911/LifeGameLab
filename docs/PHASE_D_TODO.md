@@ -4,15 +4,12 @@ Zweck: Infrastruktur und aktive Sicht/Fog-Regeln nach stabiler DNA-Zone.
 
 ## Status
 
-- Produktiv strikt geblockt bis Phase C stabil voll gemerged ist.
-- Erlaubt vor Produktivstart:
-  - TODO-/Prompt-/Testmatrix-/Smoke-Vorbereitung
-  - UI-Textslots und Read-Model-Platzhalter vorbereiten
-  - Caller-/Smoke-Tabellen vorbereiten
-- Nicht erlaubt vor Produktivstart:
+- Phase D ist aktiv; D1 ist abgeschlossen.
+- D2-D8 bleiben offen.
+- Nicht in D1 enthalten:
   - kein Infrastruktur-Bau-Produktivcode
   - kein aktives Fog-Produktivcode
-  - kein D-Produktivcode ueberhaupt
+  - keine UI-/Renderer-Umschaltung
 
 ## Zielbild
 
@@ -31,16 +28,21 @@ Zweck: Infrastruktur und aktive Sicht/Fog-Regeln nach stabiler DNA-Zone.
 ## Ticket-Reihenfolge
 
 ### D1 Contract-/State-Basis
-- [ ] `sim.infrastructureUnlocked` ergaenzen
-- [ ] `sim.infraBuildMode` ergaenzen
-- [ ] `sim.infraBuildCostEnergy` ergaenzen
-- [ ] `sim.infraBuildCostDNA` ergaenzen
-- [ ] `BEGIN_INFRA_BUILD` ergaenzen
-- [ ] `BUILD_INFRA_PATH` ergaenzen
-- [ ] `CONFIRM_INFRA_PATH` ergaenzen
-- [ ] `visibility/explored` aktiv vertraglich nutzen
-- [ ] Contracts/Gates/Metrics/Assertions updaten
-- [ ] Tests + Doku aktualisieren
+- [x] `sim.infrastructureUnlocked` ergaenzen
+- [x] `sim.infraBuildMode` ergaenzen
+- [x] `sim.infraBuildCostEnergy` ergaenzen
+- [x] `sim.infraBuildCostDNA` ergaenzen
+- [x] `BEGIN_INFRA_BUILD` ergaenzen
+- [x] `BUILD_INFRA_PATH` ergaenzen
+- [x] `CONFIRM_INFRA_PATH` ergaenzen
+- [x] `visibility/explored` aktiv vertraglich nutzen
+- [x] Contracts/Gates/Metrics/Assertions updaten
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-freeze-contract.mjs`
+  - `node tests/test-sim-gate.mjs`
+  - `node tests/test-dataflow-contract.mjs`
+  - `node tests/test-string-contract.mjs`
 
 ### D2 Infrastruktur-Bauen
 - [ ] Pfad-Build semantisch statt Brush
@@ -128,3 +130,11 @@ phaseD: {
 - keine dritte Zone als volles Content-System
 - keine Preset-Explosion
 - keine Kernel-Aenderung
+
+## D1-Abschluss
+
+- Neue Sim-Felder sind im Contract, Reducer-Default und `simGate`.
+- Neue Infra-Actions existieren als contract-synchrone No-Op-Surface.
+- `phaseD`-Presetbasis fuer Kosten und Sichtweiten ist angelegt.
+- `CONFIRM_DNA_ZONE` zieht die D1-Kostenbasis bereits deterministisch aus dem Preset nach.
+- Infrastruktur-Bau, Sicht/Fog-Logik, UI und Renderer bleiben bewusst fuer D2-D6 offen.
