@@ -1,16 +1,13 @@
 # MASTER_CHANGE_LOG
 
 Reproduzierbar generierter Commit-Changelog (Source of Truth: Git-Historie).
-Release-Version: v2.5.0
+Release-Version: v2.7.0
 Policy: append-only.
-Operative Nutzung: globale Gesamtansicht/Fallback.
-Nicht als Standardreferenz fuer operative Taskarbeit verwenden.
-Operativ zuerst task-spezifische Doku gemaess Task-Entry nutzen.
 
 ## Reproduzierbarkeit
 - Generator: `node tools/generate-master-changelog.mjs`
 - Basis (v1-Fallback): `646658e186d0beb7e6183a7448037a4a9f086768`
-- Commit-Anzahl: 11
+- Commit-Anzahl: 52
 - Reihenfolge: `git rev-list --reverse HEAD`
 
 ## Commit-Ledger Seit v1
@@ -356,3 +353,777 @@ Operativ zuerst task-spezifische Doku gemaess Task-Entry nutzen.
   - `docs/START_HERE.md`
   - `docs/TASK_SEQUENCE.md`
   - `progress.md`
+
+### 2026-03-14 b7d94a1
+- hash: `b7d94a16e8a5327fb4f3a810b34cbb9bcbc332a0`
+- author: Vannon0911
+- subject: Refactor runtime/ui/sim phases and harden determinism checks
+- diffstat: +926 / -294 / files 18
+- files:
+  - `docs/BUGFIX_LOG.md`
+  - `docs/LLM_ENTRY.md`
+  - `docs/MASTER_CHANGE_LOG.md`
+  - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+  - `docs/SESSION_HANDOFF.md`
+  - `src/app/main.js`
+  - `src/app/runtime/publicApi.js`
+  - `src/game/sim/step.js`
+  - `src/game/sim/stepPhases.js`
+  - `src/game/ui/ui.constants.js`
+  - `src/game/ui/ui.js`
+  - `src/game/ui/ui.model.js`
+  - `tests/support/handleCleanup.mjs`
+  - `tests/test-determinism-long.mjs`
+  - `tests/test-determinism-per-tick.mjs`
+  - `tests/test-determinism-with-interactions.mjs`
+  - `tests/test-drift-negative-order.mjs`
+  - `tools/generate-master-changelog.mjs`
+
+### 2026-03-14 f5ecc98
+- hash: `f5ecc984f2ad2e699a0fb0d28a69d4d11c9f9052`
+- author: Vannon0911
+- subject: Harden contract strings and add Playwright viewport docs/screens
+- diffstat: +127 / -18 / files 27
+- files:
+  - `README.md`
+  - `docs/GITHUB_MEDIA_INDEX.md`
+  - `docs/assets/compare-desktop-1280x720-home.png`
+  - `docs/assets/compare-desktop-1280x720-status.png`
+  - `docs/assets/compare-desktop-1280x720-werkzeuge.png`
+  - `docs/assets/compare-desktop-1536-home.png`
+  - `docs/assets/compare-desktop-1536x960-evolution.png`
+  - `docs/assets/compare-desktop-1536x960-home.png`
+  - `docs/assets/compare-desktop-1536x960-status.png`
+  - `docs/assets/compare-desktop-1536x960-systeme.png`
+  - `docs/assets/compare-desktop-1536x960-werkzeuge.png`
+  - `docs/assets/compare-mobile-360x640-home.png`
+  - `docs/assets/compare-mobile-360x640-status.png`
+  - `docs/assets/compare-mobile-360x640-werkzeuge.png`
+  - `docs/assets/compare-mobile-390x844-evolution.png`
+  - `docs/assets/compare-mobile-390x844-home.png`
+  - `docs/assets/compare-mobile-390x844-status.png`
+  - `docs/assets/compare-mobile-390x844-systeme.png`
+  - `docs/assets/compare-mobile-390x844-werkzeuge.png`
+  - `docs/assets/compare-tablet-834x1112-home.png`
+  - `docs/assets/compare-tablet-834x1112-status.png`
+  - `docs/assets/compare-tablet-834x1112-werkzeuge.png`
+  - `src/game/sim/reducer/index.js`
+  - `src/game/ui/ui.js`
+  - `src/project/llm/readModel.js`
+  - `tests/test-raw-string-guard.mjs`
+  - `tests/test-ui-strategy-contract.mjs`
+
+### 2026-03-14 76848ca
+- hash: `76848ca3d977c9c93cb5ab8f9bf95ed6f0517abb`
+- author: Vannon0911
+- subject: Modul split 2
+- diffstat: +616 / -438 / files 24
+- files:
+  - `.gitignore`
+  - `README.md`
+  - `docs/LLM_ENTRY.md`
+  - `docs/PERF_HOTSPOTS.md`
+  - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+  - `docs/PROJECT_STRUCTURE.md`
+  - `docs/SESSION_HANDOFF.md`
+  - `docs/TEST_BUDGETS.md`
+  - `package.json`
+  - `progress.md`
+  - `src/app/main.js`
+  - `src/app/runtime/bootStatus.js`
+  - `src/app/runtime/reportUtils.js`
+  - `src/app/runtime/worldStateLog.js`
+  - `src/game/sim/reducer/controlActions.js`
+  - `src/game/sim/reducer/index.js`
+  - `src/game/sim/step.js`
+  - `src/game/sim/stepRuntime.js`
+  - `src/game/ui/ui.dom.js`
+  - `src/game/ui/ui.feedback.js`
+  - `src/game/ui/ui.js`
+  - `tools/run-all-tests.mjs`
+  - `tools/run-test-suite.mjs`
+  - `tools/test-suites.mjs`
+
+### 2026-03-14 d5c41bf
+- hash: `d5c41bfe4603b9ad828a9973b6163ccf7cf20257`
+- author: Vannon0911
+- subject: gameplay anpassungen
+- diffstat: +995 / -152 / files 4
+- files:
+  - `src/game/ui/ui.js`
+  - `src/game/ui/ui.model.js`
+  - `src/project/llm/advisorModel.js`
+  - `src/project/llm/readModel.js`
+
+### 2026-03-14 4f2c865
+- hash: `4f2c865ba572a8d0b733e1a96f356e0e24106d76`
+- author: Vannon0911
+- subject: weitere npasssungen
+- diffstat: +253 / -68 / files 6
+- files:
+  - `src/game/render/renderer.js`
+  - `src/game/sim/reducer/controlActions.js`
+  - `src/game/sim/reducer/index.js`
+  - `src/game/sim/reducer/techTreeOps.js`
+  - `src/game/ui/ui.js`
+  - `src/project/contract/stateSchema.js`
+
+### 2026-03-14 ecc7eb4
+- hash: `ecc7eb425f9b4ea93532948adc4678aa0a4e77a9`
+- author: Vannon0911
+- subject: testing angepasst
+- diffstat: +523 / -2 / files 6
+- files:
+  - `src/game/ui/ui.js`
+  - `tests/test-advisor-model.mjs`
+  - `tests/test-llm-contract.mjs`
+  - `tests/test-overlay-diagnostics.mjs`
+  - `tests/test-string-contract.mjs`
+  - `tools/test-suites.mjs`
+
+### 2026-03-14 4861952
+- hash: `4861952ed7ed0e70bf8e99a543570ffd737bf5b0`
+- author: Vannon0911
+- subject: release: cut v2.4.0 main-run update
+- diffstat: +85 / -25 / files 15
+- files:
+  - `README.md`
+  - `docs/BUGFIX_LOG.md`
+  - `docs/MASTER_CHANGE_LOG.md`
+  - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+  - `docs/UPDATE_NOTE_v2.4.0.md`
+  - `index.html`
+  - `package.json`
+  - `progress.md`
+  - `src/project/contract/manifest.js`
+  - `src/project/contract/stateSchema.js`
+  - `tests/test-advisor-model.mjs`
+  - `tests/test-interactions.mjs`
+  - `tests/test-llm-contract.mjs`
+  - `tests/test-overlay-diagnostics.mjs`
+  - `tests/test-player-action-ownership.mjs`
+
+### 2026-03-14 d117489
+- hash: `d117489b138f1ec071e29602c5d10a2863faaf7b`
+- author: Vannon0911
+- subject: test: align gameplay loop with placement cost contract
+- diffstat: +3 / -1 / files 2
+- files:
+  - `docs/UPDATE_NOTE_v2.4.0.md`
+  - `tests/test-gameplay-loop.mjs`
+
+### 2026-03-14 b785c19
+- hash: `b785c19d59b494be311176ec6e660fad109a60d1`
+- author: Vannon0911
+- subject: ui rework Base butt intable
+- diffstat: +1192 / -550 / files 30
+- files:
+  - `docs/NAMING_BASELINE.md`
+  - `docs/SESSION_HANDOFF.md`
+  - `output/playwright/smoke/server.err.log`
+  - `output/playwright/smoke/server.out.log`
+  - `output/playwright/smoke/status-energy-paused-css.png`
+  - `output/playwright/smoke/status-energy-paused.png`
+  - `output/playwright/smoke/status-normal-paused.png`
+  - `output/playwright/smoke/ui-8080-after-fix.png`
+  - `progress.md`
+  - `src/game/render/renderer.js`
+  - `src/game/sim/mainRunActions.js`
+  - `src/game/sim/playerActions.js`
+  - `src/game/sim/reducer/index.js`
+  - `src/game/sim/reducer/metrics.js`
+  - `src/game/sim/reducer/progression.js`
+  - `src/game/sim/reducer/worldRules.js`
+  - `src/game/sim/step.js`
+  - `src/game/sim/worldPresets.js`
+  - `src/game/sim/worldgen.js`
+  - `src/game/ui/ui.constants.js`
+  - `src/game/ui/ui.js`
+  - `src/project/contract/actionSchema.js`
+  - `src/project/contract/dataflow.js`
+  - `src/project/contract/mutationMatrix.js`
+  - `src/project/contract/simGate.js`
+  - `src/project/contract/stateSchema.js`
+  - `tests/test-freeze-contract.mjs`
+  - `tests/test-freeze-progression.mjs`
+  - `tests/test-ui-strategy-contract.mjs`
+  - `tests/test-world-presets-determinism.mjs`
+
+### 2026-03-14 e9e3ea4
+- hash: `e9e3ea40ac0e2570af97005649b38d3a095e19fe`
+- author: Vannon0911
+- subject: update fix
+- diffstat: +213 / -5 / files 11
+- files:
+  - `output/playwright/freeze-server-8091.err.log`
+  - `output/playwright/freeze-server-8091.out.log`
+  - `output/playwright/freeze-server.err.log`
+  - `output/playwright/freeze-server.out.log`
+  - `output/web-game/freeze/shot-0.png`
+  - `output/web-game/freeze/shot-1.png`
+  - `output/web-game/freeze/state-0.json`
+  - `output/web-game/freeze/state-1.json`
+  - `src/game/sim/worldPresets.js`
+  - `src/game/sim/worldgen.js`
+  - `tests/test-gameplay-loop.mjs`
+
+### 2026-03-14 3c5342f
+- hash: `3c5342f23302f3daf4c5444c9e52a32375f76f48`
+- author: Vannon0911
+- subject: tessting
+- diffstat: +761 / -0 / files 8
+- files:
+  - `docs/PLAYWRIGHT_DEBUG_LOOP.md`
+  - `output/web-game/debug-loop/iter-01-boot.json`
+  - `output/web-game/debug-loop/iter-01-boot.png`
+  - `output/web-game/freeze/server-8091.err.log`
+  - `output/web-game/freeze/server-8091.out.log`
+  - `package.json`
+  - `progress.md`
+  - `tools/playwright-debug-loop.mjs`
+
+### 2026-03-14 611b7ae
+- hash: `611b7aeb38cbe1969ebc82f927a7268dd920b952`
+- author: Vannon0911
+- subject: testing update
+- diffstat: +169 / -19 / files 6
+- files:
+  - `output/web-game/debug-loop/iter-01-boot.json`
+  - `output/web-game/debug-loop/iter-01-console.json`
+  - `output/web-game/debug-loop/iter-01-run.json`
+  - `output/web-game/debug-loop/iter-01-run.png`
+  - `output/web-game/freeze/server-8091.err.log`
+  - `tools/playwright-debug-loop.mjs`
+
+### 2026-03-14 b4453e8
+- hash: `b4453e812e7280c94ac9d6d4000b65001d0045f9`
+- author: Vannon0911
+- subject: testloop
+- diffstat: +398 / -25 / files 17
+- files:
+  - `docs/PLAYWRIGHT_DEBUG_LOOP.md`
+  - `output/web-game/debug-loop/iter-01-boot.json`
+  - `output/web-game/debug-loop/iter-01-panel-eingriffe.png`
+  - `output/web-game/debug-loop/iter-01-panel-evolution.png`
+  - `output/web-game/debug-loop/iter-01-panel-labor.png`
+  - `output/web-game/debug-loop/iter-01-panel-lage.png`
+  - `output/web-game/debug-loop/iter-01-panel-welt.png`
+  - `output/web-game/debug-loop/iter-01-run.json`
+  - `output/web-game/debug-loop/iter-01-run.png`
+  - `output/web-game/debug-loop/iter-02-boot.json`
+  - `output/web-game/debug-loop/iter-02-boot.png`
+  - `output/web-game/debug-loop/iter-02-console.json`
+  - `output/web-game/debug-loop/iter-02-run.json`
+  - `output/web-game/debug-loop/iter-02-run.png`
+  - `output/web-game/debug-loop/summary.json`
+  - `output/web-game/freeze/server-8091.err.log`
+  - `tools/playwright-debug-loop.mjs`
+
+### 2026-03-14 ba78924
+- hash: `ba789241b3e57025d9ee25221b72e3723bb13dac`
+- author: Vannon0911
+- subject: test fix ...again
+- diffstat: +187 / -6 / files 4
+- files:
+  - `output/web-game/freeze/server-8091.err.log`
+  - `src/game/sim/reducer/index.js`
+  - `tests/test-bootstrap-gen-world.mjs`
+  - `tools/test-suites.mjs`
+
+### 2026-03-14 07b8de9
+- hash: `07b8de9d59ed4e2d1186ebcc5b666bddd8821a6d`
+- author: Vannon0911
+- subject: server
+- diffstat: +109 / -5 / files 5
+- files:
+  - `docs/PLAYWRIGHT_DEBUG_LOOP.md`
+  - `output/web-game/freeze/server-8091.err.log`
+  - `progress.md`
+  - `src/game/ui/ui.js`
+  - `tests/test-ui-strategy-contract.mjs`
+
+### 2026-03-14 be3fca0
+- hash: `be3fca024be45e85acf667e48c2b5fc8e4ba4154`
+- author: Vannon0911
+- subject: minor: optimize recycle_patch and add main-run function loop gate
+- diffstat: +80 / -6 / files 3
+- files:
+  - `src/game/sim/mainRunActions.js`
+  - `tests/test-mainrun-function-loop.mjs`
+  - `tools/test-suites.mjs`
+
+### 2026-03-14 7b4ecb3
+- hash: `7b4ecb3d2ebef35be1a13fc5ada09fdeef454767`
+- author: Vannon0911
+- subject: patch: sync ui panel state and harden debug evidence failures
+- diffstat: +32 / -5 / files 4
+- files:
+  - `docs/PLAYWRIGHT_DEBUG_LOOP.md`
+  - `src/game/ui/ui.js`
+  - `tests/support/liveTestKit.mjs`
+  - `tests/test-ui-strategy-contract.mjs`
+
+### 2026-03-14 809c397
+- hash: `809c3975559baf063a4c23de8f52914e17954f0e`
+- author: Vannon0911
+- subject: minor: release v2.5.0 with update-size versioning docs
+- diffstat: +55 / -9 / files 9
+- files:
+  - `README.md`
+  - `docs/BUGFIX_LOG.md`
+  - `docs/MASTER_CHANGE_LOG.md`
+  - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+  - `docs/VERSIONING_BY_UPDATE_SIZE.md`
+  - `index.html`
+  - `package.json`
+  - `progress.md`
+  - `src/project/contract/manifest.js`
+
+### 2026-03-14 00fd978
+- hash: `00fd978b4c1fa2f7c30374184269a8de5bbeb002`
+- author: Vannon0911
+- subject: ,more small fixes
+- diffstat: +139 / -0 / files 7
+- files:
+  - `.gitignore`
+  - `docs/llm/TASK_ENTRY_MATRIX.json`
+  - `docs/llm/contracts/CONTRACT_TASK_ENTRY.md`
+  - `docs/llm/entry/ENTRY_ENFORCEMENT.md`
+  - `docs/llm/entry/LLM_ENTRY_LOCK.json`
+  - `docs/llm/sim/SIM_TASK_ENTRY.md`
+  - `output/web-game/freeze/server-8091.err.log`
+
+### 2026-03-14 04aad53
+- hash: `04aad53d703443595acad0701733ed677cd3a66d`
+- author: Vannon0911
+- subject: patch: enforce llm entry preflight and task entry docs
+- diffstat: +204 / -0 / files 8
+- files:
+  - `docs/llm/entry/ENTRY_ENFORCEMENT.md`
+  - `docs/llm/testing/TESTING_TASK_ENTRY.md`
+  - `docs/llm/ui/UI_TASK_ENTRY.md`
+  - `docs/llm/versioning/VERSIONING_TASK_ENTRY.md`
+  - `package.json`
+  - `tests/test-llm-contract.mjs`
+  - `tools/llm-preflight.mjs`
+  - `tools/run-test-suite.mjs`
+
+### 2026-03-14 f0e6f25
+- hash: `f0e6f2595c1db7f9acdf63bc6365e7070cff6c49`
+- author: Vannon0911
+- subject: debugging
+- diffstat: +66 / -16 / files 5
+- files:
+  - `src/app/main.js`
+  - `src/game/render/renderer.js`
+  - `src/game/ui/ui.constants.js`
+  - `src/game/ui/ui.js`
+  - `src/project/contract/stateSchema.js`
+
+### 2026-03-14 c4a88a6
+- hash: `c4a88a619f5b5f4c53f1361510faf03d1bb0c2ce`
+- author: Vannon0911
+- subject: LLM suite Improve
+- diffstat: +505 / -118 / files 16
+- files:
+  - `MANDATORY_READING.md`
+  - `docs/LLM_OPERATING_PROTOCOL.md`
+  - `docs/MASTER_CHANGE_LOG.md`
+  - `docs/START_HERE.md`
+  - `docs/llm/TASK_ENTRY_MATRIX.json`
+  - `docs/llm/contracts/CONTRACT_TASK_ENTRY.md`
+  - `docs/llm/entry/ENTRY_ENFORCEMENT.md`
+  - `docs/llm/sim/SIM_TASK_ENTRY.md`
+  - `docs/llm/testing/TESTING_TASK_ENTRY.md`
+  - `docs/llm/ui/UI_TASK_ENTRY.md`
+  - `docs/llm/versioning/VERSIONING_TASK_ENTRY.md`
+  - `package.json`
+  - `tests/test-llm-contract.mjs`
+  - `tools/llm-preflight.mjs`
+  - `tools/run-all-tests.mjs`
+  - `tools/run-test-suite.mjs`
+
+### 2026-03-14 306b3be
+- hash: `306b3bed8d7f1efbd81323eee50703d292e1b255`
+- author: Vannon0911
+- subject: test rework
+- diffstat: +109 / -31 / files 2
+- files:
+  - `tests/test-llm-contract.mjs`
+  - `tests/test-smoke.mjs`
+
+### 2026-03-14 604d341
+- hash: `604d341d53c8d96b2cc15030fd073a1772151734`
+- author: Vannon0911
+- subject: test rework
+- diffstat: +165 / -51 / files 4
+- files:
+  - `tests/test-llm-contract.mjs`
+  - `tests/test-smoke.mjs`
+  - `tests/test-ui-contract.mjs`
+  - `tests/test-ui-strategy-contract.mjs`
+
+### 2026-03-14 5a50021
+- hash: `5a500217c5ef1cdab223cd5f7856fe67596c24c6`
+- author: Vannon0911
+- subject: harden test contracts, add checkpoint determinism, fix SET_PLACEMENT_COST dataflow drift
+- diffstat: +365 / -79 / files 6
+- files:
+  - `docs/TEST_BUDGETS.md`
+  - `src/project/contract/dataflow.js`
+  - `tests/test-llm-contract.mjs`
+  - `tests/test-smoke.mjs`
+  - `tests/test-ui-contract.mjs`
+  - `tests/test-ui-strategy-contract.mjs`
+
+### 2026-03-14 1a8cd5d
+- hash: `1a8cd5de9c60ccebdf27496d4ddc14c517e6d7c1`
+- author: Vannon0911
+- subject: Last commit bevor REKONSTRUJT TO BIGGER BETTERN HARDER
+- diffstat: +1177 / -0 / files 60
+- files:
+  - `output/web-game/capture-timing-isolation/repeat-1.png`
+  - `output/web-game/capture-timing-isolation/repeat-2.png`
+  - `output/web-game/capture-timing-isolation/repeat-3.png`
+  - `output/web-game/capture-timing-isolation/single-cdp.png`
+  - `output/web-game/capture-timing-isolation/single.png`
+  - `output/web-game/manual-check-no-clear/iter-01-boot.json`
+  - `output/web-game/manual-check-no-clear/iter-01-boot.png`
+  - `output/web-game/manual-check-no-clear/iter-01-console.json`
+  - `output/web-game/manual-check-no-clear/iter-01-panel-eingriffe.png`
+  - `output/web-game/manual-check-no-clear/iter-01-panel-evolution.png`
+  - `output/web-game/manual-check-no-clear/iter-01-panel-labor.png`
+  - `output/web-game/manual-check-no-clear/iter-01-panel-lage.png`
+  - `output/web-game/manual-check-no-clear/iter-01-panel-welt.png`
+  - `output/web-game/manual-check-no-clear/iter-01-run.json`
+  - `output/web-game/manual-check-no-clear/iter-01-run.png`
+  - `output/web-game/manual-check-no-clear/summary.json`
+  - `output/web-game/manual-check-single/iter-01-boot.json`
+  - `output/web-game/manual-check-single/iter-01-boot.png`
+  - `output/web-game/manual-check-single/iter-01-console.json`
+  - `output/web-game/manual-check-single/iter-01-panel-eingriffe.png`
+  - `output/web-game/manual-check-single/iter-01-panel-evolution.png`
+  - `output/web-game/manual-check-single/iter-01-panel-labor.png`
+  - `output/web-game/manual-check-single/iter-01-panel-lage.png`
+  - `output/web-game/manual-check-single/iter-01-panel-welt.png`
+  - `output/web-game/manual-check-single/iter-01-run.json`
+  - `output/web-game/manual-check-single/iter-01-run.png`
+  - `output/web-game/manual-check-single/summary.json`
+  - `output/web-game/manual-check-timing2/iter-01-boot.json`
+  - `output/web-game/manual-check-timing2/iter-01-boot.png`
+  - `output/web-game/manual-check-timing2/iter-01-console.json`
+  - `output/web-game/manual-check-timing2/iter-01-panel-eingriffe.png`
+  - `output/web-game/manual-check-timing2/iter-01-panel-evolution.png`
+  - `output/web-game/manual-check-timing2/iter-01-panel-labor.png`
+  - `output/web-game/manual-check-timing2/iter-01-panel-lage.png`
+  - `output/web-game/manual-check-timing2/iter-01-panel-welt.png`
+  - `output/web-game/manual-check-timing2/iter-01-run.json`
+  - `output/web-game/manual-check-timing2/iter-01-run.png`
+  - `output/web-game/manual-check-timing2/summary.json`
+  - `output/web-game/manual-check-timing3/iter-01-boot.json`
+  - `output/web-game/manual-check-timing3/iter-01-boot.png`
+  - `output/web-game/manual-check-timing3/iter-01-console.json`
+  - `output/web-game/manual-check-timing3/iter-01-panel-eingriffe.png`
+  - `output/web-game/manual-check-timing3/iter-01-panel-evolution.png`
+  - `output/web-game/manual-check-timing3/iter-01-panel-labor.png`
+  - `output/web-game/manual-check-timing3/iter-01-panel-lage.png`
+  - `output/web-game/manual-check-timing3/iter-01-panel-welt.png`
+  - `output/web-game/manual-check-timing3/iter-01-run.json`
+  - `output/web-game/manual-check-timing3/iter-01-run.png`
+  - `output/web-game/manual-check-timing3/summary.json`
+  - `output/web-game/manual-check/iter-01-boot.json`
+  - `output/web-game/manual-check/iter-01-boot.png`
+  - `output/web-game/manual-check/iter-01-console.json`
+  - `output/web-game/manual-check/iter-01-panel-eingriffe.png`
+  - `output/web-game/manual-check/iter-01-panel-evolution.png`
+  - `output/web-game/manual-check/iter-01-panel-labor.png`
+  - `output/web-game/manual-check/iter-01-panel-lage.png`
+  - `output/web-game/manual-check/iter-01-panel-welt.png`
+  - `output/web-game/manual-check/iter-01-run.json`
+  - `output/web-game/manual-check/iter-01-run.png`
+  - `output/web-game/tmp-playwright-no-clear.mjs`
+
+### 2026-03-14 6d00072
+- hash: `6d00072d8cb85971d48b5378ee97963d34634cb0`
+- author: Vannon0911
+- subject: lasst prepatch
+- diffstat: +0 / -0 / files 9
+- files:
+  - `output/web-game/capture-timing-isolation/page-animations-disabled.png`
+  - `output/web-game/capture-timing-isolation/repeat-4.png`
+  - `output/web-game/capture-timing-isolation/repeat-5.png`
+  - `output/web-game/capture-timing-isolation/repeat-6.png`
+  - `output/web-game/capture-timing-isolation/repeat-7.png`
+  - `output/web-game/capture-timing-isolation/repeat-page-1.png`
+  - `output/web-game/capture-timing-isolation/reuse-1.png`
+  - `output/web-game/capture-timing-isolation/reuse-2.png`
+  - `output/web-game/capture-timing-isolation/reuse-3.png`
+
+### 2026-03-14 b5fcbf1
+- hash: `b5fcbf105bd04210c4be94378db8621783415710`
+- author: Vannon0911
+- subject: phase-a: genesis bootstrap, founder gating, and lab autorun split
+- diffstat: +1435 / -85 / files 52
+- files:
+  - `docs/PHASE_A_TODO.md`
+  - `docs/SESSION_HANDOFF.md`
+  - `progress.md`
+  - `src/app/main.js`
+  - `src/game/contracts/ids.js`
+  - `src/game/sim/gate.js`
+  - `src/game/sim/playerActions.js`
+  - `src/game/sim/reducer.js`
+  - `src/game/sim/reducer/index.js`
+  - `src/game/sim/reducer/metrics.js`
+  - `src/game/sim/reducer/winConditions.js`
+  - `src/game/sim/step.js`
+  - `src/game/sim/stepPhases.js`
+  - `src/game/sim/worldAi.js`
+  - `src/game/sim/worldPresets.js`
+  - `src/game/sim/worldgen.js`
+  - `src/game/ui/ui.js`
+  - `src/game/ui/ui.model.js`
+  - `src/project/contract/actionSchema.js`
+  - `src/project/contract/dataflow.js`
+  - `src/project/contract/mutationMatrix.js`
+  - `src/project/contract/simGate.js`
+  - `src/project/contract/stateSchema.js`
+  - `src/project/project.logic.js`
+  - `tests/test-bootstrap-gen-world.mjs`
+  - `tests/test-buffered-step.mjs`
+  - `tests/test-confirm-foundation.mjs`
+  - `tests/test-core-gates.mjs`
+  - `tests/test-determinism-long.mjs`
+  - `tests/test-determinism-per-tick.mjs`
+  - `tests/test-determinism-with-interactions.mjs`
+  - `tests/test-divergence.mjs`
+  - `tests/test-drift-negative-order.mjs`
+  - `tests/test-faction-metrics.mjs`
+  - `tests/test-founder-placement.mjs`
+  - `tests/test-freeze-contract.mjs`
+  - `tests/test-freeze-progression.mjs`
+  - `tests/test-gameplay-loop.mjs`
+  - `tests/test-genesis-action-gates.mjs`
+  - `tests/test-genesis-ui-minimum.mjs`
+  - `tests/test-interactions.mjs`
+  - `tests/test-invariants.mjs`
+  - `tests/test-layer-split.mjs`
+  - `tests/test-mainrun-function-loop.mjs`
+  - `tests/test-player-action-ownership.mjs`
+  - `tests/test-result-phase.mjs`
+  - `tests/test-sim-modules.mjs`
+  - `tests/test-smoke.mjs`
+  - `tests/test-split-security-gate.mjs`
+  - `tests/test-stability.mjs`
+  - `tests/test-string-contract.mjs`
+  - `tests/test-world-start-windows.mjs`
+
+### 2026-03-14 ef309db
+- hash: `ef309dbd65705ff445a9a313af814d01da3cf202`
+- author: Vannon0911
+- subject: fix
+- diffstat: +48 / -25 / files 9
+- files:
+  - `README.md`
+  - `docs/LLM_ENTRY.md`
+  - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
+  - `docs/TEST_BUDGETS.md`
+  - `docs/llm/entry/ENTRY_ENFORCEMENT.md`
+  - `docs/llm/entry/LLM_ENTRY_LOCK.json`
+  - `progress.md`
+  - `tools/run-all-tests.mjs`
+  - `tools/run-test-suite.mjs`
+
+### 2026-03-14 8ac51bd
+- hash: `8ac51bd71767a2cdb2af2369a76e8006eed913c9`
+- author: Vannon0911
+- subject: B3 work
+- diffstat: +544 / -34 / files 26
+- files:
+  - `docs/PHASE_A_TODO.md`
+  - `docs/llm/TASK_ENTRY_MATRIX.json`
+  - `docs/llm/contracts/CONTRACT_TASK_ENTRY.md`
+  - `docs/llm/versioning/VERSIONING_TASK_ENTRY.md`
+  - `progress.md`
+  - `src/game/contracts/ids.js`
+  - `src/game/sim/gate.js`
+  - `src/game/sim/reducer/index.js`
+  - `src/game/sim/reducer/metrics.js`
+  - `src/game/sim/worldPresets.js`
+  - `src/game/sim/worldgen.js`
+  - `src/project/contract/actionSchema.js`
+  - `src/project/contract/mutationMatrix.js`
+  - `src/project/contract/simGate.js`
+  - `src/project/contract/stateSchema.js`
+  - `tests/test-bootstrap-gen-world.mjs`
+  - `tests/test-confirm-core-zone.mjs`
+  - `tests/test-confirm-foundation.mjs`
+  - `tests/test-founder-placement.mjs`
+  - `tests/test-freeze-contract.mjs`
+  - `tests/test-genesis-action-gates.mjs`
+  - `tests/test-llm-contract.mjs`
+  - `tests/test-sim-gate.mjs`
+  - `tests/test-string-contract.mjs`
+  - `tools/llm-preflight.mjs`
+  - `tools/test-suites.mjs`
+
+### 2026-03-14 7c98c2f
+- hash: `7c98c2f797009c8d39a480e293e7f18be1b3c9e6`
+- author: Vannon0911
+- subject: B end phase road to c
+- diffstat: +159 / -48 / files 7
+- files:
+  - `docs/PHASE_A_TODO.md`
+  - `progress.md`
+  - `src/game/ui/ui.js`
+  - `src/game/ui/ui.model.js`
+  - `src/project/contract/dataflow.js`
+  - `tests/test-genesis-ui-minimum.mjs`
+  - `tools/test-suites.mjs`
+
+### 2026-03-14 ce89167
+- hash: `ce891676ad68545b608a6e3ccbe1edecc1d46d1f`
+- author: Vannon0911
+- subject: todo extan
+- diffstat: +433 / -10 / files 13
+- files:
+  - `docs/LLM_ENTRY.md`
+  - `docs/PHASE_A_TODO.md`
+  - `docs/PHASE_C_TODO.md`
+  - `docs/PHASE_D_TODO.md`
+  - `docs/PROJECT_STRUCTURE.md`
+  - `docs/llm/TASK_ENTRY_MATRIX.json`
+  - `docs/llm/entry/LLM_ENTRY_LOCK.json`
+  - `docs/llm/ui/UI_TASK_ENTRY.md`
+  - `progress.md`
+  - `tests/test-llm-contract.mjs`
+  - `tests/test-main-runtime-callers.mjs`
+  - `tests/test-standard-genesis-flow.mjs`
+  - `tools/test-suites.mjs`
+
+### 2026-03-14 9e3d309
+- hash: `9e3d30900443b1b77138ccf88c67fd2ea507cdcd`
+- author: Vannon0911
+- subject: Almost...
+- diffstat: +921 / -20 / files 26
+- files:
+  - `docs/PHASE_C_TODO.md`
+  - `progress.md`
+  - `src/game/contracts/ids.js`
+  - `src/game/sim/reducer/index.js`
+  - `src/game/sim/reducer/metrics.js`
+  - `src/game/sim/reducer/worldRules.js`
+  - `src/game/sim/worldPresets.js`
+  - `src/game/sim/worldgen.js`
+  - `src/game/ui/ui.js`
+  - `src/game/ui/ui.model.js`
+  - `src/project/contract/actionSchema.js`
+  - `src/project/contract/dataflow.js`
+  - `src/project/contract/mutationMatrix.js`
+  - `src/project/contract/simGate.js`
+  - `src/project/contract/stateSchema.js`
+  - `tests/test-confirm-core-zone.mjs`
+  - `tests/test-confirm-dna-zone.mjs`
+  - `tests/test-dna-zone-setup-gates.mjs`
+  - `tests/test-freeze-contract.mjs`
+  - `tests/test-genesis-ui-minimum.mjs`
+  - `tests/test-sim-gate.mjs`
+  - `tests/test-standard-dna-flow.mjs`
+  - `tests/test-start-dna-zone-setup.mjs`
+  - `tests/test-string-contract.mjs`
+  - `tests/test-toggle-dna-zone-cell.mjs`
+  - `tools/test-suites.mjs`
+
+### 2026-03-14 e9c2e22
+- hash: `e9c2e22dbfd6b2ca33c49362865f3de1d5bc6166`
+- author: Vannon0911
+- subject: c done ready for D?
+- diffstat: +83 / -42 / files 2
+- files:
+  - `docs/PHASE_C_TODO.md`
+  - `progress.md`
+
+### 2026-03-14 a394d28
+- hash: `a394d2815af527f02bee2618af72dd439d9a8a94`
+- author: Vannon0911
+- subject: last mile
+- diffstat: +316 / -18 / files 9
+- files:
+  - `docs/LLM_ENTRY.md`
+  - `docs/PHASE_C_TODO.md`
+  - `docs/PHASE_E_TODO.md`
+  - `docs/PHASE_F_TODO.md`
+  - `docs/PHASE_G_TODO.md`
+  - `docs/PROJECT_STRUCTURE.md`
+  - `docs/SESSION_HANDOFF.md`
+  - `docs/llm/entry/LLM_ENTRY_LOCK.json`
+  - `progress.md`
+
+### 2026-03-14 96aa1eb
+- hash: `96aa1eb1099540ceb4abc03bdb81501dc1faf0bf`
+- author: Vannon0911
+- subject: d2
+- diffstat: +124 / -21 / files 13
+- files:
+  - `docs/PHASE_D_TODO.md`
+  - `progress.md`
+  - `src/game/sim/reducer/index.js`
+  - `src/game/sim/reducer/metrics.js`
+  - `src/game/sim/reducer/worldRules.js`
+  - `src/game/sim/worldPresets.js`
+  - `src/game/sim/worldgen.js`
+  - `src/project/contract/actionSchema.js`
+  - `src/project/contract/mutationMatrix.js`
+  - `src/project/contract/simGate.js`
+  - `src/project/contract/stateSchema.js`
+  - `tests/test-freeze-contract.mjs`
+  - `tests/test-sim-gate.mjs`
+
+### 2026-03-14 ec7a74c
+- hash: `ec7a74c17562a1bc2e82c255327323c04bc2e4a5`
+- author: Vannon0911
+- subject: reducer patch
+- diffstat: +207 / -7 / files 1
+- files:
+  - `src/game/sim/reducer/index.js`
+
+### 2026-03-14 ef5b8ce
+- hash: `ef5b8ce8291b66d2fe2c44eafe62e15064ba2a6f`
+- author: Vannon0911
+- subject: d2 70%
+- diffstat: +382 / -5 / files 7
+- files:
+  - `docs/PHASE_D_TODO.md`
+  - `progress.md`
+  - `src/project/contract/mutationMatrix.js`
+  - `tests/test-begin-infra-build.mjs`
+  - `tests/test-build-infra-path.mjs`
+  - `tests/test-confirm-infra-path.mjs`
+  - `tools/test-suites.mjs`
+
+### 2026-03-14 0b2ebad
+- hash: `0b2ebad94ea5ed96574a99ce6ada06527945c100`
+- author: Vannon0911
+- subject: phase d follow-up: finalize infra tests and versioning gate
+- diffstat: +26 / -4 / files 4
+- files:
+  - `docs/PHASE_D_TODO.md`
+  - `src/game/sim/gate.js`
+  - `tests/test-build-infra-path.mjs`
+  - `tests/test-confirm-infra-path.mjs`
+
+### 2026-03-14 85e288e
+- hash: `85e288efbc5cbd95a0b31c97c58de6ff6713e429`
+- author: Vannon0911
+- subject: docs: add current rework concept to readme
+- diffstat: +31 / -0 / files 1
+- files:
+  - `README.md`
+
+### 2026-03-14 716d2bf
+- hash: `716d2bf31bdd295c55a614520d852a36aef53565`
+- author: Vannon0911
+- subject: docs: rewrite readme as project history
+- diffstat: +101 / -33 / files 1
+- files:
+  - `README.md`

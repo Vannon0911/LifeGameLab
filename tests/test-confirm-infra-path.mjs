@@ -105,6 +105,11 @@ function createInfraCommitStore(seed, presetId = "river_delta") {
     coreXY[0],
     { x: minX - 1, y: minY },
   ];
+  const farCell = {
+    x: Math.min(active.world.w - 1, minX + 5),
+    y: Math.min(active.world.h - 1, maxY + 4),
+  };
+  patchPlayerCells(store, [farCell]);
   patchPlayerCells(store, pathCells);
   patchPlayerEnergy(store, 6);
   store.dispatch({
@@ -117,7 +122,60 @@ function createInfraCommitStore(seed, presetId = "river_delta") {
     },
   });
   store.dispatch({ type: "BEGIN_INFRA_BUILD", payload: {} });
-  return { store, pathCells };
+  return { store, pathCells, farCell };
+}
+
+function assertFloatArrayEqual(a, b, msg) {
+  assert(a.length === b.length, `${msg}: length mismatch`);
+  for (let i = 0; i < a.length; i++) {
+    if (Math.abs(Number(a[i] || 0) - Number(b[i] || 0)) > 1e-9) {
+      throw new Error(`${msg}: mismatch at ${i}`);
+    }
+  }
+}
+
+{
+  const { store } = createInfraCommitStore("confirm-infra-path-abort-1");
+  const before = store.getState();
+  const linkBefore = new Float32Array(before.world.link);
+  const energyBefore = new Float32Array(before.world.E);
+  const dnaBefore = Number(before.sim.playerDNA || 0);
+  const storedEnergyBefore = Number(before.sim.playerEnergyStored || 0);
+  assert(before.sim.infraBuildMode === "path", "empty confirm requires path mode");
+  assert(before.sim.running === false, "begin infra build must pause run before abort");
+  store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
+  const blockedResume = store.getState();
+  assert(blockedResume.sim.running === false, "manual resume must stay blocked while infra build mode is active");
+  store.dispatch({ type: "CONFIRM_INFRA_PATH", payload: {} });
+  const after = store.getState();
+  assert(after.sim.runPhase === RUN_PHASE.RUN_ACTIVE, "empty confirm abort must stay in active run phase");
+  assert(after.sim.running === true, "empty confirm abort must restart the run");
+  assert(after.sim.infraBuildMode === "", "empty confirm abort must leave build mode");
+  assert(after.sim.infrastructureUnlocked === false, "empty confirm abort must not unlock infrastructure");
+  assert(Number(after.sim.playerDNA || 0) === dnaBefore, "empty confirm abort must not spend dna");
+  assert(Number(after.sim.playerEnergyStored || 0) === storedEnergyBefore, "empty confirm abort must not spend stored energy");
+  assertFloatArrayEqual(after.world.link, linkBefore, "empty confirm abort must leave world.link unchanged");
+  assertFloatArrayEqual(after.world.E, energyBefore, "empty confirm abort must leave world.E unchanged");
+  assert(after.world.infraCandidateMask.every((value) => (Number(value || 0) | 0) === 0), "empty confirm abort must keep candidate mask empty");
+}
+
+{
+  const { store, pathCells, farCell } = createInfraCommitStore("confirm-infra-path-invalid-1");
+  const invalidState = store.getState();
+  const candidateMask = new Uint8Array(invalidState.world.infraCandidateMask);
+  const anchorIdx = pathCells[0].y * invalidState.world.w + pathCells[0].x;
+  const farIdx = farCell.y * invalidState.world.w + farCell.x;
+  candidateMask[anchorIdx] = 1;
+  candidateMask[farIdx] = 1;
+  const tamperedState = {
+    ...invalidState,
+    world: {
+      ...invalidState.world,
+      infraCandidateMask: candidateMask,
+    },
+  };
+  const patches = reducer(tamperedState, { type: "CONFIRM_INFRA_PATH", payload: {} }, { rng: {} });
+  assert(Array.isArray(patches) && patches.length === 0, "invalid non-empty staged infra path must stay blocked");
 }
 
 {
@@ -144,4 +202,4 @@ function createInfraCommitStore(seed, presetId = "river_delta") {
   }
 }
 
-console.log("CONFIRM_INFRA_PATH_OK commit and cost path verified");
+console.log("CONFIRM_INFRA_PATH_OK abort, invalid, and commit paths verified");
