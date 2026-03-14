@@ -1,4 +1,4 @@
-import { deriveRiskCode, normalizeGoalCode } from "../../game/contracts/ids.js";
+import { BRUSH_MODE, deriveRiskCode, normalizeGoalCode } from "../../game/contracts/ids.js";
 
 const TOOL_ALIASES = Object.freeze({
   paint_light: "light",
@@ -12,7 +12,7 @@ export function buildLlmReadModel(state, benchmark = null) {
   const safeState = state && typeof state === "object" ? state : {};
   const playerLineageId = Number(safeState?.meta?.playerLineageId || 0);
   const memory = safeState?.world?.lineageMemory?.[playerLineageId] || {};
-  const rawTool = String(safeState?.meta?.brushMode || "observe");
+  const rawTool = String(safeState?.meta?.brushMode || BRUSH_MODE.OBSERVE);
   const clusterRatio = Number(safeState?.sim?.clusterRatio || 0);
   const networkRatio = Number(safeState?.sim?.networkRatio || 0);
   const structure =

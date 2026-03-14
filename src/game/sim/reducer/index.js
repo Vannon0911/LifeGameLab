@@ -12,6 +12,7 @@ import { clamp, cloneTypedArray, paintCircle } from "../shared.js";
 import {
   BRUSH_MODE,
   GAME_RESULT,
+  OVERLAY_MODE,
   WIN_MODE,
   WIN_MODE_SELECTABLE,
   isBrushMode,
@@ -367,7 +368,7 @@ export function reducer(state, action, { rng }) {
     }
 
     case "SET_OVERLAY": {
-      const ov = String(action.payload || "none");
+      const ov = String(action.payload || OVERLAY_MODE.NONE);
       if (!isOverlayMode(ov)) return [];
       return [{ op: "set", path: "/meta/activeOverlay", value: ov }];
     }
