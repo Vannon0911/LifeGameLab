@@ -18,6 +18,7 @@
   },
   "contracts": {
     "triggerPrefixes": [
+      "src/game/contracts/",
       "src/project/contract/",
       "src/core/kernel/",
       "docs/llm/contracts/"
@@ -39,11 +40,14 @@
       "package.json",
       "src/project/contract/manifest.js",
       "docs/VERSIONING_BY_UPDATE_SIZE.md",
+      "docs/PHASE_*_TODO.md",
       "docs/START_HERE.md",
       "docs/LLM_ENTRY.md",
       "docs/LLM_OPERATING_PROTOCOL.md",
       "docs/PROJECT_STRUCTURE.md",
       "docs/PROJECT_CONTRACT_SNAPSHOT.md",
+      "docs/*HANDOFF*.md",
+      "docs/*ENTRY*.md",
       "docs/SCOPE_BASELINE.md",
       "docs/TASK_SEQUENCE.md",
       "docs/MASTER_CHANGE_LOG.md",

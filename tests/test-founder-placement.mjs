@@ -81,6 +81,19 @@ const blocked = handlePlaceCell(runActiveState, {
 });
 assert(Array.isArray(blocked) && blocked.length === 0, "PLACE_CELL must be blocked in genesis mode after RUN_ACTIVE");
 
+const genesisZoneState = {
+  ...s,
+  sim: {
+    ...s.sim,
+    runPhase: RUN_PHASE.GENESIS_ZONE,
+  },
+};
+const blockedInGenesisZone = handlePlaceCell(genesisZoneState, {
+  type: "PLACE_CELL",
+  payload: { x: first.x, y: first.y, remove: false },
+});
+assert(Array.isArray(blockedInGenesisZone) && blockedInGenesisZone.length === 0, "PLACE_CELL must be blocked in genesis zone");
+
 const labStore = createStore(manifest, { reducer, simStep: simStepPatch });
 labStore.dispatch({ type: "SET_SEED", payload: "founder-placement-lab-1" });
 labStore.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });

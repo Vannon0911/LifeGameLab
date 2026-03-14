@@ -48,8 +48,10 @@ function placeFounders(store, points) {
   assert(before.sim.runPhase === RUN_PHASE.GENESIS_SETUP, "runPhase must start in genesis");
   store.dispatch({ type: "CONFIRM_FOUNDATION" });
   const after = store.getState();
-  assert(after.sim.runPhase === RUN_PHASE.RUN_ACTIVE, "CONFIRM_FOUNDATION must activate run");
-  assert(after.sim.running === true, "CONFIRM_FOUNDATION must set running=true");
+  assert(after.sim.runPhase === RUN_PHASE.GENESIS_ZONE, "CONFIRM_FOUNDATION must enter genesis zone");
+  assert(after.sim.running === false, "CONFIRM_FOUNDATION must keep running=false until core confirm");
+  assert(Number(after.sim.cpuAliveCount || 0) === 0, "CONFIRM_FOUNDATION must not trigger cpu spawn");
+  assert(after.world.coreZoneMask.every((v) => (v | 0) === 0), "CONFIRM_FOUNDATION must not stamp coreZoneMask");
 }
 
 // fewer than 4 founders must be blocked.

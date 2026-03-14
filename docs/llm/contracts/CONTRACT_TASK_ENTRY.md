@@ -29,3 +29,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 
 ## Taskregel
 Keine neue Action/Feldlogik vor vollstaendigem Contract.
+
+## Klassifizierungs-Hinweis
+- `src/project/contract/*`, `src/core/kernel/*` und `src/game/contracts/*` gehoeren zum Contract-Task.
+- Insbesondere `src/game/contracts/ids.js` ist Contract-Core und darf nicht aus der Matrix fallen.

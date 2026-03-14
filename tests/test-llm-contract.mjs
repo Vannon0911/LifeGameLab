@@ -86,6 +86,24 @@ function runPreflight(args) {
 }
 
 {
+  const contractIds = runPreflight(["classify", "--paths", "src/game/contracts/ids.js"]);
+  assert(contractIds.status === 0, `contract ids classify should pass, got status=${contractIds.status} stderr=${contractIds.stderr}`);
+  assertContains(contractIds.stdout, "task=contracts", "contract ids classify must resolve task=contracts");
+}
+
+{
+  const phaseTodo = runPreflight(["classify", "--paths", "docs/PHASE_A_TODO.md"]);
+  assert(phaseTodo.status === 0, `phase todo classify should pass, got status=${phaseTodo.status} stderr=${phaseTodo.stderr}`);
+  assertContains(phaseTodo.stdout, "task=versioning", "phase todo classify must resolve task=versioning");
+}
+
+{
+  const phaseTodoVariants = runPreflight(["classify", "--paths", "docs/PHASE_B_TODO.md,docs/PHASE_C_TODO.md"]);
+  assert(phaseTodoVariants.status === 0, `phase todo variants classify should pass, got status=${phaseTodoVariants.status} stderr=${phaseTodoVariants.stderr}`);
+  assertContains(phaseTodoVariants.stdout, "task=versioning", "phase todo variants classify must resolve task=versioning");
+}
+
+{
   const mismatch = runPreflight([
     "check",
     "--task",

@@ -68,6 +68,10 @@ function parseTaskFlag(args) {
 function matchesPrefix(relPath, rawPrefix) {
   const prefix = String(rawPrefix || "").trim().replace(/\\/g, "/");
   if (!prefix) return false;
+  if (prefix.includes("*")) {
+    const escaped = prefix.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+    return new RegExp(`^${escaped}$`).test(relPath);
+  }
   if (prefix.endsWith("/")) {
     return relPath.startsWith(prefix);
   }

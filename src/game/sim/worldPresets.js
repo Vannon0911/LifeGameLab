@@ -38,6 +38,7 @@ export const WORLD_PRESETS = Object.freeze({
     lightBias: 0.00,
     fertilityBias: 0.08,
     plantBoost: 0.10,
+    coreZoneUnlockCostEnergy: 12,
     startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 1.02,
@@ -58,6 +59,7 @@ export const WORLD_PRESETS = Object.freeze({
     lightBias: 0.10,
     fertilityBias: -0.10,
     plantBoost: -0.08,
+    coreZoneUnlockCostEnergy: 16,
     startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 1.16,
@@ -77,6 +79,7 @@ export const WORLD_PRESETS = Object.freeze({
     lightBias: -0.04,
     fertilityBias: 0.14,
     plantBoost: 0.18,
+    coreZoneUnlockCostEnergy: 10,
     startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 0.94,
