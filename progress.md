@@ -38,3 +38,10 @@ Original prompt: Baue github repo so um das es wie ein spiel produkt wirkt und l
 - 2026-03-14: Vollsuite erneut grün nach Fixes: `npm test` => `ALL_TESTS_OK` (inkl. Determinismus, Gates, Gameplay, Redteam).
 - 2026-03-14: Browser-Vollabnahme mit identischen Voraussetzungen auf Größen `32,48,64,72,96,120,144` durchgeführt (Seed `life-light`, neue Welt pro Größe, Actions + `advanceTime` + Pointer-Mapping). Finale Artefakte unter `output/playwright/perf-raster/*-after-fix-v3.png` und Konsole `output/playwright/perf-raster/logs/console-final-v3.log` (0 Errors).
 - 2026-03-14: Wichtiger Cache-Hinweis: älterer Browser-Origin (`:8080`) hielt alte ES-Module im Cache und zeigte alte Fehlerbilder; verlässliche Verifikation erfolgte auf frischem Origin `http://127.0.0.1:8081` nach Vorher-/Nachher-Storage-Clean.
+- 2026-03-14: Konservative Architektur-Umstrukturierung begonnen: Pflicht-Lesereihenfolge aus `docs/LLM_ENTRY.md` vollständig abgearbeitet, Kernel-Grenzen bestätigt.
+- 2026-03-14: Contract intern modularisiert nach `src/project/contract/*`; `src/project/project.manifest.js` auf kompatible Reexport-Fassade reduziert.
+- 2026-03-14: LLM-Schicht isoliert unter `src/project/llm/*`; `main.js` nutzt jetzt Read-Model (`renderLlmReadModelAsText`) und LLM-Action-Adapter ohne Kernel-Eingriff.
+- 2026-03-14: Reducer-Struktur konservativ gesplittet: aktive Implementierung in `src/game/sim/reducer/index.js`, kompatibler Entry bleibt `src/game/sim/reducer.js`.
+- 2026-03-14: Domänenmodule für Reducer ergänzt (`metrics`, `worldRules`, `winConditions`, `techTreeOps`, `cpuActions`) und im Index verdrahtet.
+- 2026-03-14: `src/game/sim/sim.js` als dünnen Kompatibilitäts-Reexport auf `step.js` wieder eingeführt; Wrapper-Ban-Test auf Legacy-Verbot statt Datei-Abwesenheit angepasst.
+- 2026-03-14: Neue Absicherungstests ergänzt: `tests/test-contract-facade.mjs`, `tests/test-llm-contract.mjs`.

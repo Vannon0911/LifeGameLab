@@ -30,6 +30,13 @@ Dieses Projekt ist ein Contract-System. Änderungen ohne Manifest-, Schema- und 
 - Wenn ein Test nach einer Änderung fehlschlägt, zuerst Ursachenforschung, reale Contract-Prüfung und alternative Fixes priorisieren.
 - Testanpassungen sind nur legitim, wenn der Test nachweislich falsche Annahmen prüft oder Laufzeit-/Tooling-Rauschen statt Produktverhalten misst.
 
+## Strukturhinweise (aktuell)
+
+- `src/project/project.manifest.js` ist eine kompatible Fassade; der aktive Contract lebt in `src/project/contract/*`.
+- `src/game/sim/reducer.js` ist ein kompatibler Entry; aktive Implementierung liegt in `src/game/sim/reducer/index.js`.
+- `src/game/sim/sim.js` ist nur ein dünner Reexport auf `src/game/sim/step.js` (kein Legacy-Backcompat-Wrapper).
+- LLM-spezifische Policy/Read-Model/Command-Adapter liegen außerhalb des Kernels unter `src/project/llm/*`.
+
 ## Repro-Kommandos
 
 ```bash

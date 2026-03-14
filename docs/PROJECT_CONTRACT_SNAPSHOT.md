@@ -1,5 +1,5 @@
 # LIFEXLAB — SYSTEM ARCHITECTURE SNAPSHOT
-**Datum:** 2026-03-14 | **Version:** 14.4 | **APP_VERSION:** 2.3.0 (Sandbox Build) | **Status:** VERIFIZIERT · Vollsuite, Determinismus, Core-Gates und Contract-Hardening grün; Perf-Ziel aus Implementierungsplan noch offen
+**Datum:** 2026-03-14 | **Version:** 14.5 | **APP_VERSION:** 2.3.0 (Sandbox Build) | **Status:** VERIFIZIERT · Kernel-isoliert, Contract modularisiert, Reducer-Split aktiv, LLM-Schicht außerhalb des Kernels; Perf-Ziel aus Implementierungsplan noch offen
 
 ## Architektur-Mandat
 
@@ -13,11 +13,15 @@
 
 ## Contract-Kerne
 
-- `src/project/project.manifest.js` definiert `stateSchema`, `actionSchema`, `mutationMatrix`
+- `src/project/project.manifest.js` bleibt kompatible Fassade
+- aktiver Contract liegt unter `src/project/contract/{stateSchema,actionSchema,mutationMatrix,simGate,dataflow,manifest}.js`
 - `src/core/kernel/patches.js` erzwingt Write-Gates
 - `src/core/kernel/schema.js` erzwingt Sanitizing
 - `src/core/kernel/store.js` schützt Determinismus und Dispatch-Pipeline
 - `src/game/contracts/ids.js` ist Source-of-Truth für kritische String-IDs (`winMode`, `gameResult`, `goal`, `overlay`, `brushMode`)
+- `src/game/sim/reducer.js` bleibt kompatibler Entry; aktive Komposition liegt in `src/game/sim/reducer/index.js`
+- Reducer-Domänenmodule aktiv: `cpuActions.js`, `metrics.js`, `techTreeOps.js`, `winConditions.js`, `worldRules.js`
+- LLM-Schicht aktiv und kernel-frei unter `src/project/llm/*` (`policy`, `readModel`, `commandAdapter`, `gateSync`)
 
 ## Empirische Beweise
 
@@ -30,6 +34,8 @@
 - Pfadhygiene: `tests/test-path-hygiene.mjs`
 - Dataflow-Doku: `tests/test-manifest-dataflow.mjs`
 - Dataflow-Contract konkret: `tests/test-dataflow-contract.mjs`
+- Contract-Fassade: `tests/test-contract-facade.mjs`
+- LLM-Schicht-Contract: `tests/test-llm-contract.mjs`
 - Core-Gates: `tests/test-core-gates.mjs`
 - SIM-Gate: `tests/test-sim-gate.mjs`
 - String-Contract: `tests/test-string-contract.mjs`
@@ -56,5 +62,5 @@
 - `PERF-01` Ziel aus Implementierungsplan noch offen: `>=10%` Profilverbesserung je Fall aktuell nicht erreicht (`node tools/profile-core.mjs`: `4.154 / 5.481 / 9.003 ms_per_tick` für `32² / 64² / 96²`)
 - `PERF-02` Browser-Benchmark (Main/Worker) erneut messen und dokumentieren
 - `RENDER-01` Flow-Lines / Energiefluss visualisieren
-- `ARCH-01` weiteren Reducer-Abbau nach `playerActions.js` fortsetzen, damit `src/game/sim/reducer.js` kein Rest-Monolith bleibt
+- `ARCH-01` weiteren Abbau in `src/game/sim/reducer/index.js` fortsetzen, damit nur Routing/Komposition verbleibt
 - `UX-01` Missions- und Directive-Feedback weiter verdichten, damit Stage- und Tech-Unlocks noch härter im Canvas spürbar werden

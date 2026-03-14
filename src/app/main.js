@@ -9,7 +9,9 @@ import { render }            from "../project/renderer.js";
 import { UI }                from "../project/ui.js";
 import { hashString }        from "../core/kernel/rng.js";
 import { createSimStepBuffer } from "../core/runtime/simStepBuffer.js";
-import { deriveRiskCode, normalizeGoalCode } from "../game/contracts/ids.js";
+import { createLlmCommandAdapter } from "../project/llm/commandAdapter.js";
+import { renderLlmReadModelAsText } from "../project/llm/readModel.js";
+import { assertLlmGateSync } from "../project/llm/gateSync.js";
 
 function getCookie(name) {
   const safeName = String(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -258,7 +260,12 @@ window.addEventListener("unhandledrejection", (ev) => {
 });
 
 // ── Store ─────────────────────────────────────────────────
-const store = createStore(manifest, { reducer, simStep: simStepPatch });
+assertLlmGateSync(manifest);
+const store = createStore(manifest, {
+  reducer,
+  simStep: simStepPatch,
+  actionAdapter: createLlmCommandAdapter(),
+});
 // Initialize Log with Seed from Store
 WorldStateLog.init(store.getState().meta.seed);
 window.__worldStateLog = WorldStateLog;
@@ -937,46 +944,10 @@ function runUiSync() {
 }
 
 function renderGameToText() {
-  const state = store.getState();
-  const playerLineageId = Number(state?.meta?.playerLineageId || 0);
-  const memory = state?.world?.lineageMemory?.[playerLineageId] || {};
-  const rawTool = String(state?.meta?.brushMode || "observe");
-  const toolAliases = {
-    paint_light: "light",
-    paint_light_remove: "light_remove",
-    paint_nutrient: "nutrient",
-    paint_toxin: "toxin",
-    paint_reset: "saturation_reset",
-  };
-  const energyNet = Number(state?.sim?.playerEnergyNet || 0);
-  const playerAlive = Number(state?.sim?.playerAliveCount || 0);
-  const clusterRatio = Number(state?.sim?.clusterRatio || 0);
-  const networkRatio = Number(state?.sim?.networkRatio || 0);
-  const risk = deriveRiskCode(state?.sim || {});
-  const mission = normalizeGoalCode(state?.sim?.goal || "");
-  const structure =
-    clusterRatio >= 0.56 ? "colony_core" :
-    clusterRatio >= 0.28 || networkRatio >= 0.22 ? "biomodule_2x2" :
-    "single_cells";
-  return JSON.stringify({
-    tick: Number(state?.sim?.tick || 0),
-    running: !!state?.sim?.running,
-    tool: toolAliases[rawTool] || rawTool,
-    stage: Number(state?.sim?.playerStage || 1),
-    dna: Number(state?.sim?.playerDNA || 0),
-    playerAlive,
-    cpuAlive: Number(state?.sim?.cpuAliveCount || 0),
-    energyNet,
-    clusterRatio,
-    networkRatio,
-    risk,
-    mission,
-    structure,
-    doctrine: String(memory.doctrine || "equilibrium"),
-    techs: Array.isArray(memory.techs) ? memory.techs : [],
-    synergies: Array.isArray(memory.synergies) ? memory.synergies : [],
-    benchmark: typeof Benchmark.getSnapshot === "function" ? Benchmark.getSnapshot() : null,
-  }, null, 2);
+  return renderLlmReadModelAsText(
+    store.getState(),
+    typeof Benchmark.getSnapshot === "function" ? Benchmark.getSnapshot() : null
+  );
 }
 
 async function advanceTime(ms = 1000) {
