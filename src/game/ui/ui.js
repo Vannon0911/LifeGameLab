@@ -1,5 +1,6 @@
 import { PHYSICS_DEFAULT } from "../../core/kernel/physics.js";
 import { APP_VERSION } from "../../project/project.manifest.js";
+import { buildAdvisorModel } from "../../project/llm/advisorModel.js";
 import {
   PLAYER_DOCTRINES,
   DOCTRINE_BY_ID,
@@ -27,11 +28,17 @@ import {
   ZONE_TYPES,
 } from "./ui.constants.js";
 import {
+  getActionState,
+  getBottleneckState,
   getGoalState,
   getInfluencePhase,
+  getLeverState,
+  getOverlayState,
   getPlayerMemory,
   getRiskState,
   getStructureState,
+  getWinModeState,
+  getZoneState,
 } from "./ui.model.js";
 import { el, fmt, fmtSign, isDesktopLayout } from "./ui.dom.js";
 import { announceInLiveRegion, buildGateFeedback, createActionFeedback } from "./ui.feedback.js";
@@ -449,6 +456,7 @@ export class UI {
     if (!this._activeContext) return;
     this._lastPanelRenderAt = Date.now();
     const { meta, sim } = state;
+    const advisorModel = buildAdvisorModel(state, { benchmark: this._getBenchmarkState() });
     container.innerHTML = "";
     const ctx = this._activeContext;
     const panelMeta = PANEL_BY_KEY[ctx];
@@ -476,23 +484,27 @@ export class UI {
       container.appendChild(fb);
     }
 
-    // ── STATUS (Lagebericht) ────────────────────────────────
-    if (ctx === "status") {
-      const playerMemory = getPlayerMemory(state);
-      const playerStage = Number(sim.playerStage || 1);
-      const playerAlive = Number(sim.playerAliveCount || 0);
-      const energyNet = Number(sim.playerEnergyNet || 0);
-      const toxin = Number(sim.meanToxinField || 0);
-      const commandScore = deriveCommandScore(sim);
-      const doctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
-      const influencePhase = getInfluencePhase(playerStage, commandScore);
-      const splitUnlocked = this._hasSplitUnlock(state);
-      const goalState = getGoalState(sim, doctrine);
-      const structureState = getStructureState(sim);
-      const riskState = getRiskState(sim);
-      const gateFeedback = this._getGateFeedback(state);
+	    // ── STATUS (Lagebericht) ────────────────────────────────
+	    if (ctx === "status") {
+	      const playerMemory = getPlayerMemory(state);
+	      const playerStage = Number(sim.playerStage || 1);
+	      const playerAlive = Number(sim.playerAliveCount || 0);
+	      const energyNet = Number(sim.playerEnergyNet || 0);
+	      const commandScore = deriveCommandScore(sim);
+	      const doctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
+	      const influencePhase = getInfluencePhase(playerStage, advisorModel.status.commandScore);
+	      const goalState = getGoalState(advisorModel);
+	      const structureState = getStructureState(advisorModel.status.structure);
+	      const riskState = getRiskState(advisorModel.status.risk);
+	      const bottleneckState = getBottleneckState(advisorModel.advisor.bottleneckPrimary);
+	      const nextActionState = getActionState(advisorModel.advisor.nextAction);
+	      const nextLeverState = getLeverState(advisorModel.advisor.nextLever);
+	      const zoneState = getZoneState(advisorModel.advisor.recommendedZone);
+	      const overlayState = getOverlayState(advisorModel.advisor.recommendedOverlay);
+	      const winModeState = getWinModeState(advisorModel.runIdentity.winMode);
+	      const gateFeedback = this._getGateFeedback(state);
 
-      const mkBar = (pct, cls, label) => {
+	      const mkBar = (pct, cls, label) => {
         const wrap = el("div", "nx-bar-wrap");
         wrap.setAttribute("role", "progressbar");
         wrap.setAttribute("aria-valuenow", Math.round(pct * 100));
@@ -510,61 +522,70 @@ export class UI {
         return row;
       };
 
-      let statusText = "Kolonie beobachtet ihr Umfeld. Autonomes Wachstum hat Vorrang.";
-      let statusColor = "var(--cyan)";
-      if (riskState.id === "collapse") {
-        statusText = "Kolonie kollabiert. Die aktuelle Linie hat keine tragfähigen Cluster mehr.";
-        statusColor = "var(--red)";
-      } else if (riskState.id === "critical") {
-        statusText = "Energie kippt ins Minus. Priorität auf Sparen oder Reservekern setzen.";
-        statusColor = "var(--red)";
-      } else if (riskState.id === "toxic") {
-        statusText = "Toxinlast steigt. Detox oder Schutzhülle werden relevant.";
-        statusColor = "var(--orange)";
-      } else if (commandScore >= 0.18) {
-        statusText = "Cluster reagieren stabil. Strategische Eingriffe werden wirksam.";
-        statusColor = "var(--green)";
-      }
+	      let statusText = "Kolonie beobachtet ihr Umfeld. Autonomes Wachstum hat Vorrang.";
+	      let statusColor = "var(--cyan)";
+	      if (advisorModel.advisor.bottleneckPrimary === "collapse") {
+	        statusText = "Kolonie kollabiert. Die aktive Linie hat keine tragfaehige Struktur mehr.";
+	        statusColor = "var(--red)";
+	      } else if (advisorModel.advisor.bottleneckPrimary === "energy") {
+	        statusText = "Energie kippt ins Minus. BUFFER, Reserve oder defensivere Prioritaet zuerst.";
+	        statusColor = "var(--red)";
+	      } else if (advisorModel.advisor.bottleneckPrimary === "toxin") {
+	        statusText = "Toxinlast steigt. Detox, Quarantaene oder robustere Korridore werden relevant.";
+	        statusColor = "var(--orange)";
+	      } else if (advisorModel.advisor.bottleneckPrimary === "win_push") {
+	        statusText = "Keine groessere Krise blockiert den Run. Der Siegpfad darf jetzt Prioritaet bekommen.";
+	        statusColor = "var(--green)";
+	      } else if (advisorModel.advisor.nextAction === "wait_and_advance_time") {
+	        statusText = "Kein dominanter Krisenengpass aktiv. Beobachtung und Vorspulen liefern die beste neue Information.";
+	        statusColor = "var(--cyan)";
+	      }
 
-      const alertCard = el("section", "nx-card");
-      alertCard.appendChild(el("div", "nx-card-title", "Lagebericht"));
-      const alertBox = el("div", "nx-alert-box", statusText);
-      alertBox.style.color = statusColor;
-      alertBox.style.borderColor = statusColor;
-      alertCard.appendChild(alertBox);
-      alertCard.appendChild(el("div", "nx-note", "Die Kolonie wächst selbst. Du setzt nur Prioritäten, Freischaltungen und neue Startcluster."));
-      container.appendChild(alertCard);
+	      const alertCard = el("section", "nx-card");
+	      alertCard.appendChild(el("div", "nx-card-title", "Lagebericht"));
+	      const alertBox = el("div", "nx-alert-box", statusText);
+	      alertBox.style.color = statusColor;
+	      alertBox.style.borderColor = statusColor;
+	      alertCard.appendChild(alertBox);
+	      alertCard.appendChild(el("div", "nx-note", `${bottleneckState.title}: ${bottleneckState.detail}`));
+	      alertCard.appendChild(el("div", "nx-note", `Reason-Codes: ${(advisorModel.advisor.reasonCodes || []).join(", ") || "none"}`));
+	      container.appendChild(alertCard);
 
-      const missionCard = el("section", "nx-card nx-card-mission");
-      missionCard.appendChild(el("div", "nx-card-title", "Aktuelle Mission"));
-      missionCard.appendChild(el("div", "nx-mission-title", goalState.title));
-      missionCard.appendChild(el("div", "nx-mission-copy", goalState.detail));
-      missionCard.append(
-        mkMetric("Mission", goalState.short, "nx-mono nx-val-pos"),
-        mkMetric("Risiko", riskState.label, riskState.id === "stable" ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
-        mkMetric("Struktur", structureState.tier)
-      );
-      container.appendChild(missionCard);
+	      const missionCard = el("section", "nx-card nx-card-mission");
+	      missionCard.appendChild(el("div", "nx-card-title", "Aktuelle Mission"));
+	      missionCard.appendChild(el("div", "nx-mission-title", goalState.title));
+	      missionCard.appendChild(el("div", "nx-mission-copy", goalState.detail));
+	      missionCard.append(
+	        mkMetric("Mission", goalState.short, "nx-mono nx-val-pos"),
+	        mkMetric("Risiko", riskState.label, riskState.id === "stable" ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
+	        mkMetric("Struktur", structureState.tier),
+	        mkMetric("Run-Pfad", winModeState.label),
+	        mkMetric("Win-Blocker", advisorModel.winProgress.blockerCode)
+	      );
+	      container.appendChild(missionCard);
 
-      const commandCard = el("section", "nx-card");
-      commandCard.appendChild(el("div", "nx-card-title", "Kommandoraum"));
-      const commandHero = el("div", "nx-active-tool");
-      commandHero.append(
-        el("div", "nx-active-tool-label", influencePhase),
-        el("div", "nx-active-tool-copy", `${doctrine.label}: ${doctrine.summary}`)
-      );
-      commandCard.appendChild(commandHero);
-      commandCard.append(
-        mkMetric("Command-Score", `${Math.round(commandScore * 100)} / 100`, "nx-mono nx-val-pos"),
-        mkBar(commandScore, "nx-bar-stage", "Command-Score"),
-        mkMetric("Priorität", doctrine.label),
-        mkMetric("Fingerprint", doctrine.visualTag || doctrine.summary || doctrine.label),
-        mkMetric("Split", splitUnlocked ? "bereit" : "gesperrt", splitUnlocked ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
-        mkMetric("Clusterstärke", `${Math.round(Number(sim.clusterRatio || 0) * 100)}%`),
-        mkMetric("Netzwerk", `${Math.round(Number(sim.networkRatio || 0) * 100)}%`),
-        mkMetric("Synergien", String((playerMemory?.synergies || []).length || 0))
-      );
-      container.appendChild(commandCard);
+	      const commandCard = el("section", "nx-card");
+	      commandCard.appendChild(el("div", "nx-card-title", "Advisor"));
+	      const commandHero = el("div", "nx-active-tool");
+	      commandHero.append(
+	        el("div", "nx-active-tool-label", influencePhase),
+	        el("div", "nx-active-tool-copy", `${doctrine.label}: ${advisorModel.runIdentity.doctrineTradeoff}`)
+	      );
+	      commandCard.appendChild(commandHero);
+	      commandCard.append(
+	        mkMetric("Engpass", bottleneckState.title),
+	        mkMetric("Naechste Aktion", nextActionState.label),
+	        mkMetric("Naechster Hebel", nextLeverState.label),
+	        mkMetric("Command-Score", `${Math.round(advisorModel.status.commandScore * 100)} / 100`, "nx-mono nx-val-pos"),
+	        mkBar(advisorModel.status.commandScore, "nx-bar-stage", "Command-Score"),
+	        mkMetric("Doctrine", doctrine.label),
+	        mkMetric("Trade-off", advisorModel.runIdentity.doctrineTradeoff),
+	        mkMetric("Split", advisorModel.status.splitReady ? "bereit" : "noch nicht", advisorModel.status.splitReady ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
+	        mkMetric("Clusterstärke", `${Math.round(Number(sim.clusterRatio || 0) * 100)}%`),
+	        mkMetric("Netzwerk", `${Math.round(Number(sim.networkRatio || 0) * 100)}%`),
+	        mkMetric("Synergien", String((playerMemory?.synergies || []).length || 0))
+	      );
+	      container.appendChild(commandCard);
 
       const energyCard = el("section", "nx-card");
       energyCard.appendChild(el("div", "nx-card-title", "Energie & Wachstum"));
@@ -584,21 +605,24 @@ export class UI {
       energyCard.appendChild(mixGrid);
       container.appendChild(energyCard);
 
-      const progressCard = el("section", "nx-card");
-      progressCard.appendChild(el("div", "nx-card-title", "Evo- und Siegpfad"));
-      progressCard.append(
-        mkMetric("Stage", `S${playerStage}`, "nx-mono nx-chip-stage"),
-        mkMetric("DNA", `🧬 ${fmt(Number(sim.playerDNA || 0), 1)}`),
-        mkMetric("Ernten", String(Number(sim.totalHarvested || 0))),
-        mkMetric("Aktiver Siegpfad", WIN_MODE_RESULT_LABEL[String(sim.winMode || WIN_MODE.SUPREMACY)] || String(sim.winMode || WIN_MODE.SUPREMACY))
-      );
-      progressCard.append(
-        el("div", "nx-note", `${structureState.detail} Phase ${influencePhase}: weitere Eingriffe schalten sich über Stage und Clusterstärke frei.`),
-        mkBar(Math.min(1, Number(sim.energySupremacyTicks || 0) / 200), "nx-bar-light", "Suprematie-Fortschritt"),
-        mkBar(Math.min(1, Number(sim.stockpileTicks || 0) / 200), "nx-bar-nutrient", "Territorium-Fortschritt"),
-        mkBar(Math.min(1, Number(sim.efficiencyTicks || 0) / 100), "nx-bar-stage", "Effizienz-Fortschritt")
-      );
-      container.appendChild(progressCard);
+	      const progressCard = el("section", "nx-card");
+	      progressCard.appendChild(el("div", "nx-card-title", "Siegpfad & Ausbau"));
+	      progressCard.append(
+	        mkMetric("Stage", `S${playerStage}`, "nx-mono nx-chip-stage"),
+	        mkMetric("DNA", `🧬 ${fmt(Number(sim.playerDNA || 0), 1)}`),
+	        mkMetric("Ernten", String(Number(sim.totalHarvested || 0))),
+	        mkMetric("Aktiver Siegpfad", winModeState.label),
+	        mkMetric("Win-Fortschritt", `${advisorModel.winProgress.progress} / ${advisorModel.winProgress.target}`),
+	        mkMetric("Naechste Zone", zoneState.label),
+	        mkMetric("Naechster Overlay-Scan", overlayState.label)
+	      );
+	      progressCard.append(
+	        el("div", "nx-note", `${structureState.detail} Phase ${influencePhase}: ${advisorModel.winProgress.blockerDetail}`),
+	        mkBar(Math.min(1, Number(sim.energySupremacyTicks || 0) / 200), "nx-bar-light", "Suprematie-Fortschritt"),
+	        mkBar(Math.min(1, Number(sim.stockpileTicks || 0) / 200), "nx-bar-nutrient", "Territorium-Fortschritt"),
+	        mkBar(Math.min(1, Number(sim.efficiencyTicks || 0) / 100), "nx-bar-stage", "Effizienz-Fortschritt")
+	      );
+	      container.appendChild(progressCard);
 
       if (gateFeedback.length) {
         const gateCard = el("section", "nx-card");
@@ -612,9 +636,10 @@ export class UI {
         container.appendChild(gateCard);
       }
 
-      const ovCard = el("section", "nx-card");
-      ovCard.appendChild(el("div", "nx-card-title", "Scanner"));
-      const ovGrid = el("div", "nx-chip-grid");
+	      const ovCard = el("section", "nx-card");
+	      ovCard.appendChild(el("div", "nx-card-title", "Scanner"));
+	      ovCard.appendChild(el("div", "nx-note", `Empfohlen: ${overlayState.label}${overlayState.id !== "none" ? ` fuer ${bottleneckState.title}` : ""}`));
+	      const ovGrid = el("div", "nx-chip-grid");
       const overlayLabels = {
         [OVERLAY_MODE.NONE]: "Normal",
         [OVERLAY_MODE.ENERGY]: "Energie",
@@ -633,11 +658,11 @@ export class UI {
           );
           queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
         });
-        ovGrid.appendChild(btn);
-      }
-      ovCard.appendChild(ovGrid);
-      container.appendChild(ovCard);
-      return;
+	        ovGrid.appendChild(btn);
+	      }
+	      ovCard.appendChild(ovGrid);
+	      container.appendChild(ovCard);
+	      return;
     }
 
     // ── TOOLS (Werkzeuge Hub) ───────────────────────────────

@@ -1,5 +1,11 @@
-import { GOAL_CODE, deriveRiskCode, normalizeGoalCode } from "../contracts/ids.js";
-import { deriveCommandScore } from "../techTree.js";
+import {
+  ACTION_LABELS,
+  BOTTLENECK_LABELS,
+  LEVER_LABELS,
+  OVERLAY_LABELS,
+  WIN_MODE_LABELS,
+  ZONE_LABELS,
+} from "../../project/llm/advisorModel.js";
 
 export function getPlayerMemory(state) {
   const playerLineageId = Number(state?.meta?.playerLineageId || 0);
@@ -12,41 +18,74 @@ export function getInfluencePhase(stage, commandScore) {
   return "Beobachten";
 }
 
-export function getRiskState(sim) {
-  const id = deriveRiskCode(sim);
-  if (id === "collapse") return { id, label: "Kollaps", chip: "☠ Kollaps", color: "var(--red)" };
-  if (id === "critical") return { id, label: "Kritisch", chip: "⚠ Kritisch", color: "var(--red)" };
-  if (id === "toxic") return { id, label: "Toxisch", chip: "☣ Toxisch", color: "var(--orange)" };
-  if (id === "unstable") return { id, label: "Instabil", chip: "◌ Instabil", color: "var(--gold)" };
-  return { id, label: "Stabil", chip: "● Stabil", color: "var(--green)" };
+export function getRiskState(riskId) {
+  if (riskId === "collapse") return { id: riskId, label: "Kollaps", chip: "☠ Kollaps", color: "var(--red)" };
+  if (riskId === "critical") return { id: riskId, label: "Kritisch", chip: "⚠ Kritisch", color: "var(--red)" };
+  if (riskId === "toxic") return { id: riskId, label: "Toxisch", chip: "☣ Toxisch", color: "var(--orange)" };
+  if (riskId === "unstable") return { id: riskId, label: "Instabil", chip: "◌ Instabil", color: "var(--gold)" };
+  return { id: riskId, label: "Stabil", chip: "● Stabil", color: "var(--green)" };
 }
 
-export function getGoalState(sim, doctrine) {
-  const stage = Number(sim?.playerStage || 1);
-  const harvested = Number(sim?.totalHarvested || 0);
-  const commandScore = deriveCommandScore(sim);
-  const goalCode = normalizeGoalCode(sim?.goal || GOAL_CODE.HARVEST_SECURE);
+export function getGoalState(advisorModel) {
+  const goalCode = String(advisorModel?.status?.goal || "harvest_secure");
+  const nextAction = String(advisorModel?.advisor?.nextAction || "wait_and_advance_time");
+  const primary = String(advisorModel?.advisor?.bottleneckPrimary || "none");
+  const doctrine = String(advisorModel?.runIdentity?.doctrine || "equilibrium");
   const map = {
-    [GOAL_CODE.EXTINCT]: { title: "Linie retten", short: "Reset oder neue Welt", detail: "Die aktive Linie ist kollabiert. Starte neu oder sichere zuerst wieder einen tragfähigen Kern." },
-    [GOAL_CODE.SURVIVE_ENERGY]: { title: "Energie stabilisieren", short: "Netto wieder positiv", detail: "Reduziere Upkeep, stärke Cluster oder aktiviere defensive Prioritäten." },
-    [GOAL_CODE.SURVIVE_TOXIN]: { title: "Toxin-Druck brechen", short: "Detox priorisieren", detail: "Leite die Linie in robuste Bereiche oder nutze Resistenz-/Buffer-Pfade." },
-    [GOAL_CODE.EVOLUTION_READY]: { title: "Evolution auslösen", short: "Tech jetzt kaufen", detail: "DNA reicht für den nächsten Durchbruch. Nutze den Ring mit der höchsten Hebelwirkung." },
-    [GOAL_CODE.GROWTH]: { title: "Erstes Cluster stabilisieren", short: `Stabilisiere ${Math.max(18, Number(sim?.playerAliveCount || 0) + 8)} Zellen`, detail: "Halte den Kern am Leben, sammle DNA und vermeide negative Energiebilanzen." },
-    [GOAL_CODE.EXPANSION]: { title: "Expansion starten", short: doctrine?.label || "Directive", detail: "Die Linie ist stabil genug. Nutze Doctrine, Synergien und Split-Seeds für den nächsten Schub." },
-    [GOAL_CODE.HARVEST_SECURE]: { title: `Stage ${Math.min(5, stage + 1)} vorbereiten`, short: `${harvested} DNA-Ernten`, detail: "Ernte gezielt und halte den Cluster kompakt, bis der nächste Entwicklungsschub frei wird." },
+    extinct: { title: "Linie retten", short: "Reset oder neue Welt", detail: "Die aktive Linie ist kollabiert. Zuerst wieder einen tragfaehigen Kern aufbauen." },
+    survive_energy: { title: "Energie stabilisieren", short: "Netto wieder positiv", detail: "Reserve, BUFFER-Zonen oder defensivere Prioritaeten loesen den Engpass." },
+    survive_toxin: { title: "Toxin-Druck brechen", short: "Detox priorisieren", detail: "Leite die Linie in robustere Bereiche oder isoliere toxische Zonen." },
+    evolution_ready: { title: "Evolution ausloesen", short: "Tech jetzt kaufen", detail: "DNA und Gates reichen fuer den naechsten relevanten Tech." },
+    growth: { title: "Ersten Kern stabilisieren", short: "Kern verdichten", detail: "Mehr zusammenhaengende Struktur vor weiterem Ausbau herstellen." },
+    expansion: { title: "Expansion starten", short: "Ausbau vorbereiten", detail: "Der Run ist stabil genug fuer Split oder Territoriums-Ausbau." },
+    harvest_secure: { title: "DNA sichern", short: "Gezielt ernten", detail: "Ernte gezielt, bis der naechste Investitionszug sauber offen ist." },
   };
   if (map[goalCode]) return map[goalCode];
-  if (commandScore < 0.18) {
-    return { title: "Clusterstärke aufbauen", short: `${Math.round(commandScore * 100)}/18 Command`, detail: "Verdichte Kerne und Netzwerke, damit neue Techs und Split-Seeds zuverlässig greifen." };
-  }
-  return { title: doctrine?.label || "Directive", short: doctrine?.label || "Directive", detail: "Die Linie ist stabil genug. Nutze Doctrine, Synergien und Split-Seeds für den nächsten Durchbruch." };
+  return {
+    title: BOTTLENECK_LABELS[primary] || "Naechster Schritt",
+    short: ACTION_LABELS[nextAction] || nextAction,
+    detail: `Doctrine ${doctrine} richtet die Linie auf den naechsten Schritt aus.`,
+  };
 }
 
-export function getStructureState(sim) {
-  const clusterRatio = Number(sim?.clusterRatio || 0);
-  const networkRatio = Number(sim?.networkRatio || 0);
-  if (clusterRatio >= 0.56) return { tier: "Koloniekern", short: "dichte Biomodule", detail: "Mehrere reife Kerne tragen die Linie. Split und Synergien wirken sichtbar." };
-  if (clusterRatio >= 0.28 || networkRatio >= 0.22) return { tier: "Biomodul", short: "2x2-Cluster entstehen", detail: "Die Linie verlässt die Einzelzellenphase. Verdichtete 2x2-Strukturen tragen das Wachstum." };
-  return { tier: "Einzelzellen", short: "primitive Membranen", detail: "Die Kolonie besteht noch überwiegend aus einzelnen Zellen. Wachstum ist fragil und lokal." };
+export function getStructureState(structureId) {
+  if (structureId === "colony_core") return { tier: "Koloniekern", short: "dichte Biomodule", detail: "Mehrere reife Kerne tragen die Linie. Split und Synergien wirken sichtbar." };
+  if (structureId === "biomodule_2x2") return { tier: "Biomodul", short: "2x2-Cluster entstehen", detail: "Die Linie verlaesst die Einzelzellenphase. Verdichtete 2x2-Strukturen tragen das Wachstum." };
+  return { tier: "Einzelzellen", short: "primitive Membranen", detail: "Die Kolonie besteht noch ueberwiegend aus einzelnen Zellen. Wachstum ist fragil und lokal." };
 }
 
+export function getBottleneckState(bottleneckId) {
+  const map = {
+    collapse: { title: "Kollaps stoppen", detail: "Die Linie hat keine tragfaehige Basis mehr und braucht sofortige Stabilisierung." },
+    energy: { title: "Energie loesen", detail: "Der laufende Betrieb frisst mehr, als die Linie sauber erwirtschaftet." },
+    toxin: { title: "Toxin-Druck loesen", detail: "Giftige Felder zerstoeren Stabilitaet und Ueberleben der Linie." },
+    survival_core: { title: "Kerntragfaehigkeit bauen", detail: "Der Run lebt noch, traegt sich strukturell aber nicht sauber selbst." },
+    command: { title: "Command-Gate oeffnen", detail: "Die Linie ist noch nicht dicht genug fuer den naechsten strategischen Hebel." },
+    dna_investment: { title: "DNA in Hebel verwandeln", detail: "DNA und Tech-Freischaltungen muessen jetzt bewusst verbunden werden." },
+    split_expansion: { title: "Split-Schub vorbereiten", detail: "Split ist der naechste strategische Ausbauzug, nicht nur eine technische Option." },
+    territory_scaling: { title: "Territorium skalieren", detail: "Der Run drueckt in map-weiten Ausbau und braucht Raumplanung." },
+    win_push: { title: "Siegpfad pushen", detail: "Keine groessere Krise blockiert den Run, der Siegpfad darf jetzt Prioritaet bekommen." },
+    none: { title: "Beobachten", detail: "Kein akuter Engpass dominiert den Lauf. Beobachtung reicht." },
+  };
+  return map[bottleneckId] || map.none;
+}
+
+export function getActionState(actionId) {
+  return { id: actionId, label: ACTION_LABELS[actionId] || actionId };
+}
+
+export function getLeverState(leverId) {
+  return { id: leverId, label: LEVER_LABELS[leverId] || leverId };
+}
+
+export function getZoneState(zoneId) {
+  return { id: zoneId, label: ZONE_LABELS[zoneId] || zoneId };
+}
+
+export function getOverlayState(overlayId) {
+  return { id: overlayId, label: OVERLAY_LABELS[overlayId] || overlayId };
+}
+
+export function getWinModeState(winMode) {
+  return { id: winMode, label: WIN_MODE_LABELS[winMode] || winMode };
+}
