@@ -6,6 +6,7 @@ import { applyPatches } from "../src/core/kernel/patches.js";
 import { sanitizeBySchema } from "../src/core/kernel/schema.js";
 import * as manifestMod from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
+import { GAME_MODE } from "../src/game/contracts/ids.js";
 import crypto from "node:crypto";
 
 function sha256Hex(s) {
@@ -15,7 +16,7 @@ function sha256Hex(s) {
 function runNormal(seed) {
   const store = createStore(manifestMod, { reducer, simStep: simStepPatch });
   store.dispatch({ type: "SET_SEED", payload: seed });
-  store.dispatch({ type: "GEN_WORLD" });
+  store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
   store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
   store.dispatch({ type: "SIM_STEP", payload: { force: true } });
   return sha256Hex(store.getSignatureMaterial());
@@ -24,7 +25,7 @@ function runNormal(seed) {
 function runBuffered(seed) {
   const store = createStore(manifestMod, { reducer, simStep: simStepPatch });
   store.dispatch({ type: "SET_SEED", payload: seed });
-  store.dispatch({ type: "GEN_WORLD" });
+  store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
   store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
 
   const doc = store.getDoc();

@@ -99,7 +99,7 @@ export function assertSimPatchesAllowed(manifest, state, actionType, patches) {
       if (p.op !== "set") throw patchValueError(path, "sim writes must be op:set");
       const v = p.value;
       // String-typed sim keys (gameResult, winMode, goal)
-      const STRING_SIM_KEYS = new Set(["gameResult", "winMode", "goal"]);
+      const STRING_SIM_KEYS = new Set(["gameResult", "winMode", "goal", "runPhase"]);
       if (seg === "running") {
         if (typeof v !== "boolean") throw patchValueError(path, "expected boolean");
       } else if (STRING_SIM_KEYS.has(seg)) {
@@ -111,4 +111,3 @@ export function assertSimPatchesAllowed(manifest, state, actionType, patches) {
     }
   }
 }
-

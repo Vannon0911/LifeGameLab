@@ -3,6 +3,7 @@ startEvidenceCase("test-split-security-gate.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
+import { GAME_MODE } from "../src/game/contracts/ids.js";
 import { deriveCommandScore } from "../src/game/techTree.js";
 
 function assert(cond, msg) {
@@ -12,7 +13,7 @@ function assert(cond, msg) {
 function mkStore(seed = "split-security") {
   const store = createStore(manifest, { reducer, simStep: simStepPatch });
   store.dispatch({ type: "SET_SEED", payload: seed });
-  store.dispatch({ type: "GEN_WORLD" });
+  store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
   store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
   return store;
 }

@@ -11,10 +11,14 @@ import { assertSimPatchesAllowed } from "../gate.js";
 import { clamp, cloneTypedArray, paintCircle } from "../shared.js";
 import {
   BRUSH_MODE,
+  GAME_MODE,
   GAME_RESULT,
   OVERLAY_MODE,
+  RUN_PHASE,
   WIN_MODE,
   isBrushMode,
+  normalizeGameMode,
+  normalizeRunPhase,
 } from "../../contracts/ids.js";
 import {
   handleBuyEvolution,
@@ -48,7 +52,12 @@ import {
 import { applyWinConditions, applyGoalCode } from "./winConditions.js";
 import { handleDevBalanceRunAi } from "./cpuActions.js";
 import { buildSetOverlayPatches, buildSetWinModePatches } from "./controlActions.js";
-import { applyPresetPhysicsOverrides, normalizeWorldPresetId } from "../worldPresets.js";
+import {
+  applyPresetPhysicsOverrides,
+  getWorldPreset,
+  isTileInStartWindow,
+  normalizeWorldPresetId,
+} from "../worldPresets.js";
 import { deriveStageState } from "./progression.js";
 import {
   handleHarvestPulse,
@@ -59,6 +68,70 @@ import {
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
+}
+
+function areFounderTilesConnected8(indices, w, h) {
+  if (indices.length === 0) return false;
+  const set = new Set(indices);
+  const seen = new Set();
+  const queue = [indices[0]];
+  seen.add(indices[0]);
+  while (queue.length > 0) {
+    const idx = queue.shift();
+    const x = idx % w;
+    const y = (idx / w) | 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const xx = x + dx;
+        const yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+        const j = yy * w + xx;
+        if (!set.has(j) || seen.has(j)) continue;
+        seen.add(j);
+        queue.push(j);
+      }
+    }
+  }
+  return seen.size === indices.length;
+}
+
+function canConfirmFoundation(state) {
+  if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return false;
+  if (state.sim.runPhase !== RUN_PHASE.GENESIS_SETUP) return false;
+  const world = state.world;
+  if (!world?.alive || !world?.lineageId || !world?.founderMask) return false;
+  const w = Number(world.w || state.meta.gridW || 0) | 0;
+  const h = Number(world.h || state.meta.gridH || 0) | 0;
+  if (w <= 0 || h <= 0) return false;
+  const founderBudget = Math.max(0, Number(state.sim.founderBudget || 0) | 0);
+  const founderPlaced = Math.max(0, Number(state.sim.founderPlaced || 0) | 0);
+  if (founderBudget !== 4 || founderPlaced !== 4) return false;
+  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+  const preset = getWorldPreset(state.meta.worldPresetId);
+  const playerWindow = preset?.startWindows?.player;
+  if (!playerWindow) return false;
+
+  const founderIndices = [];
+  for (let i = 0; i < world.founderMask.length; i++) {
+    if ((Number(world.founderMask[i]) | 0) !== 1) continue;
+    founderIndices.push(i);
+  }
+  if (founderIndices.length !== 4) return false;
+
+  for (const idx of founderIndices) {
+    if ((Number(world.alive[idx]) | 0) !== 1) return false;
+    if ((Number(world.lineageId[idx]) | 0) !== playerLineageId) return false;
+    const x = idx % w;
+    const y = (idx / w) | 0;
+    if (!isTileInStartWindow(x, y, w, h, playerWindow)) return false;
+  }
+  return areFounderTilesConnected8(founderIndices, w, h);
+}
+
+function isGenesisSetupInStandardMode(state) {
+  return normalizeGameMode(state?.meta?.gameMode, GAME_MODE.GENESIS) === GAME_MODE.GENESIS
+    && normalizeRunPhase(state?.sim?.runPhase, RUN_PHASE.GENESIS_SETUP) === RUN_PHASE.GENESIS_SETUP;
 }
 
 function seededStartPhysics(seed, basePhysics) {
@@ -213,9 +286,13 @@ function deriveBootstrapSimMetrics(world, meta, baseSim) {
   return nextSim;
 }
 
-function buildWorldGenerationPatches(state, presetId) {
+function buildWorldGenerationPatches(state, presetId, gameModeOverride, patchGameMode = false) {
   const meta = state.meta;
   const normalizedPresetId = normalizeWorldPresetId(presetId ?? meta.worldPresetId);
+  const nextGameMode = gameModeOverride === undefined
+    ? normalizeGameMode(meta.gameMode, GAME_MODE.GENESIS)
+    : normalizeGameMode(gameModeOverride, normalizeGameMode(meta.gameMode, GAME_MODE.GENESIS));
+  const isLabAutorun = nextGameMode === GAME_MODE.LAB_AUTORUN;
   const seededPhysics = seededStartPhysics(meta.seed, PHYSICS_DEFAULT);
   const tunedPhysics = applyPresetPhysicsOverrides(seededPhysics, normalizedPresetId);
   const world = generateWorld(
@@ -223,13 +300,18 @@ function buildWorldGenerationPatches(state, presetId) {
     meta.gridH,
     meta.seed,
     tunedPhysics,
-    normalizedPresetId
+    normalizedPresetId,
+    { gameMode: nextGameMode }
   );
   applyGlobalLearningToWorld(world, meta.globalLearning);
   world.devMutationVault = cloneJson(meta.devMutationVault || defaultDevMutationVault());
   world.zoneMap = new Int8Array(meta.gridW * meta.gridH);
 
   const nextSim = deriveBootstrapSimMetrics(world, { ...meta, physics: tunedPhysics }, makeInitialState().sim);
+  nextSim.running = false;
+  nextSim.runPhase = isLabAutorun ? RUN_PHASE.RUN_ACTIVE : RUN_PHASE.GENESIS_SETUP;
+  nextSim.founderBudget = 4;
+  nextSim.founderPlaced = 0;
   const stageState = deriveStageState(world, nextSim, {
     ...meta,
     physics: tunedPhysics,
@@ -242,6 +324,9 @@ function buildWorldGenerationPatches(state, presetId) {
     { op: "set", path: "/meta/worldPresetId", value: normalizedPresetId },
     { op: "set", path: "/meta/physics", value: tunedPhysics },
   ];
+  if (patchGameMode) {
+    patches.push({ op: "set", path: "/meta/gameMode", value: nextGameMode });
+  }
   pushKeysPatches(patches, world, WORLD_KEYS, "/world");
   pushKeysPatches(patches, nextSim, SIM_KEYS, "/sim");
   patches.push({ op: "set", path: "/meta/playerLineageId", value: 1 });
@@ -253,14 +338,15 @@ export function makeInitialState() {
   return {
     meta: {
       seed:        "life-light",
-      gridW:       32,
-      gridH:       32,
-      speed:       4,
+      gridW:       16,
+      gridH:       16,
+      speed:       2,
       brushMode:   BRUSH_MODE.OBSERVE,
       brushRadius: 3,
       renderMode:  "combined",
       activeOverlay: OVERLAY_MODE.NONE,
       worldPresetId: "river_delta",
+      gameMode:    GAME_MODE.GENESIS,
       physics:     { ...PHYSICS_DEFAULT },
       ui: {
         panelOpen: false,
@@ -276,7 +362,7 @@ export function makeInitialState() {
     },
     world: null,
     sim: {
-      tick: 0, running: false,
+      tick: 0, running: false, runPhase: RUN_PHASE.GENESIS_SETUP, founderBudget: 4, founderPlaced: 0,
       aliveCount: 0, aliveRatio: 0,
       meanLAlive: 0, meanEnergyAlive: 0, meanReserveAlive: 0,
       meanNutrientField: 0, meanToxinField: 0, meanSaturationField: 0, meanPlantField: 0,
@@ -299,6 +385,11 @@ export function makeInitialState() {
       gameResult: GAME_RESULT.NONE, gameEndTick: 0,
     },
   };
+}
+
+export function shouldAdvanceSimulation(state) {
+  const runPhase = String(state?.sim?.runPhase || RUN_PHASE.GENESIS_SETUP);
+  return !!state?.sim?.running && runPhase === RUN_PHASE.RUN_ACTIVE;
 }
 
 // Simulation bridge: clone mutable world buffers, then run step orchestrator.
@@ -334,6 +425,7 @@ function runWorldSimV4(world, meta, sim, rng) {
     playerLineageId: (meta.playerLineageId | 0) || 1,
     cpuLineageId: (meta.cpuLineageId | 0) || 2,
     seasonLength: meta.physics?.seasonLength || 300,
+    gameMode: normalizeGameMode(meta.gameMode, GAME_MODE.GENESIS),
   }, sim.tick);
   return { world: worldMutable, metrics };
 }
@@ -342,7 +434,24 @@ export function reducer(state, action, { rng }) {
   switch (action.type) {
 
     case "GEN_WORLD": {
-      const patches = buildWorldGenerationPatches(state, state.meta.worldPresetId);
+      const payload = action.payload && typeof action.payload === "object" ? action.payload : {};
+      const hasModeOverride = Object.prototype.hasOwnProperty.call(payload, "gameMode");
+      const patches = buildWorldGenerationPatches(
+        state,
+        state.meta.worldPresetId,
+        hasModeOverride ? payload.gameMode : undefined,
+        hasModeOverride
+      );
+      assertSimPatchesAllowed(manifest, state, action.type, patches);
+      return patches;
+    }
+
+    case "CONFIRM_FOUNDATION": {
+      if (!canConfirmFoundation(state)) return [];
+      const patches = [
+        { op: "set", path: "/sim/runPhase", value: RUN_PHASE.RUN_ACTIVE },
+        { op: "set", path: "/sim/running", value: true },
+      ];
       assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
@@ -350,6 +459,7 @@ export function reducer(state, action, { rng }) {
     case "TOGGLE_RUNNING": {
       const running = action.payload?.running ?? !state.sim.running;
       if (!state.world && running) return [];
+      if (running && state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
       const patches = [{ op: "set", path: "/sim/running", value: running }];
       assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
@@ -360,6 +470,7 @@ export function reducer(state, action, { rng }) {
       return [];
 
     case "APPLY_BUFFERED_SIM_STEP": {
+      if (!shouldAdvanceSimulation(state)) return [];
       const src = action.payload && typeof action.payload === "object" ? action.payload : {};
       const patches = Array.isArray(src.patches) ? src.patches : [];
       // Specialized gate: reject drift / wrong typed arrays early.
@@ -503,6 +614,7 @@ export function reducer(state, action, { rng }) {
     }
 
     case "PLACE_SPLIT_CLUSTER": {
+      if (isGenesisSetupInStandardMode(state)) return [];
       return handlePlaceSplitCluster(state, action);
     }
 
@@ -511,26 +623,32 @@ export function reducer(state, action, { rng }) {
     }
 
     case "HARVEST_CELL": {
+      if (isGenesisSetupInStandardMode(state)) return [];
       return handleHarvestCell(state, action);
     }
 
     case "HARVEST_PULSE": {
+      if (isGenesisSetupInStandardMode(state)) return [];
       return handleHarvestPulse(state, action);
     }
 
     case "PRUNE_CLUSTER": {
+      if (isGenesisSetupInStandardMode(state)) return [];
       return handlePruneCluster(state, action);
     }
 
     case "RECYCLE_PATCH": {
+      if (isGenesisSetupInStandardMode(state)) return [];
       return handleRecyclePatch(state, action);
     }
 
     case "SEED_SPREAD": {
+      if (isGenesisSetupInStandardMode(state)) return [];
       return handleSeedSpread(state, action);
     }
 
     case "SET_ZONE": {
+      if (isGenesisSetupInStandardMode(state)) return [];
       return handleSetZone(state, action);
     }
 
@@ -539,6 +657,7 @@ export function reducer(state, action, { rng }) {
     }
 
     case "BUY_EVOLUTION": {
+      if (isGenesisSetupInStandardMode(state)) return [];
       return handleBuyEvolution(state, action, DEV_MUTATION_CATALOG);
     }
 
@@ -572,6 +691,7 @@ export function simStepPatch(state, action, ctx) {
   const rngStreams = ctx?.rng;
 
   if (!state.world) return [];
+  if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
   const force = !!action.payload?.force;
   if (!state.sim.running && !force) return [];
 

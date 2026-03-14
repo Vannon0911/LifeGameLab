@@ -4,10 +4,11 @@
 
 import { createStore }       from "../core/kernel/store.js";
 import { manifest, APP_VERSION } from "../project/project.manifest.js";
-import { reducer, simStepPatch } from "../project/project.logic.js";
+import { reducer, simStepPatch, shouldAdvanceSimulation } from "../project/project.logic.js";
 import { render }            from "../project/renderer.js";
 import { UI }                from "../project/ui.js";
 import { hashString }        from "../core/kernel/rng.js";
+import { GAME_MODE } from "../game/contracts/ids.js";
 import { createSimStepBuffer } from "../core/runtime/simStepBuffer.js";
 import { createLlmCommandAdapter } from "../project/llm/commandAdapter.js";
 import { assertLlmGateSync } from "../project/llm/gateSync.js";
@@ -155,7 +156,7 @@ const Benchmark = {
     // 1. Main-Thread setup
     store.dispatch({ type: "SET_UI", payload: { offscreenEnabled: false } });
     store.dispatch({ type: "SET_SIZE", payload: { w: 144, h: 144 } });
-    store.dispatch({ type: "GEN_WORLD" });
+    store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
     store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
     await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for resize
     if (!this.isRunning) return;
@@ -226,7 +227,7 @@ function recoverWorld(reason) {
   stepBuffer.stop();
   RenderManager.flush?.(reason);
   store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: false } });
-  store.dispatch({ type: "GEN_WORLD" });
+  store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
   store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
   stepBuffer.start();
 }
@@ -559,7 +560,7 @@ const DevBalance = {
     this.episode++;
     this.status = `Episode ${this.episode} – Aussterben bei T${tick}. Neue Welt…`;
     updateDevStatus();
-    store.dispatch({ type: "GEN_WORLD" });
+    store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
     store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
   },
 };
@@ -798,7 +799,7 @@ function loop(ts) {
   const state   = store.getState();
   const stepMs  = 1000 / Math.max(1, state.meta.speed);
 
-  if (state.sim.running) {
+  if (shouldAdvanceSimulation(state)) {
     acc += dt;
     if (acc > PerfBudget.maxCatchupMs) acc = PerfBudget.maxCatchupMs;
     const simStart = globalThis.performance ? globalThis.performance.now() : 0;

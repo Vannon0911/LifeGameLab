@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { generateWorld } from "../src/game/sim/worldgen.js";
 import { PHYSICS_DEFAULT } from "../src/core/kernel/physics.js";
 import { stableStringify } from "../src/core/kernel/stableStringify.js";
+import { GAME_MODE } from "../src/game/contracts/ids.js";
 
 import { diffuse, applySeasonalLightAnchor } from "../src/game/sim/fields.js";
 import { applyPlantLifecycle, enforcePlantTileCap } from "../src/game/sim/plants.js";
@@ -45,7 +46,7 @@ function hashWorldSubset(w, keys) {
 
 const seed = "module-test-1";
 const phy = { ...PHYSICS_DEFAULT };
-const base = generateWorld(32, 32, seed, phy);
+const base = generateWorld(32, 32, seed, phy, "river_delta", { gameMode: GAME_MODE.LAB_AUTORUN });
 
 // 1) fields: diffuse + seasonal anchor deterministic.
 {
@@ -91,12 +92,27 @@ const base = generateWorld(32, 32, seed, phy);
 {
   const a = cloneWorld(base);
   const b = cloneWorld(base);
-  applyWorldAi(a, 5);
-  applyWorldAi(b, 5);
+  applyWorldAi(a, 5, { gameMode: GAME_MODE.LAB_AUTORUN });
+  applyWorldAi(b, 5, { gameMode: GAME_MODE.LAB_AUTORUN });
   assert(sha256Hex(stableStringify(a.worldAiAudit)) === sha256Hex(stableStringify(b.worldAiAudit)), "worldAi determinism failed");
   applyDynamicDamping(a);
   applyDynamicDamping(b);
   assert(hashWorldSubset(a, ["B", "W", "Sat"]) === hashWorldSubset(b, ["B", "W", "Sat"]), "damping determinism failed");
+}
+
+// 4b) worldAi founder seeding is lab-only.
+{
+  const lab = generateWorld(24, 24, "module-worldai-lab", phy, "river_delta", { gameMode: GAME_MODE.GENESIS });
+  const genesis = cloneWorld(lab);
+  applyWorldAi(lab, 5, { gameMode: GAME_MODE.LAB_AUTORUN });
+  applyWorldAi(genesis, 5, { gameMode: GAME_MODE.GENESIS });
+  let labAlive = 0;
+  let genesisAlive = 0;
+  for (let i = 0; i < lab.alive.length; i++) {
+    if (lab.alive[i] === 1) labAlive++;
+    if (genesis.alive[i] === 1) genesisAlive++;
+  }
+  assert(labAlive > genesisAlive, `worldAi lab-only founder seeding failed: lab=${labAlive}, genesis=${genesisAlive}`);
 }
 
 // 5) network: computeClusterAndLinks deterministic.
@@ -125,7 +141,7 @@ const base = generateWorld(32, 32, seed, phy);
 
 // 7) conflict: force a minimal conflict scenario and verify actionMap marks.
 {
-  const w = generateWorld(16, 16, "module-conflict-1", phy);
+  const w = generateWorld(16, 16, "module-conflict-1", phy, "river_delta", { gameMode: GAME_MODE.LAB_AUTORUN });
   // Ensure two alive of different lineages with high cohesion and toxin memory.
   const i = 10;
   const j = 100;

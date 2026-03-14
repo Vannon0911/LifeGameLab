@@ -3,6 +3,7 @@ startEvidenceCase("test-interactions.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
+import { GAME_MODE } from "../src/game/contracts/ids.js";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
@@ -11,7 +12,7 @@ function assert(cond, msg) {
 function mkStore(seed = "interact-1") {
   const store = createStore(manifest, { reducer, simStep: simStepPatch });
   store.dispatch({ type: "SET_SEED", payload: seed });
-  store.dispatch({ type: "GEN_WORLD" });
+  store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
   return store;
 }
 
@@ -56,14 +57,23 @@ assert(s.world.W !== beforeW, "PAINT_BRUSH must replace world.W reference");
 assert(Number(s.world.W[idx]) >= tox0, "PAINT_BRUSH did not increase toxin at target");
 
 // PLACE_CELL add/remove must affect alive array.
-store.dispatch({ type: "PLACE_CELL", payload: { x: 4, y: 4, remove: false } });
+let emptyIdx = -1;
+for (let i = 0; i < store.getState().world.alive.length; i++) {
+  if (store.getState().world.alive[i] === 0) {
+    emptyIdx = i;
+    break;
+  }
+}
+assert(emptyIdx >= 0, "No empty tile found for PLACE_CELL test");
+const ex = emptyIdx % store.getState().world.w;
+const ey = Math.floor(emptyIdx / store.getState().world.w);
+store.dispatch({ type: "PLACE_CELL", payload: { x: ex, y: ey, remove: false } });
 s = store.getState();
-const id44 = 4 * s.world.w + 4;
-assert(s.world.alive[id44] === 1, "PLACE_CELL add did not set alive");
-store.dispatch({ type: "PLACE_CELL", payload: { x: 4, y: 4, remove: true } });
+assert(s.world.alive[emptyIdx] === 1, "PLACE_CELL add did not set alive");
+store.dispatch({ type: "PLACE_CELL", payload: { x: ex, y: ey, remove: true } });
 s = store.getState();
-assert(s.world.alive[id44] === 0, "PLACE_CELL remove did not clear alive");
-assert((s.world.E[id44] || 0) === 0, "PLACE_CELL remove did not clear energy");
+assert(s.world.alive[emptyIdx] === 0, "PLACE_CELL remove did not clear alive");
+assert((s.world.E[emptyIdx] || 0) === 0, "PLACE_CELL remove did not clear energy");
 
 // DEV_BALANCE_RUN_AI must not throw and must record audit (even if applied=0).
 store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });

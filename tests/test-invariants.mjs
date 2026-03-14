@@ -3,6 +3,7 @@ startEvidenceCase("test-invariants.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
+import { GAME_MODE } from "../src/game/contracts/ids.js";
 
 const SEEDS = ["inv-1", "inv-2"];
 const TICKS = 50;
@@ -30,7 +31,7 @@ for (const seed of SEEDS) {
 // Run the same reducer/simStep wiring as the browser runtime (src/app/main.js).
     const store = createStore(manifest, { reducer, simStep: simStepPatch });
     store.dispatch({ type: "SET_SEED", payload: seed });
-    store.dispatch({ type: "GEN_WORLD" });
+    store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
     store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
     
     for (let t = 0; t < TICKS; t++) {

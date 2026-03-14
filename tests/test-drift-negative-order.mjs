@@ -4,6 +4,7 @@ startEvidenceCase("test-drift-negative-order.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
+import { GAME_MODE } from "../src/game/contracts/ids.js";
 import { createSignatureSnapshot, sha256Hex } from "./support/determinismDiff.mjs";
 import { closeDanglingHandles } from "./support/handleCleanup.mjs";
 
@@ -20,7 +21,7 @@ function runActions(actions) {
 const baseBoot = [
   { type: "SET_SEED", payload: "drift-order-1" },
   { type: "SET_SIZE", payload: { w: 32, h: 32 } },
-  { type: "GEN_WORLD" },
+  { type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } },
   { type: "TOGGLE_RUNNING", payload: { running: true } },
 ];
 
@@ -49,4 +50,3 @@ try {
 } finally {
   await closeDanglingHandles();
 }
-
