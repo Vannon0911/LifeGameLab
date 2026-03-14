@@ -60,5 +60,12 @@ Dieser Log rekonstruiert die Evolution der Codebasis bis zum aktuellen v2.3.0 Re
 - **LLM-Test-Entry:** Als offene Integrationspunkte dokumentiert, dass `window.render_game_to_text` und `window.advanceTime` noch fehlen.
 - **UI/UX-Stand:** Browser-Checks für Mobile/Desktop, Tool-Feedback und Benchmark-UI waren grün; der offene Stand ist damit primär Sim-/Teststabilität, nicht Shell oder Rendering.
 
+## Nachtrag — 2026-03-14: Re-Verification, Split-Gate-Härtung und Baum-Cleanup
+- **Re-Verification:** `npm test` ist wieder vollständig grün; Determinismus (`long`, `per-tick`, `with-interactions`), Core-Gates und SIM-Gates sind erneut verifiziert.
+- **LLM-Entry:** `window.render_game_to_text` und `window.advanceTime` sind vorhanden; der Browser-/Strategie-Contract ist damit testseitig geschlossen.
+- **Security:** `PLACE_SPLIT_CLUSTER` ist jetzt atomar und quarantänebewusst; teilweises Platzieren in belegte oder blockierte 4x4-Felder ist unterbunden und per `tests/test-split-security-gate.mjs` abgesichert.
+- **Cleanup:** leere Legacy-Pfade und der verschachtelte Altcontainer wurden entfernt; `tests/test-path-hygiene.mjs` erzwingt jetzt deren echte Abwesenheit.
+- **Modularisierung:** spielernahe Reducer-Handler wurden nach `src/game/sim/playerActions.js` ausgelagert; gemeinsame Hilfen `cloneTypedArray` und `paintCircle` leben in `src/game/sim/shared.js`.
+
 ---
 *Ende der aktuell rekonstruierten und append-only geführten Historie.*
