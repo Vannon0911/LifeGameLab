@@ -787,17 +787,47 @@ function renderGameToText() {
   const state = store.getState();
   const playerLineageId = Number(state?.meta?.playerLineageId || 0);
   const memory = state?.world?.lineageMemory?.[playerLineageId] || {};
+  const rawTool = String(state?.meta?.brushMode || "observe");
+  const toolAliases = {
+    paint_light: "light",
+    paint_light_remove: "light_remove",
+    paint_nutrient: "nutrient",
+    paint_toxin: "toxin",
+    paint_reset: "saturation_reset",
+  };
+  const energyNet = Number(state?.sim?.playerEnergyNet || 0);
+  const toxin = Number(state?.sim?.meanToxinField || 0);
+  const playerAlive = Number(state?.sim?.playerAliveCount || 0);
+  const clusterRatio = Number(state?.sim?.clusterRatio || 0);
+  const networkRatio = Number(state?.sim?.networkRatio || 0);
+  let risk = "stable";
+  if (playerAlive === 0 && Number(state?.sim?.tick || 0) > 5) risk = "collapse";
+  else if (energyNet < -2.2) risk = "critical";
+  else if (toxin > 0.3) risk = "toxic";
+  else if (energyNet < 0.45) risk = "unstable";
+  const mission =
+    Number(state?.sim?.playerStage || 1) <= 1 ? "stabilize_first_cluster" :
+    Number(state?.sim?.totalHarvested || 0) < 15 ? "reach_next_stage" :
+    clusterRatio < 0.28 ? "form_biomodule" :
+    "push_directive";
+  const structure =
+    clusterRatio >= 0.56 ? "colony_core" :
+    clusterRatio >= 0.28 || networkRatio >= 0.22 ? "biomodule_2x2" :
+    "single_cells";
   return JSON.stringify({
     tick: Number(state?.sim?.tick || 0),
     running: !!state?.sim?.running,
-    tool: String(state?.meta?.brushMode || "observe"),
+    tool: toolAliases[rawTool] || rawTool,
     stage: Number(state?.sim?.playerStage || 1),
     dna: Number(state?.sim?.playerDNA || 0),
-    playerAlive: Number(state?.sim?.playerAliveCount || 0),
+    playerAlive,
     cpuAlive: Number(state?.sim?.cpuAliveCount || 0),
-    energyNet: Number(state?.sim?.playerEnergyNet || 0),
-    clusterRatio: Number(state?.sim?.clusterRatio || 0),
-    networkRatio: Number(state?.sim?.networkRatio || 0),
+    energyNet,
+    clusterRatio,
+    networkRatio,
+    risk,
+    mission,
+    structure,
     doctrine: String(memory.doctrine || "equilibrium"),
     techs: Array.isArray(memory.techs) ? memory.techs : [],
     synergies: Array.isArray(memory.synergies) ? memory.synergies : [],

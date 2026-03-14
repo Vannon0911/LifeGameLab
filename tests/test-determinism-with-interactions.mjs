@@ -1,11 +1,7 @@
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
-import crypto from "node:crypto";
-
-function sha256Hex(s) {
-  return crypto.createHash("sha256").update(String(s)).digest("hex");
-}
+import { createSignatureSnapshot, explainHashMismatch, sha256Hex } from "./support/determinismDiff.mjs";
 
 function buildScenario(seed) {
   // Deterministic scenario: same actions at the same ticks.
@@ -48,13 +44,12 @@ function runScenario(scn) {
   const store = createStore(manifest, { reducer, simStep: simStepPatch });
   const hashes = [];
   const sig0 = store.getSignatureMaterial();
-  hashes.push({ i: 0, action: "INIT", sig: sig0, sha256: sha256Hex(sig0) });
+  hashes.push({ i: 0, action: "INIT", ...createSignatureSnapshot(sig0) });
   let i = 0;
   for (const a of scn.steps) {
     i++;
     store.dispatch(a);
-    const sig = store.getSignatureMaterial();
-    hashes.push({ i, action: a.type, sig, sha256: sha256Hex(sig) });
+    hashes.push({ i, action: a.type, ...createSignatureSnapshot(store.getSignatureMaterial()) });
   }
   const traceDigest = sha256Hex(hashes.map((x) => x.sha256).join("\n"));
   return { hashes, traceDigest };
@@ -73,9 +68,14 @@ for (const seed of seeds) {
     if (a.hashes[k].sha256 !== b.hashes[k].sha256) {
       const ha = a.hashes[k];
       const hb = b.hashes[k];
-      console.error(`[determinism-interactions] ${seed}: FAIL at step ${k} action=${ha.action}`);
-      console.error(`a.sig=${ha.sig} a.sha256=${ha.sha256}`);
-      console.error(`b.sig=${hb.sig} b.sha256=${hb.sha256}`);
+      for (const line of explainHashMismatch({
+        suite: "determinism-interactions",
+        seed,
+        pointLabel: `step ${k}`,
+        action: ha.action,
+        left: ha,
+        right: hb,
+      })) console.error(line);
       ok = false;
       break;
     }

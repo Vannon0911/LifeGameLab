@@ -1,5 +1,5 @@
 # LIFEXLAB — SYSTEM ARCHITECTURE SNAPSHOT
-**Datum:** 2026-03-14 | **Version:** 14.2 | **APP_VERSION:** 2.3.0 (Sandbox Build) | **Status:** VERIFIZIERT · Vollsuite, Determinismus, Core-Gates und Doku synchron grün
+**Datum:** 2026-03-14 | **Version:** 14.3 | **APP_VERSION:** 2.3.0 (Sandbox Build) | **Status:** VERIFIZIERT · Vollsuite, Determinismus, Core-Gates, Browser-Hooks und Rework-Doku synchron grün
 
 ## Architektur-Mandat
 
@@ -34,6 +34,11 @@
 - Split-Sicherheitsgate: `tests/test-split-security-gate.mjs`
 - Redteam: `tools/redteam-stress-master.mjs`
 - operative Doku: nur `docs/`
+- Browser-Abnahme Rework v3:
+  - Mobile-Sheet + Dock-Wechsel verifiziert
+  - fokussierter Evolution-Flow verifiziert
+  - Desktop-Statusraum nach 5s Lauf verifiziert
+  - `window.render_game_to_text` liefert `risk`, `mission`, `structure`
 
 ## Integritäts-Signaturen
 
@@ -48,3 +53,4 @@
 - `PERF-01` activeTiles-Optimierung in `src/game/sim/step.js`
 - `RENDER-01` Flow-Lines / Energiefluss visualisieren
 - `ARCH-01` weiteren Reducer-Abbau nach `playerActions.js` fortsetzen, damit `src/game/sim/reducer.js` kein Rest-Monolith bleibt
+- `UX-01` Missions- und Directive-Feedback weiter verdichten, damit Stage- und Tech-Unlocks noch härter im Canvas spürbar werden

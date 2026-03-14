@@ -37,6 +37,36 @@ function mutationIntensityFromTrait(trait, idx) {
   return clamp01(acc / 2.6);
 }
 
+function getPlayerVisualState(world, meta, sim) {
+  const playerLineageId = Number(meta?.playerLineageId || 0);
+  const memory = world?.lineageMemory?.[playerLineageId] || {};
+  const doctrine = String(memory.doctrine || "equilibrium");
+  const synergies = Array.isArray(memory.synergies) ? memory.synergies : [];
+  return {
+    doctrine,
+    synergies: synergies.length,
+    stage: Number(sim?.playerStage || 1),
+  };
+}
+
+function getDoctrinePalette(doctrine, synergies = 0) {
+  const palettes = {
+    expansion: { hue: 152, glow: [98, 255, 184], link: [88, 255, 178] },
+    reserve: { hue: 42, glow: [255, 206, 116], link: [255, 196, 106] },
+    network: { hue: 192, glow: [118, 226, 255], link: [104, 216, 255] },
+    detox: { hue: 104, glow: [174, 246, 134], link: [132, 235, 164] },
+    equilibrium: { hue: 168, glow: [112, 228, 206], link: [102, 212, 212] },
+  };
+  const base = palettes[doctrine] || palettes.equilibrium;
+  const bonus = clamp01(synergies / 4);
+  return {
+    hue: base.hue,
+    glow: base.glow,
+    link: base.link,
+    bonus,
+  };
+}
+
 // Background/tile pass (without direct cell colour)
 function writeBackgroundPixels(data, world, meta, w, h) {
   const { alive, E, L, R, W, Sat, P, link, clusterField, superId } = world;
@@ -171,11 +201,13 @@ function writeCellColorPixels(data, world, meta, w, h) {
   }
 }
 
-function drawNetworkLinks(ctx, world, offX, offY, tilePx) {
+function drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim) {
   if (tilePx < 5) return;
   const { w, h, alive, link, hue } = world;
   const N = w * h;
   const maxLinks = tilePx < 7 ? 1800 : 4500;
+  const visual = getPlayerVisualState(world, meta, sim);
+  const doctrinePalette = getDoctrinePalette(visual.doctrine, visual.synergies);
   let links = 0;
   ctx.save();
   ctx.lineWidth = Math.max(0.5, tilePx * 0.05);
@@ -196,8 +228,9 @@ function drawNetworkLinks(ctx, world, offX, offY, tilePx) {
       const x2 = offX + (j % w) * tilePx + tilePx * 0.5;
       const y2 = offY + ((j / w) | 0) * tilePx + tilePx * 0.5;
       const mixHue = (((hue[i] || 0) + (hue[j] || 0)) * 0.5) % 360;
-      const c = hslToRgb(mixHue, 60, 62);
-      ctx.strokeStyle = `rgba(${Math.round(c[0])}, ${Math.round(c[1])}, ${Math.round(c[2])}, ${0.05 + strength * 0.22})`;
+      const doctrineMix = doctrinePalette.bonus * 0.45 + 0.2;
+      const c = hslToRgb(mixHue * (1 - doctrineMix) + doctrinePalette.hue * doctrineMix, 60 + doctrinePalette.bonus * 10, 58 + doctrinePalette.bonus * 8);
+      ctx.strokeStyle = `rgba(${Math.round(c[0])}, ${Math.round(c[1])}, ${Math.round(c[2])}, ${0.04 + strength * (0.18 + doctrinePalette.bonus * 0.08)})`;
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
@@ -208,6 +241,13 @@ function drawNetworkLinks(ctx, world, offX, offY, tilePx) {
     if (links >= maxLinks) break;
   }
   ctx.restore();
+}
+
+function hasStable2x2(world, x, y) {
+  const { w, h, alive } = world;
+  if (x < 0 || y < 0 || x >= w - 1 || y >= h - 1) return false;
+  const i = y * w + x;
+  return alive[i] === 1 && alive[i + 1] === 1 && alive[i + w] === 1 && alive[i + w + 1] === 1;
 }
 
 function drawFieldGlyphs(ctx, world, offX, offY, tilePx) {
@@ -453,14 +493,73 @@ function drawEvents(ctx, world, offX, offY, tilePx) {
   ctx.restore();
 }
 
-function drawRoundCells(ctx, world, offX, offY, tilePx, meta, quality = 3) {
+function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) {
   const { w, h, alive, E, hue, trait, clusterField, superId } = world;
   const Emax = Number(meta?.physics?.Emax) || 3.2;
   if (tilePx < 3 || quality <= 0) return;
   const cellCount = Math.max(1, w * h);
   const detailBoost = clamp01((6400 - cellCount) / 4200);
   const skip = tilePx < 4 ? 2 : quality <= 1 ? 2 : 1;
+  const visual = getPlayerVisualState(world, meta, sim);
+  const doctrinePalette = getDoctrinePalette(visual.doctrine, visual.synergies);
+  const moduleMask = new Uint8Array(w * h);
   ctx.save();
+
+  if (tilePx >= 4) {
+    for (let y = 0; y < h - 1; y++) {
+      for (let x = 0; x < w - 1; x++) {
+        if (!hasStable2x2(world, x, y)) continue;
+        const i = y * w + x;
+        if (moduleMask[i]) continue;
+        moduleMask[i] = moduleMask[i + 1] = moduleMask[i + w] = moduleMask[i + w + 1] = 1;
+        const ev = (
+          (Number(E[i]) || 0) +
+          (Number(E[i + 1]) || 0) +
+          (Number(E[i + w]) || 0) +
+          (Number(E[i + w + 1]) || 0)
+        ) / (4 * Emax);
+        const cv = (
+          (Number(clusterField?.[i]) || 0) +
+          (Number(clusterField?.[i + 1]) || 0) +
+          (Number(clusterField?.[i + w]) || 0) +
+          (Number(clusterField?.[i + w + 1]) || 0)
+        ) / 4;
+        const px = offX + x * tilePx;
+        const py = offY + y * tilePx;
+        const size = tilePx * 2;
+        const radius = Math.max(3, tilePx * 0.58);
+        const glowAlpha = 0.09 + ev * 0.12 + doctrinePalette.bonus * 0.10;
+        const shellAlpha = 0.18 + cv * 0.18 + doctrinePalette.bonus * 0.10;
+        ctx.fillStyle = `rgba(${doctrinePalette.glow[0]}, ${doctrinePalette.glow[1]}, ${doctrinePalette.glow[2]}, ${glowAlpha})`;
+        if (typeof ctx.roundRect === "function") {
+          ctx.beginPath();
+          ctx.roundRect(px + tilePx * 0.06, py + tilePx * 0.06, size - tilePx * 0.12, size - tilePx * 0.12, radius);
+          ctx.fill();
+        } else {
+          ctx.fillRect(px, py, size, size);
+        }
+        ctx.strokeStyle = `rgba(235, 255, 248, ${shellAlpha})`;
+        ctx.lineWidth = Math.max(1, tilePx * 0.12);
+        if (typeof ctx.roundRect === "function") {
+          ctx.beginPath();
+          ctx.roundRect(px + tilePx * 0.12, py + tilePx * 0.12, size - tilePx * 0.24, size - tilePx * 0.24, radius * 0.9);
+          ctx.stroke();
+        } else {
+          ctx.strokeRect(px, py, size, size);
+        }
+        const cx = px + size * 0.5;
+        const cy = py + size * 0.5;
+        const core = ctx.createRadialGradient(cx, cy, tilePx * 0.12, cx, cy, tilePx * 0.95);
+        core.addColorStop(0, `rgba(255,255,255,${0.18 + ev * 0.20})`);
+        core.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = core;
+        ctx.beginPath();
+        ctx.arc(cx, cy, tilePx * 0.95, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
   for (let y = 0; y < h; y += skip) {
     for (let x = 0; x < w; x += skip) {
       const i = y * w + x;
@@ -471,12 +570,15 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, quality = 3) {
       const mut = mutationIntensityFromTrait(trait, i);
       const cv = clamp01(clusterField?.[i] ?? 0);
       const inSuper = (superId?.[i] ?? -1) >= 0;
-      const radius = Math.max(1, tilePx * (0.38 + ev * 0.10));
+      const inModule = moduleMask[i] === 1;
+      const radius = Math.max(1, tilePx * (inModule ? 0.26 : 0.36 + ev * 0.10));
       const h0 = Number(hue[i]) || 0;
-      const sat = 14 + mut * 72;
-      const litCore = 38 + ev * 28 + mut * 12;
+      const doctrineBlend = inModule ? 0.52 : 0.18 + doctrinePalette.bonus * 0.20;
+      const sat = 14 + mut * 72 + doctrinePalette.bonus * 6;
+      const litCore = 38 + ev * 28 + mut * 12 + doctrinePalette.bonus * 5;
       const litRim = 24 + ev * 12;
-      const core = hslToRgb(h0 + mut * 24, sat, litCore);
+      const coreHue = h0 * (1 - doctrineBlend) + doctrinePalette.hue * doctrineBlend + mut * 12;
+      const core = hslToRgb(coreHue, sat, litCore);
       const rim = hslToRgb(h0 - 12, Math.max(25, sat - 20), litRim);
       const g = ctx.createRadialGradient(cx - radius * 0.28, cy - radius * 0.28, radius * 0.08, cx, cy, radius);
       g.addColorStop(0, `rgba(${Math.round(core[0])}, ${Math.round(core[1])}, ${Math.round(core[2])}, 0.96)`);
@@ -488,7 +590,7 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, quality = 3) {
       ctx.fill();
 
       if (quality >= 2 && cv > 0.5) {
-        ctx.strokeStyle = `rgba(95, 196, 255, ${0.05 + cv * 0.09})`;
+        ctx.strokeStyle = `rgba(${doctrinePalette.link[0]}, ${doctrinePalette.link[1]}, ${doctrinePalette.link[2]}, ${0.05 + cv * 0.11})`;
         ctx.lineWidth = Math.max(0.6, radius * 0.09);
         ctx.beginPath();
         ctx.arc(cx, cy, radius * (1.20 + cv * 0.10), 0, Math.PI * 2);
@@ -502,7 +604,7 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, quality = 3) {
         ctx.stroke();
       }
 
-      if (quality >= 2 && detailBoost > 0.22 && tilePx >= 4) {
+      if (quality >= 2 && detailBoost > 0.22 && tilePx >= 4 && !inModule) {
         ctx.fillStyle = `rgba(255,255,255,${(0.10 + ev * 0.15 + mut * 0.12) * detailBoost})`;
         ctx.beginPath();
         ctx.arc(cx - radius * 0.30, cy - radius * 0.32, Math.max(0.8, radius * 0.24), 0, Math.PI * 2);
@@ -526,9 +628,9 @@ function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0) {
   ctx.save();
   const small = tilePx < 22;
   const minorStep = 1;
-  const minorAlpha = small ? 0.05 : 0.08;
+  const minorAlpha = small ? 0.025 : 0.04;
   const majorEvery = 10;
-  ctx.strokeStyle = `rgba(170,210,255,${minorAlpha})`;
+  ctx.strokeStyle = `rgba(188,255,231,${minorAlpha})`;
   ctx.lineWidth = 1;
   for (let x = offX; x <= offX + imageW; x += tilePx * minorStep) {
     ctx.beginPath(); ctx.moveTo(x+0.5, offY); ctx.lineTo(x+0.5, offY+imageH); ctx.stroke();
@@ -537,8 +639,8 @@ function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0) {
     ctx.beginPath(); ctx.moveTo(offX, y+0.5); ctx.lineTo(offX+imageW, y+0.5); ctx.stroke();
   }
   if (tilePx >= 3 && lodLevel <= 2) {
-    ctx.strokeStyle = "rgba(220,238,255,0.30)";
-    ctx.lineWidth = 1.1;
+    ctx.strokeStyle = "rgba(205,255,232,0.12)";
+    ctx.lineWidth = 1;
     for (let x = offX, c = 0; x <= offX + imageW; x += tilePx, c++) {
       if (c % majorEvery !== 0) continue;
       ctx.beginPath(); ctx.moveTo(x + 0.5, offY); ctx.lineTo(x + 0.5, offY + imageH); ctx.stroke();
@@ -686,17 +788,14 @@ function drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality = 3) {
       } else if (mode === "cells") {
         r = 0; g = 0; b = 0;
       } else {
-        // Combined: saturation black->green + light blue->yellow.
-        const satMap = [0, sv * 216, 0];
-        const lightMap = [28 + lv * 208, 92 + lv * 142, 248 - lv * 164];
-        const lightTint = sv * 0.40;
-        r = satMap[0] + lightMap[0] * lightTint;
-        g = satMap[1] + lightMap[1] * lightTint;
-        b = satMap[2] + lightMap[2] * lightTint;
-        const toxDark = clamp01(wv * 0.55);
-        r *= 1 - toxDark * 0.16;
-        g *= 1 - toxDark * 0.16;
-        b *= 1 - toxDark * 0.16;
+        // Controlled game palette: dark petrol world, nutrient bloom, toxic stress.
+        r = 6 + lv * 18 + rv * 12 + pv * 8;
+        g = 16 + lv * 28 + rv * 76 + pv * 46 + sv * 24;
+        b = 16 + lv * 34 + rv * 18 + (1 - sv) * 10;
+        const toxicHeat = clamp01(wv * 0.95);
+        r = r * (1 - toxicHeat) + (82 + wv * 132);
+        g = g * (1 - toxicHeat * 0.72) + (18 + wv * 54);
+        b = b * (1 - toxicHeat * 0.85) + (12 + wv * 18);
       }
 
       const px = offX + x * tilePx;
@@ -706,18 +805,18 @@ function drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality = 3) {
       ctx.fillRect(px, py, size, size);
 
       if (detail) {
-        const shade = clamp01((1 - lv) * 0.55 + wv * 0.20 + sv * 0.14);
-        const glow = clamp01(lv * 0.62 - (sv + wv) * 0.10);
+        const shade = clamp01((1 - lv) * 0.38 + wv * 0.24 + sv * 0.08);
+        const glow = clamp01(lv * 0.42 + rv * 0.22 + pv * 0.10 - wv * 0.14);
         if (shade > 0.05) {
-          ctx.fillStyle = `rgba(8,12,22,${0.04 + shade * 0.12})`;
+          ctx.fillStyle = `rgba(3,8,10,${0.05 + shade * 0.10})`;
           ctx.fillRect(px, py, size, size);
         }
         if (glow > 0.06) {
           const gx = px + size * 0.25;
           const gy = py + size * 0.2;
           const grad = ctx.createRadialGradient(gx, gy, size * 0.08, gx, gy, size * 0.72);
-          grad.addColorStop(0, `rgba(176,220,255,${0.08 + glow * 0.14})`);
-          grad.addColorStop(1, "rgba(176,220,255,0)");
+          grad.addColorStop(0, `rgba(176,255,220,${0.06 + glow * 0.14})`);
+          grad.addColorStop(1, "rgba(176,255,220,0)");
           ctx.fillStyle = grad;
           ctx.fillRect(px, py, size, size);
         }
@@ -866,9 +965,9 @@ export function drawFrame(ctx, state, perf) {
 
   if (quality >= 1 && lod.level <= 2) drawActionOverlay(ctx, world, meta, offX, offY, tilePx);
   if (quality >= 1 && lod.level <= 2) drawLightShadowOverlay(ctx, world, meta, offX, offY, tilePx);
-  if (quality >= 2 && lod.level <= 2) drawNetworkLinks(ctx, world, offX, offY, tilePx);
+  if (quality >= 2 && lod.level <= 2) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim);
   if (quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, sim?.tick || 0);
-  drawRoundCells(ctx, world, offX, offY, tilePx, meta, quality);
+  drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality);
   if (quality >= 3 && lod.level <= 1) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawZoneOverlay(ctx, world, offX, offY, tilePx);
