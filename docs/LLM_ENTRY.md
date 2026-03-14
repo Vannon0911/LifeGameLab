@@ -37,6 +37,11 @@ Dieses Repository ist ein deterministisches Contract-System. Jede Aenderung muss
 - Kein `Math.random()`/`Date.now()` in Reducer oder SimStep.
 - Neue Felder/Actions/Writes zuerst im Manifest.
 
+## Phasen-Doku (bindend)
+- `docs/PHASE_A_TODO.md`: abgeschlossene Genesis-/Core-Phasen A und B inklusive belegter Nicht-Ziele
+- `docs/PHASE_C_TODO.md`: naechster kanonischer Arbeitsblock fuer den echten DNA-/Zone-2-Unlock
+- Bei Tasks mit Progression, Genesis, Core-Zone oder Zone-Gates sind diese Dateien vor Implementierung mitzulesen.
+
 ## Definition Of Done
 - Contract/Gates intakt
 - Determinismus intakt

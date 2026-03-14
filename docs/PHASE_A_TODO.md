@@ -379,10 +379,10 @@ Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenf
     - keine DNA-Zonen-UI, kein Tech-Panel-Umbau.
 
 ### B8 Caller/Smokes
-- [ ] Standard-Smokes um zweiten Confirm ergaenzen
-- [ ] Foundation->Core->Run Flow absichern
-- [ ] Lab-/Recovery-/Benchmark-Pfade gegen Regression pruefen
-- [ ] Tests + Doku aktualisieren
+- [x] Standard-Smokes um zweiten Confirm ergaenzen
+- [x] Foundation->Core->Run Flow absichern
+- [x] Lab-/Recovery-/Benchmark-Pfade gegen Regression pruefen
+- [x] Tests + Doku aktualisieren
 - Details:
   - Ziel: vorhandene Boot-/Reset-/Smoke-Pfade bleiben stabil.
   - Regeln:
@@ -402,15 +402,16 @@ Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenf
   - Tests:
     - Standardflow `Genesis -> Foundation -> Core -> Run`
     - Lab bleibt unveraendert explizit startbar
+    - `src/app/main.js`-Caller bleiben aufgeteilt: Standard-Boot ohne Autostart, Recovery/Benchmark explizit `LAB_AUTORUN`
   - Doku:
     - Caller-/Smoke-Tabelle aktualisieren.
   - Nicht-Ziele:
     - keine neue Runtime-Pfadfamilie.
 
 ### B9 Finalisierung
-- [ ] technische Notizen / Changelog aktualisieren
-- [ ] TODO-/Implementierungsstatus aktualisieren
-- [ ] Scope-Check: kein Pattern/Fog/Tech/Zone-Grossumbau
+- [x] technische Notizen / Changelog aktualisieren
+- [x] TODO-/Implementierungsstatus aktualisieren
+- [x] Scope-Check: kein Pattern/Fog/Tech/Zone-Grossumbau
 - Details:
   - Ziel: Phase B nur mit belegbarer Vollstaendigkeit abschliessen.
   - Pflicht pro Ticket:
@@ -433,3 +434,24 @@ Zweck: Energiekern-Startschritt nach Founder-Confirm mit atomarer Ticket-Reihenf
     - keine Auto-Expansion
     - keine CPU-Logik jenseits einmaligem Bootstrap
     - keine Kernel-Aenderung
+
+## Phase-B-Abschluss
+
+- [x] `B1` Contract-/State-Basis
+- [x] `B2` Foundation -> Genesis Zone
+- [x] `B3` Energiekern bestaetigen
+- [x] `B4` CPU-Bootstrap
+- [x] `B5` DNA-Unlock-Meter
+- [x] `B6` Genesis-Zone-Gates
+- [x] `B7` UI-Minimum
+- [x] `B8` Caller/Smokes
+- [x] `B9` Finalisierung
+- Phase B ist damit fachlich und prozessual abgeschlossen.
+
+## Phase-C-Anschluss
+
+- Kanonischer Next-Step ab hier: `docs/PHASE_C_TODO.md`
+- Phase C startet explizit erst nach `P0-C` aus `docs/PHASE_C_TODO.md`
+- Die harte Restluecke nach Phase B ist absichtlich:
+  - DNA-Unlock ist bisher nur Meter/Ziel, noch kein echter Commit-Pfad
+  - `world.zoneMap`/`SET_ZONE` sind Legacy-Bestand und muessen in Phase C erst sauber an den neuen Progressionspfad gebunden werden

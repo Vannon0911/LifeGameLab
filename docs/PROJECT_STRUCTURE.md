@@ -19,6 +19,7 @@
 - Render: reine Darstellung
 - UI: read-only + Action-Dispatch
 - Project: stabile Fassaden und Contract-Definition
+- Docs/Governance: Phase-TODOs, LLM-Einstieg, Scope- und Handoff-Artefakte
 
 ## Aktuelle Zuschnitte (2026-03-14)
 - `src/game/ui/ui.js`: UI-Orchestrierung (Panels, Event-Wiring, Dispatch)
@@ -32,3 +33,6 @@
 - `src/game/sim/stepRuntime.js`: Lineage-/Trait-Runtime-Helfer (pure)
 - `src/game/sim/reducer/index.js`: Routing/Komposition
 - `src/game/sim/reducer/controlActions.js`: pure Control-Action-Helfer
+- `docs/PHASE_A_TODO.md`: abgeschlossene Ticketfolge fuer Phase A und B
+- `docs/PHASE_C_TODO.md`: kanonische Ticketfolge fuer den naechsten DNA-/Zone-2-Block
+- `docs/LLM_ENTRY.md`: bindender Einstieg fuer Pflichtlesereihenfolge, Gates und Phasen-Doku
