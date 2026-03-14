@@ -34,5 +34,9 @@
 - `src/game/sim/reducer/index.js`: Routing/Komposition
 - `src/game/sim/reducer/controlActions.js`: pure Control-Action-Helfer
 - `docs/PHASE_A_TODO.md`: abgeschlossene Ticketfolge fuer Phase A und B
-- `docs/PHASE_C_TODO.md`: kanonische Ticketfolge fuer den naechsten DNA-/Zone-2-Block
+- `docs/PHASE_C_TODO.md`: abgeschlossene Ticketfolge fuer DNA-/Zone-2 inkl. belegter Scope-Grenzen
+- `docs/PHASE_D_TODO.md`: kanonische Ticketfolge fuer Infrastruktur + aktive Sicht/Fog
+- `docs/PHASE_E_TODO.md`: vorbereitete Folgephase fuer kanonisches Zonensystem + Pattern-Engine
+- `docs/PHASE_F_TODO.md`: vorbereitete Folgephase fuer Tech-Tree, Progression und Objectives
+- `docs/PHASE_G_TODO.md`: vorbereitete Folgephase fuer Balance, Cleanup und RC-Haertung
 - `docs/LLM_ENTRY.md`: bindender Einstieg fuer Pflichtlesereihenfolge, Gates und Phasen-Doku

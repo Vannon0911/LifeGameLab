@@ -9,6 +9,13 @@
 - Operativer Reducerpfad bleibt `src/game/sim/reducer/index.js`; `src/game/sim/reducer.js` bleibt reine Compatibility-Fassade.
 - Die kanonische Preset- und Freeze-Source-of-Truth lebt nur hier.
 
+## Aktiver Restphasen-Stand
+- Phase A und B sind abgeschlossen.
+- Phase C ist funktional und prozessual abgeschlossen; `docs/PHASE_C_TODO.md` ist der abgeschlossene Nachweis.
+- Phase D ist der naechste produktive Block und wird ueber `docs/PHASE_D_TODO.md` gesteuert.
+- Phase E, F und G sind vorbereitet, aber strikt gesperrt bis ihre jeweilige Vorphase stabil abgeschlossen ist.
+- Kanonische Restphasen-Doku ab jetzt: `docs/PHASE_D_TODO.md`, `docs/PHASE_E_TODO.md`, `docs/PHASE_F_TODO.md`, `docs/PHASE_G_TODO.md`.
+
 ## Verbindliche Produkt- und Architekturentscheidungen
 - Main-Run-Raeume sind exakt und ausschliesslich: `lage`, `eingriffe`, `evolution`, `welt`, `labor`.
 - Raumbedeutungen:

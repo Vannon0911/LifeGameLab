@@ -39,8 +39,12 @@ Dieses Repository ist ein deterministisches Contract-System. Jede Aenderung muss
 
 ## Phasen-Doku (bindend)
 - `docs/PHASE_A_TODO.md`: abgeschlossene Genesis-/Core-Phasen A und B inklusive belegter Nicht-Ziele
-- `docs/PHASE_C_TODO.md`: naechster kanonischer Arbeitsblock fuer den echten DNA-/Zone-2-Unlock
-- Bei Tasks mit Progression, Genesis, Core-Zone oder Zone-Gates sind diese Dateien vor Implementierung mitzulesen.
+- `docs/PHASE_C_TODO.md`: abgeschlossene DNA-/Zone-2-Phase inklusive belegter Nicht-Ziele
+- `docs/PHASE_D_TODO.md`: kanonische Ticketfolge fuer Infrastruktur + aktive Sicht/Fog
+- `docs/PHASE_E_TODO.md`: gesperrte Folgephase fuer kanonisches Zonensystem + Pattern-Engine
+- `docs/PHASE_F_TODO.md`: gesperrte Folgephase fuer Tech-Tree, Progression und Objectives
+- `docs/PHASE_G_TODO.md`: gesperrte Folgephase fuer Balance, Cleanup und RC-Haertung
+- Bei Tasks mit Progression, Genesis, Core-Zone, DNA-Zone, Infrastruktur, Sicht/Fog, Pattern, Tech-Tree oder Release-Gates sind die passenden Phase-Dateien vor Implementierung mitzulesen.
 
 ## Definition Of Done
 - Contract/Gates intakt
