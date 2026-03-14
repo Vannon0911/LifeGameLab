@@ -30,6 +30,7 @@ export const TEST_SUITES = Object.freeze({
     "tests/test-smoke.mjs",
     "tests/test-start-dna-zone-setup.mjs",
     "tests/test-standard-dna-flow.mjs",
+    "tests/test-standard-infra-flow.mjs",
     "tests/test-standard-genesis-flow.mjs",
     "tests/test-string-contract.mjs",
     "tests/test-toggle-dna-zone-cell.mjs",

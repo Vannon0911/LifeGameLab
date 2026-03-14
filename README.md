@@ -1,6 +1,6 @@
-# LifeGameLab v2.6.0
+# LifeGameLab v2.7.0
 
-![Version](https://img.shields.io/badge/version-2.6.0-0ea5e9)
+![Version](https://img.shields.io/badge/version-2.7.0-0ea5e9)
 ![Tests](https://img.shields.io/badge/tests-npm%20test-green)
 ![Determinismus](https://img.shields.io/badge/sim-deterministisch-22c55e)
 
@@ -23,7 +23,8 @@ Kurz gesagt: `LifeGameLab` ist heute nicht nur "ein Zellspiel", sondern die doku
 - erst Gruendung
 - dann Energiekern
 - dann DNA-Zone
-- danach Infrastruktur, Sicht, Muster, Progression und spaetere Release-Haertung
+- danach Infrastruktur und aktive Sicht
+- spaeter Muster, Progression und Release-Haertung
 
 Die Leitidee ist: beobachten, verstehen, eingreifen, entblocken. Jeder neue Fortschrittsschritt soll sich wie ein echter Systemwechsel anfuehlen, nicht wie ein weiterer Brush im selben Werkzeugkasten.
 
@@ -75,7 +76,7 @@ Die Kolonie ist nicht mehr nur "lebendig", sondern beginnt sich als zweite eigen
 
 Hier liegt die eigentliche Zukunft des Projekts:
 
-- `Phase D`: Infrastruktur, aktive Sicht und Fog
+- `Phase D`: Infrastruktur, aktive Sicht und Fog (auf Codebasis abgeschlossen)
 - `Phase E`: kanonisches Zonensystem und Pattern-Engine
 - `Phase F`: Tech-Tree, Progression, Objectives
 - `Phase G`: Cleanup, Balancing, RC-Haertung
@@ -88,6 +89,7 @@ Diese Phasen sind nicht nur Ideen, sondern als Ticket- und Gate-Doku bereits vor
 - Klare Top-Signale: `Kolonie`, `DNA`, `Risiko`, `Run-Pfad`, `Engpass`
 - Deterministischer Advisor fuer Run-Pfad, Blocker und naechsten Ausbauhebel
 - Sichtbare Strukturreife von Einzelzellen ueber Gruendung bis zu Kern- und DNA-Zone
+- Infrastruktur als semantischer Pfad-Commit mit eigener Sichtreichweite
 - Echte Diagnose-Scanner fuer `energy`, `toxin`, `nutrient`, `territory`, `conflict`
 - Browser-Hooks fuer QA/Automation: `window.render_game_to_text`, `window.advanceTime`
 
@@ -176,15 +178,14 @@ npm run test:stress
 
 - Contract-/Gate-Haertung ist umgesetzt und testgruen.
 - `Phase A-C` leben auf Codebasis: `Foundation -> Core -> DNA -> Run`.
-- `Phase D` ist gestartet; D1/D2 sind auf Codebasis umgesetzt, inklusive semantischem Infrastruktur-Staging-Pfad und leerem Confirm-Exit ohne Ressourcenkosten.
-- Sicht/Fog, CPU-Informationsgating, kanonisches Zonensystem, Pattern-Engine, Tech-Rework und RC-Haertung sind noch nicht fertig.
+- `Phase D` lebt auf Codebasis: semantischer Infrastruktur-Staging-Pfad, aktive Sicht/Fog-Memory, CPU-Informationsgating, Link/Sicht-Gates, Main-Run-UI-Minimum und Smokes sind umgesetzt.
+- Offen bleiben ab jetzt `Phase E-G`: kanonisches Zonensystem, Pattern-Engine, Tech-Rework, RC-Haertung und Performance-Endpolitur.
 - Performance-Ziel aus dem letzten groesseren Implementierungsplan ist weiter offen.
 
 ## Was noch fehlt
 
 Das Projekt ist noch kein "fertiges Release-Spiel". Es ist ein fortgeschrittenes Rework mit klarem Kurs. Die grossen offenen Bloecke sind:
 
-- Infrastruktur + Sicht/Fog als echter Spielerloop
 - Ueberfuehrung der Spezialmasken in ein kanonisches Zonensystem
 - Pattern-Engine als echte Aufbau- und Effektlogik
 - spaetere Neuverdrahtung von Tech-Tree, Objectives und Endgame
