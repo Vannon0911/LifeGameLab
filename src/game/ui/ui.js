@@ -1,5 +1,13 @@
 import { PHYSICS_DEFAULT } from "../../core/kernel/physics.js";
 import { APP_VERSION } from "../../project/project.manifest.js";
+import {
+  PLAYER_DOCTRINES,
+  DOCTRINE_BY_ID,
+  TECH_TREE,
+  TECH_SYNERGIES,
+  deriveCommandScore,
+  hasRequiredTechs,
+} from "../techTree.js";
 
 // ============================================================
 // UI — Mobile-First Web App v2.1
@@ -37,6 +45,7 @@ const ARCHETYPES = [
   { id:"toxin_resist",        label:"Toxin-Resistenz",     desc:"Überlebt giftige Zonen. Toxin-Metabolismus +.",      role:"Überleben", stage:1 },
   { id:"reserve_buffer",      label:"Energiepuffer",       desc:"Größere Energiereserve. Saisonkrisen überstehen.",   role:"Stabilität", stage:2 },
   { id:"cooperative_network", label:"Netzwerk-Kooperation",desc:"Stärkt Link-Transfer. Verbundene Zellen teilen.",   role:"Stabilität", stage:2 },
+  { id:"cluster_split",       label:"Split-Kern",          desc:"Schaltet Split frei: ein platzierbarer 4x4-Koloniebrocken als Evo-Tool.", role:"Feature", stage:2 },
   { id:"reproductive_spread", label:"Expansionsdrang",     desc:"Schnelle Ausbreitung. Höhere Geburtenrate.",         role:"Expansion", stage:2 },
   { id:"defensive_shell",     label:"Schutzschicht",       desc:"Erhöhte Überlebensschwelle. Widerstand +.",          role:"Defensive", stage:3 },
   { id:"predator_raid",       label:"Räuber-Angriff",      desc:"Aggressive Remote-Angriffe. Energie rauben.",        role:"Aggressiv", stage:3 },
@@ -60,25 +69,32 @@ const ZONE_TYPES = [
 
 const STAGE_THRESHOLDS = [0, 5, 15, 30, 60];
 
-// ── Dock navigation tabs ───────────────────────────────────
-const DOCK_TABS = [
-  { key:"status",    icon:"📊", label:"Status"    },
-  { key:"evolution", icon:"🧪", label:"Evolution" },
-  { key:"play",      icon:"▶", label:"Play"      },
-  { key:"tools",     icon:"🌱", label:"Werkzeug"  },
-  { key:"systems",   icon:"⚙️",  label:"System"    },
+const PANEL_DEFS = [
+  { key:"status", icon:"📊", label:"Status", desktopLabel:"Status", title:"Statusraum", tone:"status" },
+  { key:"evolution", icon:"🧪", label:"Evolution", desktopLabel:"Evolution", title:"Evolution", tone:"evolution" },
+  { key:"tools", icon:"🛠", label:"Werkzeuge", desktopLabel:"Werkzeuge", title:"Werkzeuge", tone:"tools" },
+  { key:"systems", icon:"⚙️", label:"Systeme", desktopLabel:"Systeme", title:"Systeme", tone:"systems" },
 ];
 
-// ── Desktop sidebar tabs ───────────────────────────────────
-const SIDEBAR_TABS = [
-  { key:"status",    icon:"📊", label:"Lagebericht" },
-  { key:"tools",     icon:"🌱", label:"Werkzeuge"   },
-  { key:"evolution", icon:"🧪", label:"Evolution"   },
-  { key:"sieg",      icon:"🏆", label:"Siegpfad"    },
-  { key:"energie",   icon:"⚡", label:"Energie"    },
-  { key:"world",     icon:"🌍", label:"Welt"        },
-  { key:"systems",   icon:"⚙️",  label:"Systeme"     },
-];
+const PANEL_BY_KEY = Object.fromEntries(PANEL_DEFS.map((panel) => [panel.key, panel]));
+const TECH_LANE_LABELS = {
+  metabolism: "Metabolismus",
+  survival: "Überleben",
+  cluster: "Cluster",
+  growth: "Wachstum",
+  evolution: "Evolution",
+};
+
+function getPlayerMemory(state) {
+  const playerLineageId = Number(state?.meta?.playerLineageId || 0);
+  return state?.world?.lineageMemory?.[playerLineageId] || null;
+}
+
+function getInfluencePhase(stage, commandScore) {
+  if (stage >= 4 && commandScore >= 0.28) return "Kommandieren";
+  if (stage >= 2 && commandScore >= 0.12) return "Lenken";
+  return "Beobachten";
+}
 
 export class UI {
   constructor(store, canvas) {
@@ -95,11 +111,14 @@ export class UI {
     this._lastDNA         = 0;
     this._lastStage       = 1;
     this._lastGameEndTick = 0;
+    this._layoutDesktop = isDesktop();
 
     this._build();
     queueMicrotask(() => this._bindControls());
     this._bindGlobalKeys();
     this._bindCanvasPaint();
+    this._bindViewportMode();
+    queueMicrotask(() => this._applyResponsiveDefaults());
   }
 
   setRenderInfo(info) { this._rInfo = info; }
@@ -126,9 +145,12 @@ export class UI {
 
     // ── TOPBAR ──────────────────────────────────────────────
     const top = el("header", "nx-topbar");
+    const topMain = el("div", "nx-top-main");
     const left = el("div", "nx-top-left");
-    const center = el("div", "nx-top-center");
-    const right = el("div", "nx-top-right");
+    const center = el("nav", "nx-top-center");
+    center.setAttribute("aria-label", "Primäre Navigation");
+    const actions = el("div", "nx-top-actions");
+    const kpis = el("div", "nx-top-kpis");
 
     this._brand   = el("div", "nx-brand", "LifeGameLab");
     this._btnPlay = el("button", "nx-btn nx-btn-primary", "▶ Spielen");
@@ -138,22 +160,37 @@ export class UI {
     this._btnStep = el("button", "nx-btn nx-btn-dev hidden", "+1");
     this._btnStep.setAttribute("aria-label", "Einzelnen Simulationsschritt ausführen");
 
-    // Desktop nav buttons in center — only strategy relevant
+    // Shared panel buttons
     this._ctxButtons = {};
-    for (const { key, label } of SIDEBAR_TABS) {
-      const btn = el("button", "nx-btn nx-btn-ghost", label);
+    for (const { key, desktopLabel } of PANEL_DEFS) {
+      const btn = el("button", "nx-btn nx-btn-ghost", desktopLabel);
       btn.dataset.ctx = key;
-      btn.setAttribute("aria-label", `${label} Panel öffnen`);
+      btn.textContent = desktopLabel;
+      btn.setAttribute("aria-label", `${desktopLabel} Panel öffnen`);
       this._ctxButtons[key] = btn;
       center.appendChild(btn);
     }
 
-    // UI-GAME-02: 5 strategy chips — DNA, Energy, Stage, Danger, Goal
+    this._dnaChipWrap = el("div", "nx-kpi");
+    this._energyChipWrap = el("div", "nx-kpi");
+    this._stageChipWrap = el("div", "nx-kpi");
+    this._dangerChipWrap = el("div", "nx-kpi");
+    this._goalChipWrap = el("div", "nx-kpi nx-kpi-goal");
+    this._dnaLabel = el("span", "nx-kpi-label", "DNA");
+    this._energyLabel = el("span", "nx-kpi-label", "Netto");
+    this._stageLabel = el("span", "nx-kpi-label", "Stage");
+    this._dangerLabel = el("span", "nx-kpi-label", "Gefahr");
+    this._goalLabel = el("span", "nx-kpi-label", "Ziel");
     this._dnaChip    = el("span", "nx-chip nx-chip-dna",    "🧬 0.0");
     this._energyChip = el("span", "nx-chip nx-chip-energy", "⚡ +0.0");
     this._stageChip  = el("span", "nx-chip nx-chip-stage",  "⬢ S1");
     this._dangerChip = el("span", "nx-chip nx-chip-danger", "☣ stabil");
     this._goalChip   = el("span", "nx-chip nx-chip-goal",   "🎯 Kolonie");
+    this._dnaChipWrap.append(this._dnaLabel, this._dnaChip);
+    this._energyChipWrap.append(this._energyLabel, this._energyChip);
+    this._stageChipWrap.append(this._stageLabel, this._stageChip);
+    this._dangerChipWrap.append(this._dangerLabel, this._dangerChip);
+    this._goalChipWrap.append(this._goalLabel, this._goalChip);
 
     // Hidden debug chips
     this._tickChip   = el("span", "nx-chip nx-mono hidden", "t0");
@@ -161,10 +198,12 @@ export class UI {
     this._playerChip = el("span", "nx-chip nx-mono hidden", "p 0");
     this._seasonChip = el("span", "nx-chip nx-mono hidden", "☀ 0%");
 
-    right.append(this._dnaChip, this._energyChip, this._stageChip, this._dangerChip, this._goalChip,
+    kpis.append(this._dnaChipWrap, this._energyChipWrap, this._stageChipWrap, this._dangerChipWrap, this._goalChipWrap,
                  this._tickChip, this._aliveChip, this._playerChip, this._seasonChip);
-    left.append(this._brand, this._btnPlay, this._btnNew, this._btnStep);
-    top.append(left, center, right);
+    left.append(this._brand);
+    actions.append(this._btnPlay, this._btnNew, this._btnStep);
+    topMain.append(left, center, actions);
+    top.append(topMain, kpis);
 
     // ── CANVAS STAGE ────────────────────────────────────────
     const stage = el("main", "nx-stage");
@@ -180,8 +219,9 @@ export class UI {
     this._hudEnergyArrow = el("span", "nx-hud-energy-arrow", "▲");
     this._hudEnergyVal   = el("span", "nx-hud-energy-val",   "+0");
     this._hudEnergy.append(this._hudEnergyArrow, this._hudEnergyVal);
+    this._hudTool = el("div", "nx-hud-tool", "Tool: Beobachtung");
 
-    this._hud.append(this._hudEnergy);
+    this._hud.append(this._hudEnergy, this._hudTool);
     this._canvasWrap.appendChild(this._hud);
 
     this._gameOverlay = el("div", "nx-game-overlay hidden");
@@ -200,15 +240,19 @@ export class UI {
     // ── MOBILE DOCK ─────────────────────────────────────────
     this._mobileDock = el("div", "nx-mobile-dock");
     this._dockTabBtns = {};
-    for (const { key, icon, label } of DOCK_TABS) {
+    for (const { key, icon, label } of PANEL_DEFS) {
       const btn = el("button", "nx-dock-btn");
-      if (key === "play") btn.classList.add("is-primary");
       btn.dataset.ctx = key;
       btn.setAttribute("aria-label", `${label} Panel öffnen`);
       btn.append(el("span", "nx-dock-icon", icon), el("span", "", label));
       this._dockTabBtns[key] = btn;
       this._mobileDock.appendChild(btn);
     }
+    this._dockPlayBtn = el("button", "nx-dock-btn is-primary");
+    this._dockPlayBtn.dataset.ctx = "play";
+    this._dockPlayBtn.setAttribute("aria-label", "Simulation starten oder pausieren");
+    this._dockPlayBtn.append(el("span", "nx-dock-icon", "▶"), el("span", "", "Play"));
+    this._mobileDock.insertBefore(this._dockPlayBtn, this._mobileDock.children[2]);
 
     // ── BOTTOM SHEET ────────────────────────────────────────
     this._sheetBackdrop = el("div", "nx-sheet-backdrop hidden");
@@ -233,10 +277,10 @@ export class UI {
   _bindControls() {
     const speedForGrid = (w, h) => {
       const m = Math.max(w, h);
-      if (m >= 144) return 5; if (m >= 120) return 6;
-      if (m >= 96)  return 8; if (m >= 72)  return 10;
-      if (m >= 64)  return 11;if (m >= 48)  return 14;
-      return 18;
+      if (m >= 144) return 2; if (m >= 120) return 2;
+      if (m >= 96)  return 3; if (m >= 72)  return 3;
+      if (m >= 64)  return 4; if (m >= 48)  return 5;
+      return 6;
     };
     this._speedForGrid = speedForGrid;
 
@@ -254,84 +298,145 @@ export class UI {
     this._btnNew.addEventListener("click", () => {
       this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:false } });
       this._dispatch({ type:"GEN_WORLD" });
-      this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:true } });
     });
 
     // Dock tab buttons
     for (const [key, btn] of Object.entries(this._dockTabBtns)) {
-      if (key === "play") {
-        btn.addEventListener("click", togglePlay);
-      } else {
-        btn.addEventListener("click", () => this._toggleSheet(key));
-      }
+      btn.addEventListener("click", () => this._togglePanel(key));
     }
+    this._dockPlayBtn.addEventListener("click", togglePlay);
 
     // Sheet close
     this._sheetClose.addEventListener("click", () => this._closeSheet());
     this._sheetBackdrop.addEventListener("click", () => this._closeSheet());
 
-    // Desktop context buttons (top center nav)
+    // Desktop context buttons
     for (const [key, btn] of Object.entries(this._ctxButtons)) {
-      btn.addEventListener("click", () => {
-        if (isDesktop()) this._toggleSidebar(key);
-        else if (key === "play") togglePlay();
-        else this._toggleSheet(key);
-      });
+      btn.addEventListener("click", () => this._togglePanel(key));
     }
+  }
+
+  _bindViewportMode() {
+    const media = window.matchMedia("(min-width:800px)");
+    const onChange = () => {
+      this._layoutDesktop = media.matches;
+      this._applyResponsiveDefaults(true);
+    };
+    if (typeof media.addEventListener === "function") media.addEventListener("change", onChange);
+    else if (typeof media.addListener === "function") media.addListener(onChange);
+  }
+
+  _applyResponsiveDefaults(forceReset = false) {
+    const desktop = isDesktop();
+    const app = document.getElementById("app");
+    app?.classList.remove("is-panel-open");
+    if (desktop) {
+      this._sheet.classList.add("hidden");
+      this._sheetBackdrop.classList.add("hidden");
+      if (forceReset || !PANEL_BY_KEY[this._activeContext]) this._activeContext = "status";
+      this._renderPanelBody(this._sidebarBody, this._store.getState());
+    } else if (forceReset) {
+      this._activeContext = null;
+      this._sidebarBody.innerHTML = "";
+      this._sheet.classList.add("hidden");
+      this._sheetBackdrop.classList.add("hidden");
+    }
+    this._updateContextButtons();
+  }
+
+  _updateContextButtons() {
+    const mobileOpen = !this._sheet.classList.contains("hidden");
+    for (const [key, btn] of Object.entries(this._ctxButtons)) {
+      btn.classList.toggle("is-active", key === this._activeContext && isDesktop());
+    }
+    for (const [key, btn] of Object.entries(this._dockTabBtns)) {
+      btn.classList.toggle("is-active", mobileOpen && key === this._activeContext);
+    }
+  }
+
+  _togglePanel(key) {
+    if (isDesktop()) this._toggleSidebar(key);
+    else this._toggleSheet(key);
   }
 
   // ── SHEET (mobile) ──────────────────────────────────────
   _toggleSheet(key) {
-    // Strategy tool auto-switch
-    if (key === "tools") this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:"cell_add" } });
-    if (key === "harvest") this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:"cell_harvest" } });
-    if (key === "zonen") this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:"zone_paint" } });
-
     if (this._activeContext === key && !this._sheet.classList.contains("hidden")) {
       this._closeSheet();
       return;
     }
     this._activeContext = key;
-    const titles = { status:"Status", energie:"Energie", evolution:"Evolution",
-      tools:"Werkzeug", zonen:"Zonen", world:"Welt", systems:"Systeme", sieg:"Sieg-Konfiguration" };
-    this._sheetTitle.textContent = titles[key] || key;
+    this._sheetTitle.textContent = PANEL_BY_KEY[key]?.title || key;
     this._sheet.classList.remove("hidden");
     this._sheetBackdrop.classList.remove("hidden");
+    document.getElementById("app")?.classList.add("is-panel-open");
     // Re-animate
     this._sheet.style.animation = "none";
     requestAnimationFrame(() => { this._sheet.style.animation = ""; });
     this._renderPanelBody(this._sheetBody, this._store.getState());
-    for (const [k, btn] of Object.entries(this._dockTabBtns))
-      btn.classList.toggle("is-active", k === key);
+    this._updateContextButtons();
   }
 
   _closeSheet() {
     this._sheet.classList.add("hidden");
     this._sheetBackdrop.classList.add("hidden");
+    document.getElementById("app")?.classList.remove("is-panel-open");
     this._activeContext = null;
-    for (const btn of Object.values(this._dockTabBtns)) btn.classList.remove("is-active");
-    for (const btn of Object.values(this._ctxButtons)) btn.classList.remove("is-active");
+    this._updateContextButtons();
   }
 
   // ── SIDEBAR (desktop) ────────────────────────────────────
   _toggleSidebar(key) {
-    if (this._activeContext === key) {
-      this._activeContext = null;
-      this._sidebarBody.innerHTML = "";
-      for (const btn of Object.values(this._ctxButtons)) btn.classList.remove("is-active");
-      return;
-    }
     this._activeContext = key;
     this._renderPanelBody(this._sidebarBody, this._store.getState());
-    for (const [k, btn] of Object.entries(this._ctxButtons))
-      btn.classList.toggle("is-active", k === key);
+    this._updateContextButtons();
   }
 
   _closeContext() {
+    if (isDesktop()) {
+      this._activeContext = "status";
+      this._renderPanelBody(this._sidebarBody, this._store.getState());
+      this._updateContextButtons();
+      return;
+    }
     this._closeSheet();
-    this._activeContext = null;
-    for (const btn of Object.values(this._ctxButtons)) btn.classList.remove("is-active");
-    this._sidebarBody.innerHTML = "";
+  }
+
+  _hasSplitUnlock(state) {
+    const memory = getPlayerMemory(state);
+    if (!memory) return false;
+    return Number(memory.splitUnlock || 0) >= 1 || (Array.isArray(memory.techs) && memory.techs.includes("cluster_split"));
+  }
+
+  _getBenchmarkState() {
+    const bench = window.__lifeGameBenchmark;
+    if (!bench || typeof bench.getSnapshot !== "function") return null;
+    return bench.getSnapshot();
+  }
+
+  _getActiveToolMeta(state) {
+    const mode = String(state?.meta?.brushMode || "observe");
+    const zone = ZONE_TYPES.find((entry) => entry.id === this._activeZoneType);
+    const map = {
+      observe: "Beobachtung",
+      cell_harvest: "DNA-Ernte",
+      split_place: "Split-Seed 4x4",
+      zone_paint: zone ? `Zone: ${zone.label}` : "Zone",
+      light: "Licht +",
+      light_remove: "Licht -",
+      nutrient: "Nährstoffe +",
+      toxin: "Toxine +",
+      saturation_reset: "Reset",
+    };
+    return {
+      mode,
+      label: map[mode] || mode,
+      detail:
+        mode === "observe" ? "Autonomes Wachstum läuft selbst. Dein Einfluss liegt in Prioritäten, Evolution und Split-Seeds." :
+        mode === "split_place" ? "Ein Klick setzt einen neuen 4x4-Cluster als strategischen Seed." :
+        mode === "cell_harvest" ? "Ein Klick erntet eine eigene Zelle für DNA." :
+        mode === "zone_paint" && zone ? zone.desc : "",
+    };
   }
 
   // ── PANEL BODY RENDERER (shared by sheet + sidebar) ─────
@@ -340,93 +445,142 @@ export class UI {
     const { meta, sim } = state;
     container.innerHTML = "";
     const ctx = this._activeContext;
+    const panelMeta = PANEL_BY_KEY[ctx];
+    if (panelMeta) {
+      const hero = el("section", `nx-panel-hero nx-panel-hero-${panelMeta.tone}`);
+      const eyebrow = el("div", "nx-panel-eyebrow", isDesktop() ? "Mission Control" : "Control Room");
+      const title = el("h2", "nx-panel-title", panelMeta.title);
+      const summaryMap = {
+        status: "Lage, Energie und Siegpfad der laufenden Kolonie.",
+        evolution: "DNA investieren, Stufen lesen und Spezialisierungen planen.",
+        tools: "Zellen platzieren, Zonen setzen und die Sandbox direkt formen.",
+        systems: "Weltparameter, Render-Modi und Runtime-Optionen steuern.",
+      };
+      const copy = el("p", "nx-panel-copy", summaryMap[ctx] || "");
+      hero.append(eyebrow, title, copy);
+      container.appendChild(hero);
+    }
 
     // ── STATUS (Lagebericht) ────────────────────────────────
     if (ctx === "status") {
-      // 1. SITUATION SUMMARY (Alerts)
-      const toxin = Number(sim.meanToxinField || 0);
-      const energyNet = Number(sim.playerEnergyNet || 0);
+      const playerMemory = getPlayerMemory(state);
+      const playerStage = Number(sim.playerStage || 1);
       const playerAlive = Number(sim.playerAliveCount || 0);
-      const isPoisoned = toxin > 0.30;
-      const isStarving = energyNet < -3 && playerAlive > 0;
-      const isUnstable = energyNet < 0.5 && !isStarving;
+      const energyNet = Number(sim.playerEnergyNet || 0);
+      const toxin = Number(sim.meanToxinField || 0);
+      const commandScore = deriveCommandScore(sim);
+      const doctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
+      const influencePhase = getInfluencePhase(playerStage, commandScore);
+      const splitUnlocked = this._hasSplitUnlock(state);
 
-      const alertCard = el("section", "nx-card");
-      alertCard.setAttribute("aria-labelledby", "status-alert-title");
-      const alertTitle = el("div", "nx-card-title", "Lagebericht");
-      alertTitle.id = "status-alert-title";
-      alertCard.appendChild(alertTitle);
-      
-      let statusText = "Systeme stabil. Normale Operation.";
-      let statusColor = "var(--green)";
-      
-      if (playerAlive === 0 && sim.tick > 10) {
-        statusText = "KOLONIE KOLLABIERT. Neustart erforderlich.";
-        statusColor = "var(--red)";
-      } else if (isStarving) {
-        statusText = "WARNUNG: Energiemangel! Expansion stoppen.";
-        statusColor = "var(--red)";
-      } else if (isPoisoned) {
-        statusText = "GEFAHR: Hohe Toxinbelastung. Resistenzen prüfen.";
-        statusColor = "var(--orange)";
-      } else if (isUnstable) {
-        statusText = "HINWEIS: Energiebilanz knapp. Effizienz steigern.";
-        statusColor = "var(--yellow)";
-      }
-      
-      const alertBox = el("div", "nx-alert-box", statusText);
-      alertBox.style.color = statusColor;
-      alertBox.style.borderColor = statusColor;
-      alertBox.setAttribute("role", "status");
-      alertCard.appendChild(alertBox);
-      container.appendChild(alertCard);
-
-      // 2. CORE METRICS
-      const metricCard = el("section", "nx-card");
-      metricCard.setAttribute("aria-labelledby", "status-metrics-title");
-      const metricTitle = el("div", "nx-card-title", "Metriken");
-      metricTitle.id = "status-metrics-title";
-      metricCard.appendChild(metricTitle);
-      
-      const mkMetric = (label, val, unit, isGood) => {
+      const mkBar = (pct, cls, label) => {
+        const wrap = el("div", "nx-bar-wrap");
+        wrap.setAttribute("role", "progressbar");
+        wrap.setAttribute("aria-valuenow", Math.round(pct * 100));
+        wrap.setAttribute("aria-valuemin", "0");
+        wrap.setAttribute("aria-valuemax", "100");
+        wrap.setAttribute("aria-label", label);
+        const fill = el("div", `nx-bar-fill ${cls}`);
+        fill.style.width = `${Math.min(100, Math.max(0, pct * 100)).toFixed(1)}%`;
+        wrap.appendChild(fill);
+        return wrap;
+      };
+      const mkMetric = (label, val, cls = "nx-mono") => {
         const row = el("div", "nx-stat-row");
-        const valSpan = el("span", "nx-mono", `${val} ${unit}`);
-        if (isGood !== undefined) valSpan.classList.add(isGood ? "nx-val-pos" : "nx-val-neg");
-        row.append(el("span", "nx-label", label), valSpan);
+        row.append(el("span", "nx-label", label), el("span", cls, val));
         return row;
       };
 
-      metricCard.append(
-        mkMetric("Population", playerAlive, "", playerAlive > 0),
-        mkMetric("Energie-Trend", fmtSign(energyNet, 1), "⚡", energyNet >= 0),
-        mkMetric("Diversität", fmt(sim.lineageDiversity || 0, 2), "", true),
-        mkMetric("Ernte-Total", sim.totalHarvested || 0, "", true)
+      let statusText = "Kolonie beobachtet ihr Umfeld. Autonomes Wachstum hat Vorrang.";
+      let statusColor = "var(--cyan)";
+      if (playerAlive === 0 && sim.tick > 10) {
+        statusText = "Kolonie kollabiert. Die aktuelle Linie hat keine tragfähigen Cluster mehr.";
+        statusColor = "var(--red)";
+      } else if (energyNet < -2) {
+        statusText = "Energie kippt ins Minus. Priorität auf Sparen oder Reservekern setzen.";
+        statusColor = "var(--red)";
+      } else if (toxin > 0.30) {
+        statusText = "Toxinlast steigt. Detox oder Schutzhülle werden relevant.";
+        statusColor = "var(--orange)";
+      } else if (commandScore >= 0.18) {
+        statusText = "Cluster reagieren stabil. Strategische Eingriffe werden wirksam.";
+        statusColor = "var(--green)";
+      }
+
+      const alertCard = el("section", "nx-card");
+      alertCard.appendChild(el("div", "nx-card-title", "Lagebericht"));
+      const alertBox = el("div", "nx-alert-box", statusText);
+      alertBox.style.color = statusColor;
+      alertBox.style.borderColor = statusColor;
+      alertCard.appendChild(alertBox);
+      alertCard.appendChild(el("div", "nx-note", "Die Kolonie wächst selbst. Du setzt nur Prioritäten, Freischaltungen und neue Startcluster."));
+      container.appendChild(alertCard);
+
+      const commandCard = el("section", "nx-card");
+      commandCard.appendChild(el("div", "nx-card-title", "Kommandoraum"));
+      const commandHero = el("div", "nx-active-tool");
+      commandHero.append(
+        el("div", "nx-active-tool-label", influencePhase),
+        el("div", "nx-active-tool-copy", `${doctrine.label}: ${doctrine.summary}`)
       );
-      container.appendChild(metricCard);
+      commandCard.appendChild(commandHero);
+      commandCard.append(
+        mkMetric("Command-Score", `${Math.round(commandScore * 100)} / 100`, "nx-mono nx-val-pos"),
+        mkBar(commandScore, "nx-bar-stage", "Command-Score"),
+        mkMetric("Priorität", doctrine.label),
+        mkMetric("Split", splitUnlocked ? "bereit" : "gesperrt", splitUnlocked ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
+        mkMetric("Clusterstärke", `${Math.round(Number(sim.clusterRatio || 0) * 100)}%`),
+        mkMetric("Netzwerk", `${Math.round(Number(sim.networkRatio || 0) * 100)}%`),
+        mkMetric("Synergien", String((playerMemory?.synergies || []).length || 0))
+      );
+      container.appendChild(commandCard);
 
-      // 3. VISUAL ANALYSIS (Overlays) - Moved from Energie
+      const energyCard = el("section", "nx-card");
+      energyCard.appendChild(el("div", "nx-card-title", "Energie & Wachstum"));
+      energyCard.append(
+        mkMetric("Population", String(playerAlive), playerAlive > 0 ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
+        mkMetric("Netto", fmtSign(energyNet, 2), energyNet >= 0 ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
+        mkMetric("Zufluss", fmt(Number(sim.playerEnergyIn || 0), 2)),
+        mkMetric("Abfluss", fmt(Number(sim.playerEnergyOut || 0), 2)),
+        mkMetric("Gespeichert", fmt(Number(sim.playerEnergyStored || 0), 2))
+      );
+      const mixGrid = el("div", "nx-stat-grid");
+      const lightBlock = el("div", "nx-stat-row nx-stat-row-col");
+      lightBlock.append(el("span", "nx-label", `Licht ${(Number(sim.lightShare || 0) * 100).toFixed(0)}%`), mkBar(Number(sim.lightShare || 0), "nx-bar-light", "Lichtanteil"));
+      const nutrientBlock = el("div", "nx-stat-row nx-stat-row-col");
+      nutrientBlock.append(el("span", "nx-label", `Nährstoffe ${(Number(sim.nutrientShare || 0) * 100).toFixed(0)}%`), mkBar(Number(sim.nutrientShare || 0), "nx-bar-nutrient", "Nährstoffanteil"));
+      mixGrid.append(lightBlock, nutrientBlock);
+      energyCard.appendChild(mixGrid);
+      container.appendChild(energyCard);
+
+      const progressCard = el("section", "nx-card");
+      progressCard.appendChild(el("div", "nx-card-title", "Evo- und Siegpfad"));
+      progressCard.append(
+        mkMetric("Stage", `S${playerStage}`, "nx-mono nx-chip-stage"),
+        mkMetric("DNA", `🧬 ${fmt(Number(sim.playerDNA || 0), 1)}`),
+        mkMetric("Ernten", String(Number(sim.totalHarvested || 0))),
+        mkMetric("Aktiver Siegpfad", String(sim.winMode || "supremacy"))
+      );
+      progressCard.append(
+        el("div", "nx-note", `Phase ${influencePhase}: weitere Eingriffe schalten sich über Stage und Clusterstärke frei.`),
+        mkBar(Math.min(1, Number(sim.energySupremacyTicks || 0) / 200), "nx-bar-light", "Suprematie-Fortschritt"),
+        mkBar(Math.min(1, Number(sim.stockpileTicks || 0) / 200), "nx-bar-nutrient", "Territorium-Fortschritt"),
+        mkBar(Math.min(1, Number(sim.efficiencyTicks || 0) / 100), "nx-bar-stage", "Effizienz-Fortschritt")
+      );
+      container.appendChild(progressCard);
+
       const ovCard = el("section", "nx-card");
-      ovCard.setAttribute("aria-labelledby", "status-scanner-title");
-      const ovTitle = el("div", "nx-card-title", "Sichtmodi (Scanner)");
-      ovTitle.id = "status-scanner-title";
-      ovCard.appendChild(ovTitle);
-
-      const ovGrid = el("div", "nx-top-center");
-      ovGrid.style.display = "flex"; ovGrid.style.flexWrap = "wrap"; ovGrid.style.gap = "4px";
-      
-      const overlays = [
+      ovCard.appendChild(el("div", "nx-card-title", "Scanner"));
+      const ovGrid = el("div", "nx-chip-grid");
+      for (const ov of [
         { id:"none", label:"Normal" },
         { id:"energy", label:"Energie" },
         { id:"toxin", label:"Toxine" },
         { id:"nutrient", label:"Nährstoffe" },
         { id:"territory", label:"Besitz" },
-        { id:"conflict", label:"Konflikt" }
-      ];
-
-      for (const ov of overlays) {
+        { id:"conflict", label:"Konflikt" },
+      ]) {
         const btn = el("button", `nx-btn nx-btn-ghost ${meta.activeOverlay === ov.id ? "is-active" : ""}`, ov.label);
-        btn.style.fontSize = "10px";
-        btn.setAttribute("aria-label", `Scanner-Modus ${ov.label} aktivieren`);
         btn.setAttribute("aria-pressed", meta.activeOverlay === ov.id);
         btn.addEventListener("click", () => {
           this._dispatch({ type:"SET_OVERLAY", payload: ov.id });
@@ -441,36 +595,69 @@ export class UI {
 
     // ── TOOLS (Werkzeuge Hub) ───────────────────────────────
     if (ctx === "tools") {
-      const mainCard = el("section","nx-card");
-      mainCard.setAttribute("aria-labelledby", "tools-main-title");
-      const mainTitle = el("div", "nx-card-title", "Kolonie-Werkzeuge");
-      mainTitle.id = "tools-main-title";
-      mainCard.appendChild(mainTitle);
-      
-      const actions = [
-        { id:"cell_add", label:"🌱 Wachsen", desc:"Platziert eine Zelle", cost:"0.5 DNA" },
-        { id:"cell_harvest", label:"🧬 Ernten", desc:"Wandelt Zelle in DNA", cost:"+1.0 DNA" },
-        { id:"cell_remove", label:"✂ Entfernen", desc:"Löscht eigene Zellen", cost:"0.0 DNA" },
-      ];
+      const activeTool = this._getActiveToolMeta(state);
+      const splitUnlocked = this._hasSplitUnlock(state);
+      const playerMemory = getPlayerMemory(state);
+      const playerStage = Number(sim.playerStage || 1);
+      const commandScore = deriveCommandScore(sim);
+      const influencePhase = getInfluencePhase(playerStage, commandScore);
+      const currentDoctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
+      const zoneUnlocked = playerStage >= 2 || commandScore >= 0.10;
 
-      for (const act of actions) {
+      const activeCard = el("section","nx-card");
+      activeCard.appendChild(el("div", "nx-card-title", "Aktiver Eingriff"));
+      const activeHero = el("div", "nx-active-tool");
+      activeHero.append(
+        el("div", "nx-active-tool-label", activeTool.label),
+        el("div", "nx-active-tool-copy", activeTool.detail || "Direkte Werkzeuge sind sparsam. Wachstum bleibt autonom.")
+      );
+      activeCard.appendChild(activeHero);
+      activeCard.appendChild(el("div", "nx-note", `Phase ${influencePhase}. Priorität ${currentDoctrine.label} steuert die Linie permanent.`));
+      container.appendChild(activeCard);
+
+      const doctrineCard = el("section","nx-card");
+      doctrineCard.appendChild(el("div", "nx-card-title", "Priorität"));
+      const doctrineGrid = el("div", "nx-doctrine-grid");
+      for (const doctrine of PLAYER_DOCTRINES) {
+        const locked = playerStage < Number(doctrine.unlockStage || 1);
+        const active = doctrine.id === currentDoctrine.id;
+        const card = el("button", `nx-doctrine-card${active ? " is-active" : ""}${locked ? " is-locked" : ""}`);
+        card.disabled = locked;
+        card.append(
+          el("span", "nx-doctrine-name", doctrine.label),
+          el("span", "nx-doctrine-stage", `ab S${doctrine.unlockStage}`),
+          el("span", "nx-doctrine-copy", doctrine.summary)
+        );
+        card.addEventListener("click", () => {
+          this._dispatch({ type:"SET_PLAYER_DOCTRINE", payload:{ doctrineId: doctrine.id } });
+          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+        });
+        doctrineGrid.appendChild(card);
+      }
+      doctrineCard.appendChild(doctrineGrid);
+      container.appendChild(doctrineCard);
+
+      const mainCard = el("section","nx-card");
+      mainCard.appendChild(el("div", "nx-card-title", "Strategische Eingriffe"));
+      for (const act of [
+        { id:"observe", label:"Beobachtung", desc:"Keine direkte Manipulation. Die Kolonie wächst autonom.", tag:"Standard", locked:false },
+        { id:"split_place", label:"Split-Seed", desc: splitUnlocked ? "Setzt einen neuen 4x4-Cluster als kontrollierten Startpunkt." : "Benötigt Split-Kern plus Clusterstärke.", tag: splitUnlocked ? "4x4" : "gesperrt", locked:!splitUnlocked },
+        { id:"cell_harvest", label:"DNA-Ernte", desc:"Erntet gezielt eine eigene Zelle für DNA.", tag:"+DNA", locked:false },
+        { id:"zone_paint", label:"Territorium", desc: zoneUnlocked ? "Markiert Harvest-, Buffer- oder Defense-Zonen." : "Erst ab stabiler Kolonie sinnvoll.", tag: zoneUnlocked ? "Zone" : "später", locked:!zoneUnlocked },
+      ]) {
         const isActive = meta.brushMode === act.id;
-        const row = el("div", `nx-zone-row${isActive ? " nx-zone-active" : ""}`);
+        const row = el("div", `nx-zone-row${isActive ? " nx-zone-active" : ""}${act.locked ? " nx-archetype-locked" : ""}`);
         row.style.cursor = "pointer";
         row.setAttribute("role", "button");
         row.setAttribute("tabindex", "0");
-        row.setAttribute("aria-label", `${act.label}: ${act.desc} (Kosten: ${act.cost})`);
         row.setAttribute("aria-pressed", isActive);
-        
+        if (act.locked) row.setAttribute("aria-disabled", "true");
         const left = el("div", "");
         left.appendChild(el("div", "nx-zone-name", act.label));
         left.appendChild(el("div", "nx-zone-desc", act.desc));
-        
-        const right = el("span", isActive ? "nx-badge-active" : "nx-badge", act.cost);
-        if (act.id === "cell_harvest") right.style.color = "var(--green)";
-        
-        row.append(left, right);
+        row.append(left, el("span", isActive ? "nx-badge-active" : "nx-badge", act.tag));
         const trigger = () => {
+          if (act.locked) return;
           this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:act.id } });
           queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
         };
@@ -482,22 +669,21 @@ export class UI {
 
 
       const zoneCard = el("section","nx-card");
-      zoneCard.setAttribute("aria-labelledby", "tools-zones-title");
-      const zoneTitle = el("div", "nx-card-title", "Territorium (Zonen)");
-      zoneTitle.id = "tools-zones-title";
-      zoneCard.appendChild(zoneTitle);
+      zoneCard.appendChild(el("div", "nx-card-title", "Zonentyp"));
 
       for (const z of ZONE_TYPES) {
         const isActive = this._activeZoneType === z.id && meta.brushMode === "zone_paint";
-        const row = el("div",`nx-zone-row${isActive ?" nx-zone-active":""}`);
+        const row = el("div",`nx-zone-row${isActive ?" nx-zone-active":""}${!zoneUnlocked ? " nx-archetype-locked" : ""}`);
         row.append(el("span","nx-zone-name",`${z.label}`), el("span","nx-zone-desc",z.desc));
         row.style.cursor="pointer";
         row.setAttribute("role", "button");
         row.setAttribute("tabindex", "0");
         row.setAttribute("aria-label", `Zone ${z.label}: ${z.desc}`);
         row.setAttribute("aria-pressed", isActive);
+        if (!zoneUnlocked) row.setAttribute("aria-disabled", "true");
 
         const trigger = () => {
+          if (!zoneUnlocked) return;
           this._activeZoneType=z.id;
           this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:"zone_paint" } });
           queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
@@ -509,23 +695,19 @@ export class UI {
       container.appendChild(zoneCard);
 
       const sandboxCard = el("section","nx-card");
-      sandboxCard.setAttribute("aria-labelledby", "tools-sandbox-title");
-      const sandboxTitle = el("div", "nx-card-title", "Simulation (Sandbox)");
-      sandboxTitle.id = "tools-sandbox-title";
-      sandboxCard.appendChild(sandboxTitle);
-
-      const sandInfo = el("div", "nx-note", "Manipuliert die Umwelt direkt. Verbraucht keine DNA.");
+      sandboxCard.appendChild(el("div", "nx-card-title", "Labormodus"));
+      const sandInfo = el("div", "nx-note", "Direkte Umweltmanipulation bleibt nur fuer spaetere Tests. Sie ist bewusst aus der Primaersteuerung entfernt.");
       sandboxCard.appendChild(sandInfo);
       
       const sRow = el("div", "nx-row");
       const brush = document.createElement("select"); brush.className="nx-select";
       brush.setAttribute("aria-label", "Umwelt-Pinsel Modus wählen");
-      [["paint_light","☀ Licht +"],["paint_light_remove","☀ Licht –"],
-       ["paint_nutrient","🌿 Nährstoff +"],["paint_toxin","☣ Toxin +"],
-       ["paint_reset","↺ Reset"]
+      [["light","☀ Licht +"],["light_remove","☀ Licht -"],
+       ["nutrient","🌿 Nährstoff +"],["toxin","☣ Toxin +"],
+       ["saturation_reset","↺ Reset"]
       ].forEach(([v,t]) => {
         const o = document.createElement("option"); o.value=v; o.textContent=t;
-        if ((meta.brushMode||"cell_add")===v) o.selected=true;
+        if (meta.brushMode === v) o.selected=true;
         brush.appendChild(o);
       });
       brush.addEventListener("change", () => {
@@ -557,7 +739,7 @@ export class UI {
       });
       costRow.append(el("span", "nx-label", "Platzierungs-Kosten (0.5 DNA)"), costToggle);
       sandboxCard.appendChild(costRow);
-      
+
       container.appendChild(sandboxCard);
       return;
     }
@@ -643,66 +825,87 @@ export class UI {
     if (ctx === "evolution") {
       const playerDNA = Number(sim.playerDNA || 0);
       const playerStage = Number(sim.playerStage || 1);
-      const totalHarvested = Number(sim.totalHarvested || 0);
       const dnaCost = 5 * playerStage;
-      const canAfford = playerDNA >= dnaCost;
+      const commandScore = deriveCommandScore(sim);
+      const playerMemory = getPlayerMemory(state);
+      const unlockedTechs = new Set(Array.isArray(playerMemory?.techs) ? playerMemory.techs.map(String) : []);
+      const unlockedSynergies = new Set(Array.isArray(playerMemory?.synergies) ? playerMemory.synergies.map(String) : []);
 
       const infoCard = el("section", "nx-card");
-      infoCard.setAttribute("aria-labelledby", "evolution-info-title");
-      const infoTitle = el("div", "nx-card-title", "Evolutions-Zentrum");
-      infoTitle.id = "evolution-info-title";
-      infoCard.appendChild(infoTitle);
-      
-      const progressGrid = el("div", "nx-stat-row");
-      progressGrid.append(el("span", "nx-label", `Stage ${playerStage} / 5`), el("span", "nx-mono nx-val-pos", `${totalHarvested} Ernten`));
-      infoCard.append(progressGrid);
-      
-      const nextThr = playerStage < 5 ? STAGE_THRESHOLDS[playerStage] : 60;
-      const prevThr = STAGE_THRESHOLDS[playerStage - 1] || 0;
-      const pct = playerStage >= 5 ? 100 : ((totalHarvested - prevThr) / (nextThr - prevThr)) * 100;
-      
-      const bar = el("div", "nx-bar-wrap");
-      bar.setAttribute("role", "progressbar");
-      bar.setAttribute("aria-valuenow", Math.round(pct));
-      bar.setAttribute("aria-valuemin", "0");
-      bar.setAttribute("aria-valuemax", "100");
-      bar.setAttribute("aria-label", "Evolutions-Fortschritt zur nächsten Stufe");
-      const fill = el("div", "nx-bar-fill nx-bar-stage");
-      fill.style.width = `${Math.min(100, pct)}%`;
-      bar.appendChild(fill);
-      infoCard.appendChild(bar);
-      
-      const dnaRow = el("div", "nx-stat-row");
-      dnaRow.append(el("span", "nx-label", "DNA-Reserve"), el("span", "nx-mono", `🧬 ${playerDNA.toFixed(1)}`));
-      infoCard.appendChild(dnaRow);
+      infoCard.appendChild(el("div", "nx-card-title", "Tech-Kern"));
+      infoCard.append(
+        el("div", "nx-note", "Evo ist jetzt ein echter Kommandopfad: erst Stoffwechsel, dann Cluster, dann Synergien."),
+        el("div", "nx-stat-row", null)
+      );
+      infoCard.lastChild.append(el("span", "nx-label", `Stage S${playerStage}`), el("span", "nx-mono nx-val-pos", `🧬 ${playerDNA.toFixed(1)} / ${dnaCost} DNA`));
+      const cmdRow = el("div", "nx-stat-row nx-stat-row-col");
+      cmdRow.append(el("span", "nx-label", `Command-Score ${Math.round(commandScore * 100)} / 100`));
+      const cmdBar = el("div", "nx-bar-wrap");
+      const cmdFill = el("div", "nx-bar-fill nx-bar-stage");
+      cmdFill.style.width = `${(commandScore * 100).toFixed(1)}%`;
+      cmdBar.appendChild(cmdFill);
+      cmdRow.appendChild(cmdBar);
+      infoCard.appendChild(cmdRow);
       container.appendChild(infoCard);
 
-      // Archetype groups by Stage
-      const stages = [1, 2, 3]; // Show first 3 stages as a tree
-      for (const s of stages) {
-        const isLocked = playerStage < s;
-        const groupDiv = el("div", `nx-archetype-group${isLocked ? " nx-archetype-locked" : ""}`);
-        const groupTitle = s === 1 ? "Basis-Stoffwechsel" : s === 2 ? "Anpassung" : "Spezialisierung";
-        groupDiv.appendChild(el("div", "nx-archetype-stage-label", `${groupTitle} (Stage ${s}${isLocked ? " [GESPERRT]" : ""})`));
-        
-        const stageArchetypes = ARCHETYPES.filter(a => a.stage === s);
-        for (const arch of stageArchetypes) {
-          const card = el("div", "nx-archetype-card");
-          const head = el("div", "nx-archetype-head");
-          head.append(el("span", "nx-archetype-name", arch.label), el("span", "nx-archetype-cost", `${dnaCost} DNA`));
-          
-          const btn = el("button", `nx-btn nx-btn-evolve${!canAfford || isLocked ? " nx-btn-disabled" : ""}`, "Integrieren");
-          btn.setAttribute("aria-label", `${arch.label} integrieren: ${arch.desc} (Kosten: ${dnaCost} DNA)`);
-          if (!canAfford || isLocked) btn.disabled = true;
+      for (let stage = 1; stage <= 5; stage++) {
+        const stageNodes = TECH_TREE.filter((node) => node.stage === stage);
+        const stageWrap = el("section", `nx-tech-stage${playerStage < stage ? " is-locked" : ""}`);
+        stageWrap.appendChild(el("div", "nx-tech-stage-label", `Stage ${stage}`));
+        const grid = el("div", "nx-tech-grid");
+        for (const tech of stageNodes) {
+          const owned = unlockedTechs.has(tech.id);
+          const stageLocked = playerStage < tech.stage;
+          const depReady = hasRequiredTechs(unlockedTechs, tech.requires);
+          const commandReady = commandScore + 1e-9 >= Number(tech.commandReq || 0);
+          const canBuy = !owned && !stageLocked && depReady && commandReady && playerDNA >= dnaCost;
+          const nodeCls = owned ? "is-owned" : canBuy ? "is-ready" : "is-locked";
+          const card = el("article", `nx-tech-node ${nodeCls}`);
+          const head = el("div", "nx-tech-head");
+          head.append(el("div", "nx-tech-name", tech.label), el("span", "nx-tech-lane", TECH_LANE_LABELS[tech.lane] || tech.lane));
+          card.appendChild(head);
+          card.appendChild(el("div", "nx-tech-desc", tech.desc));
+          const metaRow = el("div", "nx-tech-meta");
+          metaRow.append(
+            el("span", owned ? "nx-badge-active" : "nx-badge", owned ? "Aktiv" : `${dnaCost} DNA`),
+            el("span", commandReady ? "nx-badge" : "nx-badge nx-badge-warn", `Cmd ${Math.round((tech.commandReq || 0) * 100)}`),
+          );
+          card.appendChild(metaRow);
+          const reqText = tech.requires.length ? `Benötigt: ${tech.requires.map((id) => TECH_TREE.find((entry) => entry.id === id)?.label || id).join(" + ")}` : "Startknoten";
+          card.appendChild(el("div", "nx-note", reqText));
+          const stateText = owned ? "Freigeschaltet" :
+            stageLocked ? `Stage ${tech.stage} nötig` :
+            !depReady ? "Prereqs fehlen" :
+            !commandReady ? "Clusterstärke zu niedrig" :
+            playerDNA < dnaCost ? "Zu wenig DNA" :
+            "Jetzt integrieren";
+          const btn = el("button", `nx-btn nx-btn-evolve${canBuy ? "" : " nx-btn-disabled"}`, stateText);
+          btn.disabled = !canBuy;
           btn.addEventListener("click", () => {
-            this._dispatch({ type: "BUY_EVOLUTION", payload: { archetypeId: arch.id } });
+            this._dispatch({ type: "BUY_EVOLUTION", payload: { archetypeId: tech.id } });
           });
-          
-          card.append(head, el("div", "nx-archetype-desc", arch.desc), btn);
-          groupDiv.appendChild(card);
+          card.appendChild(btn);
+          grid.appendChild(card);
         }
-        container.appendChild(groupDiv);
+        stageWrap.appendChild(grid);
+        container.appendChild(stageWrap);
       }
+
+      const synergyCard = el("section", "nx-card");
+      synergyCard.appendChild(el("div", "nx-card-title", "Synergien"));
+      for (const synergy of TECH_SYNERGIES) {
+        const active = unlockedSynergies.has(synergy.id);
+        const readyCount = synergy.requires.filter((req) => unlockedTechs.has(req)).length;
+        const row = el("div", `nx-synergy-card${active ? " is-active" : ""}`);
+        const left = el("div", "");
+        left.append(
+          el("div", "nx-zone-name", synergy.label),
+          el("div", "nx-zone-desc", `${readyCount}/${synergy.requires.length} Techs · ${synergy.desc}`)
+        );
+        row.append(left, el("span", active ? "nx-badge-active" : "nx-badge", active ? "live" : "wartet"));
+        synergyCard.appendChild(row);
+      }
+      container.appendChild(synergyCard);
       return;
     }
 
@@ -882,6 +1085,63 @@ export class UI {
 
     // ── SYSTEME ─────────────────────────────────────────────
     if (ctx === "systems") {
+      const worldCard = el("section","nx-card");
+      worldCard.setAttribute("aria-labelledby", "systems-world-title");
+      const worldTitle = el("div", "nx-card-title", "Welt & Render");
+      worldTitle.id = "systems-world-title";
+      worldCard.appendChild(worldTitle);
+
+      const sizeRow = el("div","nx-row");
+      sizeRow.append(el("span","nx-label","Größe"));
+      const size = document.createElement("select");
+      size.className = "nx-select";
+      size.setAttribute("aria-label", "Weltgröße wählen");
+      [[32,32],[48,48],[64,64],[72,72],[96,96],[120,120],[144,144]].forEach(([w,h]) => {
+        const option = document.createElement("option");
+        option.value = `${w}x${h}`;
+        option.textContent = `${w}×${h}`;
+        if (w === meta.gridW && h === meta.gridH) option.selected = true;
+        size.appendChild(option);
+      });
+      size.addEventListener("change", () => {
+        const [w, h] = size.value.split("x").map(Number);
+        this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:false } });
+        this._dispatch({ type:"SET_SPEED", payload:this._speedForGrid(w,h) });
+        this._dispatch({ type:"SET_SIZE", payload:{ w, h } });
+        this._dispatch({ type:"GEN_WORLD" });
+      });
+      sizeRow.append(size);
+      worldCard.appendChild(sizeRow);
+
+      const speedRow = el("div","nx-stack");
+      speedRow.append(el("span","nx-label", `Geschwindigkeit ${meta.speed} T/s`));
+      const speed = document.createElement("input");
+      speed.type = "range";
+      speed.className = "nx-range";
+      speed.min = "1";
+      speed.max = "60";
+      speed.value = String(meta.speed);
+      speed.setAttribute("aria-label", "Simulationsgeschwindigkeit anpassen");
+      speed.addEventListener("input", () => this._dispatch({ type:"SET_SPEED", payload:Number(speed.value) }));
+      speedRow.append(speed);
+      worldCard.appendChild(speedRow);
+
+      const renderRow = el("div","nx-row");
+      renderRow.append(el("span","nx-label","Ansicht"));
+      const render = document.createElement("select");
+      render.className = "nx-select";
+      render.setAttribute("aria-label", "Darstellungsmodus wählen");
+      [["combined","Natürlich"],["light","Licht"],["fields","Felder"],["cells","Zellen"]].forEach(([v,t]) => {
+        const option = document.createElement("option");
+        option.value = v;
+        option.textContent = t;
+        if ((meta.renderMode || "combined") === v) option.selected = true;
+        render.appendChild(option);
+      });
+      render.addEventListener("change", () => this._dispatch({ type:"SET_RENDER_MODE", payload:render.value }));
+      renderRow.append(render);
+      worldCard.appendChild(renderRow);
+
       const gl = meta.globalLearning || { enabled:true, strength:0.42 };
       const learnCard = el("section","nx-card");
       learnCard.setAttribute("aria-labelledby", "systems-learning-title");
@@ -943,10 +1203,50 @@ export class UI {
       offRow.append(el("span", "nx-label", "Offscreen-Rendering"), offToggle);
       accCard.appendChild(offRow);
 
-      const benchmarkBtn = el("button", "nx-btn", "Start Benchmark");
+      const benchState = this._getBenchmarkState();
+      const benchCard = el("section", "nx-card");
+      benchCard.setAttribute("aria-labelledby", "systems-benchmark-title");
+      const benchTitle = el("div", "nx-card-title", "Benchmark");
+      benchTitle.id = "systems-benchmark-title";
+      benchCard.appendChild(benchTitle);
+      const benchStatus = benchState?.isRunning
+        ? `Läuft: ${benchState.phase} (${benchState.frames}/${benchState.targetFrames})`
+        : benchState?.lastReport
+          ? `Letzter Lauf: ${benchState.lastReport.finishedAt}`
+          : "Noch kein Lauf vorhanden.";
+      benchCard.appendChild(el("div", "nx-note", benchStatus));
+
+      const benchActions = el("div", "nx-chip-grid");
+      const benchmarkBtn = el("button", "nx-btn", benchState?.isRunning ? "Benchmark läuft" : "Start Benchmark");
       benchmarkBtn.setAttribute("aria-label", "Performance-Benchmark starten");
+      benchmarkBtn.disabled = !!benchState?.isRunning;
       benchmarkBtn.addEventListener("click", () => this._dispatch({ type: "RUN_BENCHMARK" }));
-      accCard.appendChild(benchmarkBtn);
+      benchActions.appendChild(benchmarkBtn);
+
+      const jsonBtn = el("button", "nx-btn nx-btn-ghost", "Log JSON");
+      jsonBtn.disabled = !benchState?.lastReport;
+      jsonBtn.addEventListener("click", () => window.__lifeGameBenchmark?.download?.("json"));
+      benchActions.appendChild(jsonBtn);
+
+      const csvBtn = el("button", "nx-btn nx-btn-ghost", "Log CSV");
+      csvBtn.disabled = !benchState?.lastReport;
+      csvBtn.addEventListener("click", () => window.__lifeGameBenchmark?.download?.("csv"));
+      benchActions.appendChild(csvBtn);
+      benchCard.appendChild(benchActions);
+
+      if (benchState?.lastReport?.phases) {
+        for (const phase of ["main", "worker"]) {
+          const phaseReport = benchState.lastReport.phases[phase];
+          if (!phaseReport) continue;
+          const row = el("div", "nx-stat-row");
+          row.append(
+            el("span", "nx-label", phase === "main" ? "Main Thread" : "Worker"),
+            el("span", "nx-mono", `${phaseReport.fps.avg.toFixed(1)} FPS · ${phaseReport.render.avg.toFixed(2)} ms`)
+          );
+          benchCard.appendChild(row);
+        }
+      }
+      accCard.appendChild(benchCard);
 
       const phyCard = el("section","nx-card");
       phyCard.setAttribute("aria-labelledby", "systems-physics-title");
@@ -965,7 +1265,7 @@ export class UI {
         inp.addEventListener("input", () => this._dispatch({ type:"SET_PHYSICS", payload:{ [key]:Number(inp.value) } }));
         row.append(inp); phyCard.append(row);
       }
-      container.append(learnCard, accCard, phyCard);
+      container.append(worldCard, learnCard, accCard, phyCard);
       return;
     }
 
@@ -1094,8 +1394,9 @@ export class UI {
       if (e.code === "Space") { e.preventDefault(); this._btnPlay.click(); }
       else if (e.key === "n" || e.key === "N") { e.preventDefault(); this._btnNew.click(); }
       else if (e.key === "Escape") this._closeContext();
-      else if (e.key === "s" || e.key === "S") { e.preventDefault(); this._toggleSheet("status"); }
-      else if (e.key === "e" || e.key === "E") { e.preventDefault(); this._toggleSheet("evolution"); }
+      else if (e.key === "s" || e.key === "S") { e.preventDefault(); this._togglePanel("status"); }
+      else if (e.key === "e" || e.key === "E") { e.preventDefault(); this._togglePanel("evolution"); }
+      else if (e.key === "w" || e.key === "W") { e.preventDefault(); this._togglePanel("tools"); }
     });
   }
 
@@ -1111,12 +1412,17 @@ export class UI {
     if (wx<0||wy<0||wx>=state.meta.gridW||wy>=state.meta.gridH) return;
     const mode = state.meta.brushMode;
     const radius = state.meta.brushRadius || 3;
+    if (mode === "observe") return;
     if (mode === "cell_harvest") {
       if (!start) return;
       this._dispatch({ type:"HARVEST_CELL", payload:{ x:wx, y:wy } }); return;
     }
     if (mode === "zone_paint") {
       this._dispatch({ type:"SET_ZONE", payload:{ x:wx, y:wy, radius, zoneType:this._activeZoneType } }); return;
+    }
+    if (mode === "split_place") {
+      if (!start) return;
+      this._dispatch({ type:"PLACE_SPLIT_CLUSTER", payload:{ x:wx, y:wy } }); return;
     }
     if (mode === "cell_add" || mode === "cell_remove") {
       if (!start) return;
@@ -1200,21 +1506,21 @@ export class UI {
     this._hudEnergyArrow.textContent = netSign ? "▲" : "▼";
     this._hudEnergyVal.textContent   = `${netSign ? "+" : ""}${energyNet.toFixed(1)} ⚡`;
     this._hudEnergy.style.color      = netSign ? "var(--green)" : "var(--red)";
+    this._hudTool.textContent = `Tool: ${this._getActiveToolMeta(state).label}`;
 
-    // Dock active states
-    for (const [k, btn] of Object.entries(this._dockTabBtns)) {
-      if (k === "play") {
-        btn.classList.toggle("running", !!running);
-        btn.querySelector(".nx-dock-icon").textContent = running ? "⏸" : "▶";
-      } else {
-        btn.classList.toggle("is-active", k === this._activeContext);
-      }
-    }
+    this._dockPlayBtn.classList.toggle("running", !!running);
+    this._dockPlayBtn.querySelector(".nx-dock-icon").textContent = running ? "⏸" : "▶";
+    this._dockPlayBtn.lastChild.textContent = running ? "Pause" : "Play";
+    this._updateContextButtons();
 
     // Re-render open panel (safe update)
     if (this._activeContext) {
       const container = isDesktop() ? this._sidebarBody : this._sheetBody;
       this._renderPanelBody(container, state);
+    } else if (isDesktop()) {
+      this._activeContext = "status";
+      this._renderPanelBody(this._sidebarBody, state);
+      this._updateContextButtons();
     }
 
     // --- Critical ARIA Announcements ───────────────────────

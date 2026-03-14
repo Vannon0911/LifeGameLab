@@ -43,9 +43,12 @@ export function defaultLineageMemory() {
     stage: 1,
     stageProgress: 0,
     toxinMetabolism: 0,
+    splitUnlock: 0,
+    doctrine: "equilibrium",
+    techs: [],
+    synergies: [],
     lastTickUpdated: -1,
     lastSeenTick: -1,
     mutationScore: 0,
   };
 }
-

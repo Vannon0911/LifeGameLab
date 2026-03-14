@@ -22,6 +22,39 @@ function setCookie(name, value) {
   document.cookie = `${name}=${encodeURIComponent(value)}; expires=${exp}; path=/; samesite=lax`;
 }
 
+function downloadTextFile(filename, text, mime = "text/plain;charset=utf-8") {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function summarizeSeries(values) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return { avg: 0, min: 0, max: 0, frames: 0 };
+  }
+  let min = Infinity;
+  let max = -Infinity;
+  let sum = 0;
+  for (const raw of values) {
+    const v = Number(raw || 0);
+    if (v < min) min = v;
+    if (v > max) max = v;
+    sum += v;
+  }
+  return {
+    avg: sum / values.length,
+    min,
+    max,
+    frames: values.length,
+  };
+}
+
 const WORLD_LOG_COLUMNS = [
   "t",
   "alive",
@@ -256,62 +289,152 @@ const Benchmark = {
   phase: "idle",
   frames: 0,
   results: {},
+  lastReport: null,
+  startedAt: "",
+  targetFrames: 360,
+
+  emitUpdate() {
+    try {
+      window.dispatchEvent(new CustomEvent("benchmark:update", { detail: this.getSnapshot() }));
+    } catch {}
+  },
+
+  getSnapshot() {
+    return {
+      isRunning: this.isRunning,
+      phase: this.phase,
+      frames: this.frames,
+      targetFrames: this.targetFrames,
+      lastReport: this.lastReport,
+    };
+  },
+
+  getPhaseReport(phase) {
+    const res = this.results[phase];
+    if (!res) return null;
+    return {
+      phase,
+      fps: summarizeSeries(res.fps),
+      render: summarizeSeries(res.render),
+    };
+  },
+
+  buildReport() {
+    return {
+      version: APP_VERSION,
+      startedAt: this.startedAt,
+      finishedAt: new Date().toISOString(),
+      targetFrames: this.targetFrames,
+      phases: {
+        main: this.getPhaseReport("main"),
+        worker: this.getPhaseReport("worker"),
+      },
+      raw: {
+        main: this.results.main || { fps: [], render: [] },
+        worker: this.results.worker || { fps: [], render: [] },
+      },
+    };
+  },
+
+  toCsv(report = this.lastReport) {
+    const rows = ["phase,metric,avg,min,max,frames"];
+    for (const phase of ["main", "worker"]) {
+      const phaseReport = report?.phases?.[phase];
+      if (!phaseReport) continue;
+      for (const metric of ["fps", "render"]) {
+        const stats = phaseReport[metric];
+        if (!stats) continue;
+        rows.push([
+          phase,
+          metric,
+          stats.avg.toFixed(3),
+          stats.min.toFixed(3),
+          stats.max.toFixed(3),
+          stats.frames,
+        ].join(","));
+      }
+    }
+    return `${rows.join("\n")}\n`;
+  },
+
+  download(kind = "json") {
+    const report = this.lastReport;
+    if (!report) return false;
+    const stamp = String(report.finishedAt || report.startedAt || "benchmark").replace(/[:.]/g, "-");
+    if (kind === "csv") {
+      downloadTextFile(`lifegamelab-benchmark-${stamp}.csv`, this.toCsv(report), "text/csv;charset=utf-8");
+      return true;
+    }
+    downloadTextFile(`lifegamelab-benchmark-${stamp}.json`, JSON.stringify(report, null, 2), "application/json;charset=utf-8");
+    return true;
+  },
   
   async run(store) {
     if (this.isRunning) return;
     this.isRunning = true;
-    console.log("=== Benchmark start ===");
-
-    // 1. Main-Thread
-    this.phase = "main";
+    this.startedAt = new Date().toISOString();
+    this.lastReport = null;
+    this.results = { main: { fps: [], render: [] }, worker: { fps: [], render: [] } };
+    this.phase = "setup_main";
     this.frames = 0;
-    this.results.main = { fps: [], render: [] };
+    stepBuffer.stop();
+    console.log("=== Benchmark start ===");
+    this.emitUpdate();
+
+    // 1. Main-Thread setup
     store.dispatch({ type: "SET_UI_PREFERENCE", payload: { key: "offscreenEnabled", value: false } });
     store.dispatch({ type: "SET_SIZE", payload: { w: 144, h: 144 } });
     store.dispatch({ type: "GEN_WORLD" });
+    store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
     await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for resize
-
-    // 2. Worker-Thread
-    this.phase = "worker";
+    if (!this.isRunning) return;
+    this.phase = "main";
     this.frames = 0;
-    this.results.worker = { fps: [], render: [] };
-    store.dispatch({ type: "SET_UI_PREFERENCE", payload: { key: "offscreenEnabled", value: true } });
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for worker init
-    
-    this.phase = "done";
-    this.isRunning = false;
+    this.emitUpdate();
   },
 
   tick(perf) {
     if (!this.isRunning || this.phase === "idle" || this.phase === "done") return;
-    if (this.frames < 500) {
-      this.results[this.phase].fps.push(perf.fps);
-      this.results[this.phase].render.push(perf.renderMs);
+    if (this.phase === "setup_main" || this.phase === "worker_init") return;
+    if (this.frames < this.targetFrames) {
+      this.results[this.phase].fps.push(Number(perf?.fps ?? perf?.fpsEma ?? 0));
+      this.results[this.phase].render.push(Number(perf?.renderMs ?? perf?.renderMsEma ?? 0));
       this.frames++;
+      this.emitUpdate();
     } else if (this.phase === "main") {
       this.logResults("main");
       this.phase = "worker_init";
+      this.emitUpdate();
       store.dispatch({ type: "SET_UI_PREFERENCE", payload: { key: "offscreenEnabled", value: true } });
       setTimeout(() => {
+        if (!this.isRunning) return;
         this.phase = "worker";
         this.frames = 0;
         this.results.worker = { fps: [], render: [] };
+        this.emitUpdate();
       }, 2000);
     } else if (this.phase === "worker") {
       this.logResults("worker");
       this.phase = "done";
       this.isRunning = false;
+      this.lastReport = this.buildReport();
+      stepBuffer.start();
+      this.emitUpdate();
       console.log("=== Benchmark complete ===");
     }
   },
 
   logResults(phase) {
-    const res = this.results[phase];
-    const avgFps = res.fps.reduce((a, b) => a + b, 0) / res.fps.length;
-    const avgRender = res.render.reduce((a, b) => a + b, 0) / res.render.length;
-    console.log(`[${phase.toUpperCase()}] Avg FPS: ${avgFps.toFixed(2)}, Avg Render: ${avgRender.toFixed(2)}ms`);
+    const phaseReport = this.getPhaseReport(phase);
+    if (!phaseReport) return;
+    console.log(
+      `[${phase.toUpperCase()}] FPS avg/min/max ${phaseReport.fps.avg.toFixed(2)}/${phaseReport.fps.min.toFixed(2)}/${phaseReport.fps.max.toFixed(2)} · ` +
+      `Render avg/min/max ${phaseReport.render.avg.toFixed(2)}/${phaseReport.render.min.toFixed(2)}/${phaseReport.render.max.toFixed(2)} ms`
+    );
   }
 };
+window.__lifeGameBenchmark = Benchmark;
+Benchmark.emitUpdate();
 
 
 // ── Bootstrap: generate and start world ──────────────────
@@ -405,6 +528,7 @@ const RenderManager = {
 };
 
 const ui     = new UI(store, canvas);
+window.__lifeGameStore = store;
 
 // ── Dev Balance ──────────────────────────────────────────
 const DevBalance = {
@@ -659,6 +783,51 @@ function runUiSync() {
   }
 }
 
+function renderGameToText() {
+  const state = store.getState();
+  const playerLineageId = Number(state?.meta?.playerLineageId || 0);
+  const memory = state?.world?.lineageMemory?.[playerLineageId] || {};
+  return JSON.stringify({
+    tick: Number(state?.sim?.tick || 0),
+    running: !!state?.sim?.running,
+    tool: String(state?.meta?.brushMode || "observe"),
+    stage: Number(state?.sim?.playerStage || 1),
+    dna: Number(state?.sim?.playerDNA || 0),
+    playerAlive: Number(state?.sim?.playerAliveCount || 0),
+    cpuAlive: Number(state?.sim?.cpuAliveCount || 0),
+    energyNet: Number(state?.sim?.playerEnergyNet || 0),
+    clusterRatio: Number(state?.sim?.clusterRatio || 0),
+    networkRatio: Number(state?.sim?.networkRatio || 0),
+    doctrine: String(memory.doctrine || "equilibrium"),
+    techs: Array.isArray(memory.techs) ? memory.techs : [],
+    synergies: Array.isArray(memory.synergies) ? memory.synergies : [],
+    benchmark: typeof Benchmark.getSnapshot === "function" ? Benchmark.getSnapshot() : null,
+  }, null, 2);
+}
+
+async function advanceTime(ms = 1000) {
+  const duration = Math.max(0, Number(ms) || 0);
+  const speed = Math.max(1, Number(store.getState().meta.speed || 1));
+  const steps = Math.max(1, Math.round((duration / 1000) * speed));
+  for (let i = 0; i < steps; i++) {
+    store.dispatch({ type: "SIM_STEP", payload: { force: true } });
+  }
+  runRender({
+    quality: PerfBudget.quality,
+    dprCap: PerfBudget.dprCap,
+    fps: PerfBudget.fpsEma,
+    frameMs: PerfBudget.frameMsEma,
+    renderMs: PerfBudget.renderMsEma,
+    targetMinFps: PerfBudget.targetMinFps,
+    targetMaxFps: PerfBudget.targetMaxFps,
+  });
+  runUiSync();
+  return { steps, tick: Number(store.getState().sim.tick || 0) };
+}
+
+window.render_game_to_text = renderGameToText;
+window.advanceTime = advanceTime;
+
 function tunePerformance(state) {
   const cells = (state?.world?.w || state.meta.gridW || 0) * (state?.world?.h || state.meta.gridH || 0);
   const isHeavyGrid = cells >= 120 * 120;
@@ -729,8 +898,6 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 
-// Auto-start
-store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
 requestAnimationFrame(loop);
 
 console.log(`LifeGameLab v${APP_VERSION} gestartet (Schema v${manifest.SCHEMA_VERSION}). store und __devBalance sind verfuegbar.`);
