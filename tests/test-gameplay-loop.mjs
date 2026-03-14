@@ -150,7 +150,7 @@
         if (s.sim.playerDNA >= dnaCost) break;
       }
       const dnaAfterHarvest = s.sim.playerDNA;
-      const dnaCost = 5 * (Number(s.sim.playerStage) || 1);
+      const dnaCost = 5;
       assert(dnaAfterHarvest >= dnaCost, `Not enough DNA for evolution: have ${dnaAfterHarvest}, need ${dnaCost}`);
 
       const remainingPlayer = findCell(s, s.meta.playerLineageId);
@@ -213,9 +213,8 @@
     try {
       const store = mkStore("split-cluster");
       let s = stepFor(store, 60);
-      let dnaCost = 5 * (Number(s.sim.playerStage) || 1);
+      let dnaCost = 5;
       s = earnDNA(store, dnaCost);
-      dnaCost = 5 * (Number(s.sim.playerStage) || 1);
       s = earnDNA(store, dnaCost);
       assert(s.sim.playerDNA >= dnaCost, `Not enough DNA for light_harvest: ${s.sim.playerDNA} < ${dnaCost}`);
       store.dispatch({ type: "BUY_EVOLUTION", payload: { archetypeId: "light_harvest" } });
@@ -223,8 +222,8 @@
       assert(Array.isArray(s.world.lineageMemory?.[s.meta.playerLineageId]?.techs) && s.world.lineageMemory[s.meta.playerLineageId].techs.includes("light_harvest"), "light_harvest did not unlock");
 
       let guard = 0;
-      while ((Number(s.sim.playerStage || 1) < 2 || Number(s.sim.playerDNA || 0) < 5 * (Number(s.sim.playerStage) || 1)) && guard < 32) {
-        s = earnDNA(store, 5 * Math.max(2, Number(s.sim.playerStage || 1)));
+      while ((Number(s.sim.playerStage || 1) < 2 || Number(s.sim.playerDNA || 0) < 10) && guard < 32) {
+        s = earnDNA(store, 10);
         s = stepFor(store, 2);
         guard++;
       }
@@ -235,7 +234,7 @@
         s = stepFor(store, 1);
         guard++;
       }
-      dnaCost = 5 * (Number(s.sim.playerStage) || 1);
+      dnaCost = 10;
       s = earnDNA(store, dnaCost);
       assert(s.sim.playerDNA >= dnaCost, `Not enough DNA for cooperative_network: ${s.sim.playerDNA} < ${dnaCost}`);
       store.dispatch({ type: "BUY_EVOLUTION", payload: { archetypeId: "cooperative_network" } });
@@ -249,12 +248,11 @@
         guard++;
       }
       guard = 0;
-      dnaCost = 5 * (Number(s.sim.playerStage) || 1);
+      dnaCost = 10;
       while (Number(s.sim.playerDNA || 0) < dnaCost && guard < 32) {
         s = earnDNA(store, dnaCost);
         if (Number(s.sim.playerDNA || 0) >= dnaCost) break;
         s = stepFor(store, 2);
-        dnaCost = 5 * (Number(s.sim.playerStage) || 1);
         guard++;
       }
       assert(s.sim.playerDNA >= dnaCost, `Not enough DNA for split unlock: ${s.sim.playerDNA} < ${dnaCost}`);

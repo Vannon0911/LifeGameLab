@@ -42,6 +42,7 @@ const forbiddenMarkers = [
   "src/ui/",
   "src/main.js",
   "reports/",
+  "LifeGameLab/",
   "docs/00_governance/",
 ];
 
@@ -49,9 +50,6 @@ const expectedMissing = [
   "src/main.js",
   "reports/BUG_REPORT_MVP.md",
   "GEMINI.md",
-];
-
-const expectedEmptyOrMissingDirs = [
   "src/kernel",
   "src/runtime",
   "src/sim",
@@ -60,20 +58,12 @@ const expectedEmptyOrMissingDirs = [
   "reports",
   "docs/00_governance",
   "docs/01_source_plans",
+  "LifeGameLab",
 ];
 
 for (const relPath of expectedMissing) {
   if (fs.existsSync(path.join(root, relPath))) {
     fail(`${relPath} should have been removed`);
-  }
-}
-
-for (const relPath of expectedEmptyOrMissingDirs) {
-  const abs = path.join(root, relPath);
-  if (!fs.existsSync(abs)) continue;
-  const remaining = walk(relPath);
-  if (remaining.length > 0) {
-    fail(`${relPath} should not contain files anymore`);
   }
 }
 

@@ -825,7 +825,6 @@ export class UI {
     if (ctx === "evolution") {
       const playerDNA = Number(sim.playerDNA || 0);
       const playerStage = Number(sim.playerStage || 1);
-      const dnaCost = 5 * playerStage;
       const commandScore = deriveCommandScore(sim);
       const playerMemory = getPlayerMemory(state);
       const unlockedTechs = new Set(Array.isArray(playerMemory?.techs) ? playerMemory.techs.map(String) : []);
@@ -837,7 +836,7 @@ export class UI {
         el("div", "nx-note", "Evo ist jetzt ein echter Kommandopfad: erst Stoffwechsel, dann Cluster, dann Synergien."),
         el("div", "nx-stat-row", null)
       );
-      infoCard.lastChild.append(el("span", "nx-label", `Stage S${playerStage}`), el("span", "nx-mono nx-val-pos", `🧬 ${playerDNA.toFixed(1)} / ${dnaCost} DNA`));
+      infoCard.lastChild.append(el("span", "nx-label", `Stage S${playerStage}`), el("span", "nx-mono nx-val-pos", `🧬 ${playerDNA.toFixed(1)} DNA`));
       const cmdRow = el("div", "nx-stat-row nx-stat-row-col");
       cmdRow.append(el("span", "nx-label", `Command-Score ${Math.round(commandScore * 100)} / 100`));
       const cmdBar = el("div", "nx-bar-wrap");
@@ -854,11 +853,12 @@ export class UI {
         stageWrap.appendChild(el("div", "nx-tech-stage-label", `Stage ${stage}`));
         const grid = el("div", "nx-tech-grid");
         for (const tech of stageNodes) {
+          const techCost = 5 * Math.max(1, Number(tech.stage || 1));
           const owned = unlockedTechs.has(tech.id);
           const stageLocked = playerStage < tech.stage;
           const depReady = hasRequiredTechs(unlockedTechs, tech.requires);
           const commandReady = commandScore + 1e-9 >= Number(tech.commandReq || 0);
-          const canBuy = !owned && !stageLocked && depReady && commandReady && playerDNA >= dnaCost;
+          const canBuy = !owned && !stageLocked && depReady && commandReady && playerDNA >= techCost;
           const nodeCls = owned ? "is-owned" : canBuy ? "is-ready" : "is-locked";
           const card = el("article", `nx-tech-node ${nodeCls}`);
           const head = el("div", "nx-tech-head");
@@ -867,7 +867,7 @@ export class UI {
           card.appendChild(el("div", "nx-tech-desc", tech.desc));
           const metaRow = el("div", "nx-tech-meta");
           metaRow.append(
-            el("span", owned ? "nx-badge-active" : "nx-badge", owned ? "Aktiv" : `${dnaCost} DNA`),
+            el("span", owned ? "nx-badge-active" : "nx-badge", owned ? "Aktiv" : `${techCost} DNA`),
             el("span", commandReady ? "nx-badge" : "nx-badge nx-badge-warn", `Cmd ${Math.round((tech.commandReq || 0) * 100)}`),
           );
           card.appendChild(metaRow);
@@ -877,7 +877,7 @@ export class UI {
             stageLocked ? `Stage ${tech.stage} nötig` :
             !depReady ? "Prereqs fehlen" :
             !commandReady ? "Clusterstärke zu niedrig" :
-            playerDNA < dnaCost ? "Zu wenig DNA" :
+            playerDNA < techCost ? "Zu wenig DNA" :
             "Jetzt integrieren";
           const btn = el("button", `nx-btn nx-btn-evolve${canBuy ? "" : " nx-btn-disabled"}`, stateText);
           btn.disabled = !canBuy;
