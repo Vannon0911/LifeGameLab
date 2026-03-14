@@ -57,12 +57,12 @@
     "doctrine": "equilibrium"
   },
   "perf": {
-    "fpsEma": 43.43,
-    "frameMsEma": 23.03,
-    "renderMsEma": 31.71,
-    "quality": 3,
+    "fpsEma": 29.33,
+    "frameMsEma": 34.09,
+    "renderMsEma": 40.07,
+    "quality": 1,
     "renderEvery": 1,
-    "dprCap": 2,
+    "dprCap": 1.25,
     "maxSimStepsPerFrame": 3,
     "maxSimFrameBudgetMs": 7.5,
     "maxCatchupMs": 130,
