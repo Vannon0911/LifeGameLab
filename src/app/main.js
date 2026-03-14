@@ -602,8 +602,12 @@ const RenderManager = {
     const cw = Math.max(1, Math.floor(rect.width * dpr));
     const ch = Math.max(1, Math.floor(rect.height * dpr));
     if (canvas.width !== cw || canvas.height !== ch) {
-      canvas.width = cw;
-      canvas.height = ch;
+      // Offscreen canvas can't be resized via DOM canvas after transferControlToOffscreen().
+      const canResizeDomCanvas = !(useOffscreen && this.isInitialized);
+      if (canResizeDomCanvas) {
+        canvas.width = cw;
+        canvas.height = ch;
+      }
       this.lastSignature = "";
       this.lastSubmittedTick = -1;
       try {
