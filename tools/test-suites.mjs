@@ -1,5 +1,6 @@
 export const TEST_SUITES = Object.freeze({
   quick: [
+    "tests/test-advisor-model.mjs",
     "tests/test-buffered-step.mjs",
     "tests/test-contract-facade.mjs",
     "tests/test-core-gates.mjs",
@@ -10,6 +11,7 @@ export const TEST_SUITES = Object.freeze({
     "tests/test-layer-split.mjs",
     "tests/test-llm-contract.mjs",
     "tests/test-manifest-dataflow.mjs",
+    "tests/test-overlay-diagnostics.mjs",
     "tests/test-path-hygiene.mjs",
     "tests/test-player-action-ownership.mjs",
     "tests/test-raw-string-guard.mjs",

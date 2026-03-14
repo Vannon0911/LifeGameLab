@@ -23,6 +23,9 @@ store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
 assert(store.getState().sim.winMode === WIN_MODE.SUPREMACY, "default winMode drift");
 assert(store.getState().sim.gameResult === GAME_RESULT.NONE, "default gameResult drift");
 assert(typeof store.getState().sim.goal === "string", "default goal missing");
+assert(store.getState().meta.placementCostEnabled === true, "placement cost default drift");
+assert(store.getState().meta.activeOverlay === OVERLAY_MODE.NONE, "activeOverlay default drift");
+assert(store.getState().meta.globalLearning?.enabled === false, "global learning default drift");
 
 const sigA = store.getSignature();
 store.dispatch({ type: "SET_BRUSH", payload: { brushMode: "INVALID_MODE" } });
@@ -40,6 +43,9 @@ store.dispatch({ type: "SET_WIN_MODE", payload: { winMode: WIN_MODE.STOCKPILE } 
 assert(store.getState().sim.winMode === WIN_MODE.STOCKPILE, "stockpile mode not applied");
 
 store.dispatch({ type: "SIM_STEP", payload: { force: true } });
+const winModeAfterFirstTick = store.getState().sim.winMode;
+store.dispatch({ type: "SET_WIN_MODE", payload: { winMode: WIN_MODE.EFFICIENCY } });
+assert(store.getState().sim.winMode === winModeAfterFirstTick, "winMode changed after tick 1 lock");
 const goal = String(store.getState().sim.goal || "");
 assert(GOAL_CODE_VALUES.includes(goal), `goal must be canonical code, got '${goal}'`);
 
