@@ -3,29 +3,34 @@
     "triggerPrefixes": [
       "src/game/ui/",
       "src/project/ui.js",
-      "src/game/render/"
+      "src/game/render/",
+      "docs/llm/ui/"
     ],
     "requiredEntry": "docs/llm/ui/UI_TASK_ENTRY.md"
   },
   "sim": {
     "triggerPrefixes": [
       "src/game/sim/",
-      "src/project/project.logic.js"
+      "src/project/project.logic.js",
+      "docs/llm/sim/"
     ],
     "requiredEntry": "docs/llm/sim/SIM_TASK_ENTRY.md"
   },
   "contracts": {
     "triggerPrefixes": [
       "src/project/contract/",
-      "src/core/kernel/"
+      "src/core/kernel/",
+      "docs/llm/contracts/"
     ],
     "requiredEntry": "docs/llm/contracts/CONTRACT_TASK_ENTRY.md"
   },
   "testing": {
     "triggerPrefixes": [
       "tests/",
+      "tools/llm-preflight.mjs",
       "tools/run-test-suite.mjs",
-      "tools/run-all-tests.mjs"
+      "tools/run-all-tests.mjs",
+      "docs/llm/testing/"
     ],
     "requiredEntry": "docs/llm/testing/TESTING_TASK_ENTRY.md"
   },
@@ -33,7 +38,18 @@
     "triggerPrefixes": [
       "package.json",
       "src/project/contract/manifest.js",
-      "docs/VERSIONING_BY_UPDATE_SIZE.md"
+      "docs/VERSIONING_BY_UPDATE_SIZE.md",
+      "docs/START_HERE.md",
+      "docs/LLM_ENTRY.md",
+      "docs/LLM_OPERATING_PROTOCOL.md",
+      "docs/PROJECT_STRUCTURE.md",
+      "docs/PROJECT_CONTRACT_SNAPSHOT.md",
+      "docs/SCOPE_BASELINE.md",
+      "docs/TASK_SEQUENCE.md",
+      "docs/MASTER_CHANGE_LOG.md",
+      "docs/llm/TASK_ENTRY_MATRIX.json",
+      "docs/llm/entry/",
+      "docs/llm/versioning/"
     ],
     "requiredEntry": "docs/llm/versioning/VERSIONING_TASK_ENTRY.md"
   }
