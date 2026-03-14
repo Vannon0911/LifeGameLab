@@ -1,6 +1,6 @@
 # PROJECT_CONTRACT_SNAPSHOT
 
-**APP_VERSION:** 2.4.0
+**APP_VERSION:** 2.5.0
 
 ## Contract-Status
 - Manifest-first aktiv
