@@ -43,7 +43,7 @@ Zweck: Balance, Cleanup und RC-Haertung.
 ### G2 Vollsuite
 - [x] `quick` gruen
 - [x] `truth` gruen
-- [ ] `stress` gruen
+- [x] `stress` gruen
 - [x] `playwright` gruen
 - [x] `determinism-long` gruen
 - [ ] Perf-Budgets einhalten

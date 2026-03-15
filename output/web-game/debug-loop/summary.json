@@ -1,11 +1,21 @@
 [
   {
     "iteration": 1,
-    "started": true,
+    "started": false,
     "appliedSpeed": 24,
-    "tick": 51,
-    "running": true,
-    "playerAlive": 62,
+    "tick": 0,
+    "running": false,
+    "playerAlive": 0,
+    "rasterPanels": 5,
+    "consoleErrors": 0
+  },
+  {
+    "iteration": 2,
+    "started": false,
+    "appliedSpeed": 24,
+    "tick": 0,
+    "running": false,
+    "playerAlive": 0,
     "rasterPanels": 5,
     "consoleErrors": 0
   }
