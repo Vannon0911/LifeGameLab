@@ -13,6 +13,7 @@
 import { applyPatches } from "../kernel/patches.js";
 import { sanitizeBySchema } from "../kernel/schema.js";
 import { createRngStreamsScoped } from "../kernel/rng.js";
+import { runWithDeterminismGuard } from "../kernel/store.js";
 import { assertSimPatchesAllowed } from "../../game/sim/gate.js";
 
 function nowMs() {
@@ -84,7 +85,10 @@ export function createSimStepBuffer({ store, manifest, project, maxBufferedSteps
 
     // Reducer phase (expected to be []).
     const reducerRng = createRngStreamsScoped(seed, `reducer:${actionType}:${rev}`);
-    const reducerPatches = project.reducer(shadowDoc.state, action, { rng: reducerRng }) || [];
+    const reducerPatches = runWithDeterminismGuard(
+      () => project.reducer(shadowDoc.state, action, { rng: reducerRng }) || [],
+      { enabled: true, actionType, phase: "buffer.reducer" },
+    );
     if (Array.isArray(reducerPatches) && reducerPatches.length) {
       // If reducer emits anything, include it as part of buffered step.
       assertSimPatchesAllowed(manifest, shadowDoc.state, actionType, reducerPatches);
@@ -93,7 +97,10 @@ export function createSimStepBuffer({ store, manifest, project, maxBufferedSteps
 
     // simStep phase: real simulation patches.
     const simRng = createRngStreamsScoped(seed, `simStep:${actionType}:${rev}`);
-    const simPatches = project.simStep(shadowDoc.state, action, { rng: simRng }) || [];
+    const simPatches = runWithDeterminismGuard(
+      () => project.simStep(shadowDoc.state, action, { rng: simRng }) || [],
+      { enabled: true, actionType, phase: "buffer.simStep" },
+    );
     if (!Array.isArray(simPatches) || simPatches.length === 0) return false;
     assertSimPatchesAllowed(manifest, shadowDoc.state, actionType, simPatches);
 
@@ -165,5 +172,5 @@ export function createSimStepBuffer({ store, manifest, project, maxBufferedSteps
 
   function size() { return queue.length; }
 
-  return { start, stop, invalidate, consumeOneOrNull, size };
+  return { start, stop, invalidate, consumeOneOrNull, size, _debugComputeOne: computeOne };
 }
