@@ -22,6 +22,7 @@ LLM-spezifische Regeln leben getrennt unter `docs/llm/`.
 6. Genau einen passenden Task-Entry lesen
 
 ### PRUEFEN
+- Session-Start im Chat mit `entry` (LLM-Trigger, kein Terminal-Befehl).
 - `node tools/llm-preflight.mjs classify --paths <paths>`
 - `node tools/llm-preflight.mjs ack --paths <paths>`
 - `node tools/llm-preflight.mjs check --paths <paths>`
