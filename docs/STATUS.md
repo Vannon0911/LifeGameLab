@@ -75,7 +75,7 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Truth-Suite nachgezogen
 - Debug-Loop-Artefakte fuer gruene Gegenprobe aktualisiert
 
-### 2026-03-15 b630ae9 `trest and fixxes`
+### 2026-03-15 b630ae9 `test and fixes`
 - Schwellenfehler in `src/game/sim/network.js` behoben
 - `tests/test-network-commit-threshold.mjs` angelegt
 - `tools/playwright-debug-loop.mjs` gehaertet

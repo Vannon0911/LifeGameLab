@@ -1,0 +1,48 @@
+# Task Gate Index
+
+## Zweck
+Minimale Pflicht-Leselisten pro Task, damit LLMs ohne Repo-Vollscan gate-konform arbeiten koennen.
+Reihenfolge: zuerst `docs/llm/ENTRY.md`, dann genau ein Task-Set aus dieser Datei.
+
+## Globale Mindest-Gates (immer)
+1. `src/project/contract/manifest.js` (SoT)
+2. `src/core/kernel/store.js`
+3. `src/core/kernel/patches.js`
+
+## UI Task
+1. `src/game/ui/ui.js`
+2. `src/game/ui/ui.model.js`
+3. `src/game/ui/ui.constants.js`
+4. `src/project/ui.js`
+5. `src/app/main.js` (wenn Caller/Boot betroffen)
+
+## SIM Task
+1. `src/game/sim/reducer/index.js`
+2. `src/game/sim/step.js`
+3. `src/game/sim/stepPhases.js`
+4. `src/game/sim/stepRuntime.js`
+5. `src/game/sim/worldgen.js`
+
+## CONTRACTS Task
+1. `src/project/contract/stateSchema.js`
+2. `src/project/contract/actionSchema.js`
+3. `src/project/contract/mutationMatrix.js`
+4. `src/project/contract/simGate.js`
+5. `src/project/contract/dataflow.js`
+
+## TESTING Task
+1. `tools/llm-preflight.mjs`
+2. `tools/run-test-suite.mjs`
+3. `tools/run-all-tests.mjs`
+4. `tests/test-llm-contract.mjs`
+5. `tests/support/liveTestKit.mjs`
+
+## VERSIONING Task
+1. `package.json`
+2. `src/project/contract/manifest.js`
+3. `docs/STATUS.md`
+4. `docs/ARCHITECTURE.md`
+
+## Wichtige Regel
+Wenn ein Task ueber dieses Minimum hinausgeht, dann nur gezielt die betroffenen Dateien nachladen.
+Kein blindes Full-Repo-Scannen.
