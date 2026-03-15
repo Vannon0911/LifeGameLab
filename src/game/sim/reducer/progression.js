@@ -98,6 +98,11 @@ export function deriveStageState(world, simLike, meta) {
     yieldScore >= 0.60 &&
     stabilityScore >= 0.60 &&
     ecologyScore >= 0.60;
+  const patternClasses = Object.keys(simLike?.patternCatalog || {}).filter((key) => {
+    const bucket = simLike?.patternCatalog?.[key];
+    return Array.isArray(bucket) && bucket.length > 0;
+  }).length;
+  const patternEnergyBonus = Number(simLike?.patternBonuses?.energy || 0);
 
   const risk = deriveRiskCode({
     ...simLike,
@@ -107,9 +112,9 @@ export function deriveStageState(world, simLike, meta) {
 
   const gates = {
     2: playerAliveCount >= 8 && playerEnergyNet > 0,
-    3: yieldCategories >= 2 && meanWaterField >= 0.10,
-    4: clusterRatio >= 0.12 && activeBiomes >= 2,
-    5: signals60 && risk !== RISK_CODE.COLLAPSE && risk !== RISK_CODE.CRITICAL,
+    3: yieldCategories >= 2 && meanWaterField >= 0.10 && simLike?.dnaZoneCommitted === true,
+    4: clusterRatio >= 0.12 && activeBiomes >= 2 && simLike?.infrastructureUnlocked === true,
+    5: signals60 && risk !== RISK_CODE.COLLAPSE && risk !== RISK_CODE.CRITICAL && patternClasses > 0 && patternEnergyBonus > 0,
   };
   const thresholds = {
     2: 0.22,
