@@ -2,9 +2,35 @@ import {
   GAME_RESULT,
   GOAL_CODE,
   RUN_PHASE,
+  ZONE_ROLE,
   WIN_MODE,
   deriveGoalCode,
 } from "../../contracts/ids.js";
+import { deriveGoalCodeWithPresetBias } from "./progression.js";
+
+function countAlivePlayerRoleCells(world, playerLineageId, roleId) {
+  const zoneRole = world?.zoneRole;
+  const alive = world?.alive;
+  const lineageId = world?.lineageId;
+  if (!zoneRole || !alive || !lineageId) return 0;
+  let count = 0;
+  for (let i = 0; i < zoneRole.length; i++) {
+    if ((Number(zoneRole[i]) | 0) !== (roleId | 0)) continue;
+    if ((Number(alive[i]) | 0) !== 1) continue;
+    if ((Number(lineageId[i]) | 0) !== (playerLineageId | 0)) continue;
+    count++;
+  }
+  return count;
+}
+
+function countMaskOnes(mask) {
+  if (!mask || !ArrayBuffer.isView(mask)) return 0;
+  let count = 0;
+  for (let i = 0; i < mask.length; i++) {
+    if ((Number(mask[i]) | 0) === 1) count++;
+  }
+  return count;
+}
 
 export function applyWinConditions(state, simOut, currentTick) {
   if (!state.sim.gameResult) {
@@ -43,6 +69,10 @@ export function applyWinConditions(state, simOut, currentTick) {
 
     let gameResult = GAME_RESULT.NONE;
     let resolvedWinMode = "";
+    const playerLineageId = Number(state?.meta?.playerLineageId || 1) | 0;
+    const coreAlive = countAlivePlayerRoleCells(state.world, playerLineageId, ZONE_ROLE.CORE);
+    const committedInfra = countAlivePlayerRoleCells(state.world, playerLineageId, ZONE_ROLE.INFRA);
+    const visibleTiles = countMaskOnes(state.world?.visibility);
 
     if (pAlive === 0 && currentTick > 20) {
       gameResult = GAME_RESULT.LOSS;
@@ -50,6 +80,15 @@ export function applyWinConditions(state, simOut, currentTick) {
     } else if (lossStreak >= 150) {
       gameResult = GAME_RESULT.LOSS;
       resolvedWinMode = WIN_MODE.ENERGY_COLLAPSE;
+    } else if (Number(state.sim.unlockedZoneTier || 0) >= 1 && coreAlive === 0 && currentTick > 30) {
+      gameResult = GAME_RESULT.LOSS;
+      resolvedWinMode = WIN_MODE.CORE_COLLAPSE;
+    } else if (Number(state.sim.unlockedZoneTier || 0) >= 2 && visibleTiles === 0 && currentTick > 50) {
+      gameResult = GAME_RESULT.LOSS;
+      resolvedWinMode = WIN_MODE.VISION_BREAK;
+    } else if (Number(state.sim.unlockedZoneTier || 0) >= 3 && state.sim.infrastructureUnlocked && committedInfra === 0 && currentTick > 60) {
+      gameResult = GAME_RESULT.LOSS;
+      resolvedWinMode = WIN_MODE.NETWORK_DECAY;
     } else if (winMode === WIN_MODE.SUPREMACY && supTicks >= 200) {
       gameResult = GAME_RESULT.WIN;
       resolvedWinMode = WIN_MODE.SUPREMACY;
@@ -81,6 +120,7 @@ export function applyWinConditions(state, simOut, currentTick) {
   }
 }
 
-export function applyGoalCode(simOut, currentTick) {
-  simOut.goal = deriveGoalCode(simOut, currentTick) || GOAL_CODE.HARVEST_SECURE;
+export function applyGoalCode(simOut, currentTick, meta = {}) {
+  const fallbackGoalCode = deriveGoalCode(simOut, currentTick) || GOAL_CODE.HARVEST_SECURE;
+  simOut.goal = deriveGoalCodeWithPresetBias(simOut, meta, fallbackGoalCode) || GOAL_CODE.HARVEST_SECURE;
 }
