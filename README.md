@@ -27,7 +27,7 @@ Kurz gesagt: `LifeGameLab` ist heute nicht nur "ein Zellspiel", sondern die doku
 
 Die Leitidee ist: beobachten, verstehen, eingreifen, entblocken. Jeder neue Fortschrittsschritt soll sich wie ein echter Systemwechsel anfuehlen, nicht wie ein weiterer Brush im selben Werkzeugkasten.
 
-Die feste Produktbasis fuer diese Richtung steht in [docs/CONCEPT_BASIS.md](docs/CONCEPT_BASIS.md). Das Dokument ist absichtlich enger als ein offenes GDD: Es soll neue Ideen filtern, nicht alles erlauben.
+Die feste Produktbasis fuer diese Richtung steht in [docs/PRODUCT.md](docs/PRODUCT.md). Das Dokument ist absichtlich enger als ein offenes GDD: Es soll neue Ideen filtern, nicht alles erlauben.
 
 ## Warum das Rework noetig war
 
@@ -127,8 +127,7 @@ Automatisch erstellt am **14.03.2026** via Playwright gegen `http://127.0.0.1:80
 | --- | --- |
 | ![Desktop Evolution](docs/assets/compare-desktop-1536x960-evolution.png) | ![Mobile Systeme](docs/assets/compare-mobile-390x844-systeme.png) |
 
-Vollständige Capture-Matrix (alle Größen/Ansichten):
-- [docs/GITHUB_MEDIA_INDEX.md](docs/GITHUB_MEDIA_INDEX.md)
+Weitere Capture-Artefakte liegen in `docs/assets/`.
 
 ## Schnellstart
 
@@ -172,25 +171,22 @@ npm run test:stress
 - `src/project/` Manifest + projektseitige Entry-Points
 - `tests/` Gates, Determinismus, Gameplay, Contracts
 - `tools/` Profiling, Debug, Redteam
-- `docs/` Architektur, Governance, Handoff
+- `docs/` vier kanonische Top-Level-Dokumente plus `docs/llm/`
 
 ## Aktueller Engineering-Status (ehrlich)
 
 - Contract-/Gate-Haertung ist umgesetzt und testgruen.
-- `Phase A-C` leben auf Codebasis: `Foundation -> Core -> DNA -> Run`.
-- `Phase D` ist gestartet; Contract-/State-Basis und semantischer Infrastruktur-Staging-Pfad sind angelegt.
-- Sicht/Fog, CPU-Informationsgating, kanonisches Zonensystem, Pattern-Engine, Tech-Rework und RC-Haertung sind noch nicht fertig.
-- Performance-Ziel aus dem letzten groesseren Implementierungsplan ist weiter offen.
+- `Phase A-F` leben auf Codebasis.
+- `Phase G` ist der aktive Block fuer Cleanup, Balance und RC-Haertung.
+- Performance-Ziel und finale Release-Haertung sind weiter offen.
 
 ## Was noch fehlt
 
 Das Projekt ist noch kein "fertiges Release-Spiel". Es ist ein fortgeschrittenes Rework mit klarem Kurs. Die grossen offenen Bloecke sind:
 
-- Infrastruktur + Sicht/Fog als echter Spielerloop
-- Ueberfuehrung der Spezialmasken in ein kanonisches Zonensystem
-- Pattern-Engine als echte Aufbau- und Effektlogik
-- spaetere Neuverdrahtung von Tech-Tree, Objectives und Endgame
-- finale Härtung, Balancing und Release-Qualitaet
+- Perf-Budgets sauber messen und halten
+- Presets balancieren
+- Migration-Sicherheit und finale RC-Haertung abschliessen
 
 ## Wenn du das Repo lesen willst
 
@@ -205,11 +201,8 @@ Die beste Lesart ist nicht "welche Datei macht was?", sondern:
 Die wichtigsten Anker dafuer sind:
 
 - `progress.md`
-- `docs/CONCEPT_BASIS.md`
-- `docs/SESSION_HANDOFF.md`
-- `docs/PROJECT_STRUCTURE.md`
-- `docs/PROJECT_CONTRACT_SNAPSHOT.md`
-- `docs/PHASE_D_TODO.md`
-- `docs/PHASE_E_TODO.md`
-- `docs/PHASE_F_TODO.md`
-- `docs/PHASE_G_TODO.md`
+- `docs/WORKFLOW.md`
+- `docs/PRODUCT.md`
+- `docs/ARCHITECTURE.md`
+- `docs/STATUS.md`
+- `docs/llm/ENTRY.md`

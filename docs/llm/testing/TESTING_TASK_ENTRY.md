@@ -4,8 +4,8 @@
 LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 
 ## LESEN (pflicht)
-1. `docs/LLM_ENTRY.md`
-2. `docs/LLM_OPERATING_PROTOCOL.md`
+1. `docs/llm/ENTRY.md`
+2. `docs/llm/OPERATING_PROTOCOL.md`
 3. diese Datei
 4. `tools/llm-preflight.mjs`
 5. `tools/run-test-suite.mjs`
@@ -17,7 +17,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - `node tools/llm-preflight.mjs check --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs`
 
 ## SCHREIBEN (pflicht)
-- Kein Schreiben ohne `docs/LLM_ENTRY.md` + passenden Task-Entry.
+- Kein Schreiben ohne `docs/llm/ENTRY.md` + passenden Task-Entry.
 - Kein Test ohne passendes Ack.
 - Kein Taskwechsel ohne neue Klassifikation + neues Ack.
 - Nur Test-/Gate-Scope.
@@ -25,7 +25,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 
 ## DOKU (pflicht)
 - Zuerst testing-spezifische Doku.
-- `docs/MASTER_CHANGE_LOG.md` nur globale Fallback-Ansicht.
+- `docs/STATUS.md` nur globale Fallback-Ansicht.
 
 ## Taskregel
 Kein Testlauf ohne Ack. Main-Run-UI-Checks bleiben zusaetzlich manuell belegpflichtig.

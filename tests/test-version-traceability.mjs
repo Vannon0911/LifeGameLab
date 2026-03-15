@@ -39,9 +39,8 @@ if (packageJson.scripts?.["test:full"] !== "node tools/run-all-tests.mjs") {
 assertContains("README.md", `# LifeGameLab v${APP_VERSION}`, "README version heading");
 assertContains("index.html", `<title>LifeGameLab v${APP_VERSION}</title>`, "index title version");
 assertContains("index.html", `LifeGameLab v${APP_VERSION} —`, "index description version");
-assertContains("docs/BUGFIX_LOG.md", `# BUGFIX LOG — v${APP_VERSION}`, "BUGFIX_LOG version header");
-assertContains("docs/MASTER_CHANGE_LOG.md", `v${APP_VERSION}`, "MASTER_CHANGE_LOG release version");
-assertContains("docs/MASTER_CHANGE_LOG.md", "append-only", "MASTER_CHANGE_LOG append-only policy");
-assertContains("docs/PROJECT_CONTRACT_SNAPSHOT.md", `APP_VERSION:** ${APP_VERSION}`, "contract snapshot APP_VERSION");
+assertContains("docs/STATUS.md", `# STATUS — v${APP_VERSION}`, "STATUS version header");
+assertContains("docs/STATUS.md", "append-only", "STATUS append-only policy");
+assertContains("docs/ARCHITECTURE.md", `APP_VERSION:** ${APP_VERSION}`, "architecture APP_VERSION");
 
 console.log(`VERSION_TRACEABILITY_OK ${APP_VERSION} schema=${SCHEMA_VERSION}`);

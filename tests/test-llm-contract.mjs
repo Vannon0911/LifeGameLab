@@ -98,15 +98,15 @@ function runPreflight(args) {
 }
 
 {
-  const phaseTodo = runPreflight(["classify", "--paths", "docs/PHASE_A_TODO.md"]);
-  assert(phaseTodo.status === 0, `phase todo classify should pass, got status=${phaseTodo.status} stderr=${phaseTodo.stderr}`);
-  assertContains(phaseTodo.stdout, "task=versioning", "phase todo classify must resolve task=versioning");
+  const statusDoc = runPreflight(["classify", "--paths", "docs/STATUS.md"]);
+  assert(statusDoc.status === 0, `status doc classify should pass, got status=${statusDoc.status} stderr=${statusDoc.stderr}`);
+  assertContains(statusDoc.stdout, "task=versioning", "status doc classify must resolve task=versioning");
 }
 
 {
-  const phaseTodoVariants = runPreflight(["classify", "--paths", "docs/PHASE_B_TODO.md,docs/PHASE_C_TODO.md"]);
-  assert(phaseTodoVariants.status === 0, `phase todo variants classify should pass, got status=${phaseTodoVariants.status} stderr=${phaseTodoVariants.stderr}`);
-  assertContains(phaseTodoVariants.stdout, "task=versioning", "phase todo variants classify must resolve task=versioning");
+  const topLevelDocs = runPreflight(["classify", "--paths", "docs/WORKFLOW.md,docs/ARCHITECTURE.md"]);
+  assert(topLevelDocs.status === 0, `top-level docs classify should pass, got status=${topLevelDocs.status} stderr=${topLevelDocs.stderr}`);
+  assertContains(topLevelDocs.stdout, "task=versioning", "top-level docs classify must resolve task=versioning");
 }
 
 {
@@ -126,8 +126,8 @@ function runPreflight(args) {
 }
 
 const protocolFiles = [
-  "docs/START_HERE.md",
-  "docs/LLM_OPERATING_PROTOCOL.md",
+  "docs/WORKFLOW.md",
+  "docs/llm/OPERATING_PROTOCOL.md",
   "docs/llm/ui/UI_TASK_ENTRY.md",
   "docs/llm/sim/SIM_TASK_ENTRY.md",
   "docs/llm/contracts/CONTRACT_TASK_ENTRY.md",
@@ -146,13 +146,13 @@ const uiTaskEntry = fs.readFileSync(path.join(root, "docs/llm/ui/UI_TASK_ENTRY.m
 assertContains(uiTaskEntry, "src/app/main.js", "UI task entry must mention src/app/main.js for caller/orchestration work");
 
 const mandatoryReading = fs.readFileSync(path.join(root, "MANDATORY_READING.md"), "utf8");
-assertContains(mandatoryReading, "docs/START_HERE.md", "MANDATORY_READING must redirect to START_HERE");
+assertContains(mandatoryReading, "docs/WORKFLOW.md", "MANDATORY_READING must redirect to WORKFLOW");
 
-const masterLog = fs.readFileSync(path.join(root, "docs/MASTER_CHANGE_LOG.md"), "utf8");
-assertContains(masterLog, "Fallback", "MASTER_CHANGE_LOG fallback policy missing");
+const statusDoc = fs.readFileSync(path.join(root, "docs/STATUS.md"), "utf8");
+assertContains(statusDoc, "Fallback", "STATUS fallback policy missing");
 
 const sync = assertLlmGateSync(manifest);
-assert(sync.policySource === "docs/LLM_ENTRY.md", "LLM policy source drift");
+assert(sync.policySource === "docs/llm/ENTRY.md", "LLM policy source drift");
 assert(Array.isArray(sync.invariants) && sync.invariants.length >= 3, "LLM invariants missing");
 
 const adapt = createLlmCommandAdapter();
