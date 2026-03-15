@@ -121,6 +121,11 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 
 ## Append-Only Change Log
 
+### 2026-03-15 session `entry-naming-and-backup-anchor-audit`
+- Entry-Benennung fuer technische Checks entkoppelt: `llm:entry|ack|check` ersetzt durch `llm:preflight:start|ack|check`, damit Chat-Entry (Prozess) und CLI-Preflight (Technik) nicht verwechselt werden.
+- Sicheres Backup-Anchor-Audit automatisiert: neues Script `tools/backup-anchor-audit.mjs` plus `npm run backup:audit`, `npm run backup:audit:apply` und `npm run backup:audit:fix-local`.
+- Audit-Regeln: mindestens ein echter (non-main) Pre-Rewrite-Tag, canonical Anchor-Tag (`backup-main-pre-rewrite-anchor`) und Fail bei Backup-Branches, die auf `main` zeigen.
+
 ### 2026-03-15 session `version-correction-0.7.3`
 - Produktversion als neue Truth auf `0.7.3` gesetzt (ersetzt bisherige `2.6.0` Anzeigen).
 - Synchronisiert: `package.json`, `package-lock.json`, `src/project/contract/manifest.js`, `README.md`, `index.html`, `docs/ARCHITECTURE.md`, `docs/STATUS.md`.
