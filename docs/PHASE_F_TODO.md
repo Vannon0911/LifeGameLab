@@ -5,6 +5,7 @@ Zweck: P1-Progression auf stabiler Phase-E-Basis umsetzen, ohne neue Parallel-Sy
 ## Status
 
 - Produktiv strikt gesperrt bis Phase E stabil voll gemerged ist.
+- Aktueller Dateistand am 2026-03-15: `tests/test-phase-e-integrity.mjs` fehlt; damit bleibt Phase F hart gesperrt.
 - P1-Startvoraussetzungen:
   - Phase D abgeschlossen
   - Phase E liefert kanonisch: `world.zoneRole`, `world.zoneId`, `world.zoneMeta`, `sim.patternCatalog`, `sim.patternBonuses`

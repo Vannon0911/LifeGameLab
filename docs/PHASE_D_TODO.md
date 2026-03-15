@@ -7,6 +7,8 @@ Zweck: Infrastruktur und aktive Sicht/Fog-Regeln nach stabiler DNA-Zone.
 - Phase D ist aktiv; D1 ist abgeschlossen.
 - D2 und D3 sind abgeschlossen.
 - D4-D8 bleiben offen.
+- Gegenprobe am 2026-03-15: `npm run test:quick`, `npm run test:truth` und `node tests/test-release-candidate-integrity.mjs` laufen gruen.
+- Diese Gegenprobe ersetzt die offenen D4-D8-Tickets nicht; sie zeigt nur, dass der aktuelle Baum stabil testet.
 - Nicht in D1 enthalten:
   - kein Infrastruktur-Bau-Produktivcode
   - kein aktives Fog-Produktivcode

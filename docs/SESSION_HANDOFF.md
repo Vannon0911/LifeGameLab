@@ -16,6 +16,14 @@
 - Phase E, F und G sind vorbereitet, aber strikt gesperrt bis ihre jeweilige Vorphase stabil abgeschlossen ist.
 - Kanonische Restphasen-Doku ab jetzt: `docs/PHASE_D_TODO.md`, `docs/PHASE_E_TODO.md`, `docs/PHASE_F_TODO.md`, `docs/PHASE_G_TODO.md`.
 
+## Testlage 2026-03-15
+- Verifiziert gruen: `npm run test:quick`
+- Verifiziert gruen: `npm run test:truth`
+- Verifiziert gruen: `node tests/test-release-candidate-integrity.mjs`
+- Weiterhin fehlend: `tests/test-phase-e-integrity.mjs`
+- Weiterhin fehlend: `tests/test-phase-f-progression-integrity.mjs`
+- `tests/test-release-candidate-integrity.mjs` existiert, ist aber noch nicht in `tools/test-suites.mjs` registriert.
+
 ## Verbindliche Produkt- und Architekturentscheidungen
 - Main-Run-Raeume sind exakt und ausschliesslich: `lage`, `eingriffe`, `evolution`, `welt`, `labor`.
 - Raumbedeutungen:
