@@ -56,9 +56,9 @@ export const TECH_TREE = [
   { id: "light_harvest", label: "Photonenfang", desc: "Lichtzug steigt, frühe Autonomie wird sicherer.", stage: 1, lane: "metabolism", requires: [], commandReq: 0.00 },
   { id: "nutrient_harvest", label: "Nährstoffzug", desc: "Stabiler Rohstofffluss für wachsende Cluster.", stage: 1, lane: "metabolism", requires: [], commandReq: 0.00 },
   { id: "toxin_resist", label: "Toxinfilter", desc: "Entlastet fragile Linien in giftigen Feldern.", stage: 1, lane: "survival", requires: [], commandReq: 0.00 },
-  { id: "reserve_buffer", label: "Reservekern", desc: "Mehr Energiespeicher für längere autonome Phasen.", stage: 2, lane: "survival", requires: ["nutrient_harvest"], commandReq: 0.08 },
-  { id: "cooperative_network", label: "Signalnetz", desc: "Verbundene Zellen bilden belastbare Cluster.", stage: 2, lane: "cluster", requires: ["light_harvest"], commandReq: 0.10 },
-  { id: "cluster_split", label: "Split-Kern", desc: "Strategisches 4x4-Split als neue Gruppen-Seedung.", stage: 2, lane: "cluster", requires: ["cooperative_network"], commandReq: 0.14 },
+  { id: "reserve_buffer", label: "Reservekern", desc: "Mehr Energiespeicher für längere autonome Phasen.", stage: 2, lane: "survival", requires: ["nutrient_harvest"], commandReq: 0.08, runRequirements: { minZoneTier: 2 } },
+  { id: "cooperative_network", label: "Signalnetz", desc: "Verbundene Zellen bilden belastbare Cluster.", stage: 2, lane: "cluster", requires: ["light_harvest"], commandReq: 0.10, runRequirements: { minPatternClasses: 1, minNetworkRatio: 0.10 } },
+  { id: "cluster_split", label: "Split-Kern", desc: "Strategisches 4x4-Split als neue Gruppen-Seedung.", stage: 2, lane: "cluster", requires: ["cooperative_network"], commandReq: 0.14, runRequirements: { requiresInfra: true } },
   { id: "reproductive_spread", label: "Teilungsdrang", desc: "Autonome Teilung wird bevorzugt, nicht manuelles Platzieren.", stage: 2, lane: "growth", requires: ["nutrient_harvest"], commandReq: 0.10 },
   { id: "defensive_shell", label: "Schutzhülle", desc: "Gibt dichten Clustern mehr Fehlertoleranz.", stage: 3, lane: "survival", requires: ["reserve_buffer", "toxin_resist"], commandReq: 0.18 },
   { id: "predator_raid", label: "Raid-Reflex", desc: "Öffnet aggressive Fernaktionen für starke Kolonien.", stage: 3, lane: "growth", requires: ["cooperative_network"], commandReq: 0.20 },
@@ -68,7 +68,7 @@ export const TECH_TREE = [
   { id: "scavenger_loop", label: "Aasfresser-Loop", desc: "Bindet toxische Restfelder produktiv zurück.", stage: 4, lane: "survival", requires: ["toxin_resist", "predator_raid"], commandReq: 0.25 },
   { id: "pioneer_explorer", label: "Pionierpfad", desc: "Belohnt weit verzweigte, stabile Kolonieketten.", stage: 5, lane: "growth", requires: ["nomadic_adapt", "cluster_split"], commandReq: 0.34 },
   { id: "symbiotic_bloom", label: "Symbiotische Blüte", desc: "Plantagen und Cluster erzeugen sich gegenseitig stabiler.", stage: 5, lane: "cluster", requires: ["nutrient_harvest", "hybrid_mixer"], commandReq: 0.32 },
-  { id: "mutation_diversify", label: "Mutationsfächer", desc: "Verstärkt langfristige Evolution über starke Cluster.", stage: 5, lane: "evolution", requires: ["hybrid_mixer", "scavenger_loop"], commandReq: 0.34 },
+  { id: "mutation_diversify", label: "Mutationsfächer", desc: "Verstärkt langfristige Evolution über starke Cluster.", stage: 5, lane: "evolution", requires: ["hybrid_mixer", "scavenger_loop"], commandReq: 0.34, runRequirements: { requiresInfra: true, minPatternClasses: 3, patternEnergyBonus: true } },
 ];
 
 export const TECH_BY_ID = Object.fromEntries(TECH_TREE.map((tech) => [tech.id, tech]));

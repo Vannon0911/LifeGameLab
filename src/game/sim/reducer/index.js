@@ -68,6 +68,7 @@ import {
 } from "../mainRunActions.js";
 import { hasAdjacentCommittedInfra4, isCommittedInfraValue } from "../infra.js";
 import { applyCanonicalZoneState, countAlivePlayerZoneRole, hasAdjacentZoneRole4, hasZoneRole } from "../canonicalZones.js";
+import { buildPatternState } from "../patterns.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
@@ -750,6 +751,7 @@ export function reducer(state, action, { rng }) {
         )
         : [];
       const canonicalZones = applyCanonicalZoneState(bootstrapWorld);
+      const patternState = buildPatternState(bootstrapWorld);
       const patches = [
         { op: "set", path: "/world/alive", value: alive },
         { op: "set", path: "/world/E", value: E },
@@ -766,6 +768,8 @@ export function reducer(state, action, { rng }) {
         { op: "set", path: "/world/zoneRole", value: canonicalZones.zoneRole },
         { op: "set", path: "/world/zoneId", value: canonicalZones.zoneId },
         { op: "set", path: "/world/zoneMeta", value: canonicalZones.zoneMeta },
+        { op: "set", path: "/sim/patternCatalog", value: patternState.patternCatalog },
+        { op: "set", path: "/sim/patternBonuses", value: patternState.patternBonuses },
         { op: "set", path: "/sim/unlockedZoneTier", value: 1 },
         { op: "set", path: "/sim/nextZoneUnlockKind", value: "DNA" },
         { op: "set", path: "/sim/nextZoneUnlockCostEnergy", value: nextZoneUnlockCostEnergy },
@@ -888,12 +892,22 @@ export function reducer(state, action, { rng }) {
         infraCandidateMask,
         dnaZoneMask: cloneTypedArray(world.dnaZoneMask),
       });
+      const patternState = buildPatternState({
+        ...world,
+        infraCandidateMask,
+        dnaZoneMask: cloneTypedArray(world.dnaZoneMask),
+        zoneRole: canonicalZones.zoneRole,
+        zoneId: canonicalZones.zoneId,
+        zoneMeta: canonicalZones.zoneMeta,
+      });
       const patches = [
         { op: "set", path: "/world/dnaZoneMask", value: cloneTypedArray(world.dnaZoneMask) },
         { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
         { op: "set", path: "/world/zoneRole", value: canonicalZones.zoneRole },
         { op: "set", path: "/world/zoneId", value: canonicalZones.zoneId },
         { op: "set", path: "/world/zoneMeta", value: canonicalZones.zoneMeta },
+        { op: "set", path: "/sim/patternCatalog", value: patternState.patternCatalog },
+        { op: "set", path: "/sim/patternBonuses", value: patternState.patternBonuses },
         { op: "set", path: "/sim/dnaZoneCommitted", value: true },
         { op: "set", path: "/sim/unlockedZoneTier", value: 2 },
         { op: "set", path: "/sim/nextZoneUnlockKind", value: "INFRA" },
@@ -1005,6 +1019,14 @@ export function reducer(state, action, { rng }) {
       for (const idx of candidateIndices) link[idx] = 1;
       infraCandidateMask.fill(0);
       const canonicalZones = applyCanonicalZoneState({ ...world, link, infraCandidateMask });
+      const patternState = buildPatternState({
+        ...world,
+        link,
+        infraCandidateMask,
+        zoneRole: canonicalZones.zoneRole,
+        zoneId: canonicalZones.zoneId,
+        zoneMeta: canonicalZones.zoneMeta,
+      });
       const patches = [
         { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
         { op: "set", path: "/world/link", value: link },
@@ -1012,6 +1034,8 @@ export function reducer(state, action, { rng }) {
         { op: "set", path: "/world/zoneId", value: canonicalZones.zoneId },
         { op: "set", path: "/world/zoneMeta", value: canonicalZones.zoneMeta },
         { op: "set", path: "/world/E", value: nextE },
+        { op: "set", path: "/sim/patternCatalog", value: patternState.patternCatalog },
+        { op: "set", path: "/sim/patternBonuses", value: patternState.patternBonuses },
         { op: "set", path: "/sim/playerDNA", value: Math.max(0, Number(state.sim.playerDNA || 0) - startCosts.dna) },
         { op: "set", path: "/sim/playerEnergyStored", value: Math.max(0, Number(state.sim.playerEnergyStored || 0) - startCosts.energy) },
         { op: "set", path: "/sim/infrastructureUnlocked", value: true },
@@ -1276,6 +1300,11 @@ export function simStepPatch(state, action, ctx) {
     lastExpandTick: state.sim.lastExpandTick || -99999,
     expansionWork: state.sim.expansionWork || 0,
     nextExpandCost: state.sim.nextExpandCost || 120,
+    dnaZoneCommitted: !!state.sim.dnaZoneCommitted,
+    infrastructureUnlocked: !!state.sim.infrastructureUnlocked,
+    patternCatalog: state.sim.patternCatalog || {},
+    patternBonuses: state.sim.patternBonuses || {},
+    worldPresetId: state.meta.worldPresetId,
   };
   simOut.expansionWork = Math.max(0, simOut.expansionWork + expansionWorkGain(simOut));
   simOut.nextExpandCost = expansionWorkCost(worldMutable, simOut);
@@ -1288,12 +1317,16 @@ export function simStepPatch(state, action, ctx) {
 
   if (shouldAutoExpand(worldMutable, simOut, currentTick)) {
     const expandedWorld = expandWorldPreserve(worldMutable, 1);
+    const canonicalZones = applyCanonicalZoneState(expandedWorld);
+    const patternState = buildPatternState(expandedWorld);
     expandedWorld.globalLearning = cloneJson(nextLearning);
     simOut.expansionWork = Math.max(0, simOut.expansionWork - expansionWorkCost(expandedWorld, simOut));
     simOut.expansionCount = (simOut.expansionCount || 0) + 1;
     simOut.lastExpandTick = currentTick;
     simOut.nextExpandCost = expansionWorkCost(expandedWorld, simOut);
     simOut.aliveRatio = simOut.aliveCount / Math.max(1, expandedWorld.w * expandedWorld.h);
+    simOut.patternCatalog = patternState.patternCatalog;
+    simOut.patternBonuses = patternState.patternBonuses;
 
     patches.push({ op: "set", path: "/meta/gridW", value: expandedWorld.w });
     patches.push({ op: "set", path: "/meta/gridH", value: expandedWorld.h });
@@ -1329,6 +1362,8 @@ export function simStepPatch(state, action, ctx) {
     const alivePlayerDnaCells = countAlivePlayerZoneRole(worldMutable, ZONE_ROLE.DNA, playerLineageId);
     simOut.playerDNA = Number(simOut.playerDNA || 0) + alivePlayerDnaCells * 0.1 * dnaYieldScale;
   }
+  simOut.patternCatalog = simOut.patternCatalog || state.sim.patternCatalog || {};
+  simOut.patternBonuses = simOut.patternBonuses || state.sim.patternBonuses || {};
   Object.assign(simOut, deriveStageState(worldMutable, simOut, state.meta));
   applyGoalCode(simOut, currentTick);
 
