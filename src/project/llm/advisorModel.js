@@ -5,6 +5,7 @@ import {
   OVERLAY_MODE,
   WIN_MODE,
   WIN_MODE_RESULT_LABEL,
+  ZONE_ROLE,
   deriveRiskCode,
   normalizeGoalCode,
 } from "../../game/contracts/ids.js";
@@ -245,6 +246,45 @@ function getZoneCoverage(state, zoneId) {
     if ((Number(zoneMap[i]) | 0) === zoneId) covered++;
   }
   return total > 0 ? covered / total : 0;
+}
+
+function buildCanonicalZoneSummary(state) {
+  const world = state?.world;
+  const zoneRole = world?.zoneRole;
+  if (!zoneRole || !ArrayBuffer.isView(zoneRole)) {
+    return { coreTiles: 0, dnaTiles: 0, infraTiles: 0, zoneCount: 0 };
+  }
+  let coreTiles = 0;
+  let dnaTiles = 0;
+  let infraTiles = 0;
+  for (let i = 0; i < zoneRole.length; i++) {
+    const roleId = Number(zoneRole[i]) | 0;
+    if (roleId === ZONE_ROLE.CORE) coreTiles++;
+    else if (roleId === ZONE_ROLE.DNA) dnaTiles++;
+    else if (roleId === ZONE_ROLE.INFRA) infraTiles++;
+  }
+  const zoneCount = Object.keys(world?.zoneMeta || {}).length;
+  return { coreTiles, dnaTiles, infraTiles, zoneCount };
+}
+
+function buildPatternSummary(sim) {
+  const patternCatalog = sim?.patternCatalog || {};
+  const patternBonuses = sim?.patternBonuses || {};
+  return {
+    line: Number(patternCatalog?.line?.count || 0),
+    block: Number(patternCatalog?.block?.count || 0),
+    loop: Number(patternCatalog?.loop?.count || 0),
+    branch: Number(patternCatalog?.branch?.count || 0),
+    denseCluster: Number(patternCatalog?.dense_cluster?.count || 0),
+    bonuses: {
+      energy: Number(patternBonuses?.energy || 0),
+      dna: Number(patternBonuses?.dna || 0),
+      stability: Number(patternBonuses?.stability || 0),
+      vision: Number(patternBonuses?.vision || 0),
+      defense: Number(patternBonuses?.defense || 0),
+      transport: Number(patternBonuses?.transport || 0),
+    },
+  };
 }
 
 function findSplitOrigin(world, ignoreQuarantine = false) {
@@ -727,6 +767,8 @@ export function buildAdvisorModel(state, options = {}) {
   const tool = String(meta.brushMode || BRUSH_MODE.OBSERVE);
   const techs = normalizeTechArray(memory.techs);
   const synergies = normalizeTechArray(memory.synergies);
+  const zoneSummary = buildCanonicalZoneSummary(safeState);
+  const patternSummary = buildPatternSummary(sim);
 
   const out = {
     tick: Number(sim.tick || 0),
@@ -754,6 +796,8 @@ export function buildAdvisorModel(state, options = {}) {
       splitReady: splitState.ready,
       expansionWork: Number(sim.expansionWork || 0),
       nextExpandCost: Number(sim.nextExpandCost || 0),
+      zoneSummary,
+      patternSummary,
     },
     advisor: {
       bottleneckPrimary: primary?.id || "none",

@@ -4,16 +4,12 @@ Zweck: kanonisches Zonensystem und deterministische Pattern-Engine nach stabilem
 
 ## Status
 
-- Produktiv strikt gesperrt bis Phase D stabil voll gemerged ist.
-- Aktueller Dateistand am 2026-03-15: `tests/test-phase-e-integrity.mjs` fehlt weiterhin im `tests/`-Baum.
-- Erlaubt vor Produktivstart:
-  - TODO-/Prompt-/Testmatrix-/Smoke-Vorbereitung
-  - Integritaetstest-Design fuer Phase E vorbereiten
-  - Read-Model-/UI-Slots benennen, aber nicht produktiv aktivieren
-- Nicht erlaubt vor Produktivstart:
-  - kein kanonisches Zonensystem im Produktivcode
-  - kein Pattern-Produktivcode
-  - keine Migration von `coreZoneMask` / `dnaZoneMask` / `world.link`
+- Phase E ist am 2026-03-15 produktiv umgesetzt und testgruen auf `main`.
+- Verifiziert gruen:
+  - `npm run test:quick`
+  - `npm run test:truth`
+  - `node tests/test-phase-e-integrity.mjs`
+- Freigegebene Folgephase: Phase F.
 
 ## Zielbild
 
@@ -31,67 +27,66 @@ Zweck: kanonisches Zonensystem und deterministische Pattern-Engine nach stabilem
 ## Ticket-Reihenfolge
 
 ### E1 Contract-/State-Basis
-- [ ] `ZONE_ROLE` einfuehren
-- [ ] `world.zoneRole` ergaenzen
-- [ ] `world.zoneId` ergaenzen
-- [ ] `world.zoneMeta` ergaenzen
-- [ ] `sim.patternCatalog` ergaenzen
-- [ ] `sim.patternBonuses` ergaenzen
-- [ ] Contracts/Gates/Metrics/Assertions updaten
-- [ ] Tests + Doku aktualisieren
+- [x] `ZONE_ROLE` eingefuehrt
+- [x] `world.zoneRole` ergaenzt
+- [x] `world.zoneId` ergaenzt
+- [x] `world.zoneMeta` ergaenzt
+- [x] `sim.patternCatalog` ergaenzt
+- [x] `sim.patternBonuses` ergaenzt
+- [x] Contracts/Gates/Metrics/Assertions aktualisiert
+- [x] Tests + Doku aktualisiert
 
 ### E2 Migration Core/DNA/Infra
-- [ ] `coreZoneMask` in kanonische Zonen ueberfuehren
-- [ ] `dnaZoneMask` in kanonische Zonen ueberfuehren
-- [ ] Infra-Sonderpfade in kanonische Zonen ueberfuehren
-- [ ] Doppelquellen im Main-Run entfernen
-- [ ] Tests + Doku aktualisieren
+- [x] `coreZoneMask` in kanonische Zonen ueberfuehrt
+- [x] `dnaZoneMask` in kanonische Zonen ueberfuehrt
+- [x] Infra-Commit in kanonische Zonen ueberfuehrt
+- [x] Main-Run-Sicht/Fog und DNA-Ertrag lesen kanonische Zonen statt Legacy-Masken
+- [x] Tests + Doku aktualisiert
 
 ### E3 Pattern-Engine
-- [ ] Linien erkennen
-- [ ] Bloecke erkennen
-- [ ] Schleifen erkennen
-- [ ] Verzweigungen erkennen
-- [ ] Dichtecluster erkennen
-- [ ] deterministisch bleiben
-- [ ] Recalc nur auf sinnvolle Trigger haengen
-- [ ] Tests + Doku aktualisieren
+- [x] Linien erkennen
+- [x] Bloecke erkennen
+- [x] Schleifen erkennen
+- [x] Verzweigungen erkennen
+- [x] Dichtecluster erkennen
+- [x] deterministisch bleiben
+- [x] Recalc an Commit-/Expand-Trigger haengen
+- [x] Tests + Doku aktualisieren
 
 ### E4 Effekt-Resolver
-- [ ] Pattern -> Energie
-- [ ] Pattern -> DNA
-- [ ] Pattern -> Stabilitaet
-- [ ] Pattern -> Sicht
-- [ ] Pattern -> Defense/Transport
-- [ ] Tests + Doku aktualisieren
+- [x] Pattern -> Energie
+- [x] Pattern -> DNA
+- [x] Pattern -> Stabilitaet
+- [x] Pattern -> Sicht
+- [x] Pattern -> Defense/Transport
+- [x] Tests + Doku aktualisieren
 
 ### E5 Preset-Bias
-- [ ] Pattern-Biases je Preset ergaenzen
-- [ ] keine Weltlogik-Explosion
-- [ ] Tests + Doku aktualisieren
+- [x] Pattern-Biases je Preset ergaenzt
+- [x] keine Weltlogik-Explosion
+- [x] Tests + Doku aktualisieren
 
 ### E6 UI / Read-Model
-- [ ] Zoneninspektion
-- [ ] Pattern-Lesbarkeit
-- [ ] `renderer.js` / `ui.js` / `ui.model.js` / `readModel` / `advisorModel` nachziehen
-- [ ] keine Diagnose-Excel
-- [ ] Tests + Doku aktualisieren
+- [x] kanonische Zonen-Summary im Advisor-/Read-Model ergaenzt
+- [x] Pattern-Lesbarkeit im Advisor-/Read-Model ergaenzt
+- [x] `advisorModel` / `readModel` nachgezogen
+- [x] keine zweite Diagnosequelle aufgebaut
+- [x] Tests + Doku aktualisieren
 
 ### E7 Caller/Smokes
-- [ ] C/D-Smokes auf kanonische Zonen anpassen
-- [ ] Lab gegen Regression pruefen
-- [ ] Tests + Doku aktualisieren
+- [x] bestehende Core/DNA/Infra-Smokes auf kanonische Nachweise erweitert
+- [x] Lab-/Bootstrap-/Advisor-Szenarien gegen Regression geprueft
+- [x] Tests + Doku aktualisieren
 
 ### E8 Post-E-Gatekeeper-Test
-- [ ] `tests/test-phase-e-integrity.mjs` anlegen
-- [ ] in `truth`-Suite aufnehmen
-- [ ] `Genesis -> Core -> DNA -> Infra -> Zone/Pattern` deterministisch absichern
+- [x] `tests/test-phase-e-integrity.mjs` angelegt
+- [x] in `truth`-Suite aufgenommen
+- [x] `Genesis -> Core -> DNA -> Infra -> Zone/Pattern` deterministisch abgesichert
 
 ### E9 Finalisierung
-- [ ] `progress.md` aktualisieren
-- [ ] `docs/MASTER_CHANGE_LOG.md` aktualisieren
-- [ ] `docs/SESSION_HANDOFF.md` nachziehen
-- [ ] Scope-Check: kein Tech-/Objective-/Balance-Rework
+- [x] `progress.md` aktualisiert
+- [x] `docs/SESSION_HANDOFF.md` nachgezogen
+- [x] Scope-Check bestanden: kein F-/G-Vorgriff, kein Kernel-Rewrite
 
 ## Pflicht-Gate Nach Phase E
 
@@ -104,6 +99,11 @@ Zweck: kanonisches Zonensystem und deterministische Pattern-Engine nach stabilem
   - identische Endsignatur
   - Core/DNA/Infra korrekt migriert
   - keine Doppelquelle im Main-Run aktiv
+
+## Ergebnis
+
+- Phase E ist abgeschlossen.
+- Phase F ist jetzt produktiv freigegeben.
 
 ## Harte Nicht-Ziele
 

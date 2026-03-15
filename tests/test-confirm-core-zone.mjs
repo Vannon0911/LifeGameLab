@@ -4,7 +4,7 @@ startEvidenceCase("test-confirm-core-zone.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
-import { BRUSH_MODE, GAME_MODE, RUN_PHASE } from "../src/game/contracts/ids.js";
+import { BRUSH_MODE, GAME_MODE, RUN_PHASE, ZONE_ROLE } from "../src/game/contracts/ids.js";
 import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
 
 function assert(cond, msg) {
@@ -54,9 +54,12 @@ function createGenesisZoneStore(seed, presetId = "river_delta") {
   assert(after.sim.dnaZoneCommitted === false, "core confirm must not mark dna zone committed");
   assert(after.sim.nextInfraUnlockCostDNA === 0, "core confirm must not expose infra unlock cost yet");
   assert(after.sim.cpuBootstrapDone === 1, "core confirm must mark cpu bootstrap done");
+  assert(Object.keys(after.world.zoneMeta || {}).length >= 1, "core confirm must populate canonical zoneMeta");
+  assert(Number(after.sim.patternBonuses?.energy || 0) >= 0, "core confirm must populate pattern bonuses");
 
   let founderCount = 0;
   let coreCount = 0;
+  let canonicalCoreCount = 0;
   let cpuAliveCount = 0;
   for (let i = 0; i < after.world.founderMask.length; i++) {
     const founder = Number(after.world.founderMask[i]) | 0;
@@ -65,11 +68,13 @@ function createGenesisZoneStore(seed, presetId = "river_delta") {
     const lineage = Number(after.world.lineageId[i]) | 0;
     if (founder === 1) founderCount++;
     if (core === 1) coreCount++;
+    if ((Number(after.world.zoneRole[i]) | 0) === ZONE_ROLE.CORE) canonicalCoreCount++;
     assert(core === founder, `core mask drift at idx=${i}`);
     if (alive === 1 && lineage === (Number(after.meta.cpuLineageId || 2) | 0)) cpuAliveCount++;
   }
   assert(founderCount === 4, `expected 4 founders, got ${founderCount}`);
   assert(coreCount === 4, `expected 4 core tiles, got ${coreCount}`);
+  assert(canonicalCoreCount === 4, `expected 4 canonical core tiles, got ${canonicalCoreCount}`);
   assert(cpuAliveCount === 4, `expected 4 cpu bootstrap cells, got ${cpuAliveCount}`);
 }
 

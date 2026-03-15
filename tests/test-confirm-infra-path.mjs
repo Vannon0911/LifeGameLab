@@ -4,7 +4,7 @@ startEvidenceCase("test-confirm-infra-path.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
-import { BRUSH_MODE, RUN_PHASE } from "../src/game/contracts/ids.js";
+import { BRUSH_MODE, RUN_PHASE, ZONE_ROLE } from "../src/game/contracts/ids.js";
 import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
 
 function assert(cond, msg) {
@@ -87,6 +87,7 @@ function createInfraCommitStore(seed, presetId = "river_delta") {
   }
   const coreXY = coreIndices.map((idx) => ({ x: idx % active.world.w, y: (idx / active.world.w) | 0 }));
   const minX = Math.min(...coreXY.map((pos) => pos.x));
+  const maxX = Math.max(...coreXY.map((pos) => pos.x));
   const minY = Math.min(...coreXY.map((pos) => pos.y));
   const maxY = Math.max(...coreXY.map((pos) => pos.y));
   const validDnaCells = [
@@ -101,9 +102,10 @@ function createInfraCommitStore(seed, presetId = "river_delta") {
     store.dispatch({ type: "TOGGLE_DNA_ZONE_CELL", payload: { ...cell, remove: false } });
   }
   store.dispatch({ type: "CONFIRM_DNA_ZONE" });
+  const infraX = minX - 2 >= 0 ? minX - 2 : maxX + 1;
   const pathCells = [
-    coreXY[0],
-    { x: minX - 1, y: minY },
+    { x: infraX, y: minY },
+    { x: infraX, y: maxY },
   ];
   patchPlayerCells(store, pathCells);
   patchPlayerEnergy(store, 6);
@@ -137,10 +139,13 @@ function createInfraCommitStore(seed, presetId = "river_delta") {
   assert(after.sim.infraBuildMode === "", "infra confirm must leave build mode");
   assert(Number(after.sim.playerDNA || 0) === dnaBefore - 38, "infra confirm must spend unlock dna plus build dna");
   assert(Math.round(Number(after.sim.playerEnergyStored || 0) * 1000) === Math.round((energyBefore - 10) * 1000), "infra confirm must spend stored energy");
+  assert(Object.keys(after.world.zoneMeta || {}).length >= 3, "infra confirm must populate canonical zoneMeta");
   for (const cell of pathCells) {
     const idx = cell.y * after.world.w + cell.x;
     assert(Number(after.world.link[idx] || 0) > 0, "infra confirm must commit staged path to world.link");
     assert(Number(after.world.infraCandidateMask[idx] || 0) === 0, "infra confirm must clear staged candidate path");
+    assert(Number(after.world.zoneRole[idx] || 0) === ZONE_ROLE.INFRA || Number(after.world.zoneRole[idx] || 0) === ZONE_ROLE.CORE, "infra confirm must stamp canonical infra/core role");
+    assert(Number(after.world.zoneId[idx] || 0) > 0, "infra confirm must stamp canonical zoneId");
   }
 }
 

@@ -26,6 +26,13 @@ export const GAME_RESULT = Object.freeze({
   LOSS: "loss",
 });
 
+export const ZONE_ROLE = Object.freeze({
+  NONE: 0,
+  CORE: 1,
+  DNA: 2,
+  INFRA: 3,
+});
+
 export const GAME_MODE = Object.freeze({
   GENESIS: "genesis",
   LAB_AUTORUN: "lab_autorun",

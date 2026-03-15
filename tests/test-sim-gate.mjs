@@ -42,6 +42,11 @@ mustThrow(() => {
 mustNotThrow(() => {
   assertSimPatchesAllowed(manifest, state, "CONFIRM_CORE_ZONE", [
     { op: "set", path: "/world/coreZoneMask", value: new Uint8Array(tileCount) },
+    { op: "set", path: "/world/zoneRole", value: new Int8Array(tileCount) },
+    { op: "set", path: "/world/zoneId", value: new Uint16Array(tileCount) },
+    { op: "set", path: "/world/zoneMeta", value: {} },
+    { op: "set", path: "/sim/patternCatalog", value: {} },
+    { op: "set", path: "/sim/patternBonuses", value: { energy: 0, dna: 0, stability: 0, vision: 0, defense: 0, transport: 0 } },
     { op: "set", path: "/sim/unlockedZoneTier", value: 1 },
     { op: "set", path: "/sim/nextZoneUnlockKind", value: "DNA" },
     { op: "set", path: "/sim/nextZoneUnlockCostEnergy", value: 12 },
@@ -68,6 +73,9 @@ mustNotThrow(() => {
 mustNotThrow(() => {
   assertSimPatchesAllowed(manifest, state, "CONFIRM_DNA_ZONE", [
     { op: "set", path: "/world/dnaZoneMask", value: new Uint8Array(tileCount) },
+    { op: "set", path: "/world/zoneRole", value: new Int8Array(tileCount) },
+    { op: "set", path: "/world/zoneId", value: new Uint16Array(tileCount) },
+    { op: "set", path: "/world/zoneMeta", value: {} },
     { op: "set", path: "/sim/unlockedZoneTier", value: 2 },
     { op: "set", path: "/sim/dnaZoneCommitted", value: true },
     { op: "set", path: "/sim/nextZoneUnlockKind", value: "INFRA" },
@@ -79,10 +87,30 @@ mustNotThrow(() => {
     { op: "set", path: "/sim/infraBuildMode", value: "" },
     { op: "set", path: "/sim/infraBuildCostEnergy", value: 10 },
     { op: "set", path: "/sim/infraBuildCostDNA", value: 8 },
+    { op: "set", path: "/sim/patternCatalog", value: {} },
+    { op: "set", path: "/sim/patternBonuses", value: { energy: 0, dna: 0, stability: 0, vision: 0, defense: 0, transport: 0 } },
     { op: "set", path: "/sim/zone2PlacementBudget", value: 0 },
     { op: "set", path: "/sim/runPhase", value: "run_active" },
     { op: "set", path: "/sim/running", value: true },
   ]);
 }, "SIM_GATE_PHASE_C_CONTRACT_KEYS");
+
+mustNotThrow(() => {
+  assertSimPatchesAllowed(manifest, state, "CONFIRM_INFRA_PATH", [
+    { op: "set", path: "/world/infraCandidateMask", value: new Uint8Array(tileCount) },
+    { op: "set", path: "/world/link", value: new Float32Array(tileCount) },
+    { op: "set", path: "/world/zoneRole", value: new Int8Array(tileCount) },
+    { op: "set", path: "/world/zoneId", value: new Uint16Array(tileCount) },
+    { op: "set", path: "/world/zoneMeta", value: {} },
+    { op: "set", path: "/world/E", value: new Float32Array(tileCount) },
+    { op: "set", path: "/sim/patternCatalog", value: {} },
+    { op: "set", path: "/sim/patternBonuses", value: { energy: 0, dna: 0, stability: 0, vision: 0, defense: 0, transport: 0 } },
+    { op: "set", path: "/sim/playerDNA", value: 1 },
+    { op: "set", path: "/sim/playerEnergyStored", value: 1 },
+    { op: "set", path: "/sim/infrastructureUnlocked", value: true },
+    { op: "set", path: "/sim/infraBuildMode", value: "" },
+    { op: "set", path: "/sim/running", value: true },
+  ]);
+}, "SIM_GATE_PHASE_E_INFRA_KEYS");
 
 console.log("SIM_GATE_OK");
