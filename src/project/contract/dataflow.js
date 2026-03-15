@@ -36,7 +36,7 @@ const DISPATCH_SOURCES = Object.freeze({
   SET_ZONE: ["src/game/ui/ui.js"],
   BUY_EVOLUTION: ["src/game/ui/ui.js"],
   SET_PLAYER_DOCTRINE: ["src/game/ui/ui.js"],
-  SET_WIN_MODE: ["src/game/ui/ui.js"],
+  SET_WIN_MODE: [],
   SET_OVERLAY: ["src/game/ui/ui.js"],
   SET_PLACEMENT_COST: [],
   RUN_BENCHMARK: ["src/game/ui/ui.js"],
