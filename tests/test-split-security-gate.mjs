@@ -47,6 +47,29 @@ function earnDNA(store, minimum) {
   return state;
 }
 
+function patchClusterRunRequirements(store) {
+  store.dispatch({
+    type: "APPLY_BUFFERED_SIM_STEP",
+    payload: {
+      patches: [
+        {
+          op: "set",
+          path: "/sim/patternCatalog",
+          value: {
+            line: { count: 1, zoneIds: [1], anchors: [1] },
+            block: { count: 0, zoneIds: [], anchors: [] },
+            loop: { count: 0, zoneIds: [], anchors: [] },
+            branch: { count: 0, zoneIds: [], anchors: [] },
+            dense_cluster: { count: 0, zoneIds: [], anchors: [] },
+          },
+        },
+        { op: "set", path: "/sim/networkRatio", value: 0.20 },
+      ],
+    },
+  });
+  return store.getState();
+}
+
 function findEmptyClusterOrigin(state, size = 4) {
   const { w, h, alive } = state.world;
   for (let y = 0; y <= h - size; y++) {
@@ -106,6 +129,7 @@ function unlockSplit(store) {
     state = stepFor(store, 1);
     guard++;
   }
+  state = patchClusterRunRequirements(store);
   state = earnDNA(store, 10);
   assert(state.sim.playerDNA >= 10, `Not enough DNA for cooperative_network: ${state.sim.playerDNA}`);
   store.dispatch({ type: "BUY_EVOLUTION", payload: { archetypeId: "cooperative_network" } });
@@ -117,6 +141,7 @@ function unlockSplit(store) {
     state = stepFor(store, 1);
     guard++;
   }
+  state = patchClusterRunRequirements(store);
   guard = 0;
   while (Number(state.sim.playerDNA || 0) < 10 && guard < 40) {
     state = earnDNA(store, 10);

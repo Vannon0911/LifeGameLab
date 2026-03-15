@@ -4,6 +4,9 @@ export const WIN_MODE = Object.freeze({
   EFFICIENCY: "efficiency",
   EXTINCTION: "extinction",
   ENERGY_COLLAPSE: "energy_collapse",
+  CORE_COLLAPSE: "core_collapse",
+  VISION_BREAK: "vision_break",
+  NETWORK_DECAY: "network_decay",
 });
 
 export const WIN_MODE_SELECTABLE = Object.freeze([
@@ -18,6 +21,9 @@ export const WIN_MODE_RESULT_LABEL = Object.freeze({
   [WIN_MODE.EFFICIENCY]: "Effizienz-Meister",
   [WIN_MODE.EXTINCTION]: "Ausrottung",
   [WIN_MODE.ENERGY_COLLAPSE]: "Energie-Kollaps",
+  [WIN_MODE.CORE_COLLAPSE]: "Kern-Kollaps",
+  [WIN_MODE.VISION_BREAK]: "Sicht-Bruch",
+  [WIN_MODE.NETWORK_DECAY]: "Netz-Zerfall",
 });
 
 export const GAME_RESULT = Object.freeze({

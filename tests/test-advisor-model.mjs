@@ -148,6 +148,7 @@ function makeState({
   assert(highGap.advisor.bottleneckPrimary === "toxin", `severity-gap primary drift: ${highGap.advisor.bottleneckPrimary}`);
   assert(typeof highGap.status.zoneSummary === "object", "zoneSummary missing from advisor status");
   assert(typeof highGap.status.patternSummary === "object", "patternSummary missing from advisor status");
+  assert(typeof highGap.runIdentity.worldPresetId === "string", "worldPresetId missing from runIdentity");
 
   const lowGapState = makeState({
     techs: ALL_TECHS,
@@ -159,6 +160,21 @@ function makeState({
   });
   const lowGap = buildAdvisorDebugModel(lowGapState);
   assert(lowGap.advisor.bottleneckPrimary === "energy", `priority tie-break drift: ${lowGap.advisor.bottleneckPrimary}`);
+}
+
+{
+  const blockedTechState = makeState({
+    simPatch: {
+      playerStage: 4,
+      playerDNA: 80,
+      infrastructureUnlocked: false,
+      patternCatalog: {},
+      patternBonuses: { energy: 0, dna: 0, stability: 0, vision: 0, defense: 0, transport: 0 },
+    },
+  });
+  const blockedTech = buildAdvisorDebugModel(blockedTechState);
+  assert(Array.isArray(blockedTech.advisor.blockedTechReasonLabels), "blocked tech labels missing");
+  assert(blockedTech.advisor.blockedTechReasonLabels.length >= 1, "blocked tech labels must not be empty");
 }
 
 {

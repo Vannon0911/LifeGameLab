@@ -55,6 +55,12 @@ assert(GOAL_CODE_VALUES.includes(goal), `goal must be canonical code, got '${goa
 
 assert(WIN_MODE_SELECTABLE.includes(WIN_MODE.STOCKPILE), "stockpile must stay selectable contract id");
 assert(!WIN_MODE_SELECTABLE.includes("territory"), "territory must not become selectable contract id");
+assert(!WIN_MODE_SELECTABLE.includes(WIN_MODE.CORE_COLLAPSE), "core_collapse must not become selectable");
+assert(!WIN_MODE_SELECTABLE.includes(WIN_MODE.VISION_BREAK), "vision_break must not become selectable");
+assert(!WIN_MODE_SELECTABLE.includes(WIN_MODE.NETWORK_DECAY), "network_decay must not become selectable");
 assert(typeof WIN_MODE_RESULT_LABEL[WIN_MODE.STOCKPILE] === "string", "stockpile UI label missing");
+assert(typeof WIN_MODE_RESULT_LABEL[WIN_MODE.CORE_COLLAPSE] === "string", "core collapse UI label missing");
+assert(typeof WIN_MODE_RESULT_LABEL[WIN_MODE.VISION_BREAK] === "string", "vision break UI label missing");
+assert(typeof WIN_MODE_RESULT_LABEL[WIN_MODE.NETWORK_DECAY] === "string", "network decay UI label missing");
 
 console.log("STRING_CONTRACT_OK brush/overlay/winmode/goal contracts stable");

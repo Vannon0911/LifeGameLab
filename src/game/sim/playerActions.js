@@ -527,6 +527,26 @@ export function handleBuyEvolution(state, action, devMutationCatalog) {
   if (unlocked.has(archetypeId)) return [];
   if (!hasRequiredTechs(unlocked, tech.requires)) return [];
   if (commandScore + 1e-9 < Number(tech.commandReq || 0)) return [];
+  const req = tech.runRequirements;
+  if (req) {
+    if (Number(req.minZoneTier || 0) > 0 && Number(state.sim.unlockedZoneTier || 0) < Number(req.minZoneTier || 0)) return [];
+    if (req.requiresInfra && !state.sim.infrastructureUnlocked) return [];
+    if (Number(req.minPatternClasses || 0) > 0) {
+      let count = 0;
+      const patternCatalog = state.sim.patternCatalog || {};
+      for (const key of Object.keys(patternCatalog)) {
+        if (Number(patternCatalog[key]?.count || 0) > 0) count++;
+      }
+      if (count < Number(req.minPatternClasses || 0)) return [];
+    }
+    if (Number(req.minNetworkRatio || 0) > 0 && Number(state.sim.networkRatio || 0) + 1e-9 < Number(req.minNetworkRatio || 0)) return [];
+    if (Number(req.minExpansionCount || 0) > 0 && Number(state.sim.expansionCount || 0) < Number(req.minExpansionCount || 0)) return [];
+    if (Array.isArray(req.positivePatternBonuses) && req.positivePatternBonuses.length > 0) {
+      const bonuses = state.sim.patternBonuses || {};
+      const hasPositiveBonus = req.positivePatternBonuses.some((key) => Number(bonuses[key] || 0) > 0);
+      if (!hasPositiveBonus) return [];
+    }
+  }
 
   unlocked.add(archetypeId);
   currentMemory.techs = [...unlocked].sort();

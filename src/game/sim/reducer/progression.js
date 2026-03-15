@@ -1,4 +1,4 @@
-import { deriveRiskCode, RISK_CODE } from "../../contracts/ids.js";
+import { GOAL_CODE, deriveRiskCode, RISK_CODE } from "../../contracts/ids.js";
 import { BIOME_IDS } from "../worldPresets.js";
 
 function clamp01(value) {
@@ -104,12 +104,23 @@ export function deriveStageState(world, simLike, meta) {
     playerAliveCount,
     meanWaterField,
   });
+  const patternCatalog = simLike?.patternCatalog || {};
+  const patternBonuses = simLike?.patternBonuses || {};
+  let patternClassCount = 0;
+  for (const key of Object.keys(patternCatalog)) {
+    if (Number(patternCatalog[key]?.count || 0) > 0) patternClassCount++;
+  }
+  const hasPositivePatternBonus = Object.keys(patternBonuses).some((key) => Number(patternBonuses[key] || 0) > 0);
 
   const gates = {
     2: playerAliveCount >= 8 && playerEnergyNet > 0,
-    3: yieldCategories >= 2 && meanWaterField >= 0.10,
-    4: clusterRatio >= 0.12 && activeBiomes >= 2,
-    5: signals60 && risk !== RISK_CODE.COLLAPSE && risk !== RISK_CODE.CRITICAL,
+    3: yieldCategories >= 2 && meanWaterField >= 0.10 && simLike?.dnaZoneCommitted === true,
+    4: clusterRatio >= 0.12 && activeBiomes >= 2 && simLike?.infrastructureUnlocked === true,
+    5: signals60
+      && risk !== RISK_CODE.COLLAPSE
+      && risk !== RISK_CODE.CRITICAL
+      && patternClassCount > 0
+      && hasPositivePatternBonus,
   };
   const thresholds = {
     2: 0.22,
@@ -131,4 +142,32 @@ export function deriveStageState(world, simLike, meta) {
     playerStage: nextStage,
     activeBiomeCount: activeBiomes,
   };
+}
+
+export function deriveGoalCodeWithPresetBias(simLike, meta, fallbackGoalCode) {
+  const presetId = String(meta?.worldPresetId || "river_delta");
+  const networkRatio = Number(simLike?.networkRatio || 0);
+  const playerEnergyNet = Number(simLike?.playerEnergyNet || 0);
+  const patternCatalog = simLike?.patternCatalog || {};
+  const patternBonuses = simLike?.patternBonuses || {};
+  let patternClassCount = 0;
+  for (const key of Object.keys(patternCatalog)) {
+    if (Number(patternCatalog[key]?.count || 0) > 0) patternClassCount++;
+  }
+  const hasPositivePatternBonus = Object.keys(patternBonuses).some((key) => Number(patternBonuses[key] || 0) > 0);
+
+  if (presetId === "river_delta" && simLike?.infrastructureUnlocked && networkRatio >= 0.10 && playerEnergyNet > 0) {
+    return GOAL_CODE.EXPANSION;
+  }
+  if (presetId === "dry_basin") {
+    if (playerEnergyNet < 2) return GOAL_CODE.SURVIVE_ENERGY;
+    return GOAL_CODE.HARVEST_SECURE;
+  }
+  if (presetId === "wet_meadow") {
+    if (patternClassCount > 0 && hasPositivePatternBonus && Number(simLike?.playerDNA || 0) >= Math.max(5, Number(simLike?.playerStage || 1) * 5)) {
+      return GOAL_CODE.EVOLUTION_READY;
+    }
+    return GOAL_CODE.GROWTH;
+  }
+  return fallbackGoalCode;
 }

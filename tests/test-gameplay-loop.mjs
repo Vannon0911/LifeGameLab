@@ -99,6 +99,29 @@ startEvidenceCase("test-gameplay-loop.mjs");
       return store.getState();
     }
 
+    function patchClusterRunRequirements(store) {
+      store.dispatch({
+        type: "APPLY_BUFFERED_SIM_STEP",
+        payload: {
+          patches: [
+            {
+              op: "set",
+              path: "/sim/patternCatalog",
+              value: {
+                line: { count: 1, zoneIds: [1], anchors: [1] },
+                block: { count: 0, zoneIds: [], anchors: [] },
+                loop: { count: 0, zoneIds: [], anchors: [] },
+                branch: { count: 0, zoneIds: [], anchors: [] },
+                dense_cluster: { count: 0, zoneIds: [], anchors: [] },
+              },
+            },
+            { op: "set", path: "/sim/networkRatio", value: 0.20 },
+          ],
+        },
+      });
+      return store.getState();
+    }
+
     let pass = 0;
     const total = 7;
 
@@ -245,6 +268,7 @@ startEvidenceCase("test-gameplay-loop.mjs");
         s = stepFor(store, 1);
         guard++;
       }
+      s = patchClusterRunRequirements(store);
       dnaCost = 10;
       s = earnDNA(store, dnaCost);
       assert(s.sim.playerDNA >= dnaCost, `Not enough DNA for cooperative_network: ${s.sim.playerDNA} < ${dnaCost}`);
@@ -258,6 +282,7 @@ startEvidenceCase("test-gameplay-loop.mjs");
         s = stepFor(store, 1);
         guard++;
       }
+      s = patchClusterRunRequirements(store);
       guard = 0;
       dnaCost = 10;
       while (Number(s.sim.playerDNA || 0) < dnaCost && guard < 32) {
