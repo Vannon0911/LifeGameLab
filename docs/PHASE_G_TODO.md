@@ -6,7 +6,7 @@ Zweck: Balance, Cleanup und RC-Haertung.
 
 - Produktiv strikt gesperrt bis Phase F stabil voll gemerged ist.
 - Gegenprobe am 2026-03-15: `npm run test:quick`, `npm run test:truth` und `node tests/test-release-candidate-integrity.mjs` laufen gruen.
-- `tests/test-release-candidate-integrity.mjs` existiert, ist aber noch nicht in `truth` oder `full` registriert.
+- `tests/test-release-candidate-integrity.mjs` ist jetzt in `truth` registriert und laeuft dort gruen mit.
 - Erlaubt vor Produktivstart:
   - TODO-/Prompt-/Testmatrix-/Release-Checklist-Vorbereitung
   - RC-Testdesign und Suite-Einordnung vorbereiten
@@ -71,7 +71,7 @@ Zweck: Balance, Cleanup und RC-Haertung.
 
 ### G6 RC-Gate-Test
 - [x] `tests/test-release-candidate-integrity.mjs` anlegen
-- [ ] in `truth` oder `full` registrieren
+- [x] in `truth` oder `full` registrieren
 
 ## Pflicht-Gate Nach Phase G
 

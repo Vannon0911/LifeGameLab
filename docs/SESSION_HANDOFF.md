@@ -28,7 +28,7 @@
 - Verifiziert gruen: `node tests/test-release-candidate-integrity.mjs`
 - Weiterhin fehlend: `tests/test-phase-e-integrity.mjs`
 - Weiterhin fehlend: `tests/test-phase-f-progression-integrity.mjs`
-- `tests/test-release-candidate-integrity.mjs` existiert, ist aber noch nicht in `tools/test-suites.mjs` registriert.
+- `tests/test-release-candidate-integrity.mjs` ist jetzt in `tools/test-suites.mjs` unter `truth` registriert.
 
 ## Verbindliche Produkt- und Architekturentscheidungen
 - Main-Run-Raeume sind exakt und ausschliesslich: `lage`, `eingriffe`, `evolution`, `welt`, `labor`.
