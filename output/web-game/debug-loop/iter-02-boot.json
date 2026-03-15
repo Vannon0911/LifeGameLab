@@ -85,9 +85,9 @@
     "doctrine": "equilibrium"
   },
   "perf": {
-    "fpsEma": 46.08,
-    "frameMsEma": 21.7,
-    "renderMsEma": 24.94,
+    "fpsEma": 43.43,
+    "frameMsEma": 23.03,
+    "renderMsEma": 21.22,
     "quality": 3,
     "renderEvery": 1,
     "dprCap": 2,
