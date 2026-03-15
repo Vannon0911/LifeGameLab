@@ -1,5 +1,11 @@
 {
+<<<<<<< HEAD
   "entryPath": "docs/llm/ENTRY.md",
   "sha256": "72ade2829a6911ccd60164b1051dc04bba39166784d8a9fa63109cc089535400",
   "requiredReadOrderCount": 5
+=======
+  "entryPath": "docs/LLM_ENTRY.md",
+  "sha256": "6a2655b3e727ee762a3a5a90c7455de27527b73127aec4e00e94533cb8d86d49",
+  "requiredReadOrderCount": 26
+>>>>>>> origin/main
 }
