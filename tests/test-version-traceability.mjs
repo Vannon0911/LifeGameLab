@@ -23,9 +23,12 @@ if (packageJson.version !== APP_VERSION) {
   fail(`package.json version ${packageJson.version} does not match APP_VERSION ${APP_VERSION}`);
 }
 
-const majorVersion = Number(String(APP_VERSION).split(".")[0]);
-if (!Number.isFinite(majorVersion) || majorVersion !== SCHEMA_VERSION) {
-  fail(`APP_VERSION major ${majorVersion} must match SCHEMA_VERSION ${SCHEMA_VERSION}`);
+if (!/^\d+\.\d+\.\d+$/.test(String(APP_VERSION))) {
+  fail(`APP_VERSION ${APP_VERSION} must be SemVer-like (x.y.z)`);
+}
+
+if (!Number.isInteger(SCHEMA_VERSION) || SCHEMA_VERSION < 1) {
+  fail(`SCHEMA_VERSION ${SCHEMA_VERSION} must be a positive integer`);
 }
 
 if (packageJson.scripts?.test !== "node tools/run-all-tests.mjs") {

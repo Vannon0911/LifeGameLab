@@ -1,4 +1,4 @@
-# STATUS — v2.6.0
+# STATUS — v0.7.3
 
 ## Zweck
 Diese Datei ist die einzige Status-, Bugfix-, Release- und Changelog-Quelle.
@@ -120,6 +120,11 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Verifikation: `npm run test:quick` gruen, inklusive `test-advisor-model`, `test-overlay-diagnostics`, `test-string-contract`, `test-version-traceability`.
 
 ## Append-Only Change Log
+
+### 2026-03-15 session `version-correction-0.7.3`
+- Produktversion als neue Truth auf `0.7.3` gesetzt (ersetzt bisherige `2.6.0` Anzeigen).
+- Synchronisiert: `package.json`, `package-lock.json`, `src/project/contract/manifest.js`, `README.md`, `index.html`, `docs/ARCHITECTURE.md`, `docs/STATUS.md`.
+- `tests/test-version-traceability.mjs` entkoppelt von der alten Regel `APP_VERSION.major == SCHEMA_VERSION`; Schema bleibt separat versioniert.
 
 ### 2026-03-15 session `determinism-drift-audit-hardening`
 - Session-Audit hat drei Drift-Risiken bestaetigt: (1) `guardDeterminism` war abschaltbar, (2) `simStepBuffer` lief ohne Determinismus-Guard, (3) Entropie-Policy fehlte bei `crypto.randomUUID` und `crypto.getRandomValues`.

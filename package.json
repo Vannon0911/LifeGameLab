@@ -1,6 +1,6 @@
 {
   "name": "lifexlab-game-sandbox",
-  "version": "2.6.0",
+  "version": "0.7.3",
   "private": true,
   "type": "module",
   "scripts": {
