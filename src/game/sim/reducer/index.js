@@ -203,12 +203,13 @@ function deriveVisibilityState(world, presetId, playerLineageId) {
 
   const radii = getVisionRadii(presetId);
   for (let i = 0; i < N; i++) {
-    if (!isAlivePlayerOwnedTile(world, i, playerLineageId)) continue;
+    const isPlayerOwned = (Number(world?.lineageId?.[i] || 0) | 0) === (playerLineageId | 0);
+    if (!isPlayerOwned) continue;
     const x = i % w;
     const y = (i / w) | 0;
     if (isMarked(world?.coreZoneMask, i)) revealRadius(visibility, w, h, x, y, radii.core);
     if (isMarked(world?.dnaZoneMask, i)) revealRadius(visibility, w, h, x, y, radii.dna);
-    if (Number(world?.link?.[i] || 0) > 0) revealRadius(visibility, w, h, x, y, radii.infra);
+    if (isCommittedInfraValue(world?.link?.[i])) revealRadius(visibility, w, h, x, y, radii.infra);
   }
 
   for (let i = 0; i < N; i++) {
