@@ -4,15 +4,17 @@ Zweck: Balance, Cleanup und RC-Haertung.
 
 ## Status
 
-- Produktiv strikt gesperrt bis Phase F stabil voll gemerged ist.
-- Gegenprobe am 2026-03-15: `npm run test:quick`, `npm run test:truth` und `node tests/test-release-candidate-integrity.mjs` laufen gruen.
+- Phase F ist am 2026-03-15 produktiv abgeschlossen; Phase G ist damit freigegeben.
+- Gegenprobe am 2026-03-15: `npm run test:quick`, `npm run test:truth`, `node tests/test-phase-f-progression-integrity.mjs` und `node tests/test-release-candidate-integrity.mjs` laufen gruen.
 - `tests/test-release-candidate-integrity.mjs` ist jetzt in `truth` registriert und laeuft dort gruen mit.
+- `tests/test-phase-f-progression-integrity.mjs` ist jetzt ebenfalls in `truth` registriert und laeuft dort gruen mit.
 - Erlaubt vor Produktivstart:
-  - TODO-/Prompt-/Testmatrix-/Release-Checklist-Vorbereitung
-  - RC-Testdesign und Suite-Einordnung vorbereiten
-  - Balance-Checklisten formulieren
-- Nicht erlaubt vor Produktivstart:
-  - keine neuen Kernfeatures
+  - G1 Cleanup
+  - G2 Vollsuite + Perf-Budgets
+  - G3 Balance
+  - G4/G5 Doku- und Release-Haertung
+- Harte Startbedingung bleibt:
+  - keine neuen Kernfeatures ausser G-Cleanup/RC-Haertung
   - keine neue Zone
   - keine neuen Presets
   - kein Sim-Mode-Revival im Main-Run
