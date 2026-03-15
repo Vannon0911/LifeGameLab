@@ -4,15 +4,12 @@ Zweck: kanonisches Zonensystem und deterministische Pattern-Engine nach stabilem
 
 ## Status
 
-- Produktiv strikt gesperrt bis Phase D stabil voll gemerged ist.
-- Erlaubt vor Produktivstart:
-  - TODO-/Prompt-/Testmatrix-/Smoke-Vorbereitung
-  - Integritaetstest-Design fuer Phase E vorbereiten
-  - Read-Model-/UI-Slots benennen, aber nicht produktiv aktivieren
-- Nicht erlaubt vor Produktivstart:
-  - kein kanonisches Zonensystem im Produktivcode
-  - kein Pattern-Produktivcode
-  - keine Migration von `coreZoneMask` / `dnaZoneMask` / `world.link`
+- Phase D ist stabil abgeschlossen; Phase E darf auf dieser Basis produktiv anlaufen.
+- Aktueller Stand: E1 ist erledigt, E2+ bleiben offen.
+- Weiterhin nicht erlaubt ausserhalb der jeweiligen Tickets:
+  - keine Migration von `coreZoneMask` / `dnaZoneMask` / `world.link` vor E2
+  - keine Pattern-Auswertung vor E3/E4
+  - keine UI-/Read-Model-Aktivierung vor E6
 
 ## Zielbild
 
@@ -30,14 +27,19 @@ Zweck: kanonisches Zonensystem und deterministische Pattern-Engine nach stabilem
 ## Ticket-Reihenfolge
 
 ### E1 Contract-/State-Basis
-- [ ] `ZONE_ROLE` einfuehren
-- [ ] `world.zoneRole` ergaenzen
-- [ ] `world.zoneId` ergaenzen
-- [ ] `world.zoneMeta` ergaenzen
-- [ ] `sim.patternCatalog` ergaenzen
-- [ ] `sim.patternBonuses` ergaenzen
-- [ ] Contracts/Gates/Metrics/Assertions updaten
-- [ ] Tests + Doku aktualisieren
+- [x] `ZONE_ROLE` einfuehren
+- [x] `world.zoneRole` ergaenzen
+- [x] `world.zoneId` ergaenzen
+- [x] `world.zoneMeta` ergaenzen
+- [x] `sim.patternCatalog` ergaenzen
+- [x] `sim.patternBonuses` ergaenzen
+- [x] Contracts/Gates/Metrics/Assertions updaten
+- [x] Tests + Doku aktualisieren
+
+E1 ist bewusst nur die Basis:
+- neue Contract-/State-Felder sind vorhanden und durch Gates/Bootstrap abgesichert
+- `GEN_WORLD`/Expansion preserven die neuen Felder deterministisch
+- keine Core-/DNA-/Infra-Migration und keine Pattern-Berechnung in diesem Ticket
 
 ### E2 Migration Core/DNA/Infra
 - [ ] `coreZoneMask` in kanonische Zonen ueberfuehren
