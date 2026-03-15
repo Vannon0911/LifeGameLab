@@ -5,6 +5,7 @@ Zweck: kanonisches Zonensystem und deterministische Pattern-Engine nach stabilem
 ## Status
 
 - Produktiv strikt gesperrt bis Phase D stabil voll gemerged ist.
+- Aktueller Dateistand am 2026-03-15: `tests/test-phase-e-integrity.mjs` fehlt weiterhin im `tests/`-Baum.
 - Erlaubt vor Produktivstart:
   - TODO-/Prompt-/Testmatrix-/Smoke-Vorbereitung
   - Integritaetstest-Design fuer Phase E vorbereiten
