@@ -121,6 +121,16 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 
 ## Append-Only Change Log
 
+### 2026-03-15 session `determinism-drift-audit-hardening`
+- Session-Audit hat drei Drift-Risiken bestaetigt: (1) `guardDeterminism` war abschaltbar, (2) `simStepBuffer` lief ohne Determinismus-Guard, (3) Entropie-Policy fehlte bei `crypto.randomUUID` und `crypto.getRandomValues`.
+- Fix umgesetzt:
+  - `src/core/kernel/store.js`: Guard nicht mehr deaktivierbar, Crypto-Entropie im Guard blockiert.
+  - `src/core/runtime/simStepBuffer.js`: Reducer + simStep im Buffer laufen jetzt im gleichen Guard-Kontext; Debug-Compute fuer Testnachweis exponiert.
+  - `src/project/llm/policy.js`: Entropie-Blockliste um `performance.now`, `crypto.randomUUID`, `crypto.getRandomValues` erweitert.
+  - `tests/test-determinism-guard-policy.mjs` und `tests/test-simstep-buffer-guard.mjs` neu als harte Drift-Regressionstests.
+  - `tools/test-suites.mjs` erweitert, damit beide neuen Tests im quick-Gate verpflichtend laufen.
+- Verifikation: `npm test` gruen nach den Aenderungen.
+
 ### 2026-03-15 session `release-plan-rc-phase-g`
 - Konkreten Release-Plan fuer Phase G in drei Milestones (R1 P0, R2 RC-Haertung, R3 RC-Freeze) dokumentiert.
 - Gates und Exit-Kriterien pro Milestone explizit als Startanweisung fuer die naechste Session festgehalten.

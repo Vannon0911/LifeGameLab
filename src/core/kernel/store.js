@@ -12,7 +12,10 @@ export function createStore(manifest, project, options = {}) {
   const adaptAction = typeof options.actionAdapter === "function"
     ? options.actionAdapter
     : (typeof project.adaptAction === "function" ? project.adaptAction : (a) => a);
-  const guardDeterminism = options.guardDeterminism !== false;
+  if (options.guardDeterminism === false) {
+    throw new Error("guardDeterminism cannot be disabled");
+  }
+  const guardDeterminism = true;
 
   let listeners = new Set();
 
@@ -121,6 +124,8 @@ export function runWithDeterminismGuard(fn, meta) {
   const OrigDate = globalThis.Date;
   const OrigIntl = globalThis.Intl;
   const OrigPerf = globalThis.performance;
+  const OrigCrypto = globalThis.crypto;
+  const cryptoRestorers = [];
   const blocked = (name) => () => { throw new Error(`Non-deterministic source blocked: ${name} (${meta.phase}:${meta.actionType})`); };
 
   Math.random = blocked("Math.random");
@@ -153,6 +158,40 @@ export function runWithDeterminismGuard(fn, meta) {
     });
   }
 
+  if (OrigCrypto && typeof OrigCrypto === "object") {
+    const patchCryptoMethod = (name, marker) => {
+      if (typeof OrigCrypto[name] !== "function") return;
+      const prev = OrigCrypto[name];
+      const replacement = blocked(marker);
+      try {
+        OrigCrypto[name] = replacement;
+      } catch {
+        try {
+          Object.defineProperty(OrigCrypto, name, {
+            configurable: true,
+            writable: true,
+            value: replacement,
+          });
+        } catch {
+          throw new Error(`Cannot enforce determinism guard for ${marker}`);
+        }
+      }
+      cryptoRestorers.push(() => {
+        try {
+          OrigCrypto[name] = prev;
+        } catch {
+          Object.defineProperty(OrigCrypto, name, {
+            configurable: true,
+            writable: true,
+            value: prev,
+          });
+        }
+      });
+    };
+    patchCryptoMethod("randomUUID", "crypto.randomUUID()");
+    patchCryptoMethod("getRandomValues", "crypto.getRandomValues()");
+  }
+
   try {
     return fn();
   } finally {
@@ -160,6 +199,9 @@ export function runWithDeterminismGuard(fn, meta) {
     Math.random = origRandom;
     globalThis.Intl = OrigIntl;
     globalThis.performance = OrigPerf;
+    for (let i = cryptoRestorers.length - 1; i >= 0; i -= 1) {
+      cryptoRestorers[i]();
+    }
   }
 }
 

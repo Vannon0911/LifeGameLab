@@ -12,6 +12,7 @@
   "sim": {
     "triggerPrefixes": [
       "src/game/sim/",
+      "src/core/runtime/",
       "src/project/project.logic.js",
       "docs/llm/sim/"
     ],
@@ -21,6 +22,7 @@
     "triggerPrefixes": [
       "src/game/contracts/",
       "src/project/contract/",
+      "src/project/llm/",
       "src/core/kernel/",
       "docs/llm/contracts/"
     ],
@@ -32,6 +34,7 @@
       "tools/llm-preflight.mjs",
       "tools/run-test-suite.mjs",
       "tools/run-all-tests.mjs",
+      "tools/test-suites.mjs",
       "tools/git-llm-guard.mjs",
       "tools/install-git-hooks.mjs",
       ".githooks/",

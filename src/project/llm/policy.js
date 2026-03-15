@@ -7,5 +7,12 @@ export const LLM_POLICY = Object.freeze({
     "deterministic_sim",
     "manifest_first_contracts",
   ]),
-  forbiddenEntropy: Object.freeze(["Math.random", "Date.now", "system_time"]),
+  forbiddenEntropy: Object.freeze([
+    "Math.random",
+    "Date.now",
+    "performance.now",
+    "crypto.randomUUID",
+    "crypto.getRandomValues",
+    "system_time",
+  ]),
 });
