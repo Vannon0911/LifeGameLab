@@ -18,7 +18,6 @@ import {
   OVERLAY_MODE,
   OVERLAY_MODE_VALUES,
   RUN_PHASE,
-  WIN_MODE,
   WIN_MODE_RESULT_LABEL,
 } from "../contracts/ids.js";
 import {
@@ -26,7 +25,6 @@ import {
   PANEL_BY_KEY,
   PANEL_DEFS,
   PHYSICS_KEYS,
-  STAGE_THRESHOLDS,
   STATUS_GROUPS,
   TECH_LANE_LABELS,
   RENDER_DETAIL_MODE_OPTIONS,
@@ -44,10 +42,22 @@ import {
   getRiskState,
   getStructureState,
   getWinModeState,
-  getZoneState,
 } from "./ui.model.js";
-import { el, fmt, fmtSign, isDesktopLayout } from "./ui.dom.js";
+import { el, fmt, isDesktopLayout } from "./ui.dom.js";
 import { announceInLiveRegion, buildGateFeedback, createActionFeedback } from "./ui.feedback.js";
+
+const LAB_ONLY_BRUSH_MODES = new Set([
+  BRUSH_MODE.CELL_HARVEST,
+  BRUSH_MODE.SPLIT_PLACE,
+  BRUSH_MODE.ZONE_PAINT,
+  BRUSH_MODE.CELL_ADD,
+  BRUSH_MODE.CELL_REMOVE,
+  BRUSH_MODE.LIGHT,
+  BRUSH_MODE.LIGHT_REMOVE,
+  BRUSH_MODE.NUTRIENT,
+  BRUSH_MODE.TOXIN,
+  BRUSH_MODE.SATURATION_RESET,
+]);
 
 function countMaskTiles(mask) {
   if (!mask || typeof mask.length !== "number") return 0;
@@ -432,12 +442,14 @@ export class UI {
       this._sheet.classList.add("hidden");
       this._sheetBackdrop.classList.add("hidden");
       if (forceReset || !PANEL_BY_KEY[this._activeContext]) this._activeContext = "lage";
+      this._ensureLabBrushIsolation(this._activeContext || "lage");
       this._renderPanelBody(this._sidebarBody, this._store.getState());
     } else if (forceReset) {
       this._activeContext = "lage";
       this._sidebarBody.innerHTML = "";
       this._sheet.classList.add("hidden");
       this._sheetBackdrop.classList.add("hidden");
+      this._ensureLabBrushIsolation("lage");
     }
     this._updateContextButtons();
   }
@@ -476,6 +488,7 @@ export class UI {
       return;
     }
     this._activeContext = key;
+    this._ensureLabBrushIsolation(key);
     this._sheetTitle.textContent = PANEL_BY_KEY[key]?.title || key;
     this._sheet.classList.remove("hidden");
     this._sheetBackdrop.classList.remove("hidden");
@@ -492,6 +505,7 @@ export class UI {
     this._sheet.classList.add("hidden");
     this._sheetBackdrop.classList.add("hidden");
     document.getElementById("app")?.classList.remove("is-panel-open");
+    this._ensureLabBrushIsolation("lage");
     this._updateContextButtons();
     this._syncUiPanelState(false, this._activeContext || "lage");
   }
@@ -499,6 +513,7 @@ export class UI {
   // ── SIDEBAR (desktop) ────────────────────────────────────
   _toggleSidebar(key) {
     this._activeContext = key;
+    this._ensureLabBrushIsolation(key);
     this._renderPanelBody(this._sidebarBody, this._store.getState());
     this._updateContextButtons();
     this._syncUiPanelState(true, key);
@@ -507,6 +522,7 @@ export class UI {
   _closeContext() {
     if (isDesktopLayout()) {
       this._activeContext = "lage";
+      this._ensureLabBrushIsolation("lage");
       this._renderPanelBody(this._sidebarBody, this._store.getState());
       this._updateContextButtons();
       this._syncUiPanelState(true, "lage");
@@ -525,6 +541,23 @@ export class UI {
     const bench = window.__lifeGameBenchmark;
     if (!bench || typeof bench.getSnapshot !== "function") return null;
     return bench.getSnapshot();
+  }
+
+  _isLabOnlyBrushMode(mode) {
+    return LAB_ONLY_BRUSH_MODES.has(String(mode || ""));
+  }
+
+  _isLaborPanelActive(state = this._store.getState()) {
+    const activeTab = String(state?.meta?.ui?.activeTab || this._activeContext || "");
+    const panelOpen = state?.meta?.ui?.panelOpen;
+    return activeTab === "labor" && panelOpen !== false;
+  }
+
+  _ensureLabBrushIsolation(nextContext = this._activeContext, state = this._store.getState()) {
+    if (String(nextContext || "") === "labor") return;
+    const mode = String(state?.meta?.brushMode || BRUSH_MODE.OBSERVE);
+    if (!this._isLabOnlyBrushMode(mode)) return;
+    this._dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.OBSERVE } });
   }
 
   _getActiveToolMeta(state) {
@@ -750,86 +783,6 @@ export class UI {
       return;
     }
 
-    // ── ENERGIE (Analyse) ───────────────────────────────────
-    if (ctx === "legacy_energie") {
-      const eIn = Number(sim.playerEnergyIn || 0), eOut = Number(sim.playerEnergyOut || 0);
-      const eNet = Number(sim.playerEnergyNet || 0), eStored = Number(sim.playerEnergyStored || 0);
-      const cpuIntel = advisorModel?.cpuIntel || { summary: "CPU ausserhalb Sicht unbekannt", mode: "hidden", precise: false, visibleAlive: 0 };
-      const lShare = Number(sim.lightShare || 0), nShare = Number(sim.nutrientShare || 0);
-      const season = Number(sim.seasonPhase || 0);
-      const pAlive = Number(sim.playerAliveCount || 0);
-
-      const flowCard = el("section", "nx-card");
-      flowCard.setAttribute("aria-labelledby", "energy-flow-title");
-      const flowTitle = el("div", "nx-card-title", "Energiebilanz");
-      flowTitle.id = "energy-flow-title";
-      flowCard.appendChild(flowTitle);
-
-      for (const [label, val, cls] of [
-        ["Einnahmen", fmt(eIn,3), "nx-val-pos"],
-        ["Ausgaben",  fmt(eOut,3),"nx-val-neg"],
-        ["Netto",     fmtSign(eNet,3), eNet>=0?"nx-val-pos":"nx-val-neg"],
-        ["Gespeichert",fmt(eStored,2),"nx-val"],
-        ["CPU Intel", cpuIntel.summary, "nx-val"],
-      ]) {
-        const row = el("div", "nx-stat-row");
-        row.append(el("span", "nx-label", label), el("span", `nx-mono ${cls}`, val));
-        flowCard.appendChild(row);
-      }
-
-      const mkBar = (pct, cls, label) => {
-        const wrap = el("div", "nx-bar-wrap");
-        wrap.setAttribute("role", "progressbar");
-        wrap.setAttribute("aria-valuenow", Math.round(pct * 100));
-        wrap.setAttribute("aria-valuemin", "0");
-        wrap.setAttribute("aria-valuemax", "100");
-        wrap.setAttribute("aria-label", label);
-        const fill = el("div", `nx-bar-fill ${cls}`);
-        fill.style.width = `${Math.min(100,pct*100).toFixed(1)}%`;
-        wrap.appendChild(fill); return wrap;
-      };
-      const srcCard = el("section", "nx-card");
-      srcCard.setAttribute("aria-labelledby", "energy-sources-title");
-      const srcTitle = el("div", "nx-card-title", "Quellen");
-      srcTitle.id = "energy-sources-title";
-      srcCard.appendChild(srcTitle);
-
-      const lRow = el("div", "nx-stat-row nx-stat-row-col");
-      lRow.append(el("span","nx-label",`Licht ${(lShare*100).toFixed(1)}%`), mkBar(lShare,"nx-bar-light", "Licht-Anteil"));
-      const nRow = el("div", "nx-stat-row nx-stat-row-col");
-      nRow.append(el("span","nx-label",`Nährstoff ${(nShare*100).toFixed(1)}%`), mkBar(nShare,"nx-bar-nutrient", "Nährstoff-Anteil"));
-      srcCard.append(lRow, nRow);
-
-      const seaCard = el("section", "nx-card");
-      seaCard.setAttribute("aria-labelledby", "energy-season-title");
-      const seaTitle = el("div", "nx-card-title", "Saison");
-      seaTitle.id = "energy-season-title";
-      seaCard.appendChild(seaTitle);
-
-      const seasonLabel = season<0.25?"Frühling 🌱":season<0.5?"Sommer ☀":season<0.75?"Herbst 🍂":"Winter ❄";
-      const sRow = el("div", "nx-stat-row nx-stat-row-col");
-      sRow.append(el("span","nx-label",`${seasonLabel} ${(season*100).toFixed(0)}%`), mkBar(season,"nx-bar-season", "Saison-Fortschritt"));
-      seaCard.appendChild(sRow);
-
-      const fracCard = el("section", "nx-card");
-      fracCard.setAttribute("aria-labelledby", "energy-fractions-title");
-      const fracTitle = el("div", "nx-card-title", "Fraktionen");
-      fracTitle.id = "energy-fractions-title";
-      fracCard.appendChild(fracTitle);
-
-      const pRow2 = el("div", "nx-stat-row");
-      pRow2.append(el("span","nx-label","Spieler alive"), el("span","nx-mono nx-val-pos", String(pAlive)));
-      const cRow2 = el("div", "nx-stat-row");
-      cRow2.append(
-        el("span","nx-label","CPU Status"),
-        el("span","nx-mono nx-val-neg", cpuIntel.precise ? `${cpuIntel.visibleAlive} in Sicht` : cpuIntel.mode === "signature" ? "nur Signatur" : "keine Sicht")
-      );
-      fracCard.append(pRow2, cRow2);
-
-      container.append(flowCard, srcCard, seaCard, fracCard);
-      return;
-    }
-
     // ── EVOLUTION (Tech-Pfad) ───────────────────────────────
     if (ctx === "evolution") {
       const playerDNA = Number(sim.playerDNA || 0);
@@ -962,132 +915,7 @@ export class UI {
       }
       container.appendChild(synergyCard);
       return;
-    }
-
-
-    // ── HARVEST ────────────────────────────────────────────
-    if (ctx === "legacy_harvest") {
-      const playerDNA = Number(sim.playerDNA || 0);
-      const totalHarvested = Number(sim.totalHarvested || 0);
-      const playerStage = Number(sim.playerStage || 1);
-      const nextThr = playerStage < 5 ? STAGE_THRESHOLDS[playerStage] : null;
-
-      const card = el("section", "nx-card");
-      card.setAttribute("aria-labelledby", "harvest-info-title");
-      const harvestTitle = el("div", "nx-card-title", "DNA-Ernte");
-      harvestTitle.id = "harvest-info-title";
-      card.appendChild(harvestTitle);
-      
-      const dnaRow = el("div", "nx-stat-row");
-      dnaRow.append(el("span", "nx-label", "Verfügbare DNA"), el("span", "nx-mono nx-chip-dna", playerDNA.toFixed(1)));
-      card.appendChild(dnaRow);
-
-      const countRow = el("div", "nx-stat-row");
-      countRow.append(el("span", "nx-label", "Zellen geerntet"), el("span", "nx-mono", String(totalHarvested)));
-      card.appendChild(countRow);
-
-      if (nextThr !== null) {
-        const prog = Math.min(1, totalHarvested / nextThr);
-        const wrap = el("div","nx-bar-wrap"); 
-        wrap.setAttribute("role", "progressbar");
-        wrap.setAttribute("aria-valuenow", Math.round(prog * 100));
-        wrap.setAttribute("aria-label", `Meilenstein zur Stufe ${playerStage + 1}`);
-        const fill = el("div","nx-bar-fill nx-bar-stage");
-        fill.style.width = `${(prog*100).toFixed(1)}%`; wrap.appendChild(fill);
-        const nr = el("div","nx-stat-row");
-        nr.append(el("span","nx-label",`Meilenstein Stage ${playerStage+1}`), el("span","nx-mono",`${nextThr} Ernten nötig`));
-        card.append(nr, wrap);
-      }
-
-      const info = el("div", "nx-note", "Tipp: Ernte eigene Zellen, um DNA zu gewinnen. In HARVEST-Zonen erhältst du +50% Yield.");
-      card.appendChild(info);
-
-      container.appendChild(card);
-      return;
-    }
-
-    // ── TOOLS (Wachsen) ─────────────────────────────────────
-    if (ctx === "legacy_tools") {
-      const card = el("section","nx-card");
-      card.appendChild(el("div","nx-card-title","Kolonie erweitern"));
-      
-      const infoRow = el("div", "nx-stat-row");
-      infoRow.append(el("span", "nx-label", "Kosten"), el("span", "nx-mono nx-val-neg", "0.5 DNA / Zelle"));
-      card.appendChild(infoRow);
-
-      const radRow = el("div", "nx-stat-row nx-stat-row-col");
-      radRow.append(el("span", "nx-label", `Pinsel-Radius: ${meta.brushRadius || 3}`));
-      const radRange = document.createElement("input");
-      radRange.type = "range"; radRange.min = "1"; radRange.max = "10"; radRange.value = String(meta.brushRadius || 3);
-      radRange.className = "nx-range";
-      radRange.addEventListener("input", (e) => {
-        this._dispatch({ type:"SET_BRUSH", payload:{ brushRadius: Number(e.target.value) } });
-        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-      });
-      radRow.appendChild(radRange);
-      card.appendChild(radRow);
-
-      const hint = el("div", "nx-note", "Tipp: Platziere Zellen in der Nähe deiner Kolonie, um sie zu vergrößern. Achte auf deine Energiebilanz.");
-      card.appendChild(hint);
-
-      // Advanced tools hidden by default
-      const advBtn = el("button", "nx-btn nx-btn-ghost", "Experten-Werkzeuge");
-      advBtn.style.marginTop = "15px";
-      advBtn.addEventListener("click", () => {
-        advBtn.remove();
-        const advRow = el("div", "nx-row");
-        const brush = document.createElement("select"); brush.className="nx-select";
-        [[BRUSH_MODE.CELL_ADD,"🌱 Zelle setzen"],[BRUSH_MODE.CELL_REMOVE,"✂ Entfernen"],[BRUSH_MODE.CELL_HARVEST,"🧬 Ernten"],
-         [BRUSH_MODE.LIGHT,"☀ Licht +"],[BRUSH_MODE.LIGHT_REMOVE,"☀ Licht –"],[BRUSH_MODE.NUTRIENT,"🌿 Nährstoff +"],
-         [BRUSH_MODE.TOXIN,"☣ Toxin +"],[BRUSH_MODE.SATURATION_RESET,"↺ Sättigung –"],[BRUSH_MODE.ZONE_PAINT,"🧱 Zone malen"]
-        ].forEach(([v,t]) => {
-          const o = document.createElement("option"); o.value=v; o.textContent=t;
-          if ((meta.brushMode||BRUSH_MODE.CELL_ADD)===v) o.selected=true;
-          brush.appendChild(o);
-        });
-        brush.addEventListener("change", () => this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:brush.value } }));
-        advRow.append(el("span", "nx-label", "Modus"), brush);
-        card.appendChild(advRow);
-      });
-      card.appendChild(advBtn);
-
-      container.appendChild(card);
-      return;
-    }
-
-    // ── ZONEN ───────────────────────────────────────────────
-    if (ctx === "legacy_zonen") {
-      const card = el("section","nx-card");
-      card.setAttribute("aria-labelledby", "zones-placement-title");
-      const zonesTitle = el("div", "nx-card-title", "Zonen-Placement");
-      zonesTitle.id = "zones-placement-title";
-      card.appendChild(zonesTitle);
-
-      card.appendChild(el("div","nx-note","zone_paint-Pinsel aktivieren → Werkzeug. Dann auf Karte tippen."));
-      for (const z of ZONE_TYPES) {
-        const isActive = this._activeZoneType === z.id;
-        const row = el("div",`nx-zone-row${isActive ?" nx-zone-active":""}`);
-        row.append(el("span","nx-zone-name",`${z.id}: ${z.label}`), el("span","nx-zone-desc",z.desc));
-        if (z.id !== 0) {
-          row.style.cursor="pointer";
-          row.setAttribute("role", "button");
-          row.setAttribute("tabindex", "0");
-          row.setAttribute("aria-label", `Zone ${z.label} auswählen`);
-          row.setAttribute("aria-pressed", isActive);
-
-          const trigger = () => {
-            this._activeZoneType=z.id;
-            this._dispatch({ type:"SET_BRUSH", payload:{ brushMode:BRUSH_MODE.ZONE_PAINT } });
-            this._renderPanelBody(container, this._store.getState());
-          };
-          row.addEventListener("click", trigger);
-          row.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); trigger(); } });
-        }
-        card.appendChild(row);
-      }
-      container.append(card);
-      return;
-    }
+    }
 
     // ── WELT ────────────────────────────────────────────────
     if (ctx === "welt") {
@@ -1469,96 +1297,7 @@ export class UI {
 
       container.append(worldCard, learnCard, accCard, phyCard, rawCard);
       return;
-    }
-
-    // ── SIEG (Pfad & Blocker) ───────────────────────────────
-    if (ctx === "legacy_sieg") {
-      const currentMode = String(sim.winMode || WIN_MODE.SUPREMACY);
-      const playerStage = Number(sim.playerStage || 1);
-      const runLocked = Number(sim.tick || 0) > 0;
-      const WIN_MODES = [
-        { id: WIN_MODE.SUPREMACY, label:"Energie-Suprematie", desc:"Dominanz: EIn > CPU x 1.5", req:"Stage 2 empfohlen", stage:2 },
-        { id: WIN_MODE.STOCKPILE, label:"Territorial-Dominanz", desc:"Pop-Vorteil: Pop > CPU x 1.5", req:"Stage 3 empfohlen", stage:3 },
-        { id: WIN_MODE.EFFICIENCY, label:"Effizienz-Meister", desc:"Kontrolle: E/Zelle > 0.18", req:"Stage 4 empfohlen", stage:4 },
-      ];
-
-      const modeCard = el("section","nx-card");
-      modeCard.setAttribute("aria-labelledby", "victory-modes-title");
-      const modesTitle = el("div", "nx-card-title", "Siegpfad wählen");
-      modesTitle.id = "victory-modes-title";
-      modeCard.appendChild(modesTitle);
-      modeCard.appendChild(el("div", "nx-note", runLocked ? "Der Run-Pfad ist nach Tick 1 fixiert. Bereitschaft bleibt sichtbar, Umschalten ist gesperrt." : "Den Run-Pfad vor Tick 1 festlegen. Stage-Hinweise bleiben Bereitschaft, kein Auswahl-Lock."));
-
-      for (const m of WIN_MODES) {
-        const isActive = currentMode === m.id;
-        const ready = playerStage >= m.stage;
-        const isLocked = runLocked && !isActive;
-        const row = el("div",`nx-zone-row${isActive ?" nx-zone-active":""}${isLocked?" nx-archetype-locked":""}`);
-        row.style.cursor = isLocked ? "default" : "pointer";
-        row.setAttribute("role", "button");
-        row.setAttribute("tabindex", isLocked ? "-1" : "0");
-        row.setAttribute("aria-label", `Siegmodus ${m.label}: ${isLocked ? "Im laufenden Run fixiert" : m.desc}`);
-        row.setAttribute("aria-pressed", isActive);
-        if (isLocked) row.setAttribute("aria-disabled", "true");
-
-        const left2 = el("div","");
-        left2.appendChild(el("div","nx-zone-name",m.label));
-        left2.appendChild(el("div","nx-zone-desc", `${m.desc} · ${ready ? "Bereit" : m.req}`));
-        row.appendChild(left2);
-
-        if (!isLocked) {
-          if (isActive) row.appendChild(el("span","nx-val-pos","✓"));
-          const trigger = () => {
-            this._dispatch(
-              { type:"SET_WIN_MODE", payload:{ winMode:m.id } },
-              { ok: `Siegpfad ${m.label} aktiv.`, blocked: "Siegpfad konnte nicht gesetzt werden.", hint: "Nächster Schritt: Stage-Gate prüfen." }
-            );
-            queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-          };
-          row.addEventListener("click", trigger);
-          row.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); trigger(); } });
-        }
-        modeCard.appendChild(row);
-      }
-
-      const progCard = el("section","nx-card");
-      progCard.setAttribute("aria-labelledby", "victory-progress-title");
-      const progressTitle = el("div", "nx-card-title", "Fortschritt & Blocker");
-      progressTitle.id = "victory-progress-title";
-      progCard.appendChild(progressTitle);
-
-      const supTicks  = Number(sim.energySupremacyTicks||0);
-      const effTicks  = Number(sim.efficiencyTicks||0);
-      const lossStreak= Number(sim.lossStreakTicks||0);
-      const stockTicks= Number(sim.stockpileTicks||0);
-
-      const activeMode = WIN_MODES.find(m => m.id === currentMode);
-      const modeLocked = playerStage < (activeMode?.stage || 0);
-
-      const mkProg = (label, val, max, cls, active, blocker) => {
-        const row = el("div","nx-stat-row nx-stat-row-col");
-        const statusText = blocker ? `❌ ${blocker}` : (active ? `${val} / ${max}` : "⬡ inaktiv");
-        row.appendChild(el("span", active && !blocker ?"nx-label":"nx-label nx-label-dim", `${label}: ${statusText}`));
-        const wrap=el("div","nx-bar-wrap"); 
-        wrap.setAttribute("role", "progressbar");
-        wrap.setAttribute("aria-valuenow", Math.round((val / max) * 100));
-        wrap.setAttribute("aria-label", `${label} Fortschritt`);
-        const fill=el("div",`nx-bar-fill ${active && !blocker ? cls : "nx-bar-dim"}`);
-        fill.style.width=`${Math.min(100,(val/max)*100).toFixed(1)}%`; wrap.appendChild(fill);
-        row.appendChild(wrap); return row;
-      };
-
-      progCard.append(
-        mkProg("Suprematie", supTicks,  200, "nx-bar-light", currentMode===WIN_MODE.SUPREMACY, modeLocked && currentMode===WIN_MODE.SUPREMACY ? "Stage zu niedrig" : null),
-        mkProg("Territorium", stockTicks, 200, "nx-bar-nutrient", currentMode===WIN_MODE.STOCKPILE, modeLocked && currentMode===WIN_MODE.STOCKPILE ? "Stage zu niedrig" : null),
-        mkProg("Effizienz",  effTicks,  100, "nx-bar-nutrient", currentMode===WIN_MODE.EFFICIENCY, modeLocked && currentMode===WIN_MODE.EFFICIENCY ? "Stage zu niedrig" : null),
-        mkProg("Kollaps-Risiko", lossStreak, 150, "nx-bar-loss", true, null),
-      );
-      progCard.appendChild(el("div", "nx-note", `Aktiver Blocker: ${advisorModel.winProgress.blockerCode} - ${advisorModel.winProgress.blockerDetail}`));
-
-      container.append(modeCard, progCard);
-      return;
-    }
+    }
   }
 
     // ── GAME OVER OVERLAY ───────────────────────────────────
@@ -1622,6 +1361,17 @@ export class UI {
     if (wx<0||wy<0||wx>=state.meta.gridW||wy>=state.meta.gridH) return;
     const mode = state.meta.brushMode;
     const radius = state.meta.brushRadius || 3;
+    if (this._isLabOnlyBrushMode(mode) && !this._isLaborPanelActive(state)) {
+      this._ensureLabBrushIsolation(this._activeContext || "lage", state);
+      if (start) {
+        this._setActionFeedback({
+          ok: false,
+          message: "Labor-Rohwerkzeuge sind ausserhalb des Labor-Panels gesperrt.",
+          hint: "Wechsle in Labor fuer Legacy-Brushes oder nutze Main-Run-Eingriffe.",
+        });
+      }
+      return;
+    }
     if (String(state.sim?.infraBuildMode || "") === "path") {
       if (!start) return;
       const idx = wy * state.meta.gridW + wx;
@@ -1847,3 +1597,4 @@ export class UI {
     // --- Dev panel ─────────────────────────────────────────
   }
 }
+

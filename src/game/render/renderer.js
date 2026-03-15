@@ -258,141 +258,7 @@ export function computeFieldSurfaceColor(world, meta, idx) {
     : computeRenderModeFieldColor(world, meta, idx);
   return applyFogToColor(color, getTileFogState(world, idx));
 }
-
-// Background/tile pass (without direct cell colour)
-function writeBackgroundPixels(data, world, meta, w, h) {
-  const { alive, E, L, R, W, Sat, P, link, clusterField, superId } = world;
-  const Emax  = meta.physics.Emax || 3.2;
-  const mode  = meta.renderMode || "combined";
-
-  for (let j = 0; j < h; j++) {
-    for (let i = 0; i < w; i++) {
-      const idx = j * w + i;
-      const base = idx * 4;
-
-      const a  = alive[idx] === 1;
-      const lv = clamp01(L[idx]);
-      const ev = clamp01(E[idx] / Emax);
-      const rv = clamp01(R[idx]);
-      const wv = clamp01(W[idx]);
-      const svf = clamp01(Sat?.[idx] ?? 0);
-      const pv = clamp01(P?.[idx] ?? 0);
-      const lk = clamp01(link[idx]);
-      const cv = clamp01(clusterField?.[idx] ?? 0);
-      const sv = (superId?.[idx] ?? -1) >= 0 ? 1 : 0;
-
-      let r = 0, g = 0, b = 0, alpha = 255;
-
-      if (mode === "light") {
-        // Grayscale light reflection field
-        const lum = Math.round(14 + lv * 220);
-        r = lum; g = lum; b = lum;
-
-      } else if (mode === "energy") {
-        // Energy density
-        r = wv * 40; g = rv * 60; b = lv * 80;
-
-      } else if (mode === "fields") {
-        // Field map: nutrients (green), toxins (red), saturation (amber)
-        r = 18 + wv * 180 + svf * 90;
-        g = 14 + rv * 170 + pv * 110 - wv * 36;
-        b = 16 + lv * 70 + pv * 64 + (1 - svf) * 24;
-      } else if (mode === "diagnostic") {
-        // Dense all-signal field: every channel leaves a visible footprint.
-        r = 10 + wv * 170 + svf * 72 + (1 - lv) * 52;
-        g = 10 + rv * 150 + pv * 92 + lk * 28;
-        b = 10 + lv * 140 + cv * 56 + sv * 36;
-
-      } else if (mode === "cells") {
-        // Cells only, black bg
-        r = 0; g = 0; b = 0;
-
-      } else {
-        // "combined" — requested mapping:
-        // Saturation field: black (0) -> green (1)
-        // Light field: blue -> yellow gradient
-        const satMap = [0, svf * 228, 0];
-        const lightMap = [
-          34 + lv * 221,
-          88 + lv * 154,
-          255 - lv * 180,
-        ];
-        const toxDark = clamp01(wv * 0.55);
-        // Keep black at saturation=0, then tint toward blue/yellow by light.
-        const lightTint = svf * 0.46;
-        r = satMap[0] + lightMap[0] * lightTint;
-        g = satMap[1] + lightMap[1] * lightTint;
-        b = satMap[2] + lightMap[2] * lightTint;
-        // Toxins darken tiles slightly, but do not change the base mapping.
-        r *= 1 - toxDark * 0.24;
-        g *= 1 - toxDark * 0.24;
-        b *= 1 - toxDark * 0.24;
-      }
-
-      data[base]   = r;
-      data[base+1] = g;
-      data[base+2] = b;
-      data[base+3] = alpha;
-    }
-  }
-}
-
-// Cell colour pass (separate layer with alpha)
-function writeCellColorPixels(data, world, meta, w, h) {
-  const { alive, E, W, Sat, link, hue } = world;
-  const Emax = meta.physics.Emax || 3.2;
-  const mode = meta.renderMode || "combined";
-
-  for (let j = 0; j < h; j++) {
-    for (let i = 0; i < w; i++) {
-      const idx = j * w + i;
-      const base = idx * 4;
-      const a = alive[idx] === 1;
-      if (!a) {
-        data[base] = 0; data[base+1] = 0; data[base+2] = 0; data[base+3] = 0;
-        continue;
-      }
-
-      const ev = clamp01(E[idx] / Emax);
-      const wv = clamp01(W[idx]);
-      const svf = clamp01(Sat?.[idx] ?? 0);
-      const lk = clamp01(link[idx]);
-      const mut = mutationIntensityFromTrait(world?.trait, idx);
-      let cellHue = hue[idx];
-      if (wv > 0.4) cellHue = cellHue * (1 - wv * 0.4) + 20 * (wv * 0.4);
-
-      let sat = 70;
-      let lit = 45;
-      let alpha = 235;
-      if (mode === "light") {
-        sat = 20; lit = 65; alpha = 210;
-      } else if (mode === "energy") {
-        sat = 80; lit = 26 + ev * 54; alpha = 242;
-      } else if (mode === "fields") {
-        sat = 20 + (1 - svf) * 16;
-        lit = 30 + ev * 24 - wv * 8;
-        alpha = 145;
-      } else if (mode === "diagnostic") {
-        sat = 72 + lk * 16;
-        lit = 25 + ev * 26 + (1 - wv) * 12;
-        alpha = 205;
-      } else if (mode === "cells") {
-        sat = 12 + mut * 78; lit = 42 + ev * 28; alpha = 255;
-      } else {
-        sat = 8 + mut * 78 + lk * 6;
-        lit = 28 + ev * 38 + lk * 8;
-        alpha = Math.round((0.80 + ev * 0.15) * 255);
-      }
-
-      const c = hslToRgb(cellHue, sat, lit);
-      data[base] = c[0];
-      data[base+1] = c[1];
-      data[base+2] = c[2];
-      data[base+3] = alpha;
-    }
-  }
-}
-
+
 function drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim) {
   if (tilePx < 5) return;
   const { w, h, alive, link, hue } = world;
@@ -1020,66 +886,7 @@ function drawSuperBlocks(ctx, world, offX, offY, tilePx, tick = 0) {
   }
   ctx.restore();
 }
-
-function drawCanvasHud(ctx, state, CW, CH) {
-  const { sim, meta } = state;
-  const lines = [
-    `t${sim.tick}  alive ${sim.aliveCount}`,
-    `speed ${meta.speed}T/s  mode ${meta.renderMode}`,
-    `N ${(sim.meanNutrientField || 0).toFixed(2)}  T ${(sim.meanToxinField || 0).toFixed(2)}  S ${(sim.meanSaturationField || 0).toFixed(2)}`,
-    `P ${(sim.meanPlantField || 0).toFixed(2)}  div ${sim.lineageDiversity || 0}`,
-    `evo ${Number(sim.evolutionStageMean || 1).toFixed(2)} / max ${sim.evolutionStageMax || 1}`,
-    `cluster ${(clamp01(sim.clusterRatio || 0) * 100).toFixed(0)}%  reserve ${(sim.meanReserveAlive || 0).toFixed(2)}`,
-    `B ${sim.birthsLastStep || 0}  D ${sim.deathsLastStep || 0}  M ${sim.mutationsLastStep || 0}`,
-    `R ${sim.raidEventsLastStep || 0}  I ${sim.infectionsLastStep || 0}  K ${sim.conflictKillsLastStep || 0}  S2 ${sim.superCellsLastStep || 0}`,
-  ];
-  const pad = 8;
-  const lh = 13;
-  const boxW = 312;
-  const boxH = pad * 2 + lines.length * lh;
-  const x = 10;
-  const y = 10;
-
-  ctx.save();
-  ctx.fillStyle = "rgba(18, 24, 36, 0.72)";
-  ctx.strokeStyle = "rgba(230, 197, 134, 0.46)";
-  ctx.lineWidth = 1;
-  if (typeof ctx.roundRect === "function") {
-    ctx.beginPath();
-    ctx.roundRect(x, y, boxW, boxH, 10);
-    ctx.fill();
-    ctx.stroke();
-  } else {
-    ctx.fillRect(x, y, boxW, boxH);
-    ctx.strokeRect(x, y, boxW, boxH);
-  }
-
-  ctx.font = "11px JetBrains Mono, monospace";
-  ctx.fillStyle = "rgba(245, 240, 230, 0.96)";
-  for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], x + pad, y + pad + 10 + i * lh);
-  }
-
-  const touch = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
-  if (touch) {
-    const tip = "Touch: ✚ Tools  |  Drag = Paint";
-    const tw = Math.min(260, Math.max(170, tip.length * 6.2));
-    const tx = Math.max(10, CW - tw - 10);
-    const ty = Math.max(10, CH - 34);
-    ctx.fillStyle = "rgba(18, 24, 36, 0.66)";
-    if (typeof ctx.roundRect === "function") {
-      ctx.beginPath();
-      ctx.roundRect(tx, ty, tw, 24, 10);
-      ctx.fill();
-    } else {
-      ctx.fillRect(tx, ty, tw, 24);
-    }
-    ctx.fillStyle = "rgba(243, 229, 200, 0.95)";
-    ctx.fillText(tip, tx + 8, ty + 15);
-  }
-  ctx.restore();
-}
-
+
 function drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality = 3) {
   const { w, h, L, R, P, W, Sat } = world;
   const overlayActive = String(meta?.activeOverlay || OVERLAY_MODE.NONE) !== OVERLAY_MODE.NONE;
@@ -1134,33 +941,11 @@ const ZONE_PALETTE = [
   [170, "QUARANTINE"],     // 5 = cyan
 ];
 
-// Reusable context for offscreen canvases.
-// Manages creation and resizing of ImageData buffers.
-const _renderCtxCache = new Map();
-
-function getRenderContext(w, h) {
-  const key = `${w}x${h}`;
-  if (_renderCtxCache.has(key)) return _renderCtxCache.get(key);
-
-  const pixelCanvas = document.createElement("canvas");
-  pixelCanvas.width = w; pixelCanvas.height = h;
-  const pixelCtx  = pixelCanvas.getContext("2d", { willReadFrequently: true });
-  const pixelData = pixelCtx.createImageData(w, h);
-
-  const cellCanvas = document.createElement("canvas");
-  cellCanvas.width = w; cellCanvas.height = h;
-  const cellCtx  = cellCanvas.getContext("2d", { willReadFrequently: true });
-  const cellData = cellCtx.createImageData(w, h);
-
-  const context = {
-    pixelCanvas, pixelCtx, pixelData,
-    cellCanvas, cellCtx, cellData,
-    w, h
-  };
-  _renderCtxCache.set(key, context);
-  return context;
+function shouldDrawLegacyZoneOverlay(meta) {
+  const ui = meta?.ui || {};
+  return String(ui.activeTab || "") === "labor" && ui.panelOpen !== false;
 }
-
+
 function drawZoneOverlay(ctx, world, offX, offY, tilePx) {
   const { w, h, zoneMap } = world;
   if (!zoneMap || tilePx < 1) return;
@@ -1202,13 +987,7 @@ function drawZoneOverlay(ctx, world, offX, offY, tilePx) {
   }
   ctx.restore();
 }
-
-// Reusable context for offscreen canvases.
-// Manages creation and resizing of ImageData buffers.
-let _pixelCanvas = null, _pixelCtx = null, _pixelData = null;
-let _cellCanvas = null, _cellCtx = null, _cellData = null;
-let _pw = 0, _ph = 0;
-
+
 export function render(canvas, state, perf = null) {
   const { world, meta, sim } = state;
   if (!world) return null;
@@ -1278,7 +1057,7 @@ export function drawFrame(ctx, state, perf = {}) {
   drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality);
   if (!overlayActive && !balanced && (quality >= 3 || userFocused) && lod.level <= 1 && !userMinimal) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
   if (!overlayActive && !tactical && quality >= 1 && !isHugeGrid && !userMinimal) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
-  if (quality >= 1) drawZoneOverlay(ctx, world, offX, offY, tilePx);
+  if (quality >= 1 && shouldDrawLegacyZoneOverlay(meta)) drawZoneOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level, detailMode);
   if (quality >= 1 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);
 
@@ -1294,3 +1073,4 @@ export function screenToWorld(screenX, screenY, renderInfo, meta) {
   if (wx < 0 || wy < 0 || wx >= meta.gridW || wy >= meta.gridH) return null;
   return { x: wx, y: wy };
 }
+
