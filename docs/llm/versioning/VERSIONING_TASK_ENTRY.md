@@ -18,6 +18,8 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Danach nur VERSIONING-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
+- `node tools/llm-preflight.mjs entry --paths package.json,src/project/contract/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md --mode work`
+- `node tools/llm-preflight.mjs ack --paths package.json,src/project/contract/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md`
 - `node tools/llm-preflight.mjs check --paths package.json,src/project/contract/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md`
 
 ## SCHREIBEN (pflicht)

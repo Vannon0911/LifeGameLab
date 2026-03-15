@@ -27,6 +27,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const nodeBin = process.execPath;
 const preflightScript = path.join(root, "tools", "llm-preflight.mjs");
+const preflightPaths = "tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs";
+const sessionFile = path.join(root, ".llm", "entry-session.json");
 
 function runPreflight(args) {
   const res = spawnSync(nodeBin, [preflightScript, ...args], {
@@ -44,10 +46,11 @@ function runPreflight(args) {
 }
 
 {
+  if (fs.existsSync(sessionFile)) fs.unlinkSync(sessionFile);
   const ok = runPreflight([
     "classify",
     "--paths",
-    "tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs",
+    preflightPaths,
   ]);
   assert(ok.status === 0, `preflight classify should pass, got status=${ok.status} stderr=${ok.stderr}`);
   assertContains(ok.stdout, "CLASSIFY_OK", "preflight classify output missing CLASSIFY_OK");
@@ -75,10 +78,47 @@ function runPreflight(args) {
 }
 
 {
+  const missingEntry = runPreflight([
+    "check",
+    "--paths",
+    preflightPaths,
+  ]);
+  assert(missingEntry.status !== 0, `check without session entry should fail, got status=${missingEntry.status}`);
+  assertHasAnyMarker(
+    missingEntry.stderr || missingEntry.stdout,
+    ["Missing session entry", "[llm-preflight]"],
+    "check without session entry must emit an error marker",
+  );
+}
+
+{
+  const entry = runPreflight([
+    "entry",
+    "--paths",
+    preflightPaths,
+    "--mode",
+    "work",
+  ]);
+  assert(entry.status === 0, `preflight entry should pass, got status=${entry.status} stderr=${entry.stderr}`);
+  assertContains(entry.stdout, "ENTRY_OK", "preflight entry output missing ENTRY_OK");
+  assertContains(entry.stdout, "mode=work", "preflight entry must report mode=work");
+}
+
+{
+  const ack = runPreflight([
+    "ack",
+    "--paths",
+    preflightPaths,
+  ]);
+  assert(ack.status === 0, `preflight ack should pass, got status=${ack.status} stderr=${ack.stderr}`);
+  assertContains(ack.stdout, "ACK_OK", "preflight ack output missing ACK_OK");
+}
+
+{
   const check = runPreflight([
     "check",
     "--paths",
-    "tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs",
+    preflightPaths,
   ]);
   assert(check.status === 0, `preflight check should pass for testing task, got status=${check.status} stderr=${check.stderr}`);
   assertContains(check.stdout, "CHECK_OK", "preflight check output missing CHECK_OK");

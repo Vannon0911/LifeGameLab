@@ -19,6 +19,8 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Danach nur CONTRACTS-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
+- `node tools/llm-preflight.mjs entry --paths src/project/contract/,src/core/kernel/ --mode work`
+- `node tools/llm-preflight.mjs ack --paths src/project/contract/,src/core/kernel/`
 - `node tools/llm-preflight.mjs check --paths src/project/contract/,src/core/kernel/`
 
 ## SCHREIBEN (pflicht)

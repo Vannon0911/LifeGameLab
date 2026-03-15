@@ -23,9 +23,11 @@ LLM-spezifische Regeln leben getrennt unter `docs/llm/`.
 
 ### PRUEFEN
 - Session-Start im Chat mit `entry` (LLM-Trigger, kein Terminal-Befehl).
+- Danach technisch erzwingen: `node tools/llm-preflight.mjs entry --paths <paths> --mode work|security`
 - `node tools/llm-preflight.mjs classify --paths <paths>`
 - `node tools/llm-preflight.mjs ack --paths <paths>`
 - `node tools/llm-preflight.mjs check --paths <paths>`
+- Git-Guards aktivieren (einmal pro Clone): `npm run hooks:install`
 
 ### SCHREIBEN
 - Kein Schreiben ohne gelesenen LLM-Entry plus Task-Entry.

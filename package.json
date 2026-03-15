@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "serve": "python3 -m http.server 8080",
+    "hooks:install": "node tools/install-git-hooks.mjs",
     "debug:ui": "node tools/debug-ui.mjs",
     "debug:playwright": "node tools/playwright-debug-loop.mjs",
+    "llm:entry": "node tools/llm-preflight.mjs entry --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs --mode work",
     "llm:ack": "node tools/llm-preflight.mjs ack --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs",
     "llm:check": "node tools/llm-preflight.mjs check --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs",
     "test": "node tools/run-all-tests.mjs",
