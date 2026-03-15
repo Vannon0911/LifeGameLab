@@ -2,7 +2,7 @@ import { startEvidenceCase } from "./support/liveTestKit.mjs";
 startEvidenceCase("test-freeze-contract.mjs");
 import { manifest } from "../src/project/project.manifest.js";
 import { WORLD_PRESET_IDS, getWorldPreset } from "../src/game/sim/worldPresets.js";
-import { GAME_MODE, RUN_PHASE } from "../src/game/contracts/ids.js";
+import { GAME_MODE, RUN_PHASE, ZONE_ROLE } from "../src/game/contracts/ids.js";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
@@ -10,6 +10,7 @@ function assert(cond, msg) {
 
 assert(RUN_PHASE.GENESIS_ZONE === "genesis_zone", "RUN_PHASE.GENESIS_ZONE missing or drifted");
 assert(RUN_PHASE.DNA_ZONE_SETUP === "dna_zone_setup", "RUN_PHASE.DNA_ZONE_SETUP missing or drifted");
+assert(ZONE_ROLE && typeof ZONE_ROLE === "object" && Object.keys(ZONE_ROLE).length > 0, "ZONE_ROLE missing or empty");
 
 const requiredActions = [
   "CONFIRM_FOUNDATION",
@@ -52,6 +53,8 @@ for (const key of [
   "infraBuildCostEnergy",
   "infraBuildCostDNA",
   "cpuBootstrapDone",
+  "patternCatalog",
+  "patternBonuses",
   "meanWaterField",
   "stageProgressScore",
   "harvestYieldTotal",
@@ -73,6 +76,9 @@ assert(worldKeys.dnaZoneMask?.ctor === "Uint8Array", "world.dnaZoneMask missing 
 assert(worldKeys.infraCandidateMask?.ctor === "Uint8Array", "world.infraCandidateMask missing or wrong type");
 assert(worldKeys.visibility?.ctor === "Uint8Array", "world.visibility missing or wrong type");
 assert(worldKeys.explored?.ctor === "Uint8Array", "world.explored missing or wrong type");
+assert(worldKeys.zoneRole?.ctor === "Uint8Array", "world.zoneRole missing or wrong type");
+assert(worldKeys.zoneId?.ctor === "Int32Array", "world.zoneId missing or wrong type");
+assert(worldKeys.zoneMeta?.type === "object", "world.zoneMeta missing or wrong type");
 
 assert(manifest.stateSchema?.shape?.meta?.shape?.gameMode?.default === GAME_MODE.GENESIS, "meta.gameMode default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.runPhase?.default === RUN_PHASE.GENESIS_SETUP, "sim.runPhase default drift");
@@ -92,6 +98,8 @@ assert(manifest.stateSchema?.shape?.sim?.shape?.infraBuildMode?.default === "", 
 assert(manifest.stateSchema?.shape?.sim?.shape?.infraBuildCostEnergy?.default === 0, "sim.infraBuildCostEnergy default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.infraBuildCostDNA?.default === 0, "sim.infraBuildCostDNA default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.cpuBootstrapDone?.default === 0, "sim.cpuBootstrapDone default drift");
+assert(typeof manifest.stateSchema?.shape?.sim?.shape?.patternCatalog?.default === "object", "sim.patternCatalog default missing");
+assert(typeof manifest.stateSchema?.shape?.sim?.shape?.patternBonuses?.default === "object", "sim.patternBonuses default missing");
 
 for (const presetId of WORLD_PRESET_IDS) {
   const preset = getWorldPreset(presetId);
