@@ -11,6 +11,16 @@ function clamp01(value) {
   return value < 0 ? 0 : value > 1 ? 1 : value;
 }
 
+function buildScanBatches(totalCount, maxBatchSize = 2048) {
+  const total = Math.max(0, Number(totalCount || 0) | 0);
+  const batchSize = Math.max(1, Number(maxBatchSize || 0) | 0);
+  const out = [];
+  for (let start = 0; start < total; start += batchSize) {
+    out.push({ start, end: Math.min(total, start + batchSize) });
+  }
+  return out;
+}
+
 function gauss(cx, cy, x, y, sigma, amp) {
   const dx = x - cx;
   const dy = y - cy;
@@ -217,27 +227,29 @@ function placeClusters(state, clusters, seedBase) {
 function placePlants(state, phy, preset, seedBase) {
   const count = Math.round(state.w * state.h * (0.032 + (preset.plantBoost || 0) * 0.04 + (phy.plantCloudDensity || 0.82) * 0.014));
   let stream = 12000;
-  for (let n = 0; n < count; n++) {
-    const x = Math.floor(rng01(seedBase, stream++) * state.w);
-    const y = Math.floor(rng01(seedBase, stream++) * state.h);
-    const idx = y * state.w + x;
-    const biome = Number(state.biomeId[idx] || 0);
-    const water = Number(state.water[idx] || 0);
-    const radius = biome === BIOME_IDS.wet_forest ? 3 : biome === BIOME_IDS.riverlands ? 2 : 1;
-    const peak = clamp01(0.14 + water * 0.44 + (biome === BIOME_IDS.dry_plains ? 0.06 : 0.12));
-    for (let dy = -radius; dy <= radius; dy++) {
-      for (let dx = -radius; dx <= radius; dx++) {
-        if (dx * dx + dy * dy > radius * radius) continue;
-        const xx = x + dx;
-        const yy = y + dy;
-        if (xx < 0 || yy < 0 || xx >= state.w || yy >= state.h) continue;
-        const ii = yy * state.w + xx;
-        const falloff = 1 - Math.sqrt(dx * dx + dy * dy) / Math.max(1, radius);
-        state.P[ii] = clamp01(Number(state.P[ii] || 0) + peak * falloff * 0.75);
-        state.R[ii] = clamp01(Number(state.R[ii] || 0) + peak * falloff * 0.28);
-        state.B[ii] = clamp01(Number(state.B[ii] || 0) + peak * falloff * 0.08);
-        if (state.plantKind[ii] === 0) {
-          state.plantKind[ii] = biome === BIOME_IDS.toxic_marsh ? 1 : -1;
+  for (const batch of buildScanBatches(count)) {
+    for (let n = batch.start; n < batch.end; n++) {
+      const x = Math.floor(rng01(seedBase, stream++) * state.w);
+      const y = Math.floor(rng01(seedBase, stream++) * state.h);
+      const idx = y * state.w + x;
+      const biome = Number(state.biomeId[idx] || 0);
+      const water = Number(state.water[idx] || 0);
+      const radius = biome === BIOME_IDS.wet_forest ? 3 : biome === BIOME_IDS.riverlands ? 2 : 1;
+      const peak = clamp01(0.14 + water * 0.44 + (biome === BIOME_IDS.dry_plains ? 0.06 : 0.12));
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (dx * dx + dy * dy > radius * radius) continue;
+          const xx = x + dx;
+          const yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= state.w || yy >= state.h) continue;
+          const ii = yy * state.w + xx;
+          const falloff = 1 - Math.sqrt(dx * dx + dy * dy) / Math.max(1, radius);
+          state.P[ii] = clamp01(Number(state.P[ii] || 0) + peak * falloff * 0.75);
+          state.R[ii] = clamp01(Number(state.R[ii] || 0) + peak * falloff * 0.28);
+          state.B[ii] = clamp01(Number(state.B[ii] || 0) + peak * falloff * 0.08);
+          if (state.plantKind[ii] === 0) {
+            state.plantKind[ii] = biome === BIOME_IDS.toxic_marsh ? 1 : -1;
+          }
         }
       }
     }
