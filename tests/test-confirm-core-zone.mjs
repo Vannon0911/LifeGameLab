@@ -4,11 +4,22 @@ startEvidenceCase("test-confirm-core-zone.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
-import { BRUSH_MODE, GAME_MODE, RUN_PHASE } from "../src/game/contracts/ids.js";
+import { BRUSH_MODE, GAME_MODE, RUN_PHASE, ZONE_ROLE } from "../src/game/contracts/ids.js";
 import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
+}
+
+function findZoneMetaEntry(zoneMeta, zoneId) {
+  if (!zoneMeta || typeof zoneMeta !== "object") return null;
+  const direct = zoneMeta[zoneId] ?? zoneMeta[String(zoneId)];
+  if (direct && typeof direct === "object") return direct;
+  return Object.values(zoneMeta).find((entry) => (
+    entry
+    && typeof entry === "object"
+    && Number(entry.zoneId ?? entry.id ?? -1) === Number(zoneId)
+  )) || null;
 }
 
 function createGenesisZoneStore(seed, presetId = "river_delta") {
@@ -58,6 +69,7 @@ function createGenesisZoneStore(seed, presetId = "river_delta") {
   let founderCount = 0;
   let coreCount = 0;
   let cpuAliveCount = 0;
+  const coreZoneIds = new Set();
   for (let i = 0; i < after.world.founderMask.length; i++) {
     const founder = Number(after.world.founderMask[i]) | 0;
     const core = Number(after.world.coreZoneMask[i]) | 0;
@@ -66,10 +78,25 @@ function createGenesisZoneStore(seed, presetId = "river_delta") {
     if (founder === 1) founderCount++;
     if (core === 1) coreCount++;
     assert(core === founder, `core mask drift at idx=${i}`);
+    if (core === 1) {
+      assert((Number(after.world.zoneRole?.[i]) | 0) === ZONE_ROLE.CORE, `core role mirror drift at idx=${i}`);
+      const zoneId = Number(after.world.zoneId?.[i] || 0) | 0;
+      assert(zoneId > 0, `core zoneId missing at idx=${i}`);
+      coreZoneIds.add(zoneId);
+    }
     if (alive === 1 && lineage === (Number(after.meta.cpuLineageId || 2) | 0)) cpuAliveCount++;
   }
   assert(founderCount === 4, `expected 4 founders, got ${founderCount}`);
   assert(coreCount === 4, `expected 4 core tiles, got ${coreCount}`);
+  assert(coreZoneIds.size === 1, `core zoneId must be stable across founder component, got ${Array.from(coreZoneIds).join(",")}`);
+  const coreZoneId = Array.from(coreZoneIds)[0] | 0;
+  const coreMeta = findZoneMetaEntry(after.world.zoneMeta, coreZoneId);
+  assert(coreMeta, "core zoneMeta entry missing");
+  const coreMetaRole = coreMeta.role ?? coreMeta.zoneRole ?? coreMeta.kind ?? "";
+  assert(
+    coreMetaRole === ZONE_ROLE.CORE || String(coreMetaRole).toLowerCase() === "core",
+    `core zoneMeta role drift: ${String(coreMetaRole)}`,
+  );
   assert(cpuAliveCount === 4, `expected 4 cpu bootstrap cells, got ${cpuAliveCount}`);
 }
 

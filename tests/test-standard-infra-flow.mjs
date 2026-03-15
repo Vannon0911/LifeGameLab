@@ -4,11 +4,22 @@ startEvidenceCase("test-standard-infra-flow.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
-import { BRUSH_MODE, RUN_PHASE } from "../src/game/contracts/ids.js";
+import { BRUSH_MODE, RUN_PHASE, ZONE_ROLE } from "../src/game/contracts/ids.js";
 import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
+}
+
+function findZoneMetaEntry(zoneMeta, zoneId) {
+  if (!zoneMeta || typeof zoneMeta !== "object") return null;
+  const direct = zoneMeta[zoneId] ?? zoneMeta[String(zoneId)];
+  if (direct && typeof direct === "object") return direct;
+  return Object.values(zoneMeta).find((entry) => (
+    entry
+    && typeof entry === "object"
+    && Number(entry.zoneId ?? entry.id ?? -1) === Number(zoneId)
+  )) || null;
 }
 
 function patchPlayerCells(store, cells) {
@@ -140,6 +151,29 @@ const visibleAfter = countMask(afterInfraStep.world.visibility);
 const exploredAfter = countMask(afterInfraStep.world.explored);
 assert(visibleAfter > visibleBefore, `infra visibility must expand after commit (${visibleBefore} -> ${visibleAfter})`);
 assert(exploredAfter >= exploredBefore, "explored must stay monotonic after infra sight");
+
+const infraZoneIds = new Set();
+for (const cell of infraPath) {
+  const idx = cell.y * afterInfraStep.world.w + cell.x;
+  if ((Number(afterInfraStep.world.link[idx] || 0) | 0) !== 1) continue;
+  // Anchor tiles may remain core/dna roles. Assert infra role only for dedicated corridor tiles.
+  if ((Number(afterInfraStep.world.coreZoneMask[idx] || 0) | 0) === 1) continue;
+  if ((Number(afterInfraStep.world.dnaZoneMask[idx] || 0) | 0) === 1) continue;
+  assert((Number(afterInfraStep.world.zoneRole?.[idx]) | 0) === ZONE_ROLE.INFRA, `infra role mirror drift at idx=${idx}`);
+  const zoneId = Number(afterInfraStep.world.zoneId?.[idx] || 0) | 0;
+  assert(zoneId > 0, `infra zoneId missing at idx=${idx}`);
+  infraZoneIds.add(zoneId);
+}
+assert(infraZoneIds.size >= 1, "infra zoneId mirror missing for committed non-core corridor");
+for (const zoneId of infraZoneIds) {
+  const meta = findZoneMetaEntry(afterInfraStep.world.zoneMeta, zoneId);
+  assert(meta, `infra zoneMeta missing for zoneId=${zoneId}`);
+  const role = meta.role ?? meta.zoneRole ?? meta.kind ?? "";
+  assert(
+    role === ZONE_ROLE.INFRA || String(role).toLowerCase() === "infra",
+    `infra zoneMeta role drift for zoneId=${zoneId}: ${String(role)}`,
+  );
+}
 
 patchPlayerCells(store, [
   { ...infraPath[2], alive: 0 },
