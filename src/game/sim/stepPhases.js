@@ -45,7 +45,6 @@ function recomputeVisibility(world, phy) {
   const radiusDNA = Math.max(0, Number(phy?.visionRadiusDNA || 0) | 0);
   const radiusInfra = Math.max(0, Number(phy?.visionRadiusInfra || 0) | 0);
   for (let i = 0; i < N; i++) {
-    if ((Number(world.alive[i]) | 0) !== 1) continue;
     if ((Number(world.lineageId[i]) | 0) !== playerLineageId) continue;
     if ((Number(world.coreZoneMask?.[i]) | 0) === 1) applyCircularVision(visibility, w, h, i, radiusCore);
     if ((Number(world.dnaZoneMask?.[i]) | 0) === 1) applyCircularVision(visibility, w, h, i, radiusDNA);
