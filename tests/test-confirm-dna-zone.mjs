@@ -4,7 +4,7 @@ startEvidenceCase("test-confirm-dna-zone.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
-import { BRUSH_MODE, RUN_PHASE } from "../src/game/contracts/ids.js";
+import { BRUSH_MODE, RUN_PHASE, ZONE_ROLE } from "../src/game/contracts/ids.js";
 import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
 
 function assert(cond, msg) {
@@ -111,9 +111,12 @@ function createPreparedDnaSetupStore(seed, presetId = "river_delta") {
   assert(after.sim.zoneUnlockProgress === 0, "confirm dna zone must clear old dna meter");
   assert(after.sim.coreEnergyStableTicks === 0, "confirm dna zone must reset old stable ticks");
   assert(after.sim.nextInfraUnlockCostDNA === 30, "confirm dna zone must read preset infra cost");
+  assert(Object.keys(after.world.zoneMeta || {}).length >= 2, "confirm dna zone must populate canonical zoneMeta");
   for (const cell of validCells) {
     const idx = cell.y * after.world.w + cell.x;
     assert(Number(after.world.dnaZoneMask[idx] || 0) === 1, "confirm dna zone must preserve committed mask");
+    assert(Number(after.world.zoneRole[idx] || 0) === ZONE_ROLE.DNA, "confirm dna zone must stamp canonical dna role");
+    assert(Number(after.world.zoneId[idx] || 0) > 0, "confirm dna zone must stamp canonical dna zoneId");
   }
   const dnaBeforeTick = Number(after.sim.playerDNA || 0);
   store.dispatch({ type: "SIM_STEP", payload: { force: true } });

@@ -60,6 +60,8 @@ for (const key of [
   "seedYieldTotal",
   "stabilityScore",
   "ecologyScore",
+  "patternCatalog",
+  "patternBonuses",
 ]) {
   assert(simKeys.has(key), `${key} missing from simGate`);
 }
@@ -71,6 +73,9 @@ assert(worldKeys.founderMask?.ctor === "Uint8Array", "world.founderMask missing 
 assert(worldKeys.coreZoneMask?.ctor === "Uint8Array", "world.coreZoneMask missing or wrong type");
 assert(worldKeys.dnaZoneMask?.ctor === "Uint8Array", "world.dnaZoneMask missing or wrong type");
 assert(worldKeys.infraCandidateMask?.ctor === "Uint8Array", "world.infraCandidateMask missing or wrong type");
+assert(worldKeys.zoneRole?.ctor === "Int8Array", "world.zoneRole missing or wrong type");
+assert(worldKeys.zoneId?.ctor === "Uint16Array", "world.zoneId missing or wrong type");
+assert(worldKeys.zoneMeta?.type === "object", "world.zoneMeta missing or wrong type");
 assert(worldKeys.visibility?.ctor === "Uint8Array", "world.visibility missing or wrong type");
 assert(worldKeys.explored?.ctor === "Uint8Array", "world.explored missing or wrong type");
 
@@ -92,6 +97,8 @@ assert(manifest.stateSchema?.shape?.sim?.shape?.infraBuildMode?.default === "", 
 assert(manifest.stateSchema?.shape?.sim?.shape?.infraBuildCostEnergy?.default === 0, "sim.infraBuildCostEnergy default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.infraBuildCostDNA?.default === 0, "sim.infraBuildCostDNA default drift");
 assert(manifest.stateSchema?.shape?.sim?.shape?.cpuBootstrapDone?.default === 0, "sim.cpuBootstrapDone default drift");
+assert(JSON.stringify(manifest.stateSchema?.shape?.sim?.shape?.patternCatalog?.default || {}) === "{}", "sim.patternCatalog default drift");
+assert(Number(manifest.stateSchema?.shape?.sim?.shape?.patternBonuses?.default?.energy || 0) === 0, "sim.patternBonuses.energy default drift");
 
 for (const presetId of WORLD_PRESET_IDS) {
   const preset = getWorldPreset(presetId);
@@ -100,6 +107,8 @@ for (const presetId of WORLD_PRESET_IDS) {
   assert(Number(preset?.phaseD?.visionRadiusCore || 0) >= 1, `${presetId} phaseD.visionRadiusCore missing`);
   assert(Number(preset?.phaseD?.visionRadiusDNA || 0) >= 1, `${presetId} phaseD.visionRadiusDNA missing`);
   assert(Number(preset?.phaseD?.visionRadiusInfra || 0) >= 1, `${presetId} phaseD.visionRadiusInfra missing`);
+  assert(typeof preset?.phaseE?.patternWeights === "object", `${presetId} phaseE.patternWeights missing`);
+  assert(typeof preset?.phaseE?.bonusScale === "object", `${presetId} phaseE.bonusScale missing`);
 }
 
 console.log("FREEZE_CONTRACT_OK phase-a contract surface is bound");

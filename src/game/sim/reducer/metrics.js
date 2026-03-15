@@ -25,13 +25,16 @@ export const WORLD_KEYS = [
   "coreZoneMask",
   "dnaZoneMask",
   "infraCandidateMask",
+  "zoneRole",
+  "zoneId",
+  "zoneMeta",
   "founderMask",
   "visibility",
   "explored",
 ];
 
 export const WORLD_SIM_STEP_KEYS = WORLD_KEYS.filter(
-  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "coreZoneMask" && k !== "dnaZoneMask" && k !== "infraCandidateMask" && k !== "superId" && k !== "actionMap" && k !== "born" && k !== "died" && k !== "founderMask" && k !== "visibility" && k !== "explored"
+  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "coreZoneMask" && k !== "dnaZoneMask" && k !== "infraCandidateMask" && k !== "zoneRole" && k !== "zoneId" && k !== "zoneMeta" && k !== "superId" && k !== "actionMap" && k !== "born" && k !== "died" && k !== "founderMask" && k !== "visibility" && k !== "explored"
 );
 
 export const SIM_KEYS = [
@@ -54,7 +57,7 @@ export const SIM_KEYS = [
   "lightShare", "nutrientShare", "seasonPhase",
   "playerDNA", "totalHarvested", "playerStage",
   "stageProgressScore", "harvestYieldTotal", "pruneYieldTotal", "recycleYieldTotal", "seedYieldTotal",
-  "stabilityScore", "ecologyScore", "activeBiomeCount",
+  "stabilityScore", "ecologyScore", "activeBiomeCount", "patternCatalog", "patternBonuses",
   "energySupremacyTicks", "efficiencyTicks", "lossStreakTicks", "stockpileTicks",
   "cpuEnergyIn", "gameResult", "winMode", "gameEndTick", "goal",
 ];
