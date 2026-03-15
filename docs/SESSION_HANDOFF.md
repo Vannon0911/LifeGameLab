@@ -11,8 +11,8 @@
 
 ## Aktiver Restphasen-Stand
 - Phase A bis E sind abgeschlossen.
-- Phase F ist der naechste produktive Block und wird ueber `docs/PHASE_F_TODO.md` gesteuert.
-- Phase G bleibt gesperrt bis `tests/test-phase-f-progression-integrity.mjs` existiert und gruen ist.
+- Phase F ist abgeschlossen und wurde ueber `docs/PHASE_F_TODO.md` abgearbeitet.
+- Phase G ist der naechste produktive Block und wird ueber `docs/PHASE_G_TODO.md` gesteuert.
 - Kanonische Restphasen-Doku ab jetzt: `docs/PHASE_F_TODO.md`, `docs/PHASE_G_TODO.md`.
 - Produkt- und Designrahmen fuer neue Arbeit: `docs/CONCEPT_BASIS.md`.
 
@@ -25,10 +25,11 @@
 - Verifiziert gruen: `npm run test:quick`
 - Verifiziert gruen: `npm run test:truth`
 - Verifiziert gruen: `node tests/test-phase-e-integrity.mjs`
+- Verifiziert gruen: `node tests/test-phase-f-progression-integrity.mjs`
 - Verifiziert gruen: `node tests/test-release-candidate-integrity.mjs`
-- Weiterhin fehlend: `tests/test-phase-f-progression-integrity.mjs`
 - `tests/test-release-candidate-integrity.mjs` ist jetzt in `tools/test-suites.mjs` unter `truth` registriert.
 - `tests/test-phase-e-integrity.mjs` ist jetzt ebenfalls in `tools/test-suites.mjs` unter `truth` registriert.
+- `tests/test-phase-f-progression-integrity.mjs` ist jetzt ebenfalls in `tools/test-suites.mjs` unter `truth` registriert.
 
 ## Verbindliche Produkt- und Architekturentscheidungen
 - Main-Run-Raeume sind exakt und ausschliesslich: `lage`, `eingriffe`, `evolution`, `welt`, `labor`.
