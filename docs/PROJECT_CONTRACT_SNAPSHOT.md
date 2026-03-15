@@ -46,3 +46,6 @@
 - weitere Entmonolithisierung im Sim-Reducer
 - visuelle Feedback-Dichte im Gameplay weiter schaerfen
 - Hotspot-Messung siehe `docs/PERF_HOTSPOTS.md`
+
+## Produktgrenze
+- Operative Produktentscheidungen, neue Feature-Ideen und Systemerweiterungen muessen zusaetzlich mit `docs/CONCEPT_BASIS.md` konsistent bleiben.
