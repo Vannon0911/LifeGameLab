@@ -11,9 +11,7 @@ Zweck: P1-Progression auf stabiler Phase-E-Basis umsetzen, ohne neue Parallel-Sy
   - `npm run test:quick`
   - `npm run test:truth`
   - `node tests/test-phase-f-progression-integrity.mjs`
-  - `node tests/test-core-collapse-loss.mjs`
-  - `node tests/test-vision-break-loss.mjs`
-  - `node tests/test-network-decay-loss.mjs`
+  - `node tests/test-phase-f-loss-modes.mjs`
 - `tests/test-phase-f-progression-integrity.mjs` ist in `truth` registriert.
 - Freigegebene Folgephase: Phase G.
 - P1-Startvoraussetzungen:

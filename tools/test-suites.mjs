@@ -9,7 +9,6 @@ export const TEST_SUITES = Object.freeze({
     "tests/test-confirm-core-zone.mjs",
     "tests/test-confirm-dna-zone.mjs",
     "tests/test-confirm-infra-path.mjs",
-    "tests/test-core-collapse-loss.mjs",
     "tests/test-core-gates.mjs",
     "tests/test-dataflow-contract.mjs",
     "tests/test-dna-zone-setup-gates.mjs",
@@ -39,9 +38,8 @@ export const TEST_SUITES = Object.freeze({
     "tests/test-ui-strategy-contract.mjs",
     "tests/test-version-traceability.mjs",
     "tests/test-visibility-fog.mjs",
-    "tests/test-vision-break-loss.mjs",
+    "tests/test-phase-f-loss-modes.mjs",
     "tests/test-wrapper-ban.mjs",
-    "tests/test-network-decay-loss.mjs",
   ],
   truth: [
     "tests/test-drift-negative-order.mjs",
