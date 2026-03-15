@@ -10,6 +10,16 @@ export function downloadTextFile(filename, text, mime = "text/plain;charset=utf-
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
+function toFiniteNumberOrZero(raw) {
+  try {
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+  } catch {
+    return 0;
+  }
+}
+
+
 export function summarizeSeries(values) {
   if (!Array.isArray(values) || values.length === 0) {
     return { avg: 0, min: 0, max: 0, frames: 0 };
@@ -18,7 +28,7 @@ export function summarizeSeries(values) {
   let max = -Infinity;
   let sum = 0;
   for (const raw of values) {
-    const v = Number(raw || 0);
+    const v = toFiniteNumberOrZero(raw);
     if (v < min) min = v;
     if (v > max) max = v;
     sum += v;

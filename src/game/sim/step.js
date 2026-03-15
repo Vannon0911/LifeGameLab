@@ -10,6 +10,7 @@ import { updateLineageMemory, pruneLineageMemory, mutateNewbornByEnvironment } f
 import { prepareStepBuffers } from "./buffers.js";
 import { forNeighbours8 } from "./neighbors.js";
 import { runFieldPhase, runFinalizePopulationPhase, runWorldSystemsPhase } from "./stepPhases.js";
+import { isCommittedInfraValue } from "./infra.js";
 import { buildLineageRuntime, clampScarcityByNutrient, traitAt } from "./stepRuntime.js";
 
 export function simStep(world, phy, tick) {
@@ -159,7 +160,7 @@ W[i] = clamp(W[i] + wTarget * wTransfer, 0, 1);
       applyCorpseRelease(world, i);
       E[i] = 0;
       reserve[i] = 0;
-      link[i] = 0;
+      if (!isCommittedInfraValue(link[i])) link[i] = 0;
       totalDeaths++;
       continue;
     }

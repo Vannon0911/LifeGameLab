@@ -44,6 +44,9 @@ const mainRunActions = [
   "SET_PLAYER_DOCTRINE",
   "SET_WIN_MODE",
   "PLACE_SPLIT_CLUSTER",
+  "BEGIN_INFRA_BUILD",
+  "BUILD_INFRA_PATH",
+  "CONFIRM_INFRA_PATH",
 ];
 
 const labActions = [

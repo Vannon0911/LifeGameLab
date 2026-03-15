@@ -1,4 +1,4 @@
-import { renderLlmReadModelAsText } from "../../project/llm/readModel.js";
+import { buildLlmReadModel } from "../../project/llm/readModel.js";
 
 export function registerPublicApi({
   windowObj,
@@ -11,10 +11,11 @@ export function registerPublicApi({
   perfBudget,
 }) {
   function renderGameToText() {
-    return renderLlmReadModelAsText(
-      store.getState(),
+    const state = store.getState();
+    return JSON.stringify(buildLlmReadModel(
+      state,
       typeof benchmark?.getSnapshot === "function" ? benchmark.getSnapshot() : null
-    );
+    ), null, 2);
   }
 
   async function advanceTime(ms = 1000) {

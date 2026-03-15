@@ -12,10 +12,14 @@ self.onmessage = (evt) => {
   const { cmd, payload } = evt.data;
 
   if (cmd === "INIT") {
-    offscreenCanvas = payload.canvas;
-    offscreenCanvas.width = Math.max(1, Number(payload?.width || offscreenCanvas.width || 300));
-    offscreenCanvas.height = Math.max(1, Number(payload?.height || offscreenCanvas.height || 150));
-    offscreenCtx = offscreenCanvas.getContext("2d", { alpha: false });
+    try {
+      offscreenCanvas = payload.canvas;
+      offscreenCanvas.width = Math.max(1, Number(payload?.width || offscreenCanvas.width || 300));
+      offscreenCanvas.height = Math.max(1, Number(payload?.height || offscreenCanvas.height || 150));
+      offscreenCtx = offscreenCanvas.getContext("2d", { alpha: false });
+    } catch (error) {
+      self.postMessage({ cmd: "RENDER_ERROR", error: String(error?.message || error || "worker_init_failed") });
+    }
     return;
   }
 
@@ -43,10 +47,16 @@ self.onmessage = (evt) => {
       CH: Math.max(1, Number(perf?.CH || offscreenCanvas?.height || 1)),
     };
 
-    // Draw the frame onto the offscreen canvas.
-    const renderInfo = drawFrame(offscreenCtx, state, safePerf);
-
-    // Send back renderInfo for UI sync and coordinate mapping.
-    self.postMessage({ cmd: "RENDER_COMPLETE", generation: activeGeneration, tick: payload?.tick ?? 0, payload: renderInfo });
+    try {
+      const renderInfo = drawFrame(offscreenCtx, state, safePerf);
+      self.postMessage({ cmd: "RENDER_COMPLETE", generation: activeGeneration, tick: payload?.tick ?? 0, payload: renderInfo });
+    } catch (error) {
+      self.postMessage({
+        cmd: "RENDER_ERROR",
+        generation: activeGeneration,
+        tick: payload?.tick ?? 0,
+        error: String(error?.message || error || "worker_render_failed"),
+      });
+    }
   }
 };
