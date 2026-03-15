@@ -29,26 +29,58 @@ Zweck: P1-Progression auf stabiler Phase-E-Basis umsetzen, ohne neue Parallel-Sy
 ## Harte Reihenfolge
 
 1. Phase E vollstaendig und stabil mergen.
-2. P1 in Repo-Scopes strikt getrennt ausfuehren: `versioning` -> `contracts` -> `sim/ui` -> `testing`.
+2. `tests/test-phase-e-integrity.mjs` muss existieren und gruen laufen.
+3. P1 danach atomar in genau dieser Reihenfolge ausfuehren:
+   - F1 `docs/PHASE_F_TODO.md` synchronisieren
+   - F2 `src/game/contracts/ids.js`
+   - F3 `src/game/techTree.js`
+   - F4 `src/game/sim/playerActions.js`
+   - F5 `src/game/sim/reducer/winConditions.js`
+   - F6 `src/game/sim/reducer/progression.js`
+   - F7 `src/game/ui/ui.model.js` + `src/project/llm/advisorModel.js`
+   - F8 Tests
 3. Je Subtask Pflichtablauf aus `START_HERE`: `classify -> ack -> check`.
 4. `tests/test-phase-f-progression-integrity.mjs` ist Pflicht-Gate vor Phase-G-Start.
 
 ## Ticket-Reihenfolge
 
 ### F1 Versioning-Sync (vor Produktivcode)
-- [ ] `docs/PHASE_F_TODO.md` bleibt auf P1-E-Basis synchron
-- [ ] "keine neuen Lanes/ID-Migration" als feste Scope-Regel verankern
-- [ ] TODO-/Prompt-/Testmatrix auf P1-Grenzen ausrichten
+- [x] `docs/PHASE_F_TODO.md` bleibt auf P1-E-Basis synchron
+- [x] "keine neuen Lanes/ID-Migration" als feste Scope-Regel verankern
+- [x] TODO-/Prompt-/Testmatrix auf P1-Grenzen ausrichten
+
+## Files To Touch (P1, final)
+
+- `src/game/contracts/ids.js` -> neue `WIN_MODE`-IDs
+- `src/game/techTree.js` -> statische `runRequirements` pro Tech
+- `src/game/sim/playerActions.js` -> `handleBuyEvolution()` um `runRequirements` erweitern
+- `src/game/sim/reducer/winConditions.js` -> neue Result-only-Losepfade
+- `src/game/sim/reducer/progression.js` -> `deriveStageState()` um Post-E-Gates erweitern
+- `src/game/ui/ui.model.js` -> UI-Labels fuer neue Loss-Conditions
+- `src/project/llm/advisorModel.js` -> Result-Reason-Labels / blocked-tech reasons
+- `docs/PHASE_F_TODO.md` -> Governance-Sync
+
+## Files Not To Touch (P1, hart)
+
+- `src/game/sim/reducer/techTreeOps.js`
+- `src/project/contract/stateSchema.js`
+- `src/game/sim/reducer/index.js`
+- `src/core/kernel/*`
+- `src/game/render/*`
+- `src/project/contract/manifest.js`
 
 ### F2 Contracts (klein halten)
 - [ ] `WIN_MODE` um Result-only Lose-Ausgaben erweitern: `core_collapse`, `vision_break`, `network_decay`
 - [ ] `WIN_MODE_SELECTABLE` unveraendert lassen
-- [ ] optionale `runRequirements`-Metadaten an bestehenden Tech-Entries ergaenzen
+- [ ] keine neuen waehllosen `WIN_MODE`-Pfade; nur Result-only-Losewerte
+- [ ] `runRequirements` als statisches Feld an bestehenden Tech-Entries ergaenzen
 - [ ] keine neuen Action-Typen, kein neues Sim-Feld fuer Loss-Reason
 
 ### F3 Tech-Gates auf bestehendem Pfad
 - [ ] `handleBuyEvolution()` erzwingt weiterhin DNA-Kosten, Stage, Prereqs, `commandReq`
 - [ ] zusaetzlich `runRequirements` erzwingen
+- [ ] `runRequirements` lebt in `src/game/techTree.js`, nicht im Laufzeit-State
+- [ ] kein neuer Resolver, kein neuer Store, nur Lesezugriffe auf bestehende State-Felder
 - [ ] Gate-Regeln abbilden:
   - `metabolism`: ab Stage 2 committed DNA-Zone; ab Stage 4 zusaetzlich positiver Pattern-Energie- oder DNA-Bonus
   - `survival`: ab Stage 2 Infrastruktur; ab Stage 3 zusaetzlich Defense-Aktivierung oder positiver Defense-/Stability-Bonus
@@ -81,6 +113,7 @@ Zweck: P1-Progression auf stabiler Phase-E-Basis umsetzen, ohne neue Parallel-Sy
   - Vision-Break aus committed kanonischen Zonen plus `visibility/explored`
   - Network-Decay aus kanonischen Infra-Zonen plus Netzwerk/Infrastruktur-Status
 - [ ] `SET_ZONE`/`zoneMap` bleiben lab-only/legacy und sind keine Main-Run-Wahrheit mehr
+- [ ] keine neue Loss-Reason im State; `winMode` bleibt Result-only-Transport
 
 ### F6 Read-Model / Advisor (Single Truth)
 - [ ] `runIdentity`: Preset-ID ergaenzen, Doctrine/WinMode beibehalten
@@ -128,3 +161,4 @@ Zweck: P1-Progression auf stabiler Phase-E-Basis umsetzen, ohne neue Parallel-Sy
 - keine neue CPU-Architektur
 - kein Renderer-Grundumbau
 - keine Preset-Explosion
+- kein Reducer-Split in `src/game/sim/reducer/index.js` waehrend Phase F
