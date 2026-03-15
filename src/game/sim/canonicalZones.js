@@ -109,6 +109,11 @@ export function createEmptyPatternBonuses() {
   };
 }
 
+export function hasZoneRole(world, idx, roleId) {
+  if (!world?.zoneRole || idx < 0 || idx >= world.zoneRole.length) return false;
+  return (Number(world.zoneRole[idx]) | 0) === (Number(roleId) | 0);
+}
+
 export function deriveCanonicalZoneState(world, playerLineageId, sourceZoneRole = null) {
   const w = Number(world?.w || 0) | 0;
   const h = Number(world?.h || 0) | 0;

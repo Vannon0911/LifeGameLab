@@ -1,6 +1,9 @@
 import { PHYSICS_DEFAULT } from "../../core/kernel/physics.js";
 import { APP_VERSION } from "../../project/project.manifest.js";
 import { buildAdvisorModel } from "../../project/llm/advisorModel.js";
+import { applyFogIntelToAdvisorModel } from "../render/fogOfWar.js";
+import { renderLagePanel } from "./ui.lage.js";
+import { renderEingriffePanel } from "./ui.eingriffe.js";
 import {
   PLAYER_DOCTRINES,
   DOCTRINE_BY_ID,
@@ -45,6 +48,25 @@ import {
 } from "./ui.model.js";
 import { el, fmt, fmtSign, isDesktopLayout } from "./ui.dom.js";
 import { announceInLiveRegion, buildGateFeedback, createActionFeedback } from "./ui.feedback.js";
+
+function countMaskTiles(mask) {
+  if (!mask || typeof mask.length !== "number") return 0;
+  let total = 0;
+  for (let i = 0; i < mask.length; i += 1) {
+    total += (Number(mask[i] || 0) | 0) === 1 ? 1 : 0;
+  }
+  return total;
+}
+
+function summarizeFog(world) {
+  const total = Number(world?.w || 0) * Number(world?.h || 0);
+  if (!total) return { visible: 0, explored: 0, hidden: 0 };
+  const visible = countMaskTiles(world?.visibility);
+  const exploredAll = countMaskTiles(world?.explored);
+  const explored = Math.max(0, exploredAll - visible);
+  const hidden = Math.max(0, total - visible - explored);
+  return { visible, explored, hidden };
+}
 
 // ============================================================
 // UI — Mobile-First Web App v2.1
@@ -506,6 +528,16 @@ export class UI {
   }
 
   _getActiveToolMeta(state) {
+    if (String(state?.sim?.infraBuildMode || "") === "path") {
+      const staged = countMaskTiles(state?.world?.infraCandidateMask);
+      return {
+        mode: "infra_path",
+        label: "Infrastrukturpfad",
+        detail: staged > 0
+          ? `${staged} Kacheln vorgemerkt. Klick setzt/entfernt Pfad, bestaetigen commitet, leer bestaetigen bricht ab.`
+          : "Klick setzt/entfernt Pfad. Leer bestaetigen bricht ab und setzt den Run fort.",
+      };
+    }
     const mode = String(state?.meta?.brushMode || BRUSH_MODE.OBSERVE);
     const zone = ZONE_TYPES.find((entry) => entry.id === this._activeZoneType);
     const map = {
@@ -542,7 +574,13 @@ export class UI {
     if (!this._activeContext) return;
     this._lastPanelRenderAt = Date.now();
     const { meta, sim } = state;
-    const advisorModel = buildAdvisorModel(state, { benchmark: this._getBenchmarkState() });
+    const advisorModel = applyFogIntelToAdvisorModel(
+      buildAdvisorModel(state, { benchmark: this._getBenchmarkState() }),
+      state
+    );
+    const rerenderPanel = () => {
+      queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+    };
     container.innerHTML = "";
     const ctx = this._activeContext;
     const panelMeta = PANEL_BY_KEY[ctx];
@@ -573,265 +611,51 @@ export class UI {
 
 	    // ── STATUS (Lagebericht) ────────────────────────────────
     if (ctx === "lage") {
-	      const playerMemory = getPlayerMemory(state);
-	      const playerStage = Number(sim.playerStage || 1);
-	      const playerAlive = Number(sim.playerAliveCount || 0);
-	      const energyNet = Number(sim.playerEnergyNet || 0);
-	      const commandScore = deriveCommandScore(sim);
-	      const doctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
-	      const influencePhase = getInfluencePhase(playerStage, advisorModel.status.commandScore, sim.runPhase);
-	      const goalState = getGoalState(advisorModel);
-	      const structureState = getStructureState(advisorModel.status.structure);
-	      const riskState = getRiskState(advisorModel.status.risk);
-	      const bottleneckState = getBottleneckState(advisorModel.advisor.bottleneckPrimary);
-	      const nextActionState = getActionState(advisorModel.advisor.nextAction);
-	      const nextLeverState = getLeverState(advisorModel.advisor.nextLever);
-	      const zoneState = getZoneState(advisorModel.advisor.recommendedZone);
-	      const overlayState = getOverlayState(advisorModel.advisor.recommendedOverlay);
-	      const winModeState = getWinModeState(advisorModel.runIdentity.winMode);
-	      const gateFeedback = this._getGateFeedback(state);
-
-	      const mkBar = (pct, cls, label) => {
-        const wrap = el("div", "nx-bar-wrap");
-        wrap.setAttribute("role", "progressbar");
-        wrap.setAttribute("aria-valuenow", Math.round(pct * 100));
-        wrap.setAttribute("aria-valuemin", "0");
-        wrap.setAttribute("aria-valuemax", "100");
-        wrap.setAttribute("aria-label", label);
-        const fill = el("div", `nx-bar-fill ${cls}`);
-        fill.style.width = `${Math.min(100, Math.max(0, pct * 100)).toFixed(1)}%`;
-        wrap.appendChild(fill);
-        return wrap;
-      };
-      const mkMetric = (label, val, cls = "nx-mono") => {
-        const row = el("div", "nx-stat-row");
-        row.append(el("span", "nx-label", label), el("span", cls, val));
-        return row;
-      };
-
-	      let statusText = "Kolonie beobachtet ihr Umfeld. Autonomes Wachstum hat Vorrang.";
-	      let statusColor = "var(--cyan)";
-	      if (String(sim.runPhase || "") === RUN_PHASE.GENESIS_SETUP) {
-	        statusText = "Genesis-Setup aktiv. Vier zusammenhaengende Founder im Startfenster bilden die Gruendung.";
-	        statusColor = "var(--gold)";
-	      } else if (String(sim.runPhase || "") === RUN_PHASE.GENESIS_ZONE) {
-	        statusText = "Genesis-Zone aktiv. Die Founder sind fixiert, der Energiekern muss jetzt explizit bestaetigt werden.";
-	        statusColor = "var(--gold)";
-	      } else if (advisorModel.advisor.bottleneckPrimary === "collapse") {
-	        statusText = "Kolonie kollabiert. Die aktive Linie hat keine tragfaehige Struktur mehr.";
-	        statusColor = "var(--red)";
-	      } else if (advisorModel.advisor.bottleneckPrimary === "energy") {
-	        statusText = "Energie kippt ins Minus. BUFFER, Reserve oder defensivere Prioritaet zuerst.";
-	        statusColor = "var(--red)";
-	      } else if (advisorModel.advisor.bottleneckPrimary === "toxin") {
-	        statusText = "Toxinlast steigt. Detox, Quarantaene oder robustere Korridore werden relevant.";
-	        statusColor = "var(--orange)";
-	      } else if (advisorModel.advisor.bottleneckPrimary === "win_push") {
-	        statusText = "Keine groessere Krise blockiert den Run. Der Siegpfad darf jetzt Prioritaet bekommen.";
-	        statusColor = "var(--green)";
-	      } else if (advisorModel.advisor.nextAction === "wait_and_advance_time") {
-	        statusText = "Kein dominanter Krisenengpass aktiv. Beobachtung und Vorspulen liefern die beste neue Information.";
-	        statusColor = "var(--cyan)";
-	      }
-
-	      const alertCard = el("section", "nx-card");
-	      alertCard.appendChild(el("div", "nx-card-title", "Lagebericht"));
-	      const alertBox = el("div", "nx-alert-box", statusText);
-	      alertBox.style.color = statusColor;
-	      alertBox.style.borderColor = statusColor;
-	      alertCard.appendChild(alertBox);
-	      alertCard.appendChild(el("div", "nx-note", `${bottleneckState.title}: ${bottleneckState.detail}`));
-	      alertCard.appendChild(el("div", "nx-note", `Reason-Codes: ${(advisorModel.advisor.reasonCodes || []).join(", ") || "none"}`));
-	      container.appendChild(alertCard);
-
-      if (String(sim.runPhase || "") === RUN_PHASE.GENESIS_SETUP) {
-        const founderCard = el("section", "nx-card");
-        founderCard.appendChild(el("div", "nx-card-title", "Genesis: Gründung"));
-        founderCard.appendChild(el("div", "nx-note", "Setze vier zusammenhängende Founder im linken Startfenster und bestätige danach die Gründung."));
-        const founderCount = el("div", "nx-active-tool");
-        founderCount.append(
-          el("div", "nx-active-tool-label", "Founder"),
-          el("div", "nx-active-tool-copy", `${Number(sim.founderPlaced || 0)}/${Number(sim.founderBudget || 4)}`)
-        );
-        founderCard.appendChild(founderCount);
-        const founderActions = el("div", "nx-chip-grid");
-        const brushBtn = el("button", "nx-btn nx-btn-ghost", "Founder-Brush");
-        brushBtn.addEventListener("click", () => {
-          this._dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
-          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-        });
-        const confirmBtn = el("button", "nx-btn nx-btn-primary", "Gründung bestätigen");
-        confirmBtn.addEventListener("click", () => {
-          this._dispatch(
-            { type: "CONFIRM_FOUNDATION", payload: {} },
-            {
-              ok: "Gründung bestätigt. Genesis-Zone aktiv, Energiekern wartet.",
-              blocked: "Gründung blockiert.",
-              hint: "Erforderlich: exakt 4 eigene, zusammenhängende Founder im Startfenster.",
-            }
-          );
-          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-        });
-        founderActions.append(brushBtn, confirmBtn);
-        founderCard.appendChild(founderActions);
-        container.appendChild(founderCard);
-      }
-      if (String(sim.runPhase || "") === RUN_PHASE.GENESIS_ZONE) {
-        const founderTiles = Array.isArray(state?.world?.founderMask)
-          ? state.world.founderMask.reduce((sum, value) => sum + ((Number(value || 0) | 0) === 1 ? 1 : 0), 0)
-          : 0;
-        const coreCard = el("section", "nx-card");
-        coreCard.appendChild(el("div", "nx-card-title", "Genesis-Zone: Energiekern"));
-        coreCard.appendChild(el("div", "nx-note", "Die Gruendung ist fixiert. Bestaetige jetzt den Energiekern; erst danach geht der Lauf explizit in RUN_ACTIVE."));
-        const coreCandidate = el("div", "nx-active-tool");
-        coreCandidate.append(
-          el("div", "nx-active-tool-label", "Kernkandidat"),
-          el("div", "nx-active-tool-copy", `${founderTiles} Founder-Kacheln fixiert`)
-        );
-        coreCard.appendChild(coreCandidate);
-        const coreHint = el("div", "nx-note", "Play und Step bleiben gesperrt, bis `CONFIRM_CORE_ZONE` erfolgreich war.");
-        coreCard.appendChild(coreHint);
-        const coreActions = el("div", "nx-chip-grid");
-        const confirmCoreBtn = el("button", "nx-btn nx-btn-primary", "Energiekern bestaetigen");
-        confirmCoreBtn.addEventListener("click", () => {
-          this._dispatch(
-            { type: "CONFIRM_CORE_ZONE", payload: {} },
-            {
-              ok: "Energiekern bestaetigt. Run aktiv.",
-              blocked: "Energiekern blockiert.",
-              hint: "Erforderlich: exakt die bestaetigte Founder-Komponente als gueltiger Kernkandidat.",
-            }
-          );
-          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-        });
-        coreActions.append(confirmCoreBtn);
-        coreCard.appendChild(coreActions);
-        container.appendChild(coreCard);
-      }
-      if (String(sim.runPhase || "") === RUN_PHASE.DNA_ZONE_SETUP) {
-        const selectedTiles = ArrayBuffer.isView(state?.world?.dnaZoneMask)
-          ? Array.from(state.world.dnaZoneMask).reduce((sum, value) => sum + ((Number(value || 0) | 0) === 1 ? 1 : 0), 0)
-          : 0;
-        const dnaSetupCard = el("section", "nx-card");
-        dnaSetupCard.appendChild(el("div", "nx-card-title", "DNA-Zone setzen"));
-        dnaSetupCard.appendChild(el("div", "nx-note", "Der Run ist bewusst pausiert. Waehle jetzt bis zu vier eigene, lebende Kacheln angrenzend an den Energiekern und bestaetige dann Zone 2."));
-        const dnaCandidate = el("div", "nx-active-tool");
-        dnaCandidate.append(
-          el("div", "nx-active-tool-label", "Placement-Zaehler"),
-          el("div", "nx-active-tool-copy", `${selectedTiles}/4 DNA-Kacheln gesetzt`)
-        );
-        dnaSetupCard.appendChild(dnaCandidate);
-        dnaSetupCard.append(
-          mkMetric("Restbudget", String(Number(sim.zone2PlacementBudget || 0))),
-          mkMetric("Status", "DNA-Zone setzen", "nx-mono nx-val-pos")
-        );
-        dnaSetupCard.appendChild(el("div", "nx-note", "Play und Step bleiben gesperrt, bis `CONFIRM_DNA_ZONE` erfolgreich war."));
-        const dnaActions = el("div", "nx-chip-grid");
-        const confirmDnaBtn = el("button", "nx-btn nx-btn-primary", "DNA-Zone bestaetigen");
-        confirmDnaBtn.addEventListener("click", () => {
-          this._dispatch(
-            { type: "CONFIRM_DNA_ZONE", payload: {} },
-            {
-              ok: "DNA-Zone bestaetigt. Zone 2 aktiv.",
-              blocked: "DNA-Zone blockiert.",
-              hint: "Erforderlich: genau vier gueltige DNA-Kacheln als zusammenhaengende Komponente.",
-            }
-          );
-          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-        });
-        dnaActions.append(confirmDnaBtn);
-        dnaSetupCard.appendChild(dnaActions);
-        container.appendChild(dnaSetupCard);
-      }
-
-	      const missionCard = el("section", "nx-card nx-card-mission");
-	      missionCard.appendChild(el("div", "nx-card-title", "Aktuelle Mission"));
-	      missionCard.appendChild(el("div", "nx-mission-title", goalState.title));
-	      missionCard.appendChild(el("div", "nx-mission-copy", goalState.detail));
-	      missionCard.append(
-	        mkMetric("Mission", goalState.short, "nx-mono nx-val-pos"),
-	        mkMetric("Risiko", riskState.label, riskState.id === "stable" ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
-	        mkMetric("Struktur", structureState.tier),
-	        mkMetric("Run-Pfad", winModeState.label),
-	        mkMetric("Win-Blocker", advisorModel.winProgress.blockerCode)
-	      );
-	      container.appendChild(missionCard);
-
-	      const commandCard = el("section", "nx-card");
-	      commandCard.appendChild(el("div", "nx-card-title", "Advisor"));
-	      const commandHero = el("div", "nx-active-tool");
-	      commandHero.append(
-	        el("div", "nx-active-tool-label", influencePhase),
-	        el("div", "nx-active-tool-copy", `${doctrine.label}: ${advisorModel.runIdentity.doctrineTradeoff}`)
-	      );
-	      commandCard.appendChild(commandHero);
-	      commandCard.append(
-	        mkMetric("Engpass", bottleneckState.title),
-	        mkMetric("Naechste Aktion", nextActionState.label),
-	        mkMetric("Naechster Hebel", nextLeverState.label),
-	        mkMetric("Command-Score", `${Math.round(advisorModel.status.commandScore * 100)} / 100`, "nx-mono nx-val-pos"),
-	        mkBar(advisorModel.status.commandScore, "nx-bar-stage", "Command-Score"),
-	        mkMetric("Doctrine", doctrine.label),
-	        mkMetric("Trade-off", advisorModel.runIdentity.doctrineTradeoff),
-	        mkMetric("Split", advisorModel.status.splitReady ? "bereit" : "noch nicht", advisorModel.status.splitReady ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
-	        mkMetric("Clusterstärke", `${Math.round(Number(sim.clusterRatio || 0) * 100)}%`),
-	        mkMetric("Netzwerk", `${Math.round(Number(sim.networkRatio || 0) * 100)}%`),
-	        mkMetric("Synergien", String((playerMemory?.synergies || []).length || 0))
-	      );
-	      container.appendChild(commandCard);
-
-      const energyCard = el("section", "nx-card");
-      energyCard.appendChild(el("div", "nx-card-title", "Energie & Wachstum"));
-      energyCard.append(
-        mkMetric("Population", String(playerAlive), playerAlive > 0 ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
-        mkMetric("Netto", fmtSign(energyNet, 2), energyNet >= 0 ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
-        mkMetric("Zufluss", fmt(Number(sim.playerEnergyIn || 0), 2)),
-        mkMetric("Abfluss", fmt(Number(sim.playerEnergyOut || 0), 2)),
-        mkMetric("Gespeichert", fmt(Number(sim.playerEnergyStored || 0), 2))
-      );
-      const mixGrid = el("div", "nx-stat-grid");
-      const lightBlock = el("div", "nx-stat-row nx-stat-row-col");
-      lightBlock.append(el("span", "nx-label", `Licht ${(Number(sim.lightShare || 0) * 100).toFixed(0)}%`), mkBar(Number(sim.lightShare || 0), "nx-bar-light", "Lichtanteil"));
-      const nutrientBlock = el("div", "nx-stat-row nx-stat-row-col");
-      nutrientBlock.append(el("span", "nx-label", `Nährstoffe ${(Number(sim.nutrientShare || 0) * 100).toFixed(0)}%`), mkBar(Number(sim.nutrientShare || 0), "nx-bar-nutrient", "Nährstoffanteil"));
-      mixGrid.append(lightBlock, nutrientBlock);
-      energyCard.appendChild(mixGrid);
-      container.appendChild(energyCard);
-
-      const progressCard = el("section", "nx-card");
-	      progressCard.appendChild(el("div", "nx-card-title", "Siegpfad & Ausbau"));
-	      progressCard.append(
-	        mkMetric("Stage", `S${playerStage}`, "nx-mono nx-chip-stage"),
-	        mkMetric("DNA", `🧬 ${fmt(Number(sim.playerDNA || 0), 1)}`),
-	        mkMetric("Harvest Yield", fmt(Number(sim.harvestYieldTotal || 0), 1)),
-	        mkMetric("Aktive Biome", String(Number(sim.activeBiomeCount || 0))),
-	        mkMetric("Aktiver Siegpfad", winModeState.label),
-	        mkMetric("Win-Fortschritt", `${advisorModel.winProgress.progress} / ${advisorModel.winProgress.target}`),
-	        mkMetric("Naechste Zone", zoneState.label),
-        mkMetric("Naechste Labor-Diagnose", overlayState.label)
-	      );
-	      progressCard.append(
-	        el("div", "nx-note", `${structureState.detail} Phase ${influencePhase}: ${advisorModel.winProgress.blockerDetail}`),
-	        mkBar(Math.min(1, Number(sim.energySupremacyTicks || 0) / 200), "nx-bar-light", "Suprematie-Fortschritt"),
-	        mkBar(Math.min(1, Number(sim.stockpileTicks || 0) / 200), "nx-bar-nutrient", "Territorium-Fortschritt"),
-	        mkBar(Math.min(1, Number(sim.efficiencyTicks || 0) / 100), "nx-bar-stage", "Effizienz-Fortschritt")
-	      );
-	      container.appendChild(progressCard);
-      if (Number(sim.unlockedZoneTier || 0) >= 1 && String(sim.nextZoneUnlockKind || "") === "DNA") {
-        const unlockProgress = Math.max(0, Math.min(1, Number(sim.zoneUnlockProgress || 0)));
-        const unlockCard = el("section", "nx-card");
-        unlockCard.appendChild(el("div", "nx-card-title", "Zone 2: DNA"));
-        unlockCard.appendChild(el("div", "nx-note", "Der Energiekern ist aktiv. Fortschritt tickt aus gespeicherter Energie und stabilen Kernticks."));
-        unlockCard.append(
-          mkMetric("Unlock-Fortschritt", `${Math.round(unlockProgress * 100)}%`, unlockProgress >= 1 ? "nx-mono nx-val-pos" : "nx-mono"),
-          mkMetric("Zielkosten", fmt(Number(sim.nextZoneUnlockCostEnergy || 0), 2)),
-          mkMetric("Stabile Kernticks", String(Number(sim.coreEnergyStableTicks || 0)))
-        );
-        unlockCard.appendChild(mkBar(unlockProgress, "nx-bar-stage", "DNA-Unlock-Fortschritt"));
-        if (unlockProgress >= 1 && !sim.zone2Unlocked) {
-          const unlockActions = el("div", "nx-chip-grid");
-          const startBtn = el("button", "nx-btn nx-btn-primary", "DNA-Zone starten");
-          startBtn.addEventListener("click", () => {
+      renderLagePanel({
+        container,
+        state,
+        sim,
+        advisorModel,
+        gateFeedback: this._getGateFeedback(state),
+        actions: {
+          useFounderBrush: () => {
+            this._dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
+            rerenderPanel();
+          },
+          confirmFoundation: () => {
+            this._dispatch(
+              { type: "CONFIRM_FOUNDATION", payload: {} },
+              {
+                ok: "Gruendung bestaetigt. Genesis-Zone aktiv, Energiekern wartet.",
+                blocked: "Gruendung blockiert.",
+                hint: "Erforderlich: exakt 4 eigene, zusammenhaengende Founder im Startfenster.",
+              }
+            );
+            rerenderPanel();
+          },
+          confirmCoreZone: () => {
+            this._dispatch(
+              { type: "CONFIRM_CORE_ZONE", payload: {} },
+              {
+                ok: "Energiekern bestaetigt. Run aktiv.",
+                blocked: "Energiekern blockiert.",
+                hint: "Erforderlich: exakt die bestaetigte Founder-Komponente als gueltiger Kernkandidat.",
+              }
+            );
+            rerenderPanel();
+          },
+          confirmDnaZone: () => {
+            this._dispatch(
+              { type: "CONFIRM_DNA_ZONE", payload: {} },
+              {
+                ok: "DNA-Zone bestaetigt. Zone 2 aktiv.",
+                blocked: "DNA-Zone blockiert.",
+                hint: "Erforderlich: genau vier gueltige DNA-Kacheln als zusammenhaengende Komponente.",
+              }
+            );
+            rerenderPanel();
+          },
+          startDnaZone: () => {
             this._dispatch(
               { type: "START_DNA_ZONE_SETUP", payload: {} },
               {
@@ -840,136 +664,89 @@ export class UI {
                 hint: "Erforderlich: volles DNA-Meter fuer Zone 2.",
               }
             );
-            queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-          });
-          unlockActions.appendChild(startBtn);
-          unlockCard.appendChild(unlockActions);
-        }
-        container.appendChild(unlockCard);
-      }
-      if (sim.dnaZoneCommitted) {
-        const dnaCommittedCard = el("section", "nx-card");
-        dnaCommittedCard.appendChild(el("div", "nx-card-title", "Zone 2 aktiv"));
-        dnaCommittedCard.appendChild(el("div", "nx-note", "Die DNA-Zone ist bestaetigt und erzeugt jetzt deterministisch DNA im laufenden Run."));
-        dnaCommittedCard.append(
-          mkMetric("Naechster Unlock", "Infrastruktur", "nx-mono nx-val-pos"),
-          mkMetric("DNA-Kosten", fmt(Number(sim.nextInfraUnlockCostDNA || 0), 0))
-        );
-        container.appendChild(dnaCommittedCard);
-      }
-
-      const timeCard = el("section", "nx-card");
-      timeCard.appendChild(el("div", "nx-card-title", "Zeitfenster"));
-      timeCard.appendChild(el("div", "nx-note", advisorModel.advisor.nextAction === "wait_and_advance_time"
-        ? "Beobachtung ist gerade die beste Hauptaktion. Vorspulen macht die naechste Diagnose sichtbar."
-        : "Vorspulen bleibt Analysewerkzeug. Nutze es, um die Wirkung deines letzten Eingriffs zu lesen."));
-      const timeGrid = el("div", "nx-chip-grid");
-      for (const [label, ms] of [["+1s", 1000], ["+5s", 5000], ["+15s", 15000]]) {
-        const btn = el("button", "nx-btn nx-btn-ghost", label);
-        btn.addEventListener("click", async () => {
-          if (typeof window.advanceTime !== "function") {
-            this._setActionFeedback({ ok: false, message: "advanceTime ist im aktuellen Runtime-Kontext nicht verfuegbar.", hint: "" });
-            return;
-          }
-          const beforeTick = Number(this._store.getState()?.sim?.tick || 0);
-          const result = await window.advanceTime(ms);
-          this._setActionFeedback({
-            ok: true,
-            message: `${label} vorgespult.`,
-            hint: `Tick ${beforeTick} -> ${Number(result?.tick || beforeTick)} in ${Number(result?.steps || 0)} Schritten.`,
-          });
-          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-        });
-        timeGrid.appendChild(btn);
-      }
-      timeCard.appendChild(timeGrid);
-      container.appendChild(timeCard);
-
-      if (gateFeedback.length) {
-        const gateCard = el("section", "nx-card");
-        gateCard.appendChild(el("div", "nx-card-title", "Gate-Check"));
-        for (const item of gateFeedback) {
-          const row = el("div", "nx-stat-row nx-stat-row-col");
-          row.appendChild(el("span", item.level === "warn" ? "nx-label nx-val-neg" : "nx-label", item.text));
-          row.appendChild(el("span", "nx-note", item.next));
-          gateCard.appendChild(row);
-        }
-        container.appendChild(gateCard);
-      }
-
-	      const ovCard = el("section", "nx-card");
-	      ovCard.appendChild(el("div", "nx-card-title", "Diagnose"));
-      ovCard.appendChild(el("div", "nx-note", `Diagnose bleibt im Labor. Empfohlen waere derzeit ${overlayState.label} fuer ${bottleneckState.title}, aber der Main-Run bleibt in der kanonischen Weltansicht.`));
-	      container.appendChild(ovCard);
-	      return;
+            rerenderPanel();
+          },
+          startInfra: () => {
+            this._dispatch(
+              { type: "BEGIN_INFRA_BUILD", payload: {} },
+              {
+                ok: "Infrastrukturpfad aktiv. Canvas-Klicks stagen jetzt die Verbindung.",
+                blocked: "Infrastrukturstart blockiert.",
+                hint: "Erforderlich: RUN_ACTIVE, bestaetigte DNA-Zone, INFRA als naechster Unlock sowie genug DNA und gespeicherte Energie.",
+              }
+            );
+            rerenderPanel();
+          },
+          confirmInfra: () => {
+            const currentState = this._store.getState();
+            const emptyBefore = countMaskTiles(currentState.world?.infraCandidateMask) === 0;
+            this._dispatch(
+              { type: "CONFIRM_INFRA_PATH", payload: {} },
+              {
+                ok: emptyBefore ? "Infrastrukturpfad beendet. Leerer Staging-Pfad hat nichts committed." : "Infrastrukturpfad committed.",
+                blocked: "Infrastrukturpfad blockiert.",
+                hint: emptyBefore
+                  ? "Leeres Confirm beendet nur den Build-Modus. Fuer Commit braucht der Pfad eine gueltige zusammenhaengende Verbindung."
+                  : "Pfad muss zusammenhaengend sein und an Kern, DNA-Zone oder bestehende commitete Infrastruktur anschliessen.",
+              }
+            );
+            rerenderPanel();
+          },
+          advanceTime: async (ms, label) => {
+            if (typeof window.advanceTime !== "function") {
+              this._setActionFeedback({ ok: false, message: "advanceTime ist im aktuellen Runtime-Kontext nicht verfuegbar.", hint: "" });
+              return;
+            }
+            const beforeTick = Number(this._store.getState()?.sim?.tick || 0);
+            const result = await window.advanceTime(ms);
+            this._setActionFeedback({
+              ok: true,
+              message: `${label} vorgespult.`,
+              hint: `Tick ${beforeTick} -> ${Number(result?.tick || beforeTick)} in ${Number(result?.steps || 0)} Schritten.`,
+            });
+            rerenderPanel();
+          },
+        },
+      });
+      return;
     }
 
     // ── EINGRIFFE ───────────────────────────────────────────
     if (ctx === "eingriffe") {
-      const playerMemory = getPlayerMemory(state);
-      const playerStage = Number(sim.playerStage || 1);
-      const commandScore = deriveCommandScore(sim);
-      const influencePhase = getInfluencePhase(playerStage, commandScore, sim.runPhase);
-      const currentDoctrine = DOCTRINE_BY_ID[String(playerMemory?.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
-
-      const activeCard = el("section","nx-card");
-      activeCard.appendChild(el("div", "nx-card-title", "Handlungsraum"));
-      activeCard.appendChild(el("div", "nx-note", `Phase ${influencePhase}. ${currentDoctrine.label} bleibt Dauerhaltung, die Eingriffe loesen Prozesse statt Einzelklicks aus.`));
-      activeCard.appendChild(el("div", "nx-note", `Fortschritt ${fmt(Number(sim.stageProgressScore || 0), 3)} · Stabilitaet ${fmt(Number(sim.stabilityScore || 0), 3)} · Oekologie ${fmt(Number(sim.ecologyScore || 0), 3)}`));
-      container.appendChild(activeCard);
-
-      const doctrineCard = el("section","nx-card");
-      doctrineCard.appendChild(el("div", "nx-card-title", "Prioritaet"));
-      const doctrineGrid = el("div", "nx-doctrine-grid");
-      for (const doctrine of PLAYER_DOCTRINES) {
-        const locked = playerStage < Number(doctrine.unlockStage || 1);
-        const active = doctrine.id === currentDoctrine.id;
-        const card = el("button", `nx-doctrine-card${active ? " is-active" : ""}${locked ? " is-locked" : ""}`);
-        card.disabled = locked;
-        card.append(
-          el("span", "nx-doctrine-name", doctrine.label),
-          el("span", "nx-doctrine-stage", `ab S${doctrine.unlockStage}`),
-          el("span", "nx-doctrine-copy", doctrine.summary)
-        );
-        card.addEventListener("click", () => {
-          this._dispatch(
-            { type:"SET_PLAYER_DOCTRINE", payload:{ doctrineId: doctrine.id } },
-            { ok: `Prioritaet auf ${doctrine.label} gesetzt.`, blocked: `${doctrine.label} ist noch gesperrt.`, hint: `Nächster Schritt: Stage ${doctrine.unlockStage} erreichen.` }
-          );
-          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
-        });
-        doctrineGrid.appendChild(card);
-      }
-      doctrineCard.appendChild(doctrineGrid);
-      container.appendChild(doctrineCard);
-
-      const actionCard = el("section","nx-card");
-      actionCard.appendChild(el("div", "nx-card-title", "Main-Run-Eingriffe"));
-      const actions = [
+      const mainRunActions = [
         { type: "HARVEST_PULSE", label: "Ernten", what: "Loest einen lokalen Erntepuls ueber die eigene Kolonie aus.", gain: "DNA und Harvest-Yield steigen.", risk: "Pflanzenmasse und lokale Saettigung sinken.", where: "Stark in nassen, dichten Korridoren." },
         { type: "PRUNE_CLUSTER", label: "Pflegen", what: "Schneidet ueberwuchernde oder toxische Cluster zurueck.", gain: "Prune-Yield und Raumkontrolle steigen.", risk: "Zu harte Rueckschnitte kosten kurzzeitig Biomasse.", where: "Gut in toxischen, dichten Clustern." },
         { type: "RECYCLE_PATCH", label: "Regenerieren", what: "Fuehrt toxinbelastete Flaechen in Naehrstofffluss zurueck.", gain: "Recycle-Yield und lokale Fruchtbarkeit steigen.", risk: "Braucht vorhandenen Toxindruck als Material.", where: "Am besten in belasteten Ufer- oder Sumpfsaeumen." },
         { type: "SEED_SPREAD", label: "Aussaeen", what: "Verteilt neue Pflanzen- und Biocharge-Impulse entlang der Linie.", gain: "Seed-Yield, Pflanzenmasse und Oekologie wachsen.", risk: "Verbraucht kurzfristig DNA.", where: "Besonders stark in Riverlands und Nasswald." },
       ];
-      for (const act of actions) {
-        const box = el("div", "nx-zone-row");
-        const left = el("div", "");
-        left.appendChild(el("div", "nx-zone-name", act.label));
-        left.appendChild(el("div", "nx-zone-desc", act.what));
-        box.appendChild(left);
-        const btn = el("button", "nx-btn nx-btn-ghost", act.label);
-        btn.addEventListener("click", () => {
+      const mainRunActionHandlers = new Map();
+      for (const action of mainRunActions) {
+        mainRunActionHandlers.set(action.type, () => {
           this._dispatch(
-            { type: act.type, payload: {} },
-            { ok: `${act.label} ausgelöst.`, blocked: `${act.label} wurde blockiert.`, hint: `${act.gain} ${act.risk}` }
+            { type: action.type, payload: {} },
+            { ok: `${action.label} ausgeloest.`, blocked: `${action.label} wurde blockiert.`, hint: `${action.gain} ${action.risk}` }
           );
-          queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+          rerenderPanel();
         });
-        box.appendChild(btn);
-        actionCard.appendChild(box);
-        actionCard.appendChild(el("div", "nx-note", `Ertrag: ${act.gain} Risiko: ${act.risk} Kontext: ${act.where}`));
       }
-      container.appendChild(actionCard);
+      renderEingriffePanel({
+        container,
+        state,
+        sim,
+        actionDefs: mainRunActions,
+        actions: {
+          setDoctrine: (doctrine) => {
+            this._dispatch(
+              { type:"SET_PLAYER_DOCTRINE", payload:{ doctrineId: doctrine.id } },
+              { ok: `Prioritaet auf ${doctrine.label} gesetzt.`, blocked: `${doctrine.label} ist noch gesperrt.`, hint: `Naechster Schritt: Stage ${doctrine.unlockStage} erreichen.` }
+            );
+            rerenderPanel();
+          },
+          runMainAction: (action) => {
+            mainRunActionHandlers.get(action.type)?.();
+          },
+        },
+      });
       return;
     }
 
@@ -977,10 +754,10 @@ export class UI {
     if (ctx === "legacy_energie") {
       const eIn = Number(sim.playerEnergyIn || 0), eOut = Number(sim.playerEnergyOut || 0);
       const eNet = Number(sim.playerEnergyNet || 0), eStored = Number(sim.playerEnergyStored || 0);
-      const cpuEIn = Number(sim.cpuEnergyIn || 0);
+      const cpuIntel = advisorModel?.cpuIntel || { summary: "CPU ausserhalb Sicht unbekannt", mode: "hidden", precise: false, visibleAlive: 0 };
       const lShare = Number(sim.lightShare || 0), nShare = Number(sim.nutrientShare || 0);
       const season = Number(sim.seasonPhase || 0);
-      const pAlive = Number(sim.playerAliveCount || 0), cAlive = Number(sim.cpuAliveCount || 0);
+      const pAlive = Number(sim.playerAliveCount || 0);
 
       const flowCard = el("section", "nx-card");
       flowCard.setAttribute("aria-labelledby", "energy-flow-title");
@@ -993,7 +770,7 @@ export class UI {
         ["Ausgaben",  fmt(eOut,3),"nx-val-neg"],
         ["Netto",     fmtSign(eNet,3), eNet>=0?"nx-val-pos":"nx-val-neg"],
         ["Gespeichert",fmt(eStored,2),"nx-val"],
-        ["CPU Einnahmen",fmt(cpuEIn,3),"nx-val"],
+        ["CPU Intel", cpuIntel.summary, "nx-val"],
       ]) {
         const row = el("div", "nx-stat-row");
         row.append(el("span", "nx-label", label), el("span", `nx-mono ${cls}`, val));
@@ -1043,7 +820,10 @@ export class UI {
       const pRow2 = el("div", "nx-stat-row");
       pRow2.append(el("span","nx-label","Spieler alive"), el("span","nx-mono nx-val-pos", String(pAlive)));
       const cRow2 = el("div", "nx-stat-row");
-      cRow2.append(el("span","nx-label","CPU alive"), el("span","nx-mono nx-val-neg", String(cAlive)));
+      cRow2.append(
+        el("span","nx-label","CPU Status"),
+        el("span","nx-mono nx-val-neg", cpuIntel.precise ? `${cpuIntel.visibleAlive} in Sicht` : cpuIntel.mode === "signature" ? "nur Signatur" : "keine Sicht")
+      );
       fracCard.append(pRow2, cRow2);
 
       container.append(flowCard, srcCard, seaCard, fracCard);
@@ -1383,7 +1163,17 @@ export class UI {
       });
       speedRow.append(speed);
       card.appendChild(speedRow);
-      container.append(card);
+
+      const fog = summarizeFog(state.world);
+      const fogCard = el("section", "nx-card");
+      fogCard.appendChild(el("div", "nx-card-title", "Sicht-Legende"));
+      fogCard.appendChild(el("div", "nx-note", "Sichtbar bleibt klar, erkundet wird gedimmt erinnert, unbesucht bleibt stark verdeckt."));
+      fogCard.append(
+        el("div", "nx-note", `Sichtbar: ${fog.visible}`),
+        el("div", "nx-note", `Erkundet: ${fog.explored}`),
+        el("div", "nx-note", `Unbesucht: ${fog.hidden}`)
+      );
+      container.append(card, fogCard);
       return;
     }
 
@@ -1832,6 +1622,20 @@ export class UI {
     if (wx<0||wy<0||wx>=state.meta.gridW||wy>=state.meta.gridH) return;
     const mode = state.meta.brushMode;
     const radius = state.meta.brushRadius || 3;
+    if (String(state.sim?.infraBuildMode || "") === "path") {
+      if (!start) return;
+      const idx = wy * state.meta.gridW + wx;
+      const isSelected = (Number(state.world?.infraCandidateMask?.[idx] || 0) | 0) === 1;
+      this._dispatch(
+        { type: "BUILD_INFRA_PATH", payload: { x: wx, y: wy, remove: isSelected } },
+        {
+          ok: isSelected ? "Infrastrukturkachel entfernt." : "Infrastrukturkachel vorgemerkt.",
+          blocked: "Infrastrukturpfad blockiert.",
+          hint: "Pfad muss zusammenhaengend bleiben und an Kern, DNA-Zone oder commitete Infrastruktur anschliessen.",
+        }
+      );
+      return;
+    }
     if (mode === BRUSH_MODE.OBSERVE) return;
     if (mode === BRUSH_MODE.CELL_HARVEST) {
       if (!start) return;
@@ -1936,7 +1740,10 @@ export class UI {
     const energyNet  = Number(sim.playerEnergyNet || 0);
     const season     = Number(sim.seasonPhase || 0);
     const playerAlive= Number(sim.playerAliveCount || 0);
-    const advisorModel = buildAdvisorModel(state, { benchmark: this._getBenchmarkState() });
+    const advisorModel = applyFogIntelToAdvisorModel(
+      buildAdvisorModel(state, { benchmark: this._getBenchmarkState() }),
+      state
+    );
     const doctrine = DOCTRINE_BY_ID[String(advisorModel.runIdentity.doctrine || "equilibrium")] || PLAYER_DOCTRINES[0];
     const riskState = getRiskState(advisorModel.status.risk);
     const goalState = getGoalState(advisorModel);

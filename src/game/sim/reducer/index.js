@@ -1031,7 +1031,16 @@ export function reducer(state, action, { rng }) {
       const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
       const infraCandidateMask = getInfraCandidateMask(world, w * h);
       const candidateIndices = collectMaskIndices(infraCandidateMask);
-      if (!candidateIndices.length) return [];
+      if (!candidateIndices.length) {
+        infraCandidateMask.fill(0);
+        const patches = [
+          { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
+          { op: "set", path: "/sim/infraBuildMode", value: "" },
+          { op: "set", path: "/sim/running", value: true },
+        ];
+        assertSimPatchesAllowed(manifest, state, action.type, patches);
+        return patches;
+      }
       if (!areIndicesConnected4(candidateIndices, w, h)) return [];
       let touchesAnchor = false;
       for (const idx of candidateIndices) {
