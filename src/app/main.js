@@ -297,7 +297,20 @@ const RenderManager = {
           this.lastRenderInfo = e.data.payload;
           if (this.lastRenderInfo) ui.setRenderInfo(this.lastRenderInfo);
           this.isPending = false;
+          return;
         }
+        if (e.data.cmd === "RENDER_ERROR") {
+          console.warn("[RenderManager] Worker render failed:", e.data?.error || "unknown");
+          this.flush("worker_render_error");
+          canvas = this.replaceCanvas("main");
+          this.mode = "main";
+        }
+      };
+      this.worker.onerror = (err) => {
+        console.warn("[RenderManager] Worker crashed:", err?.message || err);
+        this.flush("worker_error");
+        canvas = this.replaceCanvas("main");
+        this.mode = "main";
       };
       this.isInitialized = true;
       this.canvasMode = "worker";
@@ -332,6 +345,23 @@ const RenderManager = {
     return pref == null ? cells >= autoThreshold : !!pref;
   },
 
+  summarizeWorldView(state) {
+    const world = state?.world || {};
+    const countOnes = (mask) => {
+      if (!mask || !ArrayBuffer.isView(mask)) return 0;
+      let total = 0;
+      for (let i = 0; i < mask.length; i++) {
+        if ((Number(mask[i] || 0) | 0) === 1) total++;
+      }
+      return total;
+    };
+    return [
+      countOnes(world.visibility),
+      countOnes(world.explored),
+      countOnes(world.infraCandidateMask),
+    ].join(":");
+  },
+
   makeSignature(state, perf) {
     const ui = state?.meta?.ui || {};
     return [
@@ -345,6 +375,10 @@ const RenderManager = {
       Number(ui.showRemoteAttackOverlay ?? 1),
       Number(ui.showDefenseOverlay ?? 1),
       String(ui.renderDetailMode || "auto"),
+      String(state?.sim?.runPhase || ""),
+      String(state?.sim?.infraBuildMode || ""),
+      Number(state?.sim?.running || 0),
+      this.summarizeWorldView(state),
       this.shouldUseOffscreen(state) ? 1 : 0,
     ].join("|");
   },

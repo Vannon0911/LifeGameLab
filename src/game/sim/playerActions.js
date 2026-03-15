@@ -573,6 +573,23 @@ export function handleBuyEvolution(state, action, devMutationCatalog) {
   if (unlocked.has(archetypeId)) return [];
   if (!hasRequiredTechs(unlocked, tech.requires)) return [];
   if (commandScore + 1e-9 < Number(tech.commandReq || 0)) return [];
+  const req = tech.runRequirements;
+  if (req) {
+    if (req.minZoneTier && Number(state.sim.unlockedZoneTier || 0) < Number(req.minZoneTier || 0)) return [];
+    if (req.requiresInfra && !state.sim.infrastructureUnlocked) return [];
+    if (req.minPatternClasses) {
+      const count = Object.keys(state.sim.patternCatalog || {}).filter((key) => {
+        const bucket = state.sim.patternCatalog?.[key];
+        return Array.isArray(bucket) && bucket.length > 0;
+      }).length;
+      if (count < Number(req.minPatternClasses || 0)) return [];
+    }
+    if (req.patternEnergyBonus) {
+      const bonus = Number(state.sim.patternBonuses?.energy || 0);
+      if (bonus <= 0) return [];
+    }
+    if (req.minNetworkRatio && Number(state.sim.networkRatio || 0) < Number(req.minNetworkRatio || 0)) return [];
+  }
 
   unlocked.add(archetypeId);
   currentMemory.techs = [...unlocked].sort();
