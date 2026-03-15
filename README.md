@@ -28,6 +28,8 @@ Kurz gesagt: `LifeGameLab` ist heute nicht nur "ein Zellspiel", sondern die doku
 
 Die Leitidee ist: beobachten, verstehen, eingreifen, entblocken. Jeder neue Fortschrittsschritt soll sich wie ein echter Systemwechsel anfuehlen, nicht wie ein weiterer Brush im selben Werkzeugkasten.
 
+Die feste Produktbasis fuer diese Richtung steht in [docs/CONCEPT_BASIS.md](docs/CONCEPT_BASIS.md). Das Dokument ist absichtlich enger als ein offenes GDD: Es soll neue Ideen filtern, nicht alles erlauben.
+
 ## Warum das Rework noetig war
 
 Vor dem Rework hatte das Projekt mehrere Probleme gleichzeitig:
@@ -204,6 +206,7 @@ Die beste Lesart ist nicht "welche Datei macht was?", sondern:
 Die wichtigsten Anker dafuer sind:
 
 - `progress.md`
+- `docs/CONCEPT_BASIS.md`
 - `docs/SESSION_HANDOFF.md`
 - `docs/PROJECT_STRUCTURE.md`
 - `docs/PROJECT_CONTRACT_SNAPSHOT.md`
