@@ -85,4 +85,14 @@ mustNotThrow(() => {
   ]);
 }, "SIM_GATE_PHASE_C_CONTRACT_KEYS");
 
+mustNotThrow(() => {
+  assertSimPatchesAllowed(manifest, state, "GEN_WORLD", [
+    { op: "set", path: "/world/zoneRole", value: new Uint8Array(tileCount) },
+    { op: "set", path: "/world/zoneId", value: new Int32Array(tileCount) },
+    { op: "set", path: "/world/zoneMeta", value: {} },
+    { op: "set", path: "/sim/patternCatalog", value: {} },
+    { op: "set", path: "/sim/patternBonuses", value: {} },
+  ]);
+}, "SIM_GATE_PHASE_E_BASE_KEYS");
+
 console.log("SIM_GATE_OK");

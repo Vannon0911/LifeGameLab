@@ -166,6 +166,57 @@ function countAlivePlayerInfraCells(world, playerLineageId) {
   return countAlivePlayerMaskedCells(world?.link, world, playerLineageId);
 }
 
+function getVisionRadii(presetId) {
+  const phaseD = getWorldPreset(presetId)?.phaseD || {};
+  return {
+    core: Math.max(0, Number(phaseD.visionRadiusCore || 0) | 0),
+    dna: Math.max(0, Number(phaseD.visionRadiusDNA || 0) | 0),
+    infra: Math.max(0, Number(phaseD.visionRadiusInfra || 0) | 0),
+  };
+}
+
+function revealRadius(target, w, h, cx, cy, radius) {
+  const r = Math.max(0, Number(radius || 0) | 0);
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      if ((dx * dx + dy * dy) > r * r) continue;
+      const x = cx + dx;
+      const y = cy + dy;
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      target[y * w + x] = 1;
+    }
+  }
+}
+
+function deriveVisibilityState(world, presetId, playerLineageId) {
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  const N = w * h;
+  const prevExplored = world?.explored && ArrayBuffer.isView(world.explored)
+    ? world.explored
+    : new Uint8Array(N);
+  const visibility = new Uint8Array(N);
+  const explored = new Uint8Array(prevExplored);
+  if (!N || !world?.alive || !world?.lineageId) {
+    return { visibility, explored };
+  }
+
+  const radii = getVisionRadii(presetId);
+  for (let i = 0; i < N; i++) {
+    if (!isAlivePlayerOwnedTile(world, i, playerLineageId)) continue;
+    const x = i % w;
+    const y = (i / w) | 0;
+    if (isMarked(world?.coreZoneMask, i)) revealRadius(visibility, w, h, x, y, radii.core);
+    if (isMarked(world?.dnaZoneMask, i)) revealRadius(visibility, w, h, x, y, radii.dna);
+    if (Number(world?.link?.[i] || 0) > 0) revealRadius(visibility, w, h, x, y, radii.infra);
+  }
+
+  for (let i = 0; i < N; i++) {
+    if ((Number(visibility[i]) | 0) === 1) explored[i] = 1;
+  }
+  return { visibility, explored };
+}
+
 function getInfraCandidateMask(world, size) {
   if (world?.infraCandidateMask && ArrayBuffer.isView(world.infraCandidateMask)) {
     return cloneTypedArray(world.infraCandidateMask);
@@ -492,6 +543,9 @@ function buildWorldGenerationPatches(state, presetId, gameModeOverride, patchGam
   applyGlobalLearningToWorld(world, meta.globalLearning);
   world.devMutationVault = cloneJson(meta.devMutationVault || defaultDevMutationVault());
   world.zoneMap = new Int8Array(meta.gridW * meta.gridH);
+  world.zoneRole = new Uint8Array(meta.gridW * meta.gridH);
+  world.zoneId = new Int32Array(meta.gridW * meta.gridH);
+  world.zoneMeta = {};
 
   const nextSim = deriveBootstrapSimMetrics(world, { ...meta, physics: tunedPhysics }, makeInitialState().sim);
   nextSim.running = false;
@@ -549,7 +603,7 @@ export function makeInitialState() {
     world: null,
     sim: {
       tick: 0, running: false, runPhase: RUN_PHASE.GENESIS_SETUP, founderBudget: 4, founderPlaced: 0,
-      unlockedZoneTier: 0, nextZoneUnlockKind: "", nextZoneUnlockCostEnergy: 0, zoneUnlockProgress: 0, coreEnergyStableTicks: 0, zone2Unlocked: false, zone2PlacementBudget: 0, dnaZoneCommitted: false, nextInfraUnlockCostDNA: 0, infrastructureUnlocked: false, infraBuildMode: "", infraBuildCostEnergy: 0, infraBuildCostDNA: 0, cpuBootstrapDone: 0,
+      unlockedZoneTier: 0, nextZoneUnlockKind: "", nextZoneUnlockCostEnergy: 0, zoneUnlockProgress: 0, coreEnergyStableTicks: 0, zone2Unlocked: false, zone2PlacementBudget: 0, dnaZoneCommitted: false, nextInfraUnlockCostDNA: 0, infrastructureUnlocked: false, infraBuildMode: "", infraBuildCostEnergy: 0, infraBuildCostDNA: 0, cpuBootstrapDone: 0, patternCatalog: {}, patternBonuses: {},
       aliveCount: 0, aliveRatio: 0,
       meanLAlive: 0, meanEnergyAlive: 0, meanReserveAlive: 0,
       meanNutrientField: 0, meanToxinField: 0, meanSaturationField: 0, meanPlantField: 0,
@@ -1204,6 +1258,10 @@ export function simStepPatch(state, action, ctx) {
   };
   simOut.expansionWork = Math.max(0, simOut.expansionWork + expansionWorkGain(simOut));
   simOut.nextExpandCost = expansionWorkCost(worldMutable, simOut);
+  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+  const visionState = deriveVisibilityState(worldMutable, state.meta.worldPresetId, playerLineageId);
+  worldMutable.visibility = visionState.visibility;
+  worldMutable.explored = visionState.explored;
 
   const patches = [];
 
@@ -1223,13 +1281,14 @@ export function simStepPatch(state, action, ctx) {
   } else {
     // Drift hardening: only patch known world keys.
     pushKeysPatches(patches, worldMutable, WORLD_SIM_STEP_KEYS, "/world", state.world);
+    patches.push({ op: "set", path: "/world/visibility", value: worldMutable.visibility });
+    patches.push({ op: "set", path: "/world/explored", value: worldMutable.explored });
   }
 
   patches.push({ op: "set", path: "/meta/globalLearning", value: nextLearning });
 
   applyWinConditions(state, simOut, currentTick);
   const nextZoneUnlockCostEnergy = Math.max(0, Number(state.sim.nextZoneUnlockCostEnergy || 0));
-  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
   const alivePlayerCoreCells = countAlivePlayerCoreCells(worldMutable, playerLineageId);
   const alivePlayerInfraCells = countAlivePlayerInfraCells(worldMutable, playerLineageId);
   if (Number(state.sim.unlockedZoneTier || 0) >= 1) {
