@@ -5,7 +5,7 @@ Zweck: kanonisches Zonensystem und deterministische Pattern-Engine nach stabilem
 ## Status
 
 - Phase D ist stabil abgeschlossen; Phase E darf auf dieser Basis produktiv anlaufen.
-- Aktueller Stand: E1 ist erledigt, E2+ bleiben offen.
+- Aktueller Stand: E1 und E2 sind erledigt, E3+ bleiben offen.
 - Weiterhin nicht erlaubt ausserhalb der jeweiligen Tickets:
   - keine Migration von `coreZoneMask` / `dnaZoneMask` / `world.link` vor E2
   - keine Pattern-Auswertung vor E3/E4
@@ -42,11 +42,16 @@ E1 ist bewusst nur die Basis:
 - keine Core-/DNA-/Infra-Migration und keine Pattern-Berechnung in diesem Ticket
 
 ### E2 Migration Core/DNA/Infra
-- [ ] `coreZoneMask` in kanonische Zonen ueberfuehren
-- [ ] `dnaZoneMask` in kanonische Zonen ueberfuehren
-- [ ] Infra-Sonderpfade in kanonische Zonen ueberfuehren
-- [ ] Doppelquellen im Main-Run entfernen
-- [ ] Tests + Doku aktualisieren
+- [x] `coreZoneMask` in kanonische Zonen ueberfuehren
+- [x] `dnaZoneMask` in kanonische Zonen ueberfuehren
+- [x] Infra-Sonderpfade in kanonische Zonen ueberfuehren
+- [x] Doppelquellen im Main-Run entfernen
+- [x] Tests + Doku aktualisieren
+
+E2 ist bewusst als Migrationsschritt umgesetzt:
+- `world.zoneRole` / `world.zoneId` / `world.zoneMeta` spiegeln jetzt Core, DNA und committed Infra deterministisch
+- Main-Run-Leser fuer Sicht/Fog, Reachability und DNA-Ertrag lesen kanonische Zonen statt der alten Doppelquellen
+- `coreZoneMask`, `dnaZoneMask` und `link` bleiben vorerst als Kompatibilitaets-/Staging-Flaechen erhalten, bis E3+ sie weiter abbauen
 
 ### E3 Pattern-Engine
 - [ ] Linien erkennen

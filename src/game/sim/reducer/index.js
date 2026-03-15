@@ -16,6 +16,7 @@ import {
   OVERLAY_MODE,
   RUN_PHASE,
   WIN_MODE,
+  ZONE_ROLE,
   isBrushMode,
   normalizeGameMode,
   normalizeRunPhase,
@@ -66,6 +67,8 @@ import {
   handleSeedSpread,
 } from "../mainRunActions.js";
 import { hasAdjacentCommittedInfra4, isCommittedInfraValue } from "../infra.js";
+import { applyCanonicalZoneState, countAlivePlayerZoneRole, hasAdjacentZoneRole4, hasZoneRole } from "../canonicalZones.js";
+import { buildPatternState } from "../patterns.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
@@ -207,9 +210,9 @@ function deriveVisibilityState(world, presetId, playerLineageId) {
     if (!isPlayerOwned) continue;
     const x = i % w;
     const y = (i / w) | 0;
-    if (isMarked(world?.coreZoneMask, i)) revealRadius(visibility, w, h, x, y, radii.core);
-    if (isMarked(world?.dnaZoneMask, i)) revealRadius(visibility, w, h, x, y, radii.dna);
-    if (isCommittedInfraValue(world?.link?.[i])) revealRadius(visibility, w, h, x, y, radii.infra);
+    if (hasZoneRole(world, i, ZONE_ROLE.CORE)) revealRadius(visibility, w, h, x, y, radii.core);
+    if (hasZoneRole(world, i, ZONE_ROLE.DNA)) revealRadius(visibility, w, h, x, y, radii.dna);
+    if (hasZoneRole(world, i, ZONE_ROLE.INFRA)) revealRadius(visibility, w, h, x, y, radii.infra);
   }
 
   for (let i = 0; i < N; i++) {
@@ -231,11 +234,12 @@ function isAlivePlayerOwnedTile(world, idx, playerLineageId) {
 }
 
 function touchesCommittedInfraAnchor(world, idx, w, h) {
-  return isMarked(world?.coreZoneMask, idx)
-    || isMarked(world?.dnaZoneMask, idx)
-    || isCommittedInfraValue(world?.link?.[idx])
-    || hasAdjacentMarkedTile4(world?.coreZoneMask, idx, w, h)
-    || hasAdjacentMarkedTile4(world?.dnaZoneMask, idx, w, h)
+  return hasZoneRole(world, idx, ZONE_ROLE.CORE)
+    || hasZoneRole(world, idx, ZONE_ROLE.DNA)
+    || hasZoneRole(world, idx, ZONE_ROLE.INFRA)
+    || hasAdjacentZoneRole4(world, idx, w, h, ZONE_ROLE.CORE)
+    || hasAdjacentZoneRole4(world, idx, w, h, ZONE_ROLE.DNA)
+    || hasAdjacentZoneRole4(world, idx, w, h, ZONE_ROLE.INFRA)
     || hasAdjacentCommittedInfra4(world?.link, idx, w, h);
 }
 
@@ -355,7 +359,7 @@ function isPreRunGenesisPhase(state) {
 }
 
 function countAlivePlayerCoreCells(world, playerLineageId) {
-  return countAlivePlayerMaskedCells(world?.coreZoneMask, world, playerLineageId);
+  return countAlivePlayerZoneRole(world, ZONE_ROLE.CORE, playerLineageId);
 }
 
 function countAlivePlayerMaskedCells(mask, world, playerLineageId) {
@@ -736,6 +740,7 @@ export function reducer(state, action, { rng }) {
         born,
         died,
         W,
+        coreZoneMask,
       };
       const cpuSpawn = Number(state.sim.cpuBootstrapDone || 0) === 0
         ? seedDeterministicBootstrapCluster(
@@ -745,6 +750,8 @@ export function reducer(state, action, { rng }) {
           Number(state.meta.cpuLineageId || 2) | 0,
         )
         : [];
+      const canonicalZones = applyCanonicalZoneState(bootstrapWorld);
+      const patternState = buildPatternState(bootstrapWorld);
       const patches = [
         { op: "set", path: "/world/alive", value: alive },
         { op: "set", path: "/world/E", value: E },
@@ -758,6 +765,11 @@ export function reducer(state, action, { rng }) {
         { op: "set", path: "/world/died", value: died },
         { op: "set", path: "/world/W", value: W },
         { op: "set", path: "/world/coreZoneMask", value: coreZoneMask },
+        { op: "set", path: "/world/zoneRole", value: canonicalZones.zoneRole },
+        { op: "set", path: "/world/zoneId", value: canonicalZones.zoneId },
+        { op: "set", path: "/world/zoneMeta", value: canonicalZones.zoneMeta },
+        { op: "set", path: "/sim/patternCatalog", value: patternState.patternCatalog },
+        { op: "set", path: "/sim/patternBonuses", value: patternState.patternBonuses },
         { op: "set", path: "/sim/unlockedZoneTier", value: 1 },
         { op: "set", path: "/sim/nextZoneUnlockKind", value: "DNA" },
         { op: "set", path: "/sim/nextZoneUnlockCostEnergy", value: nextZoneUnlockCostEnergy },
@@ -875,9 +887,27 @@ export function reducer(state, action, { rng }) {
       const infraBuildCostDNA = Math.max(0, Number(phaseD.infraBuildCostDNA || 0));
       const infraCandidateMask = getInfraCandidateMask(world, w * h);
       infraCandidateMask.fill(0);
+      const canonicalZones = applyCanonicalZoneState({
+        ...world,
+        infraCandidateMask,
+        dnaZoneMask: cloneTypedArray(world.dnaZoneMask),
+      });
+      const patternState = buildPatternState({
+        ...world,
+        infraCandidateMask,
+        dnaZoneMask: cloneTypedArray(world.dnaZoneMask),
+        zoneRole: canonicalZones.zoneRole,
+        zoneId: canonicalZones.zoneId,
+        zoneMeta: canonicalZones.zoneMeta,
+      });
       const patches = [
         { op: "set", path: "/world/dnaZoneMask", value: cloneTypedArray(world.dnaZoneMask) },
         { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
+        { op: "set", path: "/world/zoneRole", value: canonicalZones.zoneRole },
+        { op: "set", path: "/world/zoneId", value: canonicalZones.zoneId },
+        { op: "set", path: "/world/zoneMeta", value: canonicalZones.zoneMeta },
+        { op: "set", path: "/sim/patternCatalog", value: patternState.patternCatalog },
+        { op: "set", path: "/sim/patternBonuses", value: patternState.patternBonuses },
         { op: "set", path: "/sim/dnaZoneCommitted", value: true },
         { op: "set", path: "/sim/unlockedZoneTier", value: 2 },
         { op: "set", path: "/sim/nextZoneUnlockKind", value: "INFRA" },
@@ -988,10 +1018,24 @@ export function reducer(state, action, { rng }) {
       const link = cloneTypedArray(world.link);
       for (const idx of candidateIndices) link[idx] = 1;
       infraCandidateMask.fill(0);
+      const canonicalZones = applyCanonicalZoneState({ ...world, link, infraCandidateMask });
+      const patternState = buildPatternState({
+        ...world,
+        link,
+        infraCandidateMask,
+        zoneRole: canonicalZones.zoneRole,
+        zoneId: canonicalZones.zoneId,
+        zoneMeta: canonicalZones.zoneMeta,
+      });
       const patches = [
         { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
         { op: "set", path: "/world/link", value: link },
+        { op: "set", path: "/world/zoneRole", value: canonicalZones.zoneRole },
+        { op: "set", path: "/world/zoneId", value: canonicalZones.zoneId },
+        { op: "set", path: "/world/zoneMeta", value: canonicalZones.zoneMeta },
         { op: "set", path: "/world/E", value: nextE },
+        { op: "set", path: "/sim/patternCatalog", value: patternState.patternCatalog },
+        { op: "set", path: "/sim/patternBonuses", value: patternState.patternBonuses },
         { op: "set", path: "/sim/playerDNA", value: Math.max(0, Number(state.sim.playerDNA || 0) - startCosts.dna) },
         { op: "set", path: "/sim/playerEnergyStored", value: Math.max(0, Number(state.sim.playerEnergyStored || 0) - startCosts.energy) },
         { op: "set", path: "/sim/infrastructureUnlocked", value: true },
@@ -1256,6 +1300,11 @@ export function simStepPatch(state, action, ctx) {
     lastExpandTick: state.sim.lastExpandTick || -99999,
     expansionWork: state.sim.expansionWork || 0,
     nextExpandCost: state.sim.nextExpandCost || 120,
+    dnaZoneCommitted: !!state.sim.dnaZoneCommitted,
+    infrastructureUnlocked: !!state.sim.infrastructureUnlocked,
+    patternCatalog: state.sim.patternCatalog || {},
+    patternBonuses: state.sim.patternBonuses || {},
+    worldPresetId: state.meta.worldPresetId,
   };
   simOut.expansionWork = Math.max(0, simOut.expansionWork + expansionWorkGain(simOut));
   simOut.nextExpandCost = expansionWorkCost(worldMutable, simOut);
@@ -1268,12 +1317,16 @@ export function simStepPatch(state, action, ctx) {
 
   if (shouldAutoExpand(worldMutable, simOut, currentTick)) {
     const expandedWorld = expandWorldPreserve(worldMutable, 1);
+    const canonicalZones = applyCanonicalZoneState(expandedWorld);
+    const patternState = buildPatternState(expandedWorld);
     expandedWorld.globalLearning = cloneJson(nextLearning);
     simOut.expansionWork = Math.max(0, simOut.expansionWork - expansionWorkCost(expandedWorld, simOut));
     simOut.expansionCount = (simOut.expansionCount || 0) + 1;
     simOut.lastExpandTick = currentTick;
     simOut.nextExpandCost = expansionWorkCost(expandedWorld, simOut);
     simOut.aliveRatio = simOut.aliveCount / Math.max(1, expandedWorld.w * expandedWorld.h);
+    simOut.patternCatalog = patternState.patternCatalog;
+    simOut.patternBonuses = patternState.patternBonuses;
 
     patches.push({ op: "set", path: "/meta/gridW", value: expandedWorld.w });
     patches.push({ op: "set", path: "/meta/gridH", value: expandedWorld.h });
@@ -1306,9 +1359,11 @@ export function simStepPatch(state, action, ctx) {
   if (state.sim.dnaZoneCommitted) {
     const preset = getWorldPreset(state.meta.worldPresetId);
     const dnaYieldScale = Math.max(0, Number(preset?.phaseC?.dnaYieldScale || 0));
-    const alivePlayerDnaCells = countAlivePlayerMaskedCells(worldMutable?.dnaZoneMask, worldMutable, playerLineageId);
+    const alivePlayerDnaCells = countAlivePlayerZoneRole(worldMutable, ZONE_ROLE.DNA, playerLineageId);
     simOut.playerDNA = Number(simOut.playerDNA || 0) + alivePlayerDnaCells * 0.1 * dnaYieldScale;
   }
+  simOut.patternCatalog = simOut.patternCatalog || state.sim.patternCatalog || {};
+  simOut.patternBonuses = simOut.patternBonuses || state.sim.patternBonuses || {};
   Object.assign(simOut, deriveStageState(worldMutable, simOut, state.meta));
   applyGoalCode(simOut, currentTick);
 
