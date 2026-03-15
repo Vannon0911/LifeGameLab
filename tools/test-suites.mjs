@@ -25,6 +25,7 @@ export const TEST_SUITES = Object.freeze({
     "tests/test-overlay-diagnostics.mjs",
     "tests/test-path-hygiene.mjs",
     "tests/test-pattern-engine.mjs",
+    "tests/test-phase-g-cleanup.mjs",
     "tests/test-player-action-ownership.mjs",
     "tests/test-raw-string-guard.mjs",
     "tests/test-sim-gate.mjs",
