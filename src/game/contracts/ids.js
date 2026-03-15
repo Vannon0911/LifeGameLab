@@ -52,6 +52,15 @@ export const RUN_PHASE_VALUES = Object.freeze([
   RUN_PHASE.RESULT,
 ]);
 
+export const ZONE_ROLE = Object.freeze({
+  NONE: 0,
+  CORE: 1,
+  DNA: 2,
+  INFRA: 3,
+});
+
+export const ZONE_ROLE_VALUES = Object.freeze(Object.values(ZONE_ROLE));
+
 export const OVERLAY_MODE = Object.freeze({
   NONE: "none",
   ENERGY: "energy",
