@@ -9,6 +9,7 @@ startEvidenceCase("test-gameplay-loop.mjs");
     import { reducer, simStepPatch } from "../src/project/project.logic.js";
     import { GAME_MODE } from "../src/game/contracts/ids.js";
     import { deriveCommandScore } from "../src/game/techTree.js";
+    import { patchClusterRunRequirements } from "./support/phaseFTestUtils.mjs";
 
     function assert(cond, msg) {
       if (!cond) throw new Error(msg);
@@ -96,29 +97,6 @@ startEvidenceCase("test-gameplay-loop.mjs");
 
     function stepFor(store, ticks) {
       for (let i = 0; i < ticks; i++) store.dispatch({ type: "SIM_STEP", payload: { force: true } });
-      return store.getState();
-    }
-
-    function patchClusterRunRequirements(store) {
-      store.dispatch({
-        type: "APPLY_BUFFERED_SIM_STEP",
-        payload: {
-          patches: [
-            {
-              op: "set",
-              path: "/sim/patternCatalog",
-              value: {
-                line: { count: 1, zoneIds: [1], anchors: [1] },
-                block: { count: 0, zoneIds: [], anchors: [] },
-                loop: { count: 0, zoneIds: [], anchors: [] },
-                branch: { count: 0, zoneIds: [], anchors: [] },
-                dense_cluster: { count: 0, zoneIds: [], anchors: [] },
-              },
-            },
-            { op: "set", path: "/sim/networkRatio", value: 0.20 },
-          ],
-        },
-      });
       return store.getState();
     }
 
