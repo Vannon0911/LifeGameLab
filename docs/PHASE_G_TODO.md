@@ -37,10 +37,10 @@ Zweck: Balance, Cleanup und RC-Haertung.
 - [ ] Tests + Doku aktualisieren
 
 ### G2 Vollsuite
-- [ ] `quick` gruen
+- [x] `quick` gruen
 - [ ] `truth` gruen
 - [ ] `stress` gruen
-- [ ] `playwright` gruen
+- [x] `playwright` gruen
 - [ ] `determinism-long` gruen
 - [ ] Perf-Budgets einhalten
 
@@ -60,15 +60,15 @@ Zweck: Balance, Cleanup und RC-Haertung.
 - [ ] TODO / Changelog finalisieren
 
 ### G5 Release-Checklist
-- [ ] clean boot
-- [ ] new run flow
-- [ ] lab path intact
+- [x] clean boot
+- [x] new run flow
+- [x] lab path intact
 - [ ] migration safe
-- [ ] smoke green
+- [x] smoke green
 - [ ] perf within budget
 
 ### G6 RC-Gate-Test
-- [ ] `tests/test-release-candidate-integrity.mjs` anlegen
+- [x] `tests/test-release-candidate-integrity.mjs` anlegen
 - [ ] in `truth` oder `full` registrieren
 
 ## Pflicht-Gate Nach Phase G
