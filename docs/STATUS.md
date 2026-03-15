@@ -50,6 +50,19 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 ### P2 (Laufende Pflege)
 1. Doku und Testbelege auf RC-Stand halten
 
+## Naechste Session Startpaket
+- Ziel: sofort mit P0-TODO starten, ohne erneute Gate-Suche.
+- LLM-Leseweg bis Gate verifiziert am 2026-03-15:
+  `WORKFLOW -> docs/llm/ENTRY.md -> docs/llm/OPERATING_PROTOCOL.md -> TASK_ENTRY_MATRIX -> TASK_GATE_INDEX -> task-entry -> classify/ack/check`.
+- Handshake ist aktuell (`.llm/entry-ack.json`): `versioning`, `testing`, `ui`, `sim`, `contracts` vorhanden.
+- Sicherheitsnachweis aktuell: `node tests/test-llm-contract.mjs` gruen (2026-03-15).
+- Startkommandos fuer die naechste Session:
+  1. `node tools/llm-preflight.mjs classify --paths <task-pfade>`
+  2. `node tools/llm-preflight.mjs ack --paths <task-pfade>`
+  3. `node tools/llm-preflight.mjs check --paths <task-pfade>`
+  4. danach erst schreiben/testen.
+- Wichtiger Hinweis: `src/project/contract/manifest.js` klassifiziert matrix-bedingt mehrdeutig (`contracts` + `versioning`); fuer Vertragsarbeit deshalb disjunkte Contract-Pfade nutzen (z. B. `src/project/contract/stateSchema.js`) oder Task strikt trennen.
+
 ## Bugfix-Log
 
 ### 2026-03-15
