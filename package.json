@@ -15,5 +15,8 @@
     "test:stress": "node tools/run-test-suite.mjs stress",
     "test:redteam": "node tools/redteam-stress-master.mjs",
     "test:full": "node tools/run-all-tests.mjs"
+  },
+  "dependencies": {
+    "python3": "^0.0.1"
   }
 }

@@ -38,6 +38,7 @@ export const TEST_SUITES = Object.freeze({
     "tests/test-ui-contract.mjs",
     "tests/test-ui-strategy-contract.mjs",
     "tests/test-version-traceability.mjs",
+    "tests/test-visibility-fog.mjs",
     "tests/test-wrapper-ban.mjs",
   ],
   truth: [
