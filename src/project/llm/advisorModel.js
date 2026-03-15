@@ -15,6 +15,7 @@ import {
   hasRequiredTechs,
   normalizeTechArray,
 } from "../../game/techTree.js";
+import { applyFogIntelToAdvisorModel } from "../../game/render/fogOfWar.js";
 
 const BOTTLENECK_ORDER = Object.freeze([
   "collapse",
@@ -88,7 +89,35 @@ export const WIN_MODE_LABELS = Object.freeze({
   [WIN_MODE.EFFICIENCY]: WIN_MODE_RESULT_LABEL[WIN_MODE.EFFICIENCY],
   [WIN_MODE.EXTINCTION]: WIN_MODE_RESULT_LABEL[WIN_MODE.EXTINCTION],
   [WIN_MODE.ENERGY_COLLAPSE]: WIN_MODE_RESULT_LABEL[WIN_MODE.ENERGY_COLLAPSE],
+  [WIN_MODE.CORE_COLLAPSE]: WIN_MODE_RESULT_LABEL[WIN_MODE.CORE_COLLAPSE],
+  [WIN_MODE.VISION_BREAK]: WIN_MODE_RESULT_LABEL[WIN_MODE.VISION_BREAK],
+  [WIN_MODE.NETWORK_DECAY]: WIN_MODE_RESULT_LABEL[WIN_MODE.NETWORK_DECAY],
 });
+
+export const RESULT_REASON_LABELS = Object.freeze({
+  core_collapse: "Kern verloren",
+  vision_break: "Sicht komplett erloschen",
+  network_decay: "Infrastruktur kollabiert",
+});
+
+function getRunRequirementBlocker(tech, state) {
+  const req = tech?.runRequirements;
+  if (!req) return null;
+  if (req.minZoneTier && Number(state?.sim?.unlockedZoneTier || 0) < Number(req.minZoneTier || 0)) {
+    return `Zone ${Number(req.minZoneTier || 0)} noch nicht freigeschaltet`;
+  }
+  if (req.requiresInfra && !state?.sim?.infrastructureUnlocked) return "Infrastruktur fehlt";
+  if (req.minPatternClasses) {
+    const count = Object.keys(state?.sim?.patternCatalog || {}).filter((key) => {
+      const bucket = state?.sim?.patternCatalog?.[key];
+      return Array.isArray(bucket) && bucket.length > 0;
+    }).length;
+    if (count < Number(req.minPatternClasses || 0)) return `Mindestens ${Number(req.minPatternClasses || 0)} Patternklassen noetig`;
+  }
+  if (req.patternEnergyBonus && Number(state?.sim?.patternBonuses?.energy || 0) <= 0) return "Positiver Energiebonus aus Patterns fehlt";
+  if (req.minNetworkRatio && Number(state?.sim?.networkRatio || 0) < Number(req.minNetworkRatio || 0)) return `Netzwerkratio unter ${Math.round(Number(req.minNetworkRatio || 0) * 100)}%`;
+  return null;
+}
 
 const STRUCTURE_LABELS = Object.freeze({
   single_cells: { tier: "Einzelzellen", short: "primitive Membranen" },
@@ -322,15 +351,18 @@ function pickTechTargets(state, commandScore, doctrinePolicy) {
     if (unlocked.has(tech.id)) continue;
     if (Number(tech.stage || 1) > playerStage) continue;
     if (!hasRequiredTechs(unlocked, tech.requires)) continue;
+    const runRequirementBlocker = getRunRequirementBlocker(tech, state);
     scored.push({
       tech,
       score: scoreTechCandidate(tech, winMode, doctrinePolicy),
+      runRequirementBlocker,
     });
   }
   scored.sort((a, b) => (b.score - a.score) || a.tech.id.localeCompare(b.tech.id));
-  const buyCandidate = scored.find((entry) => commandScore + 1e-9 >= Number(entry.tech.commandReq || 0)) || null;
-  const commandCandidate = scored.find((entry) => commandScore + 1e-9 < Number(entry.tech.commandReq || 0)) || null;
-  return { buyCandidate, commandCandidate };
+  const buyCandidate = scored.find((entry) => !entry.runRequirementBlocker && commandScore + 1e-9 >= Number(entry.tech.commandReq || 0)) || null;
+  const commandCandidate = scored.find((entry) => !entry.runRequirementBlocker && commandScore + 1e-9 < Number(entry.tech.commandReq || 0)) || null;
+  const blockedCandidate = scored.find((entry) => !!entry.runRequirementBlocker) || null;
+  return { buyCandidate, commandCandidate, blockedCandidate };
 }
 
 function buildWinProgress(state, crisisActive) {
@@ -793,7 +825,15 @@ export function buildAdvisorModel(state, options = {}) {
     };
   }
 
-  return out;
+  return applyFogIntelToAdvisorModel({
+    ...out,
+    advisor: {
+      ...out.advisor,
+      blockedTechReason: techTargets.blockedCandidate?.runRequirementBlocker || null,
+      blockedTechId: techTargets.blockedCandidate?.tech?.id || null,
+    },
+    resultReasonLabel: RESULT_REASON_LABELS[String(sim.winMode || "")] || null,
+  }, safeState);
 }
 
 export function buildAdvisorDebugModel(state, benchmark = null) {

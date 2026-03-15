@@ -1,5 +1,4 @@
 import { buildLlmReadModel } from "../../project/llm/readModel.js";
-import { applyFogIntelToAdvisorModel } from "../../game/render/fogOfWar.js";
 
 export function registerPublicApi({
   windowObj,
@@ -13,11 +12,10 @@ export function registerPublicApi({
 }) {
   function renderGameToText() {
     const state = store.getState();
-    const readModel = buildLlmReadModel(
+    return JSON.stringify(buildLlmReadModel(
       state,
       typeof benchmark?.getSnapshot === "function" ? benchmark.getSnapshot() : null
-    );
-    return JSON.stringify(applyFogIntelToAdvisorModel(readModel, state), null, 2);
+    ), null, 2);
   }
 
   async function advanceTime(ms = 1000) {
