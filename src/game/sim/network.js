@@ -1,9 +1,10 @@
 import { TRAIT_DEFAULT, TRAIT_COUNT } from "./life.data.js";
 import { clamp } from "./shared.js";
 import { forNeighbours8 } from "./neighbors.js";
-import { isCommittedInfraValue } from "./infra.js";
+import { COMMITTED_INFRA_THRESHOLD, isCommittedInfraValue } from "./infra.js";
 
 const TRAITS = TRAIT_COUNT;
+const DYNAMIC_LINK_MAX = COMMITTED_INFRA_THRESHOLD - 0.001;
 
 const tSh = (tr, i) => Number(tr[i * TRAITS + 5]) || TRAIT_DEFAULT[5];
 const tTol = (tr, i) => Number(tr[i * TRAITS + 6]) || TRAIT_DEFAULT[6];
@@ -94,8 +95,8 @@ export function computeClusterAndLinks(world, phy) {
       else link[bestJ] = clamp(link[bestJ] + linkBuild * bestScore, 0, 0.95);
       continue;
     }
-    link[i] = clamp(link[i] + linkBuild * bestScore, 0, 1);
-    link[bestJ] = clamp(link[bestJ] + linkBuild * bestScore, 0, 1);
+    link[i] = clamp(link[i] + linkBuild * bestScore, 0, DYNAMIC_LINK_MAX);
+    link[bestJ] = clamp(link[bestJ] + linkBuild * bestScore, 0, DYNAMIC_LINK_MAX);
   }
 
   const transferStrength = clamp(Number(phy.transferStrength ?? 0.08), 0, 1);

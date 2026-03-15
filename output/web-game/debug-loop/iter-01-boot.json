@@ -2,7 +2,7 @@
   "text": {
     "tick": 0,
     "running": false,
-    "tool": "observe",
+    "tool": "founder_place",
     "stage": 1,
     "dna": 0,
     "playerAlive": 0,
@@ -13,6 +13,7 @@
     "techs": [],
     "synergies": [],
     "runIdentity": {
+      "worldPresetId": "river_delta",
       "winMode": "supremacy",
       "doctrine": "equilibrium",
       "doctrineTradeoff": "Ausgleich zwischen Tempo und Stabilitaet."
@@ -24,7 +25,30 @@
       "commandScore": 0,
       "splitReady": false,
       "expansionWork": 0,
-      "nextExpandCost": 120
+      "nextExpandCost": 120,
+      "stageProgressScore": 0.21125000000000002,
+      "infrastructureUnlocked": false,
+      "zoneSummary": {
+        "coreTiles": 0,
+        "dnaTiles": 0,
+        "infraTiles": 0,
+        "zoneCount": 0
+      },
+      "patternSummary": {
+        "line": 0,
+        "block": 0,
+        "loop": 0,
+        "branch": 0,
+        "denseCluster": 0,
+        "bonuses": {
+          "energy": 0,
+          "dna": 0,
+          "stability": 0,
+          "vision": 0,
+          "defense": 0,
+          "transport": 0
+        }
+      }
     },
     "advisor": {
       "bottleneckPrimary": "collapse",
@@ -35,7 +59,11 @@
       "nextAction": "stabilize_energy",
       "nextLever": "relevant_tech",
       "recommendedZone": "buffer",
-      "recommendedOverlay": "energy"
+      "recommendedOverlay": "energy",
+      "blockedTechReasonCodes": [],
+      "blockedTechReasonLabels": [],
+      "blockedTechId": null,
+      "resultReason": null
     },
     "winProgress": {
       "mode": "supremacy",
@@ -59,7 +87,7 @@
   "perf": {
     "fpsEma": 43.43,
     "frameMsEma": 23.03,
-    "renderMsEma": 31.71,
+    "renderMsEma": 16.38,
     "quality": 3,
     "renderEvery": 1,
     "dprCap": 2,
@@ -70,7 +98,7 @@
     "offscreenMode": "main",
     "offscreenAuto": false,
     "tick": 0,
-    "grid": "32x32",
-    "cells": 1024
+    "grid": "16x16",
+    "cells": 256
   }
 }
