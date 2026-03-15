@@ -23,11 +23,13 @@ import {
   BRUSH_MODE,
   GAME_MODE,
   RUN_PHASE,
+  ZONE_ROLE,
   normalizeGameMode,
   normalizeRunPhase,
 } from "../contracts/ids.js";
 import { getWorldPreset, isTileInStartWindow } from "./worldPresets.js";
 import { hasAdjacentCommittedInfra4, isCommittedInfraValue } from "./infra.js";
+import { hasAdjacentZoneRole4, hasZoneRole } from "./canonicalZones.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
@@ -43,31 +45,14 @@ function isCurrentlyVisibleTile(world, idx) {
 }
 
 function isReachAnchorTile(world, idx, w, h) {
-  return (Number(world?.coreZoneMask?.[idx] || 0) | 0) === 1
-    || (Number(world?.dnaZoneMask?.[idx] || 0) | 0) === 1
+  return hasZoneRole(world, idx, ZONE_ROLE.CORE)
+    || hasZoneRole(world, idx, ZONE_ROLE.DNA)
+    || hasZoneRole(world, idx, ZONE_ROLE.INFRA)
+    || hasAdjacentZoneRole4(world, idx, w, h, ZONE_ROLE.CORE)
+    || hasAdjacentZoneRole4(world, idx, w, h, ZONE_ROLE.DNA)
+    || hasAdjacentZoneRole4(world, idx, w, h, ZONE_ROLE.INFRA)
     || isCommittedInfraValue(world?.link?.[idx])
-    || hasAdjacentCommittedInfra4(world?.link, idx, w, h)
-    || (
-      !!world?.coreZoneMask
-      && ArrayBuffer.isView(world.coreZoneMask)
-      && (() => {
-        const x = idx % w;
-        const y = (idx / w) | 0;
-        const neighbors = [
-          [x - 1, y],
-          [x + 1, y],
-          [x, y - 1],
-          [x, y + 1],
-        ];
-        for (const [xx, yy] of neighbors) {
-          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-          const j = yy * w + xx;
-          if ((Number(world.coreZoneMask[j]) | 0) === 1) return true;
-          if ((Number(world?.dnaZoneMask?.[j] || 0) | 0) === 1) return true;
-        }
-        return false;
-      })()
-    );
+    || hasAdjacentCommittedInfra4(world?.link, idx, w, h);
 }
 
 function hasVisibleReachAnchor(world, indices, w, h) {

@@ -6,7 +6,8 @@ import { applyWorldAi } from "./worldAi.js";
 import { applyDynamicDamping } from "./damping.js";
 import { computeClusterAndLinks } from "./network.js";
 import { PLANT_ACTIVE_THRESHOLD } from "./constants.js";
-import { isCommittedInfraValue } from "./infra.js";
+import { ZONE_ROLE } from "../contracts/ids.js";
+import { hasZoneRole } from "./canonicalZones.js";
 
 function applyCircularVision(mask, w, h, idx, radius) {
   const r = Math.max(0, Number(radius) | 0);
@@ -46,9 +47,9 @@ function recomputeVisibility(world, phy) {
   const radiusInfra = Math.max(0, Number(phy?.visionRadiusInfra || 0) | 0);
   for (let i = 0; i < N; i++) {
     if ((Number(world.lineageId[i]) | 0) !== playerLineageId) continue;
-    if ((Number(world.coreZoneMask?.[i]) | 0) === 1) applyCircularVision(visibility, w, h, i, radiusCore);
-    if ((Number(world.dnaZoneMask?.[i]) | 0) === 1) applyCircularVision(visibility, w, h, i, radiusDNA);
-    if (isCommittedInfraValue(world.link?.[i])) applyCircularVision(visibility, w, h, i, radiusInfra);
+    if (hasZoneRole(world, i, ZONE_ROLE.CORE)) applyCircularVision(visibility, w, h, i, radiusCore);
+    if (hasZoneRole(world, i, ZONE_ROLE.DNA)) applyCircularVision(visibility, w, h, i, radiusDNA);
+    if (hasZoneRole(world, i, ZONE_ROLE.INFRA)) applyCircularVision(visibility, w, h, i, radiusInfra);
   }
   for (let i = 0; i < N; i++) {
     if ((Number(visibility[i]) | 0) === 1) explored[i] = 1;
