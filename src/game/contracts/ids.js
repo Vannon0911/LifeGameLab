@@ -4,6 +4,9 @@ export const WIN_MODE = Object.freeze({
   EFFICIENCY: "efficiency",
   EXTINCTION: "extinction",
   ENERGY_COLLAPSE: "energy_collapse",
+  CORE_COLLAPSE: "core_collapse",
+  VISION_BREAK: "vision_break",
+  NETWORK_DECAY: "network_decay",
 });
 
 export const WIN_MODE_SELECTABLE = Object.freeze([
@@ -18,6 +21,9 @@ export const WIN_MODE_RESULT_LABEL = Object.freeze({
   [WIN_MODE.EFFICIENCY]: "Effizienz-Meister",
   [WIN_MODE.EXTINCTION]: "Ausrottung",
   [WIN_MODE.ENERGY_COLLAPSE]: "Energie-Kollaps",
+  [WIN_MODE.CORE_COLLAPSE]: "Kern-Kollaps",
+  [WIN_MODE.VISION_BREAK]: "Sicht-Bruch",
+  [WIN_MODE.NETWORK_DECAY]: "Netz-Zerfall",
 });
 
 export const GAME_RESULT = Object.freeze({
@@ -219,11 +225,15 @@ export function deriveGoalCode(simLike, currentTick = Number(simLike?.tick || 0)
   const pAlive = Number(simLike?.playerAliveCount || 0);
   const pENet = Number(simLike?.playerEnergyNet || 0);
   const meanTox = Number(simLike?.meanToxinField || 0);
+  const presetId = String(simLike?.worldPresetId || "");
   const dnaCost = pStage * 5;
   if (pAlive === 0 && currentTick > 5) return GOAL_CODE.EXTINCT;
   if (pENet < -3 && pAlive > 0) return GOAL_CODE.SURVIVE_ENERGY;
   if (meanTox > 0.30) return GOAL_CODE.SURVIVE_TOXIN;
   if (pDNA >= dnaCost) return GOAL_CODE.EVOLUTION_READY;
+  if (presetId === "dry_basin" && pENet < 1.5) return GOAL_CODE.SURVIVE_ENERGY;
+  if (presetId === "river_delta" && simLike?.infrastructureUnlocked && Number(simLike?.networkRatio || 0) >= 0.10) return GOAL_CODE.EXPANSION;
+  if (presetId === "wet_meadow" && pAlive < 18) return GOAL_CODE.GROWTH;
   if (pAlive < 12) return GOAL_CODE.GROWTH;
   if (pENet > 8) return GOAL_CODE.EXPANSION;
   return GOAL_CODE.HARVEST_SECURE;

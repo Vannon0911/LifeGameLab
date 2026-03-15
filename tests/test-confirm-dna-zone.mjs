@@ -4,11 +4,22 @@ startEvidenceCase("test-confirm-dna-zone.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
-import { BRUSH_MODE, RUN_PHASE } from "../src/game/contracts/ids.js";
+import { BRUSH_MODE, RUN_PHASE, ZONE_ROLE } from "../src/game/contracts/ids.js";
 import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
+}
+
+function findZoneMetaEntry(zoneMeta, zoneId) {
+  if (!zoneMeta || typeof zoneMeta !== "object") return null;
+  const direct = zoneMeta[zoneId] ?? zoneMeta[String(zoneId)];
+  if (direct && typeof direct === "object") return direct;
+  return Object.values(zoneMeta).find((entry) => (
+    entry
+    && typeof entry === "object"
+    && Number(entry.zoneId ?? entry.id ?? -1) === Number(zoneId)
+  )) || null;
 }
 
 function patchPlayerCells(store, cells) {
@@ -111,10 +122,33 @@ function createPreparedDnaSetupStore(seed, presetId = "river_delta") {
   assert(after.sim.zoneUnlockProgress === 0, "confirm dna zone must clear old dna meter");
   assert(after.sim.coreEnergyStableTicks === 0, "confirm dna zone must reset old stable ticks");
   assert(after.sim.nextInfraUnlockCostDNA === 30, "confirm dna zone must read preset infra cost");
+
+  const coreZoneIds = new Set();
+  for (let i = 0; i < after.world.coreZoneMask.length; i++) {
+    if ((Number(after.world.coreZoneMask[i]) | 0) !== 1) continue;
+    coreZoneIds.add(Number(after.world.zoneId?.[i] || 0) | 0);
+  }
+
+  const dnaZoneIds = new Set();
   for (const cell of validCells) {
     const idx = cell.y * after.world.w + cell.x;
     assert(Number(after.world.dnaZoneMask[idx] || 0) === 1, "confirm dna zone must preserve committed mask");
+    assert((Number(after.world.zoneRole?.[idx]) | 0) === ZONE_ROLE.DNA, `dna role mirror drift at idx=${idx}`);
+    const zoneId = Number(after.world.zoneId?.[idx] || 0) | 0;
+    assert(zoneId > 0, `dna zoneId missing at idx=${idx}`);
+    dnaZoneIds.add(zoneId);
   }
+  assert(dnaZoneIds.size === 1, `dna zoneId must be stable across committed component, got ${Array.from(dnaZoneIds).join(",")}`);
+  const dnaZoneId = Array.from(dnaZoneIds)[0] | 0;
+  assert(!coreZoneIds.has(dnaZoneId), `dna zoneId must not alias core zoneId (${dnaZoneId})`);
+  const dnaMeta = findZoneMetaEntry(after.world.zoneMeta, dnaZoneId);
+  assert(dnaMeta, "dna zoneMeta entry missing");
+  const dnaMetaRole = dnaMeta.role ?? dnaMeta.zoneRole ?? dnaMeta.kind ?? "";
+  assert(
+    dnaMetaRole === ZONE_ROLE.DNA || String(dnaMetaRole).toLowerCase() === "dna",
+    `dna zoneMeta role drift: ${String(dnaMetaRole)}`,
+  );
+
   const dnaBeforeTick = Number(after.sim.playerDNA || 0);
   store.dispatch({ type: "SIM_STEP", payload: { force: true } });
   const afterTick = store.getState();

@@ -5,6 +5,31 @@ import {
   WIN_MODE,
   deriveGoalCode,
 } from "../../contracts/ids.js";
+import { ZONE_ROLE } from "../../contracts/ids.js";
+
+function countMaskOnes(mask) {
+  if (!mask || !ArrayBuffer.isView(mask)) return 0;
+  let count = 0;
+  for (let i = 0; i < mask.length; i++) {
+    if ((Number(mask[i]) | 0) === 1) count++;
+  }
+  return count;
+}
+
+function countAlivePlayerZoneRole(world, role, playerLineageId) {
+  const alive = world?.alive;
+  const lineageId = world?.lineageId;
+  const zoneRole = world?.zoneRole;
+  if (!alive || !lineageId || !zoneRole) return 0;
+  let count = 0;
+  for (let i = 0; i < zoneRole.length; i++) {
+    if ((Number(zoneRole[i]) | 0) !== (role | 0)) continue;
+    if ((Number(alive[i]) | 0) !== 1) continue;
+    if ((Number(lineageId[i]) | 0) !== (playerLineageId | 0)) continue;
+    count++;
+  }
+  return count;
+}
 
 export function applyWinConditions(state, simOut, currentTick) {
   if (!state.sim.gameResult) {
@@ -50,6 +75,15 @@ export function applyWinConditions(state, simOut, currentTick) {
     } else if (lossStreak >= 150) {
       gameResult = GAME_RESULT.LOSS;
       resolvedWinMode = WIN_MODE.ENERGY_COLLAPSE;
+    } else if (Number(state.sim.unlockedZoneTier || 0) >= 1 && countAlivePlayerZoneRole(state.world, ZONE_ROLE.CORE, Number(state.meta.playerLineageId || 1) | 0) === 0 && currentTick > 30) {
+      gameResult = GAME_RESULT.LOSS;
+      resolvedWinMode = WIN_MODE.CORE_COLLAPSE;
+    } else if (Number(state.sim.unlockedZoneTier || 0) >= 2 && countMaskOnes(state.world?.visibility) === 0 && currentTick > 50) {
+      gameResult = GAME_RESULT.LOSS;
+      resolvedWinMode = WIN_MODE.VISION_BREAK;
+    } else if (Number(state.sim.unlockedZoneTier || 0) >= 3 && state.sim.infrastructureUnlocked && countAlivePlayerZoneRole(state.world, ZONE_ROLE.INFRA, Number(state.meta.playerLineageId || 1) | 0) === 0 && currentTick > 60) {
+      gameResult = GAME_RESULT.LOSS;
+      resolvedWinMode = WIN_MODE.NETWORK_DECAY;
     } else if (winMode === WIN_MODE.SUPREMACY && supTicks >= 200) {
       gameResult = GAME_RESULT.WIN;
       resolvedWinMode = WIN_MODE.SUPREMACY;
