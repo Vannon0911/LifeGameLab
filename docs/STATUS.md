@@ -94,6 +94,12 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 ## Bugfix-Log
 
 ### 2026-03-15
+- Problem: Verifikation angefragt, ob die zuletzt eingefuehrte Chunk-Logik fuer grosse Pflanzen-Scans im Worldgen die Laufzeitlogik bricht.
+- Ursache: Unsicherheit nach der Umstellung auf deterministische Scan-Batches in `placePlants()`.
+- Fix: Keine Codeaenderung an der Sim-Logik; stattdessen gezielte Re-Validierung der Determinismus- und Quick-Suites fuer den Worldgen-/Runtime-Pfad durchgefuehrt.
+- Verifikation: `node tests/test-world-presets-determinism.mjs`, `node tests/test-determinism-per-tick.mjs`, `npm run test:quick` gruen.
+
+### 2026-03-15
 - Problem: `tests/test-invariants.mjs` fiel reproduzierbar mit `link on dead tile`.
 - Ursache: organische CPU-Links in `src/game/sim/network.js` konnten bis exakt `1.0` wachsen und wirkten dadurch wie committed Infrastruktur.
 - Fix: dynamische Links bleiben jetzt strikt unter `COMMITTED_INFRA_THRESHOLD`; echte Player-Infrastruktur darf weiter `1` sein.
