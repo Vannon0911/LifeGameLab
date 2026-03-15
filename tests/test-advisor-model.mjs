@@ -146,6 +146,8 @@ function makeState({
   highGapState.sim.gameResult = "";
   const highGap = buildAdvisorDebugModel(highGapState);
   assert(highGap.advisor.bottleneckPrimary === "toxin", `severity-gap primary drift: ${highGap.advisor.bottleneckPrimary}`);
+  assert(typeof highGap.status.zoneSummary === "object", "zoneSummary missing from advisor status");
+  assert(typeof highGap.status.patternSummary === "object", "patternSummary missing from advisor status");
 
   const lowGapState = makeState({
     techs: ALL_TECHS,

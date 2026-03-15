@@ -16,6 +16,7 @@ import {
   OVERLAY_MODE,
   RUN_PHASE,
   WIN_MODE,
+  ZONE_ROLE,
   isBrushMode,
   normalizeGameMode,
   normalizeRunPhase,
@@ -65,6 +66,8 @@ import {
   handleRecyclePatch,
   handleSeedSpread,
 } from "../mainRunActions.js";
+import { deriveCanonicalZoneState } from "../canonicalZones.js";
+import { derivePatternBonuses, derivePatternCatalog } from "../patterns.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
@@ -161,8 +164,62 @@ function isMarked(mask, idx) {
   return !!mask && ArrayBuffer.isView(mask) && ((Number(mask[idx]) | 0) === 1);
 }
 
+function hasAdjacentRoleTile4(zoneRole, idx, w, h, roleIds) {
+  if (!zoneRole || !ArrayBuffer.isView(zoneRole)) return false;
+  const wanted = new Set(Array.isArray(roleIds) ? roleIds : [roleIds]);
+  const x = idx % w;
+  const y = (idx / w) | 0;
+  const neighbors = [
+    [x - 1, y],
+    [x + 1, y],
+    [x, y - 1],
+    [x, y + 1],
+  ];
+  for (const [xx, yy] of neighbors) {
+    if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+    const j = yy * w + xx;
+    if (wanted.has(Number(zoneRole[j]) | 0)) return true;
+  }
+  return false;
+}
+
+function isRoleMarked(zoneRole, idx, roleId) {
+  return !!zoneRole && ArrayBuffer.isView(zoneRole) && ((Number(zoneRole[idx]) | 0) === (roleId | 0));
+}
+
+function buildCanonicalRuntimeState(world, presetId, playerLineageId, sourceZoneRole = null) {
+  const zoneState = deriveCanonicalZoneState(world, playerLineageId, sourceZoneRole);
+  const preset = getWorldPreset(presetId);
+  const patternCatalog = derivePatternCatalog(zoneState, world);
+  const patternBonuses = derivePatternBonuses(patternCatalog, preset);
+  return { ...zoneState, patternCatalog, patternBonuses };
+}
+
+function pushCanonicalRuntimePatches(patches, canonicalState) {
+  patches.push({ op: "set", path: "/world/zoneRole", value: canonicalState.zoneRole });
+  patches.push({ op: "set", path: "/world/zoneId", value: canonicalState.zoneId });
+  patches.push({ op: "set", path: "/world/zoneMeta", value: canonicalState.zoneMeta });
+  patches.push({ op: "set", path: "/sim/patternCatalog", value: canonicalState.patternCatalog });
+  patches.push({ op: "set", path: "/sim/patternBonuses", value: canonicalState.patternBonuses });
+}
+
 function countAlivePlayerInfraCells(world, playerLineageId) {
-  return countAlivePlayerMaskedCells(world?.link, world, playerLineageId);
+  return countAlivePlayerRoleCells(world, playerLineageId, ZONE_ROLE.INFRA);
+}
+
+function countAlivePlayerRoleCells(world, playerLineageId, roleId) {
+  const zoneRole = world?.zoneRole;
+  const alive = world?.alive;
+  const lineageId = world?.lineageId;
+  if (!zoneRole || !alive || !lineageId) return 0;
+  let count = 0;
+  for (let i = 0; i < zoneRole.length; i++) {
+    if ((Number(zoneRole[i]) | 0) !== (roleId | 0)) continue;
+    if ((Number(alive[i]) | 0) !== 1) continue;
+    if ((Number(lineageId[i]) | 0) !== (playerLineageId | 0)) continue;
+    count++;
+  }
+  return count;
 }
 
 function getVisionRadii(presetId) {
@@ -205,9 +262,9 @@ function deriveVisibilityState(world, presetId, playerLineageId) {
     if (!isAlivePlayerOwnedTile(world, i, playerLineageId)) continue;
     const x = i % w;
     const y = (i / w) | 0;
-    if (isMarked(world?.coreZoneMask, i)) revealRadius(visibility, w, h, x, y, radii.core);
-    if (isMarked(world?.dnaZoneMask, i)) revealRadius(visibility, w, h, x, y, radii.dna);
-    if (Number(world?.link?.[i] || 0) > 0) revealRadius(visibility, w, h, x, y, radii.infra);
+    if (isRoleMarked(world?.zoneRole, i, ZONE_ROLE.CORE)) revealRadius(visibility, w, h, x, y, radii.core);
+    if (isRoleMarked(world?.zoneRole, i, ZONE_ROLE.DNA)) revealRadius(visibility, w, h, x, y, radii.dna);
+    if (isRoleMarked(world?.zoneRole, i, ZONE_ROLE.INFRA)) revealRadius(visibility, w, h, x, y, radii.infra);
   }
 
   for (let i = 0; i < N; i++) {
@@ -229,12 +286,10 @@ function isAlivePlayerOwnedTile(world, idx, playerLineageId) {
 }
 
 function touchesCommittedInfraAnchor(world, idx, w, h) {
-  return isMarked(world?.coreZoneMask, idx)
-    || isMarked(world?.dnaZoneMask, idx)
-    || Number(world?.link?.[idx] || 0) > 0
-    || hasAdjacentMarkedTile4(world?.coreZoneMask, idx, w, h)
-    || hasAdjacentMarkedTile4(world?.dnaZoneMask, idx, w, h)
-    || hasAdjacentMarkedTile4(world?.link, idx, w, h);
+  return isRoleMarked(world?.zoneRole, idx, ZONE_ROLE.CORE)
+    || isRoleMarked(world?.zoneRole, idx, ZONE_ROLE.DNA)
+    || isRoleMarked(world?.zoneRole, idx, ZONE_ROLE.INFRA)
+    || hasAdjacentRoleTile4(world?.zoneRole, idx, w, h, [ZONE_ROLE.CORE, ZONE_ROLE.DNA, ZONE_ROLE.INFRA]);
 }
 
 function getInfraStartCosts(sim) {
@@ -353,7 +408,7 @@ function isPreRunGenesisPhase(state) {
 }
 
 function countAlivePlayerCoreCells(world, playerLineageId) {
-  return countAlivePlayerMaskedCells(world?.coreZoneMask, world, playerLineageId);
+  return countAlivePlayerRoleCells(world, playerLineageId, ZONE_ROLE.CORE);
 }
 
 function countAlivePlayerMaskedCells(mask, world, playerLineageId) {
@@ -542,6 +597,9 @@ function buildWorldGenerationPatches(state, presetId, gameModeOverride, patchGam
   applyGlobalLearningToWorld(world, meta.globalLearning);
   world.devMutationVault = cloneJson(meta.devMutationVault || defaultDevMutationVault());
   world.zoneMap = new Int8Array(meta.gridW * meta.gridH);
+  world.zoneRole = new Int8Array(meta.gridW * meta.gridH);
+  world.zoneId = new Uint16Array(meta.gridW * meta.gridH);
+  world.zoneMeta = {};
 
   const nextSim = deriveBootstrapSimMetrics(world, { ...meta, physics: tunedPhysics }, makeInitialState().sim);
   nextSim.running = false;
@@ -616,6 +674,15 @@ export function makeInitialState() {
       stageProgressScore: 0,
       harvestYieldTotal: 0, pruneYieldTotal: 0, recycleYieldTotal: 0, seedYieldTotal: 0,
       stabilityScore: 0, ecologyScore: 0, activeBiomeCount: 0,
+      patternCatalog: {},
+      patternBonuses: {
+        energy: 0,
+        dna: 0,
+        stability: 0,
+        vision: 0,
+        defense: 0,
+        transport: 0,
+      },
       expansionCount: 0, lastExpandTick: -99999, expansionWork: 0, nextExpandCost: 120,
       stockpileTicks: 0,
       winMode: WIN_MODE.SUPREMACY,
@@ -734,6 +801,11 @@ export function reducer(state, action, { rng }) {
           Number(state.meta.cpuLineageId || 2) | 0,
         )
         : [];
+      const canonicalState = buildCanonicalRuntimeState(
+        { ...state.world, coreZoneMask, alive, lineageId, link },
+        state.meta.worldPresetId,
+        Number(state.meta.playerLineageId || 1) | 0,
+      );
       const patches = [
         { op: "set", path: "/world/alive", value: alive },
         { op: "set", path: "/world/E", value: E },
@@ -760,6 +832,7 @@ export function reducer(state, action, { rng }) {
         { op: "set", path: "/sim/runPhase", value: RUN_PHASE.RUN_ACTIVE },
         { op: "set", path: "/sim/running", value: true },
       ];
+      pushCanonicalRuntimePatches(patches, canonicalState);
       assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
@@ -864,6 +937,11 @@ export function reducer(state, action, { rng }) {
       const infraBuildCostDNA = Math.max(0, Number(phaseD.infraBuildCostDNA || 0));
       const infraCandidateMask = getInfraCandidateMask(world, w * h);
       infraCandidateMask.fill(0);
+      const canonicalState = buildCanonicalRuntimeState(
+        { ...world, infraCandidateMask, dnaZoneMask: cloneTypedArray(world.dnaZoneMask) },
+        state.meta.worldPresetId,
+        playerLineageId,
+      );
       const patches = [
         { op: "set", path: "/world/dnaZoneMask", value: cloneTypedArray(world.dnaZoneMask) },
         { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
@@ -882,6 +960,7 @@ export function reducer(state, action, { rng }) {
         { op: "set", path: "/sim/runPhase", value: RUN_PHASE.RUN_ACTIVE },
         { op: "set", path: "/sim/running", value: true },
       ];
+      pushCanonicalRuntimePatches(patches, canonicalState);
       assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
@@ -969,6 +1048,11 @@ export function reducer(state, action, { rng }) {
       const link = cloneTypedArray(world.link);
       for (const idx of candidateIndices) link[idx] = 1;
       infraCandidateMask.fill(0);
+      const canonicalState = buildCanonicalRuntimeState(
+        { ...world, link, infraCandidateMask },
+        state.meta.worldPresetId,
+        playerLineageId,
+      );
       const patches = [
         { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
         { op: "set", path: "/world/link", value: link },
@@ -979,6 +1063,7 @@ export function reducer(state, action, { rng }) {
         { op: "set", path: "/sim/infraBuildMode", value: "" },
         { op: "set", path: "/sim/running", value: true },
       ];
+      pushCanonicalRuntimePatches(patches, canonicalState);
       assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
@@ -1250,6 +1335,17 @@ export function simStepPatch(state, action, ctx) {
   if (shouldAutoExpand(worldMutable, simOut, currentTick)) {
     const expandedWorld = expandWorldPreserve(worldMutable, 1);
     expandedWorld.globalLearning = cloneJson(nextLearning);
+    const expandedCanonicalState = buildCanonicalRuntimeState(
+      expandedWorld,
+      state.meta.worldPresetId,
+      playerLineageId,
+      expandedWorld.zoneRole,
+    );
+    expandedWorld.zoneRole = expandedCanonicalState.zoneRole;
+    expandedWorld.zoneId = expandedCanonicalState.zoneId;
+    expandedWorld.zoneMeta = expandedCanonicalState.zoneMeta;
+    simOut.patternCatalog = expandedCanonicalState.patternCatalog;
+    simOut.patternBonuses = expandedCanonicalState.patternBonuses;
     simOut.expansionWork = Math.max(0, simOut.expansionWork - expansionWorkCost(expandedWorld, simOut));
     simOut.expansionCount = (simOut.expansionCount || 0) + 1;
     simOut.lastExpandTick = currentTick;
@@ -1287,7 +1383,7 @@ export function simStepPatch(state, action, ctx) {
   if (state.sim.dnaZoneCommitted) {
     const preset = getWorldPreset(state.meta.worldPresetId);
     const dnaYieldScale = Math.max(0, Number(preset?.phaseC?.dnaYieldScale || 0));
-    const alivePlayerDnaCells = countAlivePlayerMaskedCells(worldMutable?.dnaZoneMask, worldMutable, playerLineageId);
+    const alivePlayerDnaCells = countAlivePlayerRoleCells(worldMutable, playerLineageId, ZONE_ROLE.DNA);
     simOut.playerDNA = Number(simOut.playerDNA || 0) + alivePlayerDnaCells * 0.1 * dnaYieldScale;
   }
   Object.assign(simOut, deriveStageState(worldMutable, simOut, state.meta));

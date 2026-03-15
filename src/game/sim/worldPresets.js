@@ -52,6 +52,23 @@ export const WORLD_PRESETS = Object.freeze({
       visionRadiusDNA: 2,
       visionRadiusInfra: 1,
     },
+    phaseE: {
+      patternWeights: {
+        line: 1.2,
+        block: 1.0,
+        loop: 1.0,
+        branch: 1.1,
+        dense_cluster: 0.9,
+      },
+      bonusScale: {
+        energy: 1.1,
+        dna: 1.0,
+        stability: 1.0,
+        vision: 1.1,
+        defense: 1.0,
+        transport: 1.2,
+      },
+    },
     startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 1.02,
@@ -86,6 +103,23 @@ export const WORLD_PRESETS = Object.freeze({
       visionRadiusDNA: 2,
       visionRadiusInfra: 1,
     },
+    phaseE: {
+      patternWeights: {
+        line: 0.9,
+        block: 1.0,
+        loop: 1.0,
+        branch: 0.9,
+        dense_cluster: 1.2,
+      },
+      bonusScale: {
+        energy: 0.9,
+        dna: 1.0,
+        stability: 1.2,
+        vision: 0.9,
+        defense: 1.2,
+        transport: 0.9,
+      },
+    },
     startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {
       L_mean: 1.16,
@@ -118,6 +152,23 @@ export const WORLD_PRESETS = Object.freeze({
       visionRadiusCore: 2,
       visionRadiusDNA: 2,
       visionRadiusInfra: 1,
+    },
+    phaseE: {
+      patternWeights: {
+        line: 1.0,
+        block: 1.1,
+        loop: 1.2,
+        branch: 1.0,
+        dense_cluster: 1.0,
+      },
+      bonusScale: {
+        energy: 1.0,
+        dna: 1.1,
+        stability: 1.1,
+        vision: 1.0,
+        defense: 1.0,
+        transport: 1.0,
+      },
     },
     startWindows: START_WINDOWS_DEFAULT,
     physicsOverrides: {

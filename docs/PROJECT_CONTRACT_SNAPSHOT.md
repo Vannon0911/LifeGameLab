@@ -17,6 +17,8 @@
 - Deterministisches Advisor-Read-Model als gemeinsame Source of Truth fuer `render_game_to_text`, HUD und Statuspanel
 - Main-Run-Defaults: Placement Cost standardmaessig an, Global Learning standardmaessig aus, Win-Mode nach Tick 0 fixiert
 - Renderer respektiert `meta.activeOverlay` als echte Diagnoseansicht fuer Energie, Toxin, Naehrstoffe, Territorium und Konflikt
+- Phase-E-Contract aktiv: kanonische Zonen ueber `ZONE_ROLE`, `world.zoneRole`, `world.zoneId`, `world.zoneMeta`
+- Phase-E-Pattern-State aktiv: `sim.patternCatalog`, `sim.patternBonuses`
 
 ## Kernmodule
 - `src/project/contract/*`
@@ -30,6 +32,7 @@
 - `node tests/test-determinism-with-interactions.mjs`
 - `node tests/test-determinism-long.mjs`
 - `node tests/test-drift-negative-order.mjs`
+- `node tests/test-phase-e-integrity.mjs`
 - `node tests/test-path-hygiene.mjs`
 - `node tools/redteam-stress-master.mjs`
 - `npm test`

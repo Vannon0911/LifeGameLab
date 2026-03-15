@@ -32,6 +32,13 @@ assert(Number(state.sim.meanWaterField || 0) > 0, `meanWaterField stayed empty: 
 assert(state.world.founderMask.every((v) => (v | 0) === 0), "founderMask must be empty on genesis bootstrap");
 assert(state.world.coreZoneMask.length === state.world.alive.length, "coreZoneMask length mismatch");
 assert(state.world.coreZoneMask.every((v) => (v | 0) === 0), "coreZoneMask must start empty");
+assert(state.world.zoneRole.length === state.world.alive.length, "zoneRole length mismatch");
+assert(state.world.zoneId.length === state.world.alive.length, "zoneId length mismatch");
+assert(state.world.zoneRole.every((v) => (v | 0) === 0), "zoneRole must start empty");
+assert(state.world.zoneId.every((v) => (v | 0) === 0), "zoneId must start empty");
+assert(Object.keys(state.world.zoneMeta || {}).length === 0, "zoneMeta must start empty");
+assert(Object.keys(state.sim.patternCatalog || {}).length === 0, "patternCatalog must start empty");
+assert(Number(state.sim.patternBonuses?.energy || 0) === 0, "patternBonuses.energy must start empty");
 assert(state.world.visibility.length === state.world.alive.length, "visibility length mismatch");
 assert(state.world.explored.length === state.world.alive.length, "explored length mismatch");
 const genesisTick = Number(state.sim.tick || 0);
