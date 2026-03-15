@@ -15,6 +15,12 @@
 - Phase D ist der naechste produktive Block und wird ueber `docs/PHASE_D_TODO.md` gesteuert.
 - Phase E, F und G sind vorbereitet, aber strikt gesperrt bis ihre jeweilige Vorphase stabil abgeschlossen ist.
 - Kanonische Restphasen-Doku ab jetzt: `docs/PHASE_D_TODO.md`, `docs/PHASE_E_TODO.md`, `docs/PHASE_F_TODO.md`, `docs/PHASE_G_TODO.md`.
+- Produkt- und Designrahmen fuer neue Arbeit: `docs/CONCEPT_BASIS.md`.
+
+## Produktleitplanke
+- `docs/CONCEPT_BASIS.md` ist die feste Produktbasis fuer Spielerfantasie, Systemgrammatik, Muster-/Fusionsrolle, Win-Condition-Zwang und Erweiterungslogik.
+- Fehlende Systeme werden nicht frei erfunden. Wenn Contract-/Phasen-Doku etwas nicht definieren, bleibt die Arbeit innerhalb der Konzeptbasis oder markiert die Luecke offen.
+- Die Konzeptbasis ersetzt keine Contract- oder Phase-Gates. Bei Konflikten gewinnen Contract-Invarianten und aktive Phase-TODOs.
 
 ## Testlage 2026-03-15
 - Verifiziert gruen: `npm run test:quick`

@@ -40,3 +40,4 @@
 - `docs/PHASE_F_TODO.md`: vorbereitete Folgephase fuer Tech-Tree, Progression und Objectives
 - `docs/PHASE_G_TODO.md`: vorbereitete Folgephase fuer Balance, Cleanup und RC-Haertung
 - `docs/LLM_ENTRY.md`: bindender Einstieg fuer Pflichtlesereihenfolge, Gates und Phasen-Doku
+- `docs/CONCEPT_BASIS.md`: feste Produktbasis fuer Systemgrammatik, Spielerfantasie und Nicht-Ziele
