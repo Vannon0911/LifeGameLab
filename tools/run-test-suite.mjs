@@ -14,24 +14,27 @@ if (!Object.prototype.hasOwnProperty.call(TEST_SUITES, suiteName)) {
 
 const preflightScript = path.join(root, "tools", "llm-preflight.mjs");
 function runPreflight(paths, label = "suite") {
-  const preflight = spawnSync(
-    process.execPath,
-    [preflightScript, "check", "--paths", paths],
-    {
+  const steps = [
+    ["entry", "--paths", paths, "--mode", "work"],
+    ["ack", "--paths", paths],
+    ["check", "--paths", paths],
+  ];
+  for (const args of steps) {
+    const preflight = spawnSync(process.execPath, [preflightScript, ...args], {
       cwd: root,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       timeout: 30_000,
-    },
-  );
-  if (preflight.stdout) process.stdout.write(preflight.stdout);
-  if (preflight.stderr) process.stderr.write(preflight.stderr);
-  if (preflight.error) {
-    console.error(`[suite:${suiteName}] ${label} llm preflight failed: ${preflight.error.message}`);
-    process.exit(1);
-  }
-  if (preflight.status !== 0) {
-    process.exit(preflight.status ?? 1);
+    });
+    if (preflight.stdout) process.stdout.write(preflight.stdout);
+    if (preflight.stderr) process.stderr.write(preflight.stderr);
+    if (preflight.error) {
+      console.error(`[suite:${suiteName}] ${label} llm preflight failed: ${preflight.error.message}`);
+      process.exit(1);
+    }
+    if (preflight.status !== 0) {
+      process.exit(preflight.status ?? 1);
+    }
   }
 }
 

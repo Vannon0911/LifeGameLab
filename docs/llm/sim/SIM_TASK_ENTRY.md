@@ -19,6 +19,8 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Danach nur SIM-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
+- `node tools/llm-preflight.mjs entry --paths src/game/sim/,src/project/project.logic.js --mode work`
+- `node tools/llm-preflight.mjs ack --paths src/game/sim/,src/project/project.logic.js`
 - `node tools/llm-preflight.mjs check --paths src/game/sim/,src/project/project.logic.js`
 
 ## SCHREIBEN (pflicht)

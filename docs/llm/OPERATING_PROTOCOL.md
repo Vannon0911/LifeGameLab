@@ -10,8 +10,10 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 
 ## PRUEFEN
 - Task ueber `docs/llm/TASK_ENTRY_MATRIX.json` klassifizieren
+- Session starten: `node tools/llm-preflight.mjs entry --paths <...> --mode work|security`
 - Ack ueber `tools/llm-preflight.mjs`
 - vor Test und Schreiben immer `check`
+- Hook-Guards einmal aktivieren: `npm run hooks:install`
 
 ## SCHREIBEN
 - kein Schreiben ohne gelesenen LLM-Entry plus passendem Task-Entry

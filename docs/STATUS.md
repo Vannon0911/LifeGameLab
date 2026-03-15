@@ -86,9 +86,11 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Sicherheitsnachweis aktuell: `node tests/test-llm-contract.mjs` gruen (2026-03-15).
 - Startkommandos fuer die naechste Session:
   1. `node tools/llm-preflight.mjs classify --paths <task-pfade>`
-  2. `node tools/llm-preflight.mjs ack --paths <task-pfade>`
-  3. `node tools/llm-preflight.mjs check --paths <task-pfade>`
-  4. danach erst schreiben/testen.
+  2. `node tools/llm-preflight.mjs entry --paths <task-pfade> --mode work`
+  3. `node tools/llm-preflight.mjs ack --paths <task-pfade>`
+  4. `node tools/llm-preflight.mjs check --paths <task-pfade>`
+  5. danach erst schreiben/testen.
+- Commit-/Push-Guard aktivieren: `npm run hooks:install` (einmal pro Clone).
 - Wichtiger Hinweis: `src/project/contract/manifest.js` klassifiziert matrix-bedingt mehrdeutig (`contracts` + `versioning`); fuer Vertragsarbeit deshalb disjunkte Contract-Pfade nutzen (z. B. `src/project/contract/stateSchema.js`) oder Task strikt trennen.
 
 ## Bugfix-Log

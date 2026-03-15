@@ -1,0 +1,2 @@
+#!/bin/sh
+node tools/git-llm-guard.mjs pre-commit

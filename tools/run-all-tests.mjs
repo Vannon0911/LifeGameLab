@@ -8,20 +8,24 @@ const root = path.resolve(here, "..");
 
 function runPreflight() {
   const preflightScript = path.join(root, "tools", "llm-preflight.mjs");
-  const res = spawnSync(
-    process.execPath,
-    [preflightScript, "check", "--paths", "tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs"],
-    {
+  const paths = "tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs";
+  const steps = [
+    ["entry", "--paths", paths, "--mode", "work"],
+    ["ack", "--paths", paths],
+    ["check", "--paths", paths],
+  ];
+  for (const args of steps) {
+    const res = spawnSync(process.execPath, [preflightScript, ...args], {
       cwd: root,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       timeout: 30_000,
-    },
-  );
-  if (res.stdout) process.stdout.write(res.stdout);
-  if (res.stderr) process.stderr.write(res.stderr);
-  if (res.error) throw res.error;
-  if (res.status !== 0) process.exit(res.status ?? 1);
+    });
+    if (res.stdout) process.stdout.write(res.stdout);
+    if (res.stderr) process.stderr.write(res.stderr);
+    if (res.error) throw res.error;
+    if (res.status !== 0) process.exit(res.status ?? 1);
+  }
 }
 
 function runSuite(name) {

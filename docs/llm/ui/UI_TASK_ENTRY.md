@@ -20,6 +20,8 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Danach nur UI-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
+- `node tools/llm-preflight.mjs entry --paths src/app/,src/game/ui/,src/game/render/,src/project/ui.js --mode work`
+- `node tools/llm-preflight.mjs ack --paths src/app/,src/game/ui/,src/game/render/,src/project/ui.js`
 - `node tools/llm-preflight.mjs check --paths src/app/,src/game/ui/,src/game/render/,src/project/ui.js`
 
 ## SCHREIBEN (pflicht)
