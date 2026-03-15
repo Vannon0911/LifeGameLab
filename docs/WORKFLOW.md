@@ -18,7 +18,8 @@ LLM-spezifische Regeln leben getrennt unter `docs/llm/`.
 2. `docs/ARCHITECTURE.md`
 3. `docs/STATUS.md`
 4. Task ueber `docs/llm/TASK_ENTRY_MATRIX.json` klassifizieren
-5. Genau einen passenden Task-Entry lesen
+5. `docs/llm/entry/TASK_GATE_INDEX.md` fuer minimales Gate-Set lesen
+6. Genau einen passenden Task-Entry lesen
 
 ### PRUEFEN
 - `node tools/llm-preflight.mjs classify --paths <paths>`
@@ -39,6 +40,8 @@ LLM-spezifische Regeln leben getrennt unter `docs/llm/`.
 - `docs/STATUS.md` ist die einzige Status-, Bugfix-, Release- und Change-History.
 - `docs/ARCHITECTURE.md` ist die einzige technische Snapshot-Doku.
 - `docs/PRODUCT.md` ist die einzige Produkt- und Scope-Basis.
+- `src/project/contract/manifest.js` bleibt Source of Truth.
+- `src/core/kernel/store.js` und `src/core/kernel/patches.js` bleiben Pflichtgates fuer jede Task-Ausfuehrung.
 - Screenshots und Vergleichsbilder bleiben in `docs/assets/`, sind aber keine Text-Source-of-Truth.
 
 ## Abbruchregel

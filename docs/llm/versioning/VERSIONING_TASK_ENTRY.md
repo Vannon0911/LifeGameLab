@@ -7,10 +7,15 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 1. `docs/llm/ENTRY.md`
 2. `docs/llm/OPERATING_PROTOCOL.md`
 3. diese Datei
-4. `package.json`
-5. `src/project/contract/manifest.js`
-6. `docs/ARCHITECTURE.md`
-7. `docs/STATUS.md`
+4. `docs/llm/entry/TASK_GATE_INDEX.md` (VERSIONING + globale Mindest-Gates)
+5. `package.json`
+6. `src/project/contract/manifest.js`
+7. `docs/ARCHITECTURE.md`
+8. `docs/STATUS.md`
+
+## Minimalzugriff Ohne Vollscan
+- Immer zuerst globale Mindest-Gates aus `TASK_GATE_INDEX.md` laden.
+- Danach nur VERSIONING-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
 - `node tools/llm-preflight.mjs check --paths package.json,src/project/contract/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md`

@@ -720,7 +720,7 @@ export class UI {
                 blocked: "Infrastrukturpfad blockiert.",
                 hint: emptyBefore
                   ? "Leeres Confirm beendet nur den Build-Modus. Fuer Commit braucht der Pfad eine gueltige zusammenhaengende Verbindung."
-                  : "Pfad muss zusammenhaengend sein und an Kern, DNA-Zone oder bestehende commitete Infrastruktur anschliessen.",
+                  : "Pfad muss zusammenhaengend sein und an Kern, DNA-Zone oder bestehende committete Infrastruktur anschliessen.",
               }
             );
             rerenderPanel();
@@ -1381,7 +1381,7 @@ export class UI {
         {
           ok: isSelected ? "Infrastrukturkachel entfernt." : "Infrastrukturkachel vorgemerkt.",
           blocked: "Infrastrukturpfad blockiert.",
-          hint: "Pfad muss zusammenhaengend bleiben und an Kern, DNA-Zone oder commitete Infrastruktur anschliessen.",
+          hint: "Pfad muss zusammenhaengend bleiben und an Kern, DNA-Zone oder committete Infrastruktur anschliessen.",
         }
       );
       return;
