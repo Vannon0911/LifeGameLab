@@ -5,7 +5,8 @@ Zweck: Infrastruktur und aktive Sicht/Fog-Regeln nach stabiler DNA-Zone.
 ## Status
 
 - Phase D ist aktiv; D1 ist abgeschlossen.
-- D2-D8 bleiben offen.
+- D2 und D3 sind abgeschlossen.
+- D4-D8 bleiben offen.
 - Nicht in D1 enthalten:
   - kein Infrastruktur-Bau-Produktivcode
   - kein aktives Fog-Produktivcode
@@ -57,12 +58,15 @@ Zweck: Infrastruktur und aktive Sicht/Fog-Regeln nach stabiler DNA-Zone.
   - `node tools/run-test-suite.mjs quick`
 
 ### D3 Sicht-/Fog-System
-- [ ] Sicht durch Kernzone
-- [ ] Sicht durch DNA-Zone
-- [ ] Sicht durch Infrastruktur
-- [ ] `explored` fuellen
-- [ ] unsichtbare Bereiche entpraezisieren
-- [ ] Tests + Doku aktualisieren
+- [x] Sicht durch Kernzone
+- [x] Sicht durch DNA-Zone
+- [x] Sicht durch Infrastruktur
+- [x] `explored` fuellen
+- [x] unsichtbare Bereiche entpraezisieren
+- [x] Tests + Doku aktualisieren
+- Verifiziert mit:
+  - `node tests/test-visibility-fog.mjs`
+  - `node tools/run-test-suite.mjs quick`
 
 ### D4 CPU-Informationsgating
 - [ ] CPU in Sicht praezise
@@ -156,3 +160,10 @@ phaseD: {
 - `BUILD_INFRA_PATH` erlaubt nur zusammenhaengende, lebende, player-owned Netzpfade mit Anker an Kern, DNA oder bestehendem Link.
 - `CONFIRM_INFRA_PATH` committed erst dann nach `world.link`, verbraucht DNA- und Energiekosten deterministisch und setzt `infrastructureUnlocked=true`.
 - Sicht/Fog, CPU-Informationsgating und UI bleiben bewusst offen fuer D3-D6.
+
+## D3-Abschluss
+
+- Sicht/Fog wird jetzt pro Tick deterministisch aus lebenden, player-owned Kern-/DNA-/Infrastrukturankern abgeleitet.
+- `visibility` wird als aktuelle Sicht neu geschrieben; ausserhalb Sicht wird wieder entpraezisiert (`0`).
+- `explored` wird persistent gefuellt (OR ueber sichtbare Tiles).
+- `expandWorldPreserve()` erhaelt `visibility` und `explored` jetzt korrekt bei Expansion.
