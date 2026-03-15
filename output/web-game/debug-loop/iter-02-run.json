@@ -1,18 +1,19 @@
 {
   "text": {
-    "tick": 58,
-    "running": true,
-    "tool": "observe",
-    "stage": 2,
+    "tick": 0,
+    "running": false,
+    "tool": "founder_place",
+    "stage": 1,
     "dna": 0,
-    "playerAlive": 63,
-    "cpuAlive": 52,
-    "energyNet": 0.4251505016909505,
-    "clusterRatio": 0.9391304347826087,
-    "networkRatio": 0.1826086956521739,
+    "playerAlive": 0,
+    "cpuAlive": 0,
+    "energyNet": 0,
+    "clusterRatio": 0,
+    "networkRatio": 0,
     "techs": [],
     "synergies": [],
     "runIdentity": {
+      "worldPresetId": "river_delta",
       "winMode": "supremacy",
       "doctrine": "equilibrium",
       "doctrineTradeoff": "Ausgleich zwischen Tempo und Stabilitaet."
@@ -20,29 +21,56 @@
     "status": {
       "risk": "unstable",
       "goal": "harvest_secure",
-      "structure": "colony_core",
-      "commandScore": 0.6794782608695653,
+      "structure": "single_cells",
+      "commandScore": 0,
       "splitReady": false,
-      "expansionWork": 48.71131713869269,
-      "nextExpandCost": 200
+      "expansionWork": 0,
+      "nextExpandCost": 120,
+      "stageProgressScore": 0.21125000000000002,
+      "infrastructureUnlocked": false,
+      "zoneSummary": {
+        "coreTiles": 0,
+        "dnaTiles": 0,
+        "infraTiles": 0,
+        "zoneCount": 0
+      },
+      "patternSummary": {
+        "line": 0,
+        "block": 0,
+        "loop": 0,
+        "branch": 0,
+        "denseCluster": 0,
+        "bonuses": {
+          "energy": 0,
+          "dna": 0,
+          "stability": 0,
+          "vision": 0,
+          "defense": 0,
+          "transport": 0
+        }
+      }
     },
     "advisor": {
-      "bottleneckPrimary": "win_push",
+      "bottleneckPrimary": "collapse",
+      "bottleneckSecondary": "survival_core",
       "reasonCodes": [
-        "maintain_advantage",
-        "win_progress_live"
+        "population_zero"
       ],
-      "nextAction": "push_win_mode",
-      "nextLever": "win_path",
-      "recommendedZone": "none",
-      "recommendedOverlay": "energy"
+      "nextAction": "stabilize_energy",
+      "nextLever": "relevant_tech",
+      "recommendedZone": "buffer",
+      "recommendedOverlay": "energy",
+      "blockedTechReasonCodes": [],
+      "blockedTechReasonLabels": [],
+      "blockedTechId": null,
+      "resultReason": null
     },
     "winProgress": {
       "mode": "supremacy",
-      "progress": 58,
+      "progress": 0,
       "target": 200,
-      "blockerCode": "maintain_advantage",
-      "blockerDetail": "Vorsprung halten, bis der Zaehler voll ist."
+      "blockerCode": "crisis_active",
+      "blockerDetail": "Krisenengpass blockiert den Siegpfad."
     },
     "benchmark": {
       "isRunning": false,
@@ -53,13 +81,13 @@
     },
     "risk": "unstable",
     "mission": "harvest_secure",
-    "structure": "colony_core",
+    "structure": "single_cells",
     "doctrine": "equilibrium"
   },
   "perf": {
-    "fpsEma": 14.49,
-    "frameMsEma": 69.03,
-    "renderMsEma": 32.09,
+    "fpsEma": 24.16,
+    "frameMsEma": 41.39,
+    "renderMsEma": 3.39,
     "quality": 1,
     "renderEvery": 1,
     "dprCap": 1.25,
@@ -69,17 +97,24 @@
     "stepBufferSize": 0,
     "offscreenMode": "main",
     "offscreenAuto": false,
-    "tick": 58,
-    "grid": "32x32",
-    "cells": 1024
+    "tick": 0,
+    "grid": "16x16",
+    "cells": 256
   },
   "loop": {
     "requestedSpeed": 24,
     "appliedSpeed": 24,
-    "started": true,
+    "started": false,
     "advanced": {
       "steps": 48,
-      "tick": 54
-    }
+      "tick": 0
+    },
+    "panelRaster": [
+      "output\\web-game\\debug-loop\\iter-02-panel-lage.png",
+      "output\\web-game\\debug-loop\\iter-02-panel-eingriffe.png",
+      "output\\web-game\\debug-loop\\iter-02-panel-evolution.png",
+      "output\\web-game\\debug-loop\\iter-02-panel-welt.png",
+      "output\\web-game\\debug-loop\\iter-02-panel-labor.png"
+    ]
   }
 }
