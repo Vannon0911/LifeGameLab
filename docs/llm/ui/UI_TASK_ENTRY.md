@@ -4,8 +4,8 @@
 LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 
 ## LESEN (pflicht)
-1. `docs/LLM_ENTRY.md`
-2. `docs/LLM_OPERATING_PROTOCOL.md`
+1. `docs/llm/ENTRY.md`
+2. `docs/llm/OPERATING_PROTOCOL.md`
 3. diese Datei
 4. `src/game/ui/ui.constants.js`
 5. `src/game/ui/ui.model.js`
@@ -18,7 +18,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - `node tools/llm-preflight.mjs check --paths src/app/,src/game/ui/,src/game/render/,src/project/ui.js`
 
 ## SCHREIBEN (pflicht)
-- Kein Schreiben ohne `docs/LLM_ENTRY.md` + passenden Task-Entry.
+- Kein Schreiben ohne `docs/llm/ENTRY.md` + passenden Task-Entry.
 - Kein Test ohne passendes Ack.
 - Kein Taskwechsel ohne neue Klassifikation + neues Ack.
 - UI/Renderer-Scope inklusive `src/app/`-Boot-/Caller-Orchestrierung.
@@ -26,7 +26,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 
 ## DOKU (pflicht)
 - Zuerst UI-spezifische Doku/Artefakte.
-- `docs/MASTER_CHANGE_LOG.md` nur globale Fallback-Ansicht.
+- `docs/STATUS.md` nur globale Fallback-Ansicht.
 
 ## Taskregel
 Main-Run bleibt auf `lage/eingriffe/evolution/welt`; Labor kapselt Diagnose-/Legacy-Pfade.

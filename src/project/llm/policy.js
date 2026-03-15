@@ -1,6 +1,6 @@
-// Mirror of operative LLM guardrails from docs/LLM_ENTRY.md for runtime checks.
+// Mirror of operative LLM guardrails from docs/llm/ENTRY.md for runtime checks.
 export const LLM_POLICY = Object.freeze({
-  source: "docs/LLM_ENTRY.md",
+  source: "docs/llm/ENTRY.md",
   invariants: Object.freeze([
     "dispatch_patch_only",
     "ui_renderer_read_only",
