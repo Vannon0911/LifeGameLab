@@ -51,6 +51,15 @@ export const PANEL_DEFS = [
 
 export const PANEL_BY_KEY = Object.fromEntries(PANEL_DEFS.map((panel) => [panel.key, panel]));
 
+
+export const LEGACY_CONTEXT = {
+  ENERGIE: "legacy_energie",
+  HARVEST: "legacy_harvest",
+  TOOLS: "legacy_tools",
+  ZONEN: "legacy_zonen",
+  SIEG: "legacy_sieg",
+};
+
 export const WORLD_PRESET_OPTIONS = [
   { id: "river_delta", label: "River Delta", desc: "Hoher Wasserkorridor und stabile Expansion." },
   { id: "dry_basin", label: "Dry Basin", desc: "Wenig Wasser, hoher Lichtdruck und harte Gates." },
