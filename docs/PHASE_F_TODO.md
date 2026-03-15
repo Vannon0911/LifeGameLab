@@ -6,7 +6,16 @@ Zweck: P1-Progression auf stabiler Phase-E-Basis umsetzen, ohne neue Parallel-Sy
 
 - Phase E ist am 2026-03-15 produktiv abgeschlossen.
 - `tests/test-phase-e-integrity.mjs` existiert, ist in `truth` registriert und laeuft gruen.
-- Phase F ist damit produktiv freigegeben.
+- Phase F ist am 2026-03-15 produktiv umgesetzt und testgruen auf `main`.
+- Verifiziert gruen:
+  - `npm run test:quick`
+  - `npm run test:truth`
+  - `node tests/test-phase-f-progression-integrity.mjs`
+  - `node tests/test-core-collapse-loss.mjs`
+  - `node tests/test-vision-break-loss.mjs`
+  - `node tests/test-network-decay-loss.mjs`
+- `tests/test-phase-f-progression-integrity.mjs` ist in `truth` registriert.
+- Freigegebene Folgephase: Phase G.
 - P1-Startvoraussetzungen:
   - [x] Phase D abgeschlossen
   - [x] Phase E liefert kanonisch: `world.zoneRole`, `world.zoneId`, `world.zoneMeta`, `sim.patternCatalog`, `sim.patternBonuses`
@@ -66,24 +75,24 @@ Zweck: P1-Progression auf stabiler Phase-E-Basis umsetzen, ohne neue Parallel-Sy
 
 - `src/game/sim/reducer/techTreeOps.js`
 - `src/project/contract/stateSchema.js`
-- `src/game/sim/reducer/index.js`
+- `src/game/sim/reducer/index.js` fuer keinen Strukturumbau; nur minimale Callsite-Durchleitung ist toleriert
 - `src/core/kernel/*`
 - `src/game/render/*`
 - `src/project/contract/manifest.js`
 
 ### F2 Contracts (klein halten)
-- [ ] `WIN_MODE` um Result-only Lose-Ausgaben erweitern: `core_collapse`, `vision_break`, `network_decay`
-- [ ] `WIN_MODE_SELECTABLE` unveraendert lassen
-- [ ] keine neuen waehllosen `WIN_MODE`-Pfade; nur Result-only-Losewerte
-- [ ] `runRequirements` als statisches Feld an bestehenden Tech-Entries ergaenzen
-- [ ] keine neuen Action-Typen, kein neues Sim-Feld fuer Loss-Reason
+- [x] `WIN_MODE` um Result-only Lose-Ausgaben erweitern: `core_collapse`, `vision_break`, `network_decay`
+- [x] `WIN_MODE_SELECTABLE` unveraendert lassen
+- [x] keine neuen waehllosen `WIN_MODE`-Pfade; nur Result-only-Losewerte
+- [x] `runRequirements` als statisches Feld an bestehenden Tech-Entries ergaenzen
+- [x] keine neuen Action-Typen, kein neues Sim-Feld fuer Loss-Reason
 
 ### F3 Tech-Gates auf bestehendem Pfad
-- [ ] `handleBuyEvolution()` erzwingt weiterhin DNA-Kosten, Stage, Prereqs, `commandReq`
-- [ ] zusaetzlich `runRequirements` erzwingen
-- [ ] `runRequirements` lebt in `src/game/techTree.js`, nicht im Laufzeit-State
-- [ ] kein neuer Resolver, kein neuer Store, nur Lesezugriffe auf bestehende State-Felder
-- [ ] Gate-Regeln abbilden:
+- [x] `handleBuyEvolution()` erzwingt weiterhin DNA-Kosten, Stage, Prereqs, `commandReq`
+- [x] zusaetzlich `runRequirements` erzwingen
+- [x] `runRequirements` lebt in `src/game/techTree.js`, nicht im Laufzeit-State
+- [x] kein neuer Resolver, kein neuer Store, nur Lesezugriffe auf bestehende State-Felder
+- [x] Gate-Regeln auf die real vorhandenen Tech-IDs/Lanes gemappt und ueber statische `runRequirements` abgebildet:
   - `metabolism`: ab Stage 2 committed DNA-Zone; ab Stage 4 zusaetzlich positiver Pattern-Energie- oder DNA-Bonus
   - `survival`: ab Stage 2 Infrastruktur; ab Stage 3 zusaetzlich Defense-Aktivierung oder positiver Defense-/Stability-Bonus
   - `cluster`: ab Stage 2 mindestens eine Pattern-Klasse + `networkRatio >= 0.10`; ab Stage 4 mindestens zwei Pattern-Klassen
@@ -91,60 +100,60 @@ Zweck: P1-Progression auf stabiler Phase-E-Basis umsetzen, ohne neue Parallel-Sy
   - `evolution`: Infrastruktur + mindestens drei Pattern-Klassen + positiver DNA-/Stability-Bonus
 
 ### F4 Stage-Authority + Goals/Results
-- [ ] `deriveStageState()` bleibt alleinige Stage-Quelle; kein `patternScore`
-- [ ] Pattern-Einfluss nur auf `stabilityScore`
-- [ ] bestehende Gewichte/Monotonie behalten, zusaetzliche Gates:
+- [x] `deriveStageState()` bleibt alleinige Stage-Quelle; kein `patternScore`
+- [x] Pattern-Einfluss nur auf `stabilityScore`
+- [x] bestehende Gewichte/Monotonie behalten, zusaetzliche Gates:
   - Stage 3 erfordert committed DNA-Zone
   - Stage 4 erfordert Infrastruktur-Unlock
   - Stage 5 erfordert gefundene Pattern + positiven Pattern-Bonus + weiterhin kein Collapse/Kritikrisiko
-- [ ] Preset-Bias vor bestehendem Goal-Fallback:
+- [x] Preset-Bias vor bestehendem Goal-Fallback:
   - `river_delta` -> Bias auf `EXPANSION` bei stabilem Network/Infra
   - `dry_basin` -> Bias auf `SURVIVE_ENERGY` und `HARVEST_SECURE`
   - `wet_meadow` -> Bias auf `GROWTH` und `EVOLUTION_READY`
-- [ ] `goal` bleibt Run-Target; Loss-Reason nur als Result-only `winMode`
+- [x] `goal` bleibt Run-Target; Loss-Reason nur als Result-only `winMode`
 
 ### F5 Apply-Win + Post-E Signale
-- [ ] `applyWinConditions()` bleibt einziger Resolver und schreibt bei Lose:
+- [x] `applyWinConditions()` bleibt einziger Resolver und schreibt bei Lose:
   - `gameResult = LOSS`
   - `winMode = core_collapse | vision_break | network_decay`
   - `gameEndTick`
   - `running = false`
   - `runPhase = RESULT`
-- [ ] Lose-Detektion nur aus post-E kanonischen Signalen:
+- [x] Lose-Detektion nur aus post-E kanonischen Signalen:
   - Core-Extinction aus kanonischer Core-Zonen-Belegung
   - Vision-Break aus committed kanonischen Zonen plus `visibility/explored`
   - Network-Decay aus kanonischen Infra-Zonen plus Netzwerk/Infrastruktur-Status
-- [ ] `SET_ZONE`/`zoneMap` bleiben lab-only/legacy und sind keine Main-Run-Wahrheit mehr
-- [ ] keine neue Loss-Reason im State; `winMode` bleibt Result-only-Transport
+- [x] `SET_ZONE`/`zoneMap` bleiben lab-only/legacy und sind keine Main-Run-Wahrheit mehr
+- [x] keine neue Loss-Reason im State; `winMode` bleibt Result-only-Transport
 
 ### F6 Read-Model / Advisor (Single Truth)
-- [ ] `runIdentity`: Preset-ID ergaenzen, Doctrine/WinMode beibehalten
-- [ ] `status`: `stageProgressScore`, Infrastrukturstatus, Pattern-Count, Pattern-Bonus-Summary, kanonische Zonen-Summary ergaenzen
-- [ ] `advisor`: blocked-tech reasons + Result-Reason-Label aus Result-only `winMode`
-- [ ] keine zweite Read-Model-Quelle aufbauen
+- [x] `runIdentity`: Preset-ID ergaenzen, Doctrine/WinMode beibehalten
+- [x] `status`: `stageProgressScore`, Infrastrukturstatus, Pattern-Count, Pattern-Bonus-Summary, kanonische Zonen-Summary ergaenzen
+- [x] `advisor`: blocked-tech reasons + Result-Reason-Label aus Result-only `winMode`
+- [x] keine zweite Read-Model-Quelle aufbauen
 
 ### F7 Testing + Gate
-- [ ] `tests/test-phase-f-progression-integrity.mjs` anlegen und in `truth` aufnehmen
-- [ ] Beweise in F7-Gate:
+- [x] `tests/test-phase-f-progression-integrity.mjs` anlegen und in `truth` aufnehmen
+- [x] Beweise in F7-Gate:
   - deterministische Progression
   - monotones `playerStage`
   - post-E Signale wirken auf Progression
   - Altmetriken allein treiben Stage nicht
   - Preset-Goal-Bias reproduzierbar
   - Lose-Resolution deterministisch auf neue Result-only `winMode`-Werte
-- [ ] bestehende Tests erweitern:
+- [x] bestehende Tests erweitern:
   - Freeze-Progression (Telemetry-only reicht weiter nicht)
   - Result-Phase (neue Lose-Werte stabil in `RESULT`)
   - Advisor/Read-Model-Contract (neue Felder ohne zweite Wahrheit)
   - Gameplay-Loop (`BUY_EVOLUTION` + Lineage-Memory + Gates)
   - Contract/String/Sim-Gate bleiben gruen
-- [ ] Suite-Registry: `test-phase-e-integrity.mjs` und `test-phase-f-progression-integrity.mjs` in `truth`
+- [x] Suite-Registry: `test-phase-e-integrity.mjs` und `test-phase-f-progression-integrity.mjs` in `truth`
 
 ### F8 Finalisierung
-- [ ] `progress.md` aktualisieren
+- [x] `progress.md` aktualisieren
 - [ ] `docs/MASTER_CHANGE_LOG.md` aktualisieren
-- [ ] `docs/SESSION_HANDOFF.md` nachziehen
-- [ ] Scope-Check: kein neuer Content-Berg
+- [x] `docs/SESSION_HANDOFF.md` nachziehen
+- [x] Scope-Check: kein neuer Content-Berg
 
 ## Pflicht-Gate Nach Phase F
 
