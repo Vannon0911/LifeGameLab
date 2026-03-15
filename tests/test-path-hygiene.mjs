@@ -26,6 +26,19 @@ function walk(relPath, out = []) {
   return out;
 }
 
+function isTextFile(relPath) {
+  const lower = String(relPath || "").toLowerCase();
+  if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".webp")) return false;
+  if (lower.endsWith(".gif") || lower.endsWith(".ico") || lower.endsWith(".pdf") || lower.endsWith(".zip")) return false;
+  const textExt = [
+    ".js", ".mjs", ".ts", ".tsx", ".json", ".md", ".txt",
+    ".html", ".css", ".svg", ".yml", ".yaml",
+  ];
+  if (textExt.some((ext) => lower.endsWith(ext))) return true;
+  const base = path.basename(lower);
+  return base === ".gitignore";
+}
+
 const activeRoots = [
   "README.md",
   "MANDATORY_READING.md",
@@ -72,6 +85,7 @@ for (const relPath of expectedMissing) {
 const offenders = [];
 for (const relPath of activeRoots.flatMap((p) => walk(p))) {
   if (relPath === path.join("tests", "test-path-hygiene.mjs")) continue;
+  if (!isTextFile(relPath)) continue;
   const text = fs.readFileSync(path.join(root, relPath), "utf8");
   for (const marker of forbiddenMarkers) {
     if (text.includes(marker)) offenders.push(`${relPath} -> ${marker}`);

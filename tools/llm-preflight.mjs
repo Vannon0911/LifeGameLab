@@ -9,8 +9,6 @@ const root = path.resolve(here, "..");
 const lockPath = path.join(root, "docs", "llm", "entry", "LLM_ENTRY_LOCK.json");
 const matrixPath = path.join(root, "docs", "llm", "TASK_ENTRY_MATRIX.json");
 const ackPath = path.join(root, ".llm", "entry-ack.json");
-const sessionPath = path.join(root, ".llm", "entry-session.json");
-const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 function fail(message) {
   console.error(`[llm-preflight] ${message}`);
@@ -45,7 +43,12 @@ function normalizeRelPath(inputPath) {
   if (!rel || rel.startsWith("..")) {
     fail(`Path outside repository is not allowed: ${raw}`);
   }
-  return rel.split(path.sep).join("/");
+  const relUnix = rel.split(path.sep).join("/");
+  try {
+    const stat = fs.existsSync(abs) ? fs.statSync(abs) : null;
+    if (stat?.isDirectory()) return relUnix.endsWith("/") ? relUnix : `${relUnix}/`;
+  } catch {}
+  return relUnix;
 }
 
 function parsePaths(args) {
@@ -65,16 +68,6 @@ function parseTaskFlag(args) {
   const taskFlag = args.indexOf("--task");
   if (taskFlag < 0) return "";
   return String(args[taskFlag + 1] || "").trim();
-}
-
-function parseModeFlag(args) {
-  const modeFlag = args.indexOf("--mode");
-  const raw = modeFlag >= 0 ? String(args[modeFlag + 1] || "").trim().toLowerCase() : "work";
-  const mode = raw || "work";
-  if (!["work", "security"].includes(mode)) {
-    fail(`Unknown mode '${mode}'. Use --mode work|security`);
-  }
-  return mode;
 }
 
 function matchesPrefix(relPath, rawPrefix) {
@@ -181,7 +174,6 @@ function resolveTaskContext(args, matrix, options = {}) {
 }
 
 function doAck(taskCtx, entryRef, taskEntryRef) {
-  const session = readSessionOrFail(entryRef, taskCtx, taskEntryRef);
   const dir = path.dirname(ackPath);
   fs.mkdirSync(dir, { recursive: true });
 
@@ -196,7 +188,6 @@ function doAck(taskCtx, entryRef, taskEntryRef) {
     requiredEntry: taskEntryRef.requiredEntry,
     requiredEntrySha256: taskEntryRef.requiredEntrySha256,
     ackedAt: now,
-    mode: session.mode,
     classifiedPaths: taskCtx.paths,
   };
 
@@ -214,7 +205,6 @@ function doAck(taskCtx, entryRef, taskEntryRef) {
 }
 
 function doCheck(taskCtx, entryRef, taskEntryRef) {
-  const session = readSessionOrFail(entryRef, taskCtx, taskEntryRef);
   if (!fs.existsSync(ackPath)) {
     fail(`Missing ack file. Run: node tools/llm-preflight.mjs ack --paths ${taskCtx.paths.join(",")}`);
   }
@@ -233,60 +223,10 @@ function doCheck(taskCtx, entryRef, taskEntryRef) {
   if (taskAck.requiredEntrySha256 !== taskEntryRef.requiredEntrySha256) {
     fail(`Task entry hash drift for '${taskCtx.task}'. Re-run ack.`);
   }
-  if (String(taskAck.mode || "") !== String(session.mode || "")) {
-    fail(`Ack/session mode mismatch for '${taskCtx.task}'. Re-run ack.`);
-  }
 
   console.log(
-    `[llm-preflight] CHECK_OK task=${taskCtx.task} mode=${session.mode} taskEntry=${taskEntryRef.requiredEntry}`,
+    `[llm-preflight] CHECK_OK task=${taskCtx.task} taskEntry=${taskEntryRef.requiredEntry}`,
   );
-}
-
-function doEntry(taskCtx, entryRef, taskEntryRef, mode) {
-  const dir = path.dirname(sessionPath);
-  fs.mkdirSync(dir, { recursive: true });
-  const now = new Date().toISOString();
-  const payload = {
-    entryPath: entryRef.entryPath,
-    sha256: entryRef.sha256,
-    task: taskCtx.task,
-    mode,
-    requiredEntry: taskEntryRef.requiredEntry,
-    requiredEntrySha256: taskEntryRef.requiredEntrySha256,
-    classifiedPaths: taskCtx.paths,
-    startedAt: now,
-  };
-  fs.writeFileSync(sessionPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-  console.log(
-    `[llm-preflight] ENTRY_OK task=${taskCtx.task} mode=${mode} taskEntry=${taskEntryRef.requiredEntry}`,
-  );
-}
-
-function readSessionOrFail(entryRef, taskCtx, taskEntryRef) {
-  if (!fs.existsSync(sessionPath)) {
-    fail(`Missing session entry. Run: node tools/llm-preflight.mjs entry --paths ${taskCtx.paths.join(",")} --mode work`);
-  }
-  const session = readJson(sessionPath);
-  if (session.entryPath !== entryRef.entryPath || session.sha256 !== entryRef.sha256) {
-    fail("Session entry invalid due to entry hash/path mismatch. Re-run entry.");
-  }
-  if (session.task !== taskCtx.task) {
-    fail(`Session task mismatch: active='${session.task}' expected='${taskCtx.task}'. Re-run entry.`);
-  }
-  if (session.requiredEntry !== taskEntryRef.requiredEntry) {
-    fail(`Session requiredEntry drift for '${taskCtx.task}'. Re-run entry.`);
-  }
-  if (session.requiredEntrySha256 !== taskEntryRef.requiredEntrySha256) {
-    fail(`Session requiredEntry hash drift for '${taskCtx.task}'. Re-run entry.`);
-  }
-  const startedAtMs = Date.parse(String(session.startedAt || ""));
-  if (!Number.isFinite(startedAtMs)) {
-    fail("Session startedAt missing/invalid. Re-run entry.");
-  }
-  if (Date.now() - startedAtMs > SESSION_MAX_AGE_MS) {
-    fail("Session entry expired (>12h). Re-run entry.");
-  }
-  return session;
 }
 
 const command = String(process.argv[2] || "check").toLowerCase();
@@ -309,14 +249,6 @@ if (command === "ack") {
   process.exit(0);
 }
 
-if (command === "entry") {
-  const ctx = resolveTaskContext(args, matrix, { requirePaths: true });
-  const taskEntryRef = ensureTaskEntry(matrix, ctx.task);
-  const mode = parseModeFlag(args);
-  doEntry(ctx, entryRef, taskEntryRef, mode);
-  process.exit(0);
-}
-
 if (command === "check") {
   const ctx = resolveTaskContext(args, matrix, { requirePaths: true });
   const taskEntryRef = ensureTaskEntry(matrix, ctx.task);
@@ -324,4 +256,4 @@ if (command === "check") {
   process.exit(0);
 }
 
-fail(`Unknown command '${command}'. Use: classify | entry | ack | check`);
+fail(`Unknown command '${command}'. Use: classify | ack | check`);

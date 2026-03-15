@@ -7,6 +7,10 @@ import { GAME_MODE } from "../src/game/contracts/ids.js";
 import { createSignatureSnapshot, explainHashMismatch, sha256Hex } from "./support/determinismDiff.mjs";
 import { closeDanglingHandles } from "./support/handleCleanup.mjs";
 
+function assert(cond, msg) {
+  if (!cond) throw new Error(msg);
+}
+
 function buildScenario(seed) {
   // Deterministic scenario: same actions at the same ticks.
   // Note: we avoid time-based actions; everything is pure dispatch.
@@ -44,6 +48,16 @@ function buildScenario(seed) {
   };
 }
 
+function buildScenarioVariant(seed) {
+  const scn = buildScenario(seed);
+  const steps = scn.steps.slice();
+  const ix = steps.findIndex((step) => step.type === "SET_GLOBAL_LEARNING");
+  if (ix >= 0) {
+    steps[ix] = { type: "SET_GLOBAL_LEARNING", payload: { strength: 0.65 } };
+  }
+  return { ...scn, steps };
+}
+
 function runScenario(scn) {
   const store = createStore(manifest, { reducer, simStep: simStepPatch });
   const hashes = [];
@@ -61,13 +75,11 @@ function runScenario(scn) {
 
 try {
   const seeds = ["uxdet-1", "uxdet-2"];
-  let pass = 0;
   for (const seed of seeds) {
     const scn = buildScenario(seed);
     const a = runScenario(scn);
     const b = runScenario(scn);
 
-    let ok = true;
     const n = Math.min(a.hashes.length, b.hashes.length);
     for (let k = 0; k < n; k++) {
       if (a.hashes[k].sha256 !== b.hashes[k].sha256) {
@@ -81,21 +93,22 @@ try {
           left: ha,
           right: hb,
         })) console.error(line);
-        ok = false;
-        break;
+        throw new Error(`[determinism-interactions] seed=${seed} mismatch at step=${k}`);
       }
     }
 
-    if (!ok) continue;
-    if (a.hashes.length !== b.hashes.length) {
-      console.error(`[determinism-interactions] ${seed}: FAIL different trace lengths`);
-      continue;
-    }
+    assert(a.hashes.length === b.hashes.length, `[determinism-interactions] ${seed}: different trace lengths`);
+    assert(a.traceDigest === b.traceDigest, `[determinism-interactions] ${seed}: digest drift`);
     console.log(`[determinism-interactions] ${seed}: OK steps=${a.hashes.length - 1} traceDigest=${a.traceDigest}`);
-    pass++;
   }
-  console.log(`Determinism with interactions results: ${pass}/${seeds.length}`);
-  if (pass < seeds.length) process.exit(1);
+
+  const baseScenario = buildScenario(seeds[0]);
+  const variantScenario = buildScenarioVariant(seeds[0]);
+  const base = runScenario(baseScenario);
+  const variant = runScenario(variantScenario);
+  assert(base.traceDigest !== variant.traceDigest, "variant interaction scenario should produce different digest");
+
+  console.log(`Determinism with interactions results: ${seeds.length}/${seeds.length} + negative scenario divergence OK`);
 } finally {
   await closeDanglingHandles();
 }

@@ -2,6 +2,11 @@ import { startEvidenceCase } from "./support/liveTestKit.mjs";
 startEvidenceCase("test-raw-string-guard.mjs");
 import fs from "node:fs";
 import path from "node:path";
+import {
+  BRUSH_MODE,
+  GAME_RESULT,
+  OVERLAY_MODE,
+} from "../src/game/contracts/ids.js";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
@@ -9,27 +14,40 @@ function assert(cond, msg) {
 
 const root = path.resolve(".");
 
-const checks = [
+const checks = Object.freeze([
   {
     file: "src/game/ui/ui.js",
-    banned: ["\"win\"", "\"loss\"", "\"observe\"", "\"cell_add\"", "\"cell_remove\"", "\"cell_harvest\""],
+    tokens: [
+      GAME_RESULT.WIN,
+      GAME_RESULT.LOSS,
+      BRUSH_MODE.OBSERVE,
+      BRUSH_MODE.CELL_ADD,
+      BRUSH_MODE.CELL_REMOVE,
+      BRUSH_MODE.CELL_HARVEST,
+    ],
   },
   {
     file: "src/project/llm/readModel.js",
-    banned: ["\"observe\""],
+    tokens: [BRUSH_MODE.OBSERVE],
   },
   {
     file: "src/game/sim/reducer/index.js",
-    banned: ["\"none\""],
+    tokens: [OVERLAY_MODE.NONE],
   },
-];
+]);
 
-for (const { file, banned } of checks) {
+function makeQuotedNeedles(token) {
+  const value = String(token ?? "");
+  return [`"${value}"`, `'${value}'`, `\`${value}\``];
+}
+
+for (const { file, tokens } of checks) {
   const abs = path.join(root, file);
   const source = fs.readFileSync(abs, "utf8");
-  for (const token of banned) {
-    assert(!source.includes(token), `${file} contains banned raw contract token ${token}`);
+  for (const token of tokens) {
+    const hasRawLiteral = makeQuotedNeedles(token).some((needle) => source.includes(needle));
+    assert(!hasRawLiteral, `${file} contains banned raw contract token '${token}'`);
   }
 }
 
-console.log("RAW_STRING_GUARD_OK runtime files use centralized contract IDs");
+console.log("RAW_STRING_GUARD_OK runtime files use centralized contract IDs (risk-token audited)");

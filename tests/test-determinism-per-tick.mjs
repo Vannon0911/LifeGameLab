@@ -10,6 +10,10 @@ import { closeDanglingHandles } from "./support/handleCleanup.mjs";
 const SEEDS = ["det-1", "det-2", "det-3"];
 const TICKS = 300;
 
+function assert(cond, msg) {
+  if (!cond) throw new Error(msg);
+}
+
 function runTrace(seed, ticks) {
   const store = createStore(manifest, { reducer, simStep: simStepPatch });
   store.dispatch({ type: "SET_SEED", payload: seed });
@@ -29,12 +33,10 @@ function runTrace(seed, ticks) {
 }
 
 try {
-  let pass = 0;
   for (const seed of SEEDS) {
     const a = runTrace(seed, TICKS);
     const b = runTrace(seed, TICKS);
 
-    let ok = true;
     for (let t = 0; t <= TICKS; t++) {
       if (a.hashes[t].sha256 !== b.hashes[t].sha256) {
         for (const line of explainHashMismatch({
@@ -44,18 +46,19 @@ try {
           left: a.hashes[t],
           right: b.hashes[t],
         })) console.error(line);
-        ok = false;
-        break;
+        throw new Error(`[determinism-per-tick] seed=${seed} mismatch at tick=${t}`);
       }
     }
 
-    if (ok) {
-      console.log(`[determinism-per-tick] ${seed}: OK (0..${TICKS}) traceDigest=${a.traceDigest}`);
-      pass++;
-    }
+    assert(a.traceDigest === b.traceDigest, `[determinism-per-tick] traceDigest drift for seed=${seed}`);
+    console.log(`[determinism-per-tick] ${seed}: OK (0..${TICKS}) traceDigest=${a.traceDigest}`);
   }
-  console.log(`Determinism per-tick results: ${pass}/${SEEDS.length}`);
-  if (pass < SEEDS.length) process.exit(1);
+
+  const base = runTrace(SEEDS[0], TICKS);
+  const altered = runTrace(SEEDS[1], TICKS);
+  assert(base.traceDigest !== altered.traceDigest, "different seeds should not produce identical per-tick traceDigest");
+
+  console.log(`Determinism per-tick results: ${SEEDS.length}/${SEEDS.length} + negative seed divergence OK`);
 } finally {
   await closeDanglingHandles();
 }

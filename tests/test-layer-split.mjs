@@ -50,4 +50,29 @@ const toggleResult = reducer(
 );
 assert(Array.isArray(toggleResult) && toggleResult.length === 0, "TOGGLE_RUNNING(true) must be [] in RESULT");
 
+const bufferedPatch = [{ op: "set", path: "/sim/tick", value: Number(state.sim.tick || 0) + 1 }];
+const expectedRevision = 42;
+const baseSimTick = Number(state.sim.tick || 0);
+
+const bufferedWrongRevision = reducer(
+  state,
+  { type: "APPLY_BUFFERED_SIM_STEP", payload: { patches: bufferedPatch, baseRevision: expectedRevision + 1, baseSimTick } },
+  { rng: {}, revisionCount: expectedRevision }
+);
+assert(Array.isArray(bufferedWrongRevision) && bufferedWrongRevision.length === 0, "APPLY_BUFFERED_SIM_STEP must be [] on baseRevision mismatch");
+
+const bufferedWrongTick = reducer(
+  state,
+  { type: "APPLY_BUFFERED_SIM_STEP", payload: { patches: bufferedPatch, baseRevision: expectedRevision, baseSimTick: baseSimTick + 1 } },
+  { rng: {}, revisionCount: expectedRevision }
+);
+assert(Array.isArray(bufferedWrongTick) && bufferedWrongTick.length === 0, "APPLY_BUFFERED_SIM_STEP must be [] on baseSimTick mismatch");
+
+const bufferedMatch = reducer(
+  state,
+  { type: "APPLY_BUFFERED_SIM_STEP", payload: { patches: bufferedPatch, baseRevision: expectedRevision, baseSimTick } },
+  { rng: {}, revisionCount: expectedRevision }
+);
+assert(Array.isArray(bufferedMatch) && bufferedMatch.length === 1, "APPLY_BUFFERED_SIM_STEP must pass on matching baseRevision/baseSimTick");
+
 console.log("LAYER_SPLIT_OK reducer:0 patches, simStep:>0 patches");

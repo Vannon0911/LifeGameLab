@@ -9,6 +9,10 @@ import crypto from "node:crypto";
 const SEEDS = ["div-1", "div-2"];
 const TICKS = 40;
 
+function assert(cond, msg) {
+  if (!cond) throw new Error(msg);
+}
+
 function sha256Hex(s) {
   return crypto.createHash("sha256").update(String(s)).digest("hex");
 }
@@ -29,24 +33,24 @@ function getTrace(seed) {
   return results;
 }
 
-let pass = 0;
-for (const seed of SEEDS) {
-  const r1 = getTrace(seed);
-  const r2 = getTrace(seed);
-  
-  let match = true;
-  for (let i = 0; i < r1.length; i++) {
-    if (r1[i].aliveCount !== r2[i].aliveCount) { match = false; break; }
-    if (r1[i].sig !== r2[i].sig) { match = false; break; }
+function sameTrace(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].aliveCount !== b[i].aliveCount) return false;
+    if (a[i].sig !== b[i].sig) return false;
   }
-  
-  if (match) {
-    console.log(`[divergence] ${seed}: OK (deterministic)`);
-    pass++;
-  } else {
-    console.error(`[divergence] ${seed}: FAIL (non-deterministic!)`);
-  }
+  return true;
 }
 
-console.log(`Divergence results: ${pass}/${SEEDS.length}`);
-if (pass < SEEDS.length) process.exit(1);
+for (const seed of SEEDS) {
+  const left = getTrace(seed);
+  const right = getTrace(seed);
+  assert(sameTrace(left, right), `[divergence] deterministic replay failed for seed=${seed}`);
+  console.log(`[divergence] ${seed}: deterministic replay OK`);
+}
+
+const traceA = getTrace(SEEDS[0]);
+const traceB = getTrace(SEEDS[1]);
+assert(!sameTrace(traceA, traceB), "[divergence] different seeds should diverge");
+
+console.log(`Divergence results: ${SEEDS.length}/${SEEDS.length} deterministic + cross-seed divergence OK`);
