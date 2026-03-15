@@ -50,6 +50,34 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 ### P2 (Laufende Pflege)
 1. Doku und Testbelege auf RC-Stand halten
 
+## Release-Plan (Phase G -> RC)
+
+### Milestone R1 (P0 schliessen)
+1. Perf-Budgets:
+   `tests/test-performance-budgets.mjs` anlegen/aktivieren und in `truth` oder `stress` registrieren.
+2. Preset-Balance:
+   `tests/test-preset-balance.mjs` + reproduzierbares Balance-Reporting fuer `river_delta`, `dry_basin`, `wet_meadow`.
+3. Migration-Sicherheit:
+   `tests/test-migration-safety.mjs` mit klaren Drift-Regeln (Schema, strict-Pfade, Snapshot-Stabilitaet).
+4. Gate:
+   `npm run test:quick`, `npm run test:truth`, `npm run test:stress` muessen nach den Aenderungen weiter gruen bleiben.
+
+### Milestone R2 (P1 RC-Haertung)
+1. Legacy-Entkopplung:
+   verbleibende `LEGACY_CONTEXT`-Pfade in UI/Renderer weiter reduzieren oder explizit als bewusst verbleibend klassifizieren.
+2. RC-Checklist finalisieren:
+   eindeutiger Go/No-Go-Block in dieser Datei mit allen Pflichtgates und Abbruchkriterien.
+3. Gate:
+   `node tests/test-phase-g-cleanup.mjs` und `node tests/test-release-candidate-integrity.mjs` gruen.
+
+### Milestone R3 (RC-Freeze)
+1. Doku-Sync:
+   `README.md`, `docs/ARCHITECTURE.md`, `docs/STATUS.md` ohne Drift.
+2. Finale Gegenprobe:
+   Full run `quick/truth/stress` plus RC-Integritaetstest dokumentiert.
+3. Release-Entscheid:
+   RC nur bei komplett gruener Gate-Lage; sonst NO-GO mit dokumentierter Restliste.
+
 ## Naechste Session Startpaket
 - Ziel: sofort mit P0-TODO starten, ohne erneute Gate-Suche.
 - LLM-Leseweg bis Gate verifiziert am 2026-03-15:
@@ -84,6 +112,10 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Verifikation: `npm run test:quick` gruen, inklusive `test-advisor-model`, `test-overlay-diagnostics`, `test-string-contract`, `test-version-traceability`.
 
 ## Append-Only Change Log
+
+### 2026-03-15 session `release-plan-rc-phase-g`
+- Konkreten Release-Plan fuer Phase G in drei Milestones (R1 P0, R2 RC-Haertung, R3 RC-Freeze) dokumentiert.
+- Gates und Exit-Kriterien pro Milestone explizit als Startanweisung fuer die naechste Session festgehalten.
 
 ### 2026-03-15 e6020d4 `fix: restore llm lock and dataflow dispatch mapping after rebase`
 - `docs/llm/entry/LLM_ENTRY_LOCK.json` nach Rebase-Konflikt wieder auf gueltigen Stand gebracht.
