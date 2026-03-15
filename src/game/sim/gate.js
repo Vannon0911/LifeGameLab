@@ -100,10 +100,13 @@ export function assertSimPatchesAllowed(manifest, state, actionType, patches) {
       const v = p.value;
       // String-typed sim keys are declared here so new enum-like fields fail closed until registered.
       const STRING_SIM_KEYS = new Set(["gameResult", "winMode", "goal", "runPhase", "nextZoneUnlockKind", "infraBuildMode"]);
+      const OBJECT_SIM_KEYS = new Set(["patternCatalog", "patternBonuses"]);
       if (seg === "running") {
         if (typeof v !== "boolean") throw patchValueError(path, "expected boolean");
       } else if (STRING_SIM_KEYS.has(seg)) {
         if (typeof v !== "string") throw patchValueError(path, "expected string");
+      } else if (OBJECT_SIM_KEYS.has(seg)) {
+        if (!isPlainObject(v)) throw patchValueError(path, "expected plain object");
       } else {
         if (!Number.isFinite(Number(v))) throw patchValueError(path, "expected finite number");
       }
