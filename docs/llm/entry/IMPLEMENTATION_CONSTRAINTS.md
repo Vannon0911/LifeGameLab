@@ -33,5 +33,5 @@ Wenn eine Idee nicht in diese Grammatik passt, ist sie kein kleiner Zusatz, sond
 Bei Konflikten gilt:
 
 1. Contract- und Kernel-Invarianten
-2. aktive Phase-TODOs und Pflicht-Gates
-3. `docs/CONCEPT_BASIS.md`
+2. aktive Release-Gates in `docs/STATUS.md`
+3. `docs/PRODUCT.md`
