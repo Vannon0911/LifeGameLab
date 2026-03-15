@@ -47,6 +47,7 @@ export const TEST_SUITES = Object.freeze({
     "tests/test-divergence.mjs",
     "tests/test-gameplay-loop.mjs",
     "tests/test-invariants.mjs",
+    "tests/test-release-candidate-integrity.mjs",
     "tests/test-split-security-gate.mjs",
     "tests/test-stability.mjs",
   ],
