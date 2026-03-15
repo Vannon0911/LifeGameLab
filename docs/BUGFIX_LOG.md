@@ -8,6 +8,11 @@
 - Verifikation
 
 ## Aktiver Eintrag
+- 2026-03-15
+- Problem: Verifikation angefragt, ob die zuletzt eingefuehrte Chunk-Logik fuer grosse Pflanzen-Scans im Worldgen die Laufzeitlogik bricht.
+- Ursache: Unsicherheit nach der Umstellung auf deterministische Scan-Batches in `placePlants()`.
+- Fix: Keine Codeaenderung an der Sim-Logik; stattdessen gezielte Re-Validierung der Determinismus- und Quick-Suites fuer den Worldgen-/Runtime-Pfad durchgefuehrt.
+- Verifikation: `node tests/test-world-presets-determinism.mjs`, `node tests/test-determinism-per-tick.mjs`, `npm run test:quick` gruen.
 - 2026-03-14
 - Problem: Der neue Infra-Staging-Pfad konnte den Run nach einem leeren Confirm dauerhaft im Build-Modus festhalten.
 - Ursache: `CONFIRM_INFRA_PATH` behandelte einen leeren Kandidatenpfad als No-Op, waehrend `TOGGLE_RUNNING(true)` bei aktivem `infraBuildMode` weiter gesperrt blieb.
