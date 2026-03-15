@@ -5,6 +5,8 @@ Zweck: Balance, Cleanup und RC-Haertung.
 ## Status
 
 - Produktiv strikt gesperrt bis Phase F stabil voll gemerged ist.
+- Gegenprobe am 2026-03-15: `npm run test:quick`, `npm run test:truth` und `node tests/test-release-candidate-integrity.mjs` laufen gruen.
+- `tests/test-release-candidate-integrity.mjs` existiert, ist aber noch nicht in `truth` oder `full` registriert.
 - Erlaubt vor Produktivstart:
   - TODO-/Prompt-/Testmatrix-/Release-Checklist-Vorbereitung
   - RC-Testdesign und Suite-Einordnung vorbereiten
@@ -38,10 +40,10 @@ Zweck: Balance, Cleanup und RC-Haertung.
 
 ### G2 Vollsuite
 - [x] `quick` gruen
-- [ ] `truth` gruen
+- [x] `truth` gruen
 - [ ] `stress` gruen
 - [x] `playwright` gruen
-- [ ] `determinism-long` gruen
+- [x] `determinism-long` gruen
 - [ ] Perf-Budgets einhalten
 
 ### G3 Balance
