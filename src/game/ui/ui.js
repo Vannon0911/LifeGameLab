@@ -32,6 +32,7 @@ import {
   RENDER_DETAIL_MODE_OPTIONS,
   WORLD_PRESET_OPTIONS,
   ZONE_TYPES,
+  LEGACY_CONTEXT,
 } from "./ui.constants.js";
 import {
   getActionState,
@@ -751,7 +752,7 @@ export class UI {
     }
 
     // ── ENERGIE (Analyse) ───────────────────────────────────
-    if (ctx === "legacy_energie") {
+    if (ctx === LEGACY_CONTEXT.ENERGIE) {
       const eIn = Number(sim.playerEnergyIn || 0), eOut = Number(sim.playerEnergyOut || 0);
       const eNet = Number(sim.playerEnergyNet || 0), eStored = Number(sim.playerEnergyStored || 0);
       const cpuIntel = advisorModel?.cpuIntel || { summary: "CPU ausserhalb Sicht unbekannt", mode: "hidden", precise: false, visibleAlive: 0 };
@@ -966,7 +967,7 @@ export class UI {
 
 
     // ── HARVEST ────────────────────────────────────────────
-    if (ctx === "legacy_harvest") {
+    if (ctx === LEGACY_CONTEXT.HARVEST) {
       const playerDNA = Number(sim.playerDNA || 0);
       const totalHarvested = Number(sim.totalHarvested || 0);
       const playerStage = Number(sim.playerStage || 1);
@@ -1007,7 +1008,7 @@ export class UI {
     }
 
     // ── TOOLS (Wachsen) ─────────────────────────────────────
-    if (ctx === "legacy_tools") {
+    if (ctx === LEGACY_CONTEXT.TOOLS) {
       const card = el("section","nx-card");
       card.appendChild(el("div","nx-card-title","Kolonie erweitern"));
       
@@ -1056,7 +1057,7 @@ export class UI {
     }
 
     // ── ZONEN ───────────────────────────────────────────────
-    if (ctx === "legacy_zonen") {
+    if (ctx === LEGACY_CONTEXT.ZONEN) {
       const card = el("section","nx-card");
       card.setAttribute("aria-labelledby", "zones-placement-title");
       const zonesTitle = el("div", "nx-card-title", "Zonen-Placement");
@@ -1472,7 +1473,7 @@ export class UI {
     }
 
     // ── SIEG (Pfad & Blocker) ───────────────────────────────
-    if (ctx === "legacy_sieg") {
+    if (ctx === LEGACY_CONTEXT.SIEG) {
       const currentMode = String(sim.winMode || WIN_MODE.SUPREMACY);
       const playerStage = Number(sim.playerStage || 1);
       const runLocked = Number(sim.tick || 0) > 0;
