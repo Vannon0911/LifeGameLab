@@ -110,36 +110,43 @@ async function advance(page, ms) {
 }
 
 async function clearBrowserData(page, context) {
-  await page.evaluate(async () => {
-    try { localStorage.clear(); } catch {}
-    try { sessionStorage.clear(); } catch {}
-    try {
-      if (typeof indexedDB?.databases === "function") {
-        const dbs = await indexedDB.databases();
-        await Promise.all(
-          (dbs || [])
-            .map((entry) => String(entry?.name || ""))
-            .filter(Boolean)
-            .map((name) => new Promise((resolve) => {
-              try {
-                const req = indexedDB.deleteDatabase(name);
-                req.onsuccess = () => resolve();
-                req.onerror = () => resolve();
-                req.onblocked = () => resolve();
-              } catch {
-                resolve();
-              }
-            }))
-        );
-      }
-    } catch {}
-    try {
-      if ("caches" in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((key) => caches.delete(key)));
-      }
-    } catch {}
-  });
+  try {
+    await page.evaluate(async () => {
+      try { localStorage.clear(); } catch {}
+      try { sessionStorage.clear(); } catch {}
+      try {
+        if (typeof indexedDB?.databases === "function") {
+          const dbs = await indexedDB.databases();
+          await Promise.all(
+            (dbs || [])
+              .map((entry) => String(entry?.name || ""))
+              .filter(Boolean)
+              .map((name) => new Promise((resolve) => {
+                try {
+                  const req = indexedDB.deleteDatabase(name);
+                  req.onsuccess = () => resolve();
+                  req.onerror = () => resolve();
+                  req.onblocked = () => resolve();
+                } catch {
+                  resolve();
+                }
+              }))
+          );
+        }
+      } catch {}
+      try {
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        }
+      } catch {}
+    });
+  } catch (error) {
+    const text = String(error?.message || error || "");
+    if (!text.includes("Execution context was destroyed")) {
+      throw error;
+    }
+  }
   await context.clearCookies();
 }
 
@@ -179,14 +186,14 @@ async function main() {
   const args = parseArgs(process.argv);
   ensureDir(args.outDir);
   const { chromium } = await loadPlaywright();
-  const browser = await chromium.launch({
-    headless: args.headless,
-    args: ["--use-gl=angle", "--use-angle=swiftshader"],
-  });
   const runSummary = [];
 
-  try {
-    for (let i = 0; i < args.iterations; i++) {
+  for (let i = 0; i < args.iterations; i++) {
+    const browser = await chromium.launch({
+      headless: args.headless,
+      args: ["--use-gl=angle", "--use-angle=swiftshader"],
+    });
+    try {
       const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
       const page = await context.newPage();
       const consoleLog = [];
@@ -245,12 +252,14 @@ async function main() {
         });
       } finally {
         await clearBrowserData(page, context);
-        await page.goto("about:blank");
+        try {
+          await page.goto("about:blank", { waitUntil: "load", timeout: 5000 });
+        } catch {}
         await context.close();
       }
+    } finally {
+      await browser.close();
     }
-  } finally {
-    await browser.close();
   }
 
   fs.writeFileSync(path.join(args.outDir, "summary.json"), JSON.stringify(runSummary, null, 2));

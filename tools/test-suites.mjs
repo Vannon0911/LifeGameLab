@@ -21,6 +21,7 @@ export const TEST_SUITES = Object.freeze({
     "tests/test-llm-contract.mjs",
     "tests/test-mainrun-function-loop.mjs",
     "tests/test-manifest-dataflow.mjs",
+    "tests/test-network-commit-threshold.mjs",
     "tests/test-overlay-diagnostics.mjs",
     "tests/test-path-hygiene.mjs",
     "tests/test-pattern-engine.mjs",
