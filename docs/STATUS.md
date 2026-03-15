@@ -20,6 +20,7 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - `node tests/test-phase-f-progression-integrity.mjs`
 - `node tests/test-release-candidate-integrity.mjs`
 - `node tests/test-phase-g-cleanup.mjs`
+- Letzte Gegenprobe auf aktuellem Branch: 2026-03-15 (`quick`, `truth`, `stress` gruen)
 
 ### Noch Offen
 - Perf-Budgets sauber messen und einhalten
@@ -35,12 +36,19 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Phase F: Tech-Gates, Progression und Result-only-Losepfade abgeschlossen
 - Phase G: Cleanup, Perf, Balance und RC-Haertung aktiv
 
-## Aktiver Phase-G-Backlog
-- Legacy-Reste in Main-Run und Renderer weiter minimieren
-- Perf-Budgets messen und regressionssicher machen
-- Presets balancieren
-- Release-Checklist finalisieren
-- Doku und Testbelege auf RC-Stand halten
+## Aktive Prioritaetenliste (Phase G)
+
+### P0 (Blocker vor RC)
+1. Perf-Budgets messen und regressionssicher machen
+2. Preset-Balance fuer `river_delta`, `dry_basin`, `wet_meadow` abschliessen
+3. Migration-Sicherheit explizit gegenpruefen
+
+### P1 (RC-Haertung)
+1. Legacy-Reste in Main-Run und Renderer weiter minimieren
+2. Release-Checklist finalisieren
+
+### P2 (Laufende Pflege)
+1. Doku und Testbelege auf RC-Stand halten
 
 ## Bugfix-Log
 
@@ -63,6 +71,15 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Verifikation: `npm run test:quick` gruen, inklusive `test-advisor-model`, `test-overlay-diagnostics`, `test-string-contract`, `test-version-traceability`.
 
 ## Append-Only Change Log
+
+### 2026-03-15 e6020d4 `fix: restore llm lock and dataflow dispatch mapping after rebase`
+- `docs/llm/entry/LLM_ENTRY_LOCK.json` nach Rebase-Konflikt wieder auf gueltigen Stand gebracht.
+- `src/project/contract/dataflow.js` mit fehlender UI-Dispatchquelle fuer `SET_WIN_MODE` synchronisiert.
+- Quick-Gegenprobe danach wieder gruen.
+
+### 2026-03-15 session `status-sync-after-rebase`
+- `docs/STATUS.md` auf Ist-Stand nachgezogen (Prioritaeten, aktuelle Gegenprobe, Rebase-Fix).
+- Verifikation auf aktuellem Stand bestaetigt: `npm run test:truth`, `npm run test:stress` gruen.
 
 ### 2026-03-15 46556d6 `major clean`
 - UI- und Renderer-Cleanup fuer Phase G umgesetzt
