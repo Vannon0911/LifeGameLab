@@ -39,6 +39,7 @@ Dieses Repository ist ein deterministisches Contract-System. Jede Aenderung muss
 - Neue Felder/Actions/Writes zuerst im Manifest.
 
 ## Phasen-Doku (bindend)
+- `docs/CONCEPT_BASIS.md`: feste Produkt- und Designbasis; keine kreative Systemerfindung ausserhalb dieses Rahmens
 - `docs/PHASE_A_TODO.md`: abgeschlossene Genesis-/Core-Phasen A und B inklusive belegter Nicht-Ziele
 - `docs/PHASE_C_TODO.md`: abgeschlossene DNA-/Zone-2-Phase inklusive belegter Nicht-Ziele
 - `docs/PHASE_D_TODO.md`: kanonische Ticketfolge fuer Infrastruktur + aktive Sicht/Fog
@@ -46,6 +47,7 @@ Dieses Repository ist ein deterministisches Contract-System. Jede Aenderung muss
 - `docs/PHASE_F_TODO.md`: gesperrte Folgephase fuer Tech-Tree, Progression und Objectives
 - `docs/PHASE_G_TODO.md`: gesperrte Folgephase fuer Balance, Cleanup und RC-Haertung
 - Bei Tasks mit Progression, Genesis, Core-Zone, DNA-Zone, Infrastruktur, Sicht/Fog, Pattern, Tech-Tree oder Release-Gates sind die passenden Phase-Dateien vor Implementierung mitzulesen.
+- Bei Produkt-, Feature- oder Systemfragen ohne bestehendes Ticket gilt zusaetzlich `docs/CONCEPT_BASIS.md` als Scope-Grenze.
 
 ## Definition Of Done
 - Contract/Gates intakt
