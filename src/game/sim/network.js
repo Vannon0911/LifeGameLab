@@ -34,7 +34,16 @@ export function computeClusterAndLinks(world, phy) {
 
   const linkDecay = clamp(Number(phy.linkDecay ?? 0.02), 0, 1);
   for (let i = 0; i < N; i++) {
-    if (alive[i] !== 1) { link[i] = 0; clusterField[i] = 0; continue; }
+    if (alive[i] !== 1) {
+      if (playerLineageId && (Number(lineageId[i]) | 0) === playerLineageId && isCommittedInfraValue(link[i])) {
+        link[i] = 1;
+        clusterField[i] = 0;
+        continue;
+      }
+      link[i] = 0;
+      clusterField[i] = 0;
+      continue;
+    }
     if (playerLineageId && (Number(lineageId[i]) | 0) === playerLineageId && isCommittedInfraValue(link[i])) {
       link[i] = 1;
       continue;
