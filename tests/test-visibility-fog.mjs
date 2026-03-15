@@ -4,7 +4,7 @@ startEvidenceCase("test-visibility-fog.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
-import { RUN_PHASE } from "../src/game/contracts/ids.js";
+import { RUN_PHASE, ZONE_ROLE } from "../src/game/contracts/ids.js";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
@@ -12,6 +12,21 @@ function assert(cond, msg) {
 
 function extractSetPatch(patches, path) {
   return patches.find((patch) => patch && patch.op === "set" && patch.path === path)?.value ?? null;
+}
+
+const CORE_ZONE_ID = 101;
+const DNA_ZONE_ID = 202;
+const INFRA_ZONE_ID = 303;
+
+function ensureZoneMeta(state, zoneId, role) {
+  if (!state.world.zoneMeta || typeof state.world.zoneMeta !== "object") state.world.zoneMeta = {};
+  const key = String(zoneId);
+  const prev = state.world.zoneMeta[key];
+  state.world.zoneMeta[key] = {
+    ...(prev && typeof prev === "object" ? prev : {}),
+    zoneId,
+    role,
+  };
 }
 
 function makeTamperedState(seed = "visibility-fog-base") {
@@ -38,6 +53,9 @@ function makeTamperedState(seed = "visibility-fog-base") {
       lineageId: new Uint32Array(N),
       coreZoneMask: new Uint8Array(N),
       dnaZoneMask: new Uint8Array(N),
+      zoneRole: new Uint8Array(N),
+      zoneId: new Int32Array(N),
+      zoneMeta: {},
       link: new Float32Array(N),
       visibility: new Uint8Array(N),
       explored: new Uint8Array(N),
@@ -60,9 +78,24 @@ function setPlayerTile(state, x, y, { core = false, dna = false, infra = false }
   const idx = y * state.world.w + x;
   state.world.alive[idx] = 1;
   state.world.lineageId[idx] = state.meta.playerLineageId;
-  if (core) state.world.coreZoneMask[idx] = 1;
-  if (dna) state.world.dnaZoneMask[idx] = 1;
-  if (infra) state.world.link[idx] = 1;
+  if (core) {
+    state.world.coreZoneMask[idx] = 1;
+    state.world.zoneRole[idx] = ZONE_ROLE.CORE;
+    state.world.zoneId[idx] = CORE_ZONE_ID;
+    ensureZoneMeta(state, CORE_ZONE_ID, ZONE_ROLE.CORE);
+  }
+  if (dna) {
+    state.world.dnaZoneMask[idx] = 1;
+    state.world.zoneRole[idx] = ZONE_ROLE.DNA;
+    state.world.zoneId[idx] = DNA_ZONE_ID;
+    ensureZoneMeta(state, DNA_ZONE_ID, ZONE_ROLE.DNA);
+  }
+  if (infra) {
+    state.world.link[idx] = 1;
+    state.world.zoneRole[idx] = ZONE_ROLE.INFRA;
+    state.world.zoneId[idx] = INFRA_ZONE_ID;
+    ensureZoneMeta(state, INFRA_ZONE_ID, ZONE_ROLE.INFRA);
+  }
   return idx;
 }
 
@@ -94,6 +127,30 @@ function isVisible(mask, state, x, y) {
   assert(isVisible(visibility, state, 12, 10), "infra radius 1 must reveal orthogonal neighbor");
   assert(!isVisible(visibility, state, 13, 10), "infra radius 1 must not reveal distance 2");
   assert(isVisible(explored, state, 12, 10), "visible tiles must become explored");
+}
+
+// Canonical migration invariant:
+// when legacy masks/links are removed but canonical zone mirrors remain,
+// visibility semantics must stay equivalent.
+{
+  const state = makeTamperedState("visibility-fog-canonical-only");
+  setPlayerTile(state, 3, 3, { core: true });
+  setPlayerTile(state, 8, 3, { dna: true });
+  setPlayerTile(state, 11, 10, { infra: true });
+
+  state.world.coreZoneMask.fill(0);
+  state.world.dnaZoneMask.fill(0);
+  state.world.link.fill(0);
+
+  const patches = simStepPatch(state, { type: "SIM_STEP", payload: { force: true } }, { rng: {} });
+  const visibility = extractSetPatch(patches, "/world/visibility");
+  assert(visibility, "canonical-only visibility must still be patched on sim step");
+  assert(isVisible(visibility, state, 3, 1), "canonical core radius 2 must reveal vertical distance 2");
+  assert(!isVisible(visibility, state, 3, 0), "canonical core radius 2 must not reveal vertical distance 3");
+  assert(isVisible(visibility, state, 10, 3), "canonical dna radius 2 must reveal horizontal distance 2");
+  assert(!isVisible(visibility, state, 11, 3), "canonical dna radius 2 must not reveal horizontal distance 3");
+  assert(isVisible(visibility, state, 12, 10), "canonical infra radius 1 must reveal orthogonal neighbor");
+  assert(!isVisible(visibility, state, 13, 10), "canonical infra radius 1 must not reveal distance 2");
 }
 
 {
