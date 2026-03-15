@@ -7,11 +7,16 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 1. `docs/llm/ENTRY.md`
 2. `docs/llm/OPERATING_PROTOCOL.md`
 3. diese Datei
-4. `src/game/sim/reducer/index.js`
-5. `src/game/sim/worldgen.js`
-6. `src/game/sim/step.js`
-7. `src/game/sim/stepPhases.js`
-8. `src/game/sim/stepRuntime.js`
+4. `docs/llm/entry/TASK_GATE_INDEX.md` (SIM + globale Mindest-Gates)
+5. `src/game/sim/reducer/index.js`
+6. `src/game/sim/worldgen.js`
+7. `src/game/sim/step.js`
+8. `src/game/sim/stepPhases.js`
+9. `src/game/sim/stepRuntime.js`
+
+## Minimalzugriff Ohne Vollscan
+- Immer zuerst globale Mindest-Gates aus `TASK_GATE_INDEX.md` laden.
+- Danach nur SIM-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
 - `node tools/llm-preflight.mjs check --paths src/game/sim/,src/project/project.logic.js`

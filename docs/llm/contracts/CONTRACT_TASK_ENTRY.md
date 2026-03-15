@@ -7,11 +7,16 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 1. `docs/llm/ENTRY.md`
 2. `docs/llm/OPERATING_PROTOCOL.md`
 3. diese Datei
-4. `src/project/contract/stateSchema.js`
-5. `src/project/contract/actionSchema.js`
-6. `src/project/contract/mutationMatrix.js`
-7. `src/project/contract/simGate.js`
-8. `src/project/contract/dataflow.js`
+4. `docs/llm/entry/TASK_GATE_INDEX.md` (CONTRACTS + globale Mindest-Gates)
+5. `src/project/contract/stateSchema.js`
+6. `src/project/contract/actionSchema.js`
+7. `src/project/contract/mutationMatrix.js`
+8. `src/project/contract/simGate.js`
+9. `src/project/contract/dataflow.js`
+
+## Minimalzugriff Ohne Vollscan
+- Immer zuerst globale Mindest-Gates aus `TASK_GATE_INDEX.md` laden.
+- Danach nur CONTRACTS-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
 - `node tools/llm-preflight.mjs check --paths src/project/contract/,src/core/kernel/`

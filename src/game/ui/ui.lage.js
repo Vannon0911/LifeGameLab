@@ -288,7 +288,7 @@ export function renderLagePanel({
   const fog = summarizeFog(state.world);
   const visibilityCard = el("section", "nx-card");
   visibilityCard.appendChild(el("div", "nx-card-title", "Sicht & Kartenwissen"));
-  visibilityCard.appendChild(el("div", "nx-note", "Sicht kommt aus Kern, DNA-Zone und commiteter Infrastruktur. Erkundete Flaechen bleiben als Erinnerung, Unbekanntes bleibt verdeckt."));
+  visibilityCard.appendChild(el("div", "nx-note", "Sicht kommt aus Kern, DNA-Zone und committeter Infrastruktur. Erkundete Flaechen bleiben als Erinnerung, Unbekanntes bleibt verdeckt."));
   visibilityCard.append(
     mkMetric("Sichtbar", String(fog.visible), fog.visible > 0 ? "nx-mono nx-val-pos" : "nx-mono"),
     mkMetric("Erkundet", String(fog.explored)),
@@ -355,7 +355,7 @@ export function renderLagePanel({
     infraCard.appendChild(el("div", "nx-card-title", infraTitle));
     infraCard.appendChild(el("div", "nx-note", inBuildMode
       ? "Canvas-Klicks setzen oder entfernen den Pfad. Bestaetigen commitet, leer bestaetigen bricht ohne Kosten ab."
-      : "Infrastruktur erweitert Sicht nur ueber commitete Verbindungen. Ausbau bleibt an Link und Sicht gebunden."));
+      : "Infrastruktur erweitert Sicht nur ueber committete Verbindungen. Ausbau bleibt an Link und Sicht gebunden."));
     infraCard.append(
       mkMetric("Status", inBuildMode ? "Pfad-Setup" : (sim.infrastructureUnlocked ? "freigeschaltet" : (infraReady ? "bereit" : "gesperrt")), inBuildMode || sim.infrastructureUnlocked || infraReady ? "nx-mono nx-val-pos" : "nx-mono nx-val-neg"),
       mkMetric("Staged Pfad", String(stagedCount)),
