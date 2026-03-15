@@ -89,6 +89,15 @@ export const WIN_MODE_LABELS = Object.freeze({
   [WIN_MODE.EFFICIENCY]: WIN_MODE_RESULT_LABEL[WIN_MODE.EFFICIENCY],
   [WIN_MODE.EXTINCTION]: WIN_MODE_RESULT_LABEL[WIN_MODE.EXTINCTION],
   [WIN_MODE.ENERGY_COLLAPSE]: WIN_MODE_RESULT_LABEL[WIN_MODE.ENERGY_COLLAPSE],
+  [WIN_MODE.CORE_COLLAPSE]: WIN_MODE_RESULT_LABEL[WIN_MODE.CORE_COLLAPSE],
+  [WIN_MODE.VISION_BREAK]: WIN_MODE_RESULT_LABEL[WIN_MODE.VISION_BREAK],
+  [WIN_MODE.NETWORK_DECAY]: WIN_MODE_RESULT_LABEL[WIN_MODE.NETWORK_DECAY],
+});
+
+export const RESULT_REASON_LABELS = Object.freeze({
+  [WIN_MODE.CORE_COLLAPSE]: "Kern verloren",
+  [WIN_MODE.VISION_BREAK]: "Sicht komplett erloschen",
+  [WIN_MODE.NETWORK_DECAY]: "Infrastruktur kollabiert",
 });
 
 const STRUCTURE_LABELS = Object.freeze({
@@ -287,6 +296,55 @@ function buildPatternSummary(sim) {
   };
 }
 
+function getPatternClassCount(sim) {
+  const patternCatalog = sim?.patternCatalog || {};
+  let count = 0;
+  for (const key of Object.keys(patternCatalog)) {
+    if (Number(patternCatalog[key]?.count || 0) > 0) count++;
+  }
+  return count;
+}
+
+function getTechBlockedReasonCodes(tech, state, commandScore) {
+  const reasons = [];
+  const sim = state?.sim || {};
+  const req = tech?.runRequirements;
+  if (!req) return reasons;
+  if (Number(req.minZoneTier || 0) > 0 && Number(sim.unlockedZoneTier || 0) < Number(req.minZoneTier || 0)) {
+    reasons.push("zone_tier");
+  }
+  if (req.requiresInfra && !sim.infrastructureUnlocked) reasons.push("infra_missing");
+  if (Number(req.minPatternClasses || 0) > 0 && getPatternClassCount(sim) < Number(req.minPatternClasses || 0)) {
+    reasons.push("pattern_classes");
+  }
+  if (Number(req.minNetworkRatio || 0) > 0 && Number(sim.networkRatio || 0) + 1e-9 < Number(req.minNetworkRatio || 0)) {
+    reasons.push("network_ratio");
+  }
+  if (Number(req.minExpansionCount || 0) > 0 && Number(sim.expansionCount || 0) < Number(req.minExpansionCount || 0)) {
+    reasons.push("expansion_count");
+  }
+  if (Array.isArray(req.positivePatternBonuses) && req.positivePatternBonuses.length > 0) {
+    const bonuses = sim.patternBonuses || {};
+    const hasPositiveBonus = req.positivePatternBonuses.some((key) => Number(bonuses[key] || 0) > 0);
+    if (!hasPositiveBonus) reasons.push("pattern_bonus");
+  }
+  if (commandScore + 1e-9 < Number(tech.commandReq || 0)) reasons.push("command_gate");
+  return reasons;
+}
+
+function buildBlockedTechReasonLabels(reasonCodes) {
+  const labels = {
+    zone_tier: "Zone-Stufe fehlt",
+    infra_missing: "Infrastruktur fehlt",
+    pattern_classes: "Zu wenig Pattern-Klassen",
+    network_ratio: "Netzwerk zu schwach",
+    expansion_count: "Expansion fehlt",
+    pattern_bonus: "Pattern-Bonus fehlt",
+    command_gate: "Command-Gate fehlt",
+  };
+  return reasonCodes.map((code) => labels[code] || code);
+}
+
 function findSplitOrigin(world, ignoreQuarantine = false) {
   const w = Number(world?.w || 0) | 0;
   const h = Number(world?.h || 0) | 0;
@@ -365,12 +423,14 @@ function pickTechTargets(state, commandScore, doctrinePolicy) {
     scored.push({
       tech,
       score: scoreTechCandidate(tech, winMode, doctrinePolicy),
+      blockedReasonCodes: getTechBlockedReasonCodes(tech, state, commandScore),
     });
   }
   scored.sort((a, b) => (b.score - a.score) || a.tech.id.localeCompare(b.tech.id));
-  const buyCandidate = scored.find((entry) => commandScore + 1e-9 >= Number(entry.tech.commandReq || 0)) || null;
-  const commandCandidate = scored.find((entry) => commandScore + 1e-9 < Number(entry.tech.commandReq || 0)) || null;
-  return { buyCandidate, commandCandidate };
+  const buyCandidate = scored.find((entry) => entry.blockedReasonCodes.length === 0) || null;
+  const commandCandidate = scored.find((entry) => entry.blockedReasonCodes.includes("command_gate")) || null;
+  const blockedCandidate = scored.find((entry) => entry.blockedReasonCodes.length > 0 && !entry.blockedReasonCodes.includes("command_gate")) || null;
+  return { buyCandidate, commandCandidate, blockedCandidate };
 }
 
 function buildWinProgress(state, crisisActive) {
@@ -769,6 +829,9 @@ export function buildAdvisorModel(state, options = {}) {
   const synergies = normalizeTechArray(memory.synergies);
   const zoneSummary = buildCanonicalZoneSummary(safeState);
   const patternSummary = buildPatternSummary(sim);
+  const blockedTechReasonCodes = techTargets.blockedCandidate?.blockedReasonCodes || [];
+  const blockedTechReasonLabels = buildBlockedTechReasonLabels(blockedTechReasonCodes);
+  const resultReason = RESULT_REASON_LABELS[String(sim.winMode || "")] || null;
 
   const out = {
     tick: Number(sim.tick || 0),
@@ -784,6 +847,7 @@ export function buildAdvisorModel(state, options = {}) {
     techs,
     synergies,
     runIdentity: {
+      worldPresetId: String(meta.worldPresetId || "river_delta"),
       winMode: String(sim.winMode || WIN_MODE.SUPREMACY),
       doctrine: doctrineId,
       doctrineTradeoff: doctrinePolicy.tradeoff,
@@ -796,6 +860,8 @@ export function buildAdvisorModel(state, options = {}) {
       splitReady: splitState.ready,
       expansionWork: Number(sim.expansionWork || 0),
       nextExpandCost: Number(sim.nextExpandCost || 0),
+      stageProgressScore: Number(sim.stageProgressScore || 0),
+      infrastructureUnlocked: !!sim.infrastructureUnlocked,
       zoneSummary,
       patternSummary,
     },
@@ -807,6 +873,10 @@ export function buildAdvisorModel(state, options = {}) {
       nextLever,
       recommendedZone,
       recommendedOverlay,
+      blockedTechReasonCodes,
+      blockedTechReasonLabels,
+      blockedTechId: techTargets.blockedCandidate?.tech?.id || null,
+      resultReason,
     },
     winProgress,
     benchmark: options.benchmark || null,

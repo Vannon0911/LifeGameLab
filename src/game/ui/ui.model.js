@@ -3,6 +3,7 @@ import {
   BOTTLENECK_LABELS,
   LEVER_LABELS,
   OVERLAY_LABELS,
+  RESULT_REASON_LABELS,
   WIN_MODE_LABELS,
   ZONE_LABELS,
 } from "../../project/llm/advisorModel.js";
@@ -91,4 +92,8 @@ export function getOverlayState(overlayId) {
 
 export function getWinModeState(winMode) {
   return { id: winMode, label: WIN_MODE_LABELS[winMode] || winMode };
+}
+
+export function getResultReasonState(winMode) {
+  return { id: winMode, label: RESULT_REASON_LABELS[winMode] || WIN_MODE_LABELS[winMode] || winMode };
 }
