@@ -1,6 +1,6 @@
-# LifeGameLab v2.5.0
+# LifeGameLab v2.6.0
 
-![Version](https://img.shields.io/badge/version-2.5.0-0ea5e9)
+![Version](https://img.shields.io/badge/version-2.6.0-0ea5e9)
 ![Tests](https://img.shields.io/badge/tests-npm%20test-green)
 ![Determinismus](https://img.shields.io/badge/sim-deterministisch-22c55e)
 
@@ -75,14 +75,14 @@ Die Kolonie ist nicht mehr nur "lebendig", sondern beginnt sich als zweite eigen
 
 ### Phase D bis G
 
-Hier liegt die eigentliche Zukunft des Projekts:
+Der Block ist nicht mehr nur Zukunft, sondern weitgehend im Baum:
 
-- `Phase D`: Infrastruktur, aktive Sicht und Fog
-- `Phase E`: kanonisches Zonensystem und Pattern-Engine
-- `Phase F`: Tech-Tree, Progression, Objectives
-- `Phase G`: Cleanup, Balancing, RC-Haertung
+- `Phase D`: Infrastruktur, aktive Sicht und Fog sind produktiv
+- `Phase E`: kanonisches Zonensystem und Pattern-Engine sind produktiv
+- `Phase F`: Tech-Gates, Progression und Result-Only-Losepfade sind produktiv
+- `Phase G`: Cleanup, Balancing und RC-Haertung bleiben der naechste offene Release-Block
 
-Diese Phasen sind nicht nur Ideen, sondern als Ticket- und Gate-Doku bereits vorbereitet.
+Diese Phasen sind nicht nur Ideen, sondern ueber Ticket-, Gate- und Integrity-Doku abgesichert.
 
 ## Produkt-Highlights Im Aktuellen Zustand
 
