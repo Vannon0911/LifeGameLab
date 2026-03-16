@@ -23,6 +23,7 @@
 - Deterministisches Advisor-/Read-Model ist gemeinsame Truth fuer HUD, Textdiagnose und Statuspanel.
 - Main-Run-Renderpfad bleibt `combined`.
 - Legacy-/Diagnose-Overlays und Roh-Brushes sind Labor-only.
+- Repro-Hardening ist noch nicht abgeschlossen; der offene Audit und der priorisierte Fixplan liegen in `docs/audits/2026-03-16-determinism-repro-audit.md` und `docs/audits/2026-03-16-determinism-repro-bugfix-plan.md`.
 
 ## Contract-Status
 - Thin-Facades fuer `project.manifest.js`, `sim.js` und `reducer.js` aktiv

@@ -19,6 +19,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - kein Schreiben ohne gelesenen LLM-Entry plus passendem Task-Entry
 - kein Scope-Mix ohne neuen Subtask
 - task-spezifische Doku vor globaler Statuspflege
+- UMGEHUNG (z. B. direkte State-/Patch-Injektion zur Abkuerzung von Flows) ist nur mit expliziter Ruecksprache erlaubt.
 
 ## DOKU
 - `docs/STATUS.md` ist globale Fallback-Ansicht fuer Governance, Bugfixes und Change-Stand

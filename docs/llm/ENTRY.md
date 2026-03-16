@@ -23,6 +23,7 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - Renderer und UI bleiben read-only gegen Gameplay-State
 - kein `Math.random()` oder `Date.now()` in Reducer oder SimStep
 - neue Felder und Actions zuerst im Manifest und Contract
+- UMGEHUNG IST STRENG VERBOTEN OHNE VORHERIGE RUECKSPRACHE. Das gilt insbesondere fuer direkte State-/Patch-Injektion in Tests oder Runtime-Flows.
 
 ## Globale Pflichtquellen
 - `docs/PRODUCT.md`: Produkt- und Scope-Basis

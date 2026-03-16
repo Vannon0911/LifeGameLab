@@ -2,7 +2,7 @@
 
 ![Version](https://img.shields.io/badge/version-0.7.3-0ea5e9)
 ![Tests](https://img.shields.io/badge/tests-npm%20test-green)
-![Determinismus](https://img.shields.io/badge/sim-deterministisch-22c55e)
+![Repro-Audit](https://img.shields.io/badge/repro-audit%20open-f59e0b)
 
 Deterministisches Zell-Strategieprojekt ueber Kolonieaufbau, Kontrolle, Rework und die langsame Verwandlung eines Sandbox-Prototyps in ein echtes Spiel.
 
@@ -15,6 +15,19 @@ Deterministisches Zell-Strategieprojekt ueber Kolonieaufbau, Kontrolle, Rework u
 Das aktuelle Projekt ist deshalb ein laufendes Rework mit harter Richtung: weg von der offenen Sandbox, hin zu einem deterministischen Main-Run mit klaren Gates, klaren Phasen und einer vertraglich abgesicherten Architektur. Der Spieler soll nicht hundert Einzelfunktionen spam-klicken, sondern eine Kolonie lesen, stabilisieren und ueber bewusst freigeschaltete Schritte ausbauen.
 
 Kurz gesagt: `LifeGameLab` ist heute nicht nur "ein Zellspiel", sondern die dokumentierte Umstellung eines chaotisch gewachsenen Sim-Prototyps auf ein kontrolliertes, testbares Strategieprodukt.
+
+## Audit-Stand 2026-03-16
+
+Der aktuelle Repro-/Determinismus-Audit ist nicht gruen. Die Seed-Pfade selbst sind stabil, aber der Audit hat noch offene Trust-Breaks gezeigt:
+
+- eine offene Buffered-Step-Mutationsflaeche
+- ein Dev-Mutationspfad in der Live-Runtime
+- ein unvollstaendiges "full"-Testgate
+
+Die Details liegen in:
+
+- `docs/audits/2026-03-16-determinism-repro-audit.md`
+- `docs/audits/2026-03-16-determinism-repro-bugfix-plan.md`
 
 ## Was das Spiel heute sein will
 
@@ -159,6 +172,7 @@ npm run test:stress
 
 - `npm test` = Quick-Suite (truth/stress bewusst aus, um grosse Testlaeufe nicht implizit zu triggern)
 - `npm run test:full` = Quick + Truth + Stress
+- Stand 2026-03-16: `test:full` ist noch kein vollstaendiger Repo-Beweis, weil der Audit unregistrierte Testdateien gefunden hat; die Reparatur dafuer ist als P0 dokumentiert
 - Keine Zufallsquellen außerhalb Kernel-RNG
 - State-Änderungen nur via `dispatch()` + Patches
 - Contract-Tests für String-/Dataflow-/Wrapper-Hardening aktiv
@@ -178,6 +192,7 @@ npm run test:stress
 - Contract-/Gate-Haertung ist umgesetzt und testgruen.
 - `Phase A-F` leben auf Codebasis.
 - `Phase G` ist der aktive Block fuer Cleanup, Balance und RC-Haertung.
+- Der Repro-Audit vom 2026-03-16 ist offen; globale Reproduzierbarkeits-Claims bleiben bis zum P0-P2-Fixblock nur vorlaeufig.
 - Performance-Ziel und finale Release-Haertung sind weiter offen.
 
 ## Was noch fehlt
@@ -186,6 +201,7 @@ Das Projekt ist noch kein "fertiges Release-Spiel". Es ist ein fortgeschrittenes
 
 - Perf-Budgets sauber messen und halten
 - Presets balancieren
+- globale Reproduzierbarkeitsblocker aus dem Audit kausal schliessen
 - Migration-Sicherheit und finale RC-Haertung abschliessen
 
 ## Wenn du das Repo lesen willst

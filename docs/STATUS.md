@@ -8,6 +8,7 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 ## Projektstand
 - Phasen A bis F sind produktiv abgeschlossen.
 - Phase G ist aktiv und auf Cleanup, Balance und RC-Haertung beschraenkt.
+- Reproduzierbarkeit ist auf Seed-/Guard-Ebene stark, aber global noch nicht beweisbar geschlossen; Audit vom 2026-03-16 hat offene Mutationspfade und ein unehrliches Voll-Gate dokumentiert.
 - Neue Kernfeatures, neue Zone und neue Presets bleiben gesperrt.
 
 ## Aktive Release-Gates
@@ -21,8 +22,12 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - `node tests/test-release-candidate-integrity.mjs`
 - `node tests/test-phase-g-cleanup.mjs`
 - Letzte Gegenprobe auf aktuellem Branch: 2026-03-15 (`quick`, `truth`, `stress` gruen)
+- Audit-Vorbehalt seit 2026-03-16: diese gruene Suite-Lage ist noch kein vollstaendiger Repo-Beweis, weil `tools/run-all-tests.mjs --full` derzeit nicht alle realen Testdateien abdeckt.
 
 ### Noch Offen
+- Testgate ehrlich machen: alle realen Repo-Tests verpflichtend in den Voll-Gate ziehen
+- offene Runtime-Mutationspfade (`APPLY_BUFFERED_SIM_STEP`, `DEV_BALANCE_RUN_AI`) aus der Repro-Truth entfernen
+- Fog-Intel-/Reachability-Bugs aus den aktuell ausgeschlossenen roten Tests kausal beheben
 - Perf-Budgets sauber messen und einhalten
 - Preset-Balance fuer `river_delta`, `dry_basin`, `wet_meadow`
 - Migration-Sicherheit explizit gegenpruefen
@@ -39,13 +44,17 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 ## Aktive Prioritaetenliste (Phase G)
 
 ### P0 (Blocker vor RC)
-1. Perf-Budgets messen und regressionssicher machen
-2. Preset-Balance fuer `river_delta`, `dry_basin`, `wet_meadow` abschliessen
-3. Migration-Sicherheit explizit gegenpruefen
+1. Voll-Gate ehrlich machen und unregistrierte Tests in die Pflichtsuite ziehen
+2. offene Runtime-Mutationspfade aus der Repro-Truth entfernen
+3. Fog-Intel-/Reachability-Fehler aus dem Auditblock kausal beheben
+4. Perf-Budgets messen und regressionssicher machen
+5. Preset-Balance fuer `river_delta`, `dry_basin`, `wet_meadow` abschliessen
+6. Migration-Sicherheit explizit gegenpruefen
 
 ### P1 (RC-Haertung)
 1. Legacy-Reste in Main-Run und Renderer weiter minimieren
-2. Release-Checklist finalisieren
+2. Runtime/Test-Drift und Artefakt-Drift schliessen
+3. Release-Checklist finalisieren
 
 ### P2 (Laufende Pflege)
 1. Doku und Testbelege auf RC-Stand halten
@@ -120,6 +129,12 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Verifikation: `npm run test:quick` gruen, inklusive `test-advisor-model`, `test-overlay-diagnostics`, `test-string-contract`, `test-version-traceability`.
 
 ## Append-Only Change Log
+
+### 2026-03-16 session `repro-audit-and-bugfix-plan`
+- Versionierung bewusst nicht angehoben; `0.7.3` bleibt Produkt-Truth, bis der Repro-Auditblock kausal geschlossen ist.
+- Vollscan fuer Determinismus/Reproduzierbarkeit als Audit dokumentiert: `docs/audits/2026-03-16-determinism-repro-audit.md`.
+- Priorisierten kausalen Fixplan dokumentiert: `docs/audits/2026-03-16-determinism-repro-bugfix-plan.md`.
+- Statustruth gehaertet: gruene Quick/Truth/Stress-Laeufe bleiben historisch korrekt, gelten aber seit dem Audit nicht mehr als vollstaendiger Repo-Beweis.
 
 ### 2026-03-15 session `entry-naming-and-backup-anchor-audit`
 - Entry-Benennung fuer technische Checks entkoppelt: `llm:entry|ack|check` ersetzt durch `llm:preflight:start|ack|check`, damit Chat-Entry (Prozess) und CLI-Preflight (Technik) nicht verwechselt werden.
