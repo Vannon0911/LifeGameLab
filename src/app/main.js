@@ -8,13 +8,9 @@ import { reducer, simStepPatch, shouldAdvanceSimulation } from "../project/proje
 import { render }            from "../project/renderer.js";
 import { UI }                from "../project/ui.js";
 import { hashString }        from "../core/kernel/rng.js";
-import { GAME_MODE } from "../game/contracts/ids.js";
-import { createSimStepBuffer } from "../core/runtime/simStepBuffer.js";
 import { createLlmCommandAdapter } from "../project/llm/commandAdapter.js";
 import { assertLlmGateSync } from "../project/llm/gateSync.js";
-import { registerPublicApi } from "./runtime/publicApi.js";
 import { createWorldStateLog } from "./runtime/worldStateLog.js";
-import { downloadTextFile, summarizeSeries } from "./runtime/reportUtils.js";
 import { bindBootStatusErrorHooks, setBootStatus } from "./runtime/bootStatus.js";
 
 bindBootStatusErrorHooks();
@@ -29,184 +25,16 @@ const store = createStore(manifest, {
 });
 // Initialize Log with Seed from Store
 WorldStateLog.init(store.getState().meta.seed);
-window.__worldStateLog = WorldStateLog;
 const RuntimeHooks = { onStructuralChange: null };
 
-// ── SIM_STEP Precompute Buffer (idle-time compute) ─────────
-const stepBuffer = createSimStepBuffer({
-  store,
-  manifest,
-  project: { reducer, simStep: simStepPatch },
-  maxBufferedSteps: 6,
-});
-stepBuffer.start();
-
-// Invalidate precompute buffer on any non-step action (user interaction, reset, etc.).
-// This keeps buffered patches aligned with the exact revision they were computed from.
+// Runtime dispatch wrapper for structural hooks.
 const _dispatchRaw = store.dispatch.bind(store);
 store.dispatch = (action) => {
   const t = action && typeof action === "object" ? action.type : "";
-  if (t === "RUN_BENCHMARK") {
-    Benchmark.run(store);
-    return;
-  }
-  if (t && t !== "SIM_STEP" && t !== "APPLY_BUFFERED_SIM_STEP") stepBuffer.invalidate();
   const result = _dispatchRaw(action);
-  if (t && t !== "SIM_STEP" && t !== "APPLY_BUFFERED_SIM_STEP") RuntimeHooks.onStructuralChange?.(t, action);
+  if (t && t !== "SIM_STEP") RuntimeHooks.onStructuralChange?.(t, action);
   return result;
 };
-
-const Benchmark = {
-  isRunning: false,
-  phase: "idle",
-  frames: 0,
-  results: {},
-  lastReport: null,
-  startedAt: "",
-  targetFrames: 360,
-
-  emitUpdate() {
-    try {
-      window.dispatchEvent(new CustomEvent("benchmark:update", { detail: this.getSnapshot() }));
-    } catch {}
-  },
-
-  getSnapshot() {
-    return {
-      isRunning: this.isRunning,
-      phase: this.phase,
-      frames: this.frames,
-      targetFrames: this.targetFrames,
-      lastReport: this.lastReport,
-    };
-  },
-
-  getPhaseReport(phase) {
-    const res = this.results[phase];
-    if (!res) return null;
-    return {
-      phase,
-      fps: summarizeSeries(res.fps),
-      render: summarizeSeries(res.render),
-    };
-  },
-
-  buildReport() {
-    return {
-      version: APP_VERSION,
-      startedAt: this.startedAt,
-      finishedAt: new Date().toISOString(),
-      targetFrames: this.targetFrames,
-      phases: {
-        main: this.getPhaseReport("main"),
-        worker: this.getPhaseReport("worker"),
-      },
-      raw: {
-        main: this.results.main || { fps: [], render: [] },
-        worker: this.results.worker || { fps: [], render: [] },
-      },
-    };
-  },
-
-  toCsv(report = this.lastReport) {
-    const rows = ["phase,metric,avg,min,max,frames"];
-    for (const phase of ["main", "worker"]) {
-      const phaseReport = report?.phases?.[phase];
-      if (!phaseReport) continue;
-      for (const metric of ["fps", "render"]) {
-        const stats = phaseReport[metric];
-        if (!stats) continue;
-        rows.push([
-          phase,
-          metric,
-          stats.avg.toFixed(3),
-          stats.min.toFixed(3),
-          stats.max.toFixed(3),
-          stats.frames,
-        ].join(","));
-      }
-    }
-    return `${rows.join("\n")}\n`;
-  },
-
-  download(kind = "json") {
-    const report = this.lastReport;
-    if (!report) return false;
-    const stamp = String(report.finishedAt || report.startedAt || "benchmark").replace(/[:.]/g, "-");
-    if (kind === "csv") {
-      downloadTextFile(`lifegamelab-benchmark-${stamp}.csv`, this.toCsv(report), "text/csv;charset=utf-8");
-      return true;
-    }
-    downloadTextFile(`lifegamelab-benchmark-${stamp}.json`, JSON.stringify(report, null, 2), "application/json;charset=utf-8");
-    return true;
-  },
-  
-  async run(store) {
-    if (this.isRunning) return;
-    this.isRunning = true;
-    this.startedAt = new Date().toISOString();
-    this.lastReport = null;
-    this.results = { main: { fps: [], render: [] }, worker: { fps: [], render: [] } };
-    this.phase = "setup_main";
-    this.frames = 0;
-    stepBuffer.stop();
-    console.log("=== Benchmark start ===");
-    this.emitUpdate();
-
-    // 1. Main-Thread setup
-    store.dispatch({ type: "SET_UI", payload: { offscreenEnabled: false } });
-    store.dispatch({ type: "SET_SIZE", payload: { w: 144, h: 144 } });
-    store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
-    store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for resize
-    if (!this.isRunning) return;
-    this.phase = "main";
-    this.frames = 0;
-    this.emitUpdate();
-  },
-
-  tick(perf) {
-    if (!this.isRunning || this.phase === "idle" || this.phase === "done") return;
-    if (this.phase === "setup_main" || this.phase === "worker_init") return;
-    if (this.frames < this.targetFrames) {
-      this.results[this.phase].fps.push(Number(perf?.fps ?? perf?.fpsEma ?? 0));
-      this.results[this.phase].render.push(Number(perf?.renderMs ?? perf?.renderMsEma ?? 0));
-      this.frames++;
-      this.emitUpdate();
-    } else if (this.phase === "main") {
-      this.logResults("main");
-      this.phase = "worker_init";
-      this.emitUpdate();
-      store.dispatch({ type: "SET_UI", payload: { offscreenEnabled: true } });
-      setTimeout(() => {
-        if (!this.isRunning) return;
-        this.phase = "worker";
-        this.frames = 0;
-        this.results.worker = { fps: [], render: [] };
-        this.emitUpdate();
-      }, 2000);
-    } else if (this.phase === "worker") {
-      this.logResults("worker");
-      this.phase = "done";
-      this.isRunning = false;
-      this.lastReport = this.buildReport();
-      stepBuffer.start();
-      this.emitUpdate();
-      console.log("=== Benchmark complete ===");
-    }
-  },
-
-  logResults(phase) {
-    const phaseReport = this.getPhaseReport(phase);
-    if (!phaseReport) return;
-    console.log(
-      `[${phase.toUpperCase()}] FPS avg/min/max ${phaseReport.fps.avg.toFixed(2)}/${phaseReport.fps.min.toFixed(2)}/${phaseReport.fps.max.toFixed(2)} · ` +
-      `Render avg/min/max ${phaseReport.render.avg.toFixed(2)}/${phaseReport.render.min.toFixed(2)}/${phaseReport.render.max.toFixed(2)} ms`
-    );
-  }
-};
-window.__lifeGameBenchmark = Benchmark;
-Benchmark.emitUpdate();
 
 
 // ── Bootstrap: generate and start world ──────────────────
@@ -224,12 +52,9 @@ function hasRunnableWorld(state) {
 
 function recoverWorld(reason) {
   console.error("[runtime] world recovery:", reason);
-  stepBuffer.stop();
   RenderManager.flush?.(reason);
   store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: false } });
-  store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
-  store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
-  stepBuffer.start();
+  store.dispatch({ type: "GEN_WORLD" });
 }
 
 if (!hasRunnableWorld(store.getState())) {
@@ -442,180 +267,6 @@ const RenderManager = {
 };
 
 const ui     = new UI(store, canvas);
-window.__lifeGameStore = store;
-
-// ── Dev Balance ──────────────────────────────────────────
-const DevBalance = {
-  enabled: false,
-  episode: 0,
-  lastTuneTick: -999,
-  lastExtinctionTick: -1,
-  peakAlive: 0,
-  status: "Aus",
-  log: [],
-  lineageSnapshot: new Map(),
-  config: {
-    profile: "auto",
-    intensity: 0.020,
-    targets: 4,
-    chainLength: 4,
-    maxCellsPerLineage: 48,
-  },
-
-  toggle() {
-    this.enabled = !this.enabled;
-    const s = store.getState();
-    this.peakAlive = s.sim.aliveCount;
-    this.lineageSnapshot = new Map();
-    this.status = this.enabled ? "Aktiv – beobachtet" : "Aus";
-    updateDevStatus();
-    return this.enabled;
-  },
-
-  setConfig(next) {
-    this.config = {
-      ...this.config,
-      ...next,
-      intensity: Math.max(0.005, Math.min(0.060, Number(next?.intensity ?? this.config.intensity))),
-      targets: Math.max(1, Math.min(8, Number(next?.targets ?? this.config.targets) | 0)),
-      chainLength: Math.max(2, Math.min(8, Number(next?.chainLength ?? this.config.chainLength) | 0)),
-      maxCellsPerLineage: Math.max(16, Math.min(96, Number(next?.maxCellsPerLineage ?? this.config.maxCellsPerLineage) | 0)),
-    };
-  },
-
-  getConfig() {
-    return { ...this.config };
-  },
-
-  buildBlocks(mode) {
-    const pools = {
-      diversify: ["mutation_diversify", "nomadic_adapt", "reproductive_spread", "nutrient_harvest", "predator_raid", "hybrid_mixer"],
-      stabilize: ["reserve_buffer", "cooperative_network", "light_harvest", "toxin_resist", "defensive_shell", "fortress_homeostasis"],
-      counter: ["defensive_shell", "toxin_resist", "mutation_diversify", "nutrient_harvest", "scavenger_loop", "pioneer_explorer"],
-      expand: ["mutation_diversify", "reproductive_spread", "nutrient_harvest", "nomadic_adapt", "symbiotic_bloom", "pioneer_explorer"],
-      chaos: ["mutation_diversify", "predator_raid", "nomadic_adapt", "hybrid_mixer", "scavenger_loop", "symbiotic_bloom"],
-    };
-    const base = pools[mode] || pools.diversify;
-    const out = [];
-    for (let i = 0; i < this.config.chainLength; i++) out.push(base[i % base.length]);
-    return out;
-  },
-
-  nudge(state) {
-    const sim = state.sim;
-    const tick = sim.tick;
-    if (tick - this.lastTuneTick < 40) return;
-
-    const dist = this.collectLineages(state);
-    if (dist.length === 0) return;
-    const dominant = dist[0];
-    const weakest = dist[dist.length - 1];
-    const lowDiversity = (sim.lineageDiversity || 0) < 6;
-    const collapseRisk = (sim.aliveCount || 0) < Math.max(8, this.peakAlive * 0.24);
-    const dominanceRisk = dominant.ratio > 0.58 && dist.length >= 2;
-    if (!lowDiversity && !collapseRisk && !dominanceRisk) return;
-
-    this.lastTuneTick = tick;
-    let mode = "diversify";
-    let blocks = this.buildBlocks("diversify");
-    let targets = [{ lineageId: weakest.lid, weight: 1.0 }];
-    let intensity = this.config.intensity;
-
-    if (collapseRisk) {
-      mode = "stabilize";
-      blocks = this.buildBlocks("stabilize");
-      targets = dist.slice(0, Math.min(this.config.targets, dist.length)).map((x, i) => ({ lineageId: x.lid, weight: i === 0 ? 1 : 0.8 }));
-      intensity = this.config.intensity * 0.85;
-    } else if (dominanceRisk) {
-      mode = "counter";
-      blocks = this.buildBlocks("counter");
-      targets = dist.slice(1, Math.min(this.config.targets + 1, dist.length)).map((x, i) => ({ lineageId: x.lid, weight: 1 - i * 0.1 }));
-      intensity = this.config.intensity * 1.05;
-    } else if (lowDiversity) {
-      mode = "expand";
-      blocks = this.buildBlocks("expand");
-      targets = dist.slice(Math.max(0, dist.length - this.config.targets)).map((x, i) => ({ lineageId: x.lid, weight: 1 - i * 0.08 }));
-      intensity = this.config.intensity * 1.10;
-    }
-
-    if (this.config.profile !== "auto") {
-      mode = this.config.profile;
-      blocks = this.buildBlocks(mode);
-      targets = mode === "stabilize"
-        ? dist.slice(0, Math.min(this.config.targets, dist.length)).map((x, i) => ({ lineageId: x.lid, weight: i === 0 ? 1 : 0.85 }))
-        : dist.slice(Math.max(0, dist.length - this.config.targets)).map((x, i) => ({ lineageId: x.lid, weight: 1 - i * 0.08 }));
-      intensity = this.config.intensity;
-    }
-
-    store.dispatch({
-      type: "DEV_BALANCE_RUN_AI",
-      payload: {
-        mode,
-        preferredBlocks: blocks,
-        targets,
-        intensity,
-        chainLength: this.config.chainLength,
-        maxCellsPerLineage: this.config.maxCellsPerLineage,
-      },
-    });
-    const msg = `T${tick}: ${mode} target=${targets.length} dom=${(dominant.ratio * 100).toFixed(0)}%`;
-    this.log.unshift(msg);
-    this.log.length = Math.min(10, this.log.length);
-    this.status = msg;
-    updateDevStatus();
-  },
-
-  collectLineages(state) {
-    const world = state.world;
-    if (!world?.alive || !world?.lineageId) return [];
-    const counts = new Map();
-    const alive = world.alive;
-    const lineage = world.lineageId;
-    for (let i = 0; i < alive.length; i++) {
-      if (alive[i] !== 1) continue;
-      const lid = Number(lineage[i]) | 0;
-      if (!lid) continue;
-      counts.set(lid, (counts.get(lid) || 0) + 1);
-    }
-    const total = Math.max(1, state.sim.aliveCount || 1);
-    const out = [...counts.entries()].map(([lid, count]) => {
-      const prev = this.lineageSnapshot.get(lid) || count;
-      const growth = count - prev;
-      this.lineageSnapshot.set(lid, count);
-      return { lid, count, growth, ratio: count / total };
-    });
-    return out.sort((a, b) => b.count - a.count);
-  },
-
-  onExtinction(state) {
-    const tick = state.sim.tick;
-    if (this.lastExtinctionTick === tick) return;
-    this.lastExtinctionTick = tick;
-    this.episode++;
-    this.status = `Episode ${this.episode} – Aussterben bei T${tick}. Neue Welt…`;
-    updateDevStatus();
-    store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
-    store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
-  },
-};
-
-window.__devBalance = DevBalance;
-
-function updateDevStatus() {
-  const el = document.getElementById("dev-status");
-  if (el) el.textContent = DevBalance.status;
-  const logEl = document.getElementById("dev-log");
-  if (logEl) logEl.innerHTML = DevBalance.log.map(l => `<div class="dev-log-line">${l}</div>`).join("");
-}
-
-const devBtn = document.getElementById("btn-dev-balance");
-if (devBtn) {
-  devBtn.addEventListener("click", () => {
-    DevBalance.toggle();
-    devBtn.classList.toggle("btn-active", DevBalance.enabled);
-    devBtn.textContent = DevBalance.enabled ? "Dev-Balance: An" : "Dev-Balance: Aus";
-  });
-}
 
 // ── Game Loop ────────────────────────────────────────────
 let acc    = 0;
@@ -624,6 +275,7 @@ let lastTs = globalThis.performance ? globalThis.performance.now() : 0;
 let renderInfo = null;
 let recoveryCount = 0;
 let frameId = 0;
+let latestPerfStats = null;
 
 let lastSyncTick = -1;
 let lastSyncTs   = 0;
@@ -650,7 +302,7 @@ const PerfBudget = {
 function publishPerfStats(state = store.getState()) {
   const gridW = Number(state?.meta?.gridW || state?.world?.w || 0);
   const gridH = Number(state?.meta?.gridH || state?.world?.h || 0);
-  window.__lifeGamePerfStats = {
+  latestPerfStats = {
     fpsEma: Number(PerfBudget.fpsEma.toFixed(2)),
     frameMsEma: Number(PerfBudget.frameMsEma.toFixed(2)),
     renderMsEma: Number(PerfBudget.renderMsEma.toFixed(2)),
@@ -660,13 +312,14 @@ function publishPerfStats(state = store.getState()) {
     maxSimStepsPerFrame: PerfBudget.maxSimStepsPerFrame,
     maxSimFrameBudgetMs: PerfBudget.maxSimFrameBudgetMs,
     maxCatchupMs: PerfBudget.maxCatchupMs,
-    stepBufferSize: stepBuffer.size(),
+    stepBufferSize: 0,
     offscreenMode: RenderManager.mode,
     offscreenAuto: RenderManager.shouldUseOffscreen(state),
     tick: Number(state?.sim?.tick || 0),
     grid: `${gridW}x${gridH}`,
     cells: gridW * gridH,
   };
+  return latestPerfStats;
 }
 
 RuntimeHooks.onStructuralChange = (type, action) => {
@@ -683,24 +336,15 @@ RuntimeHooks.onStructuralChange = (type, action) => {
       Object.prototype.hasOwnProperty.call(action?.payload || {}, "renderDetailMode")
     ));
   if (shouldFlush) {
-    stepBuffer.stop();
     RenderManager.flush(type);
-    stepBuffer.start();
     PerfBudget.lastRenderedTick = -1;
     publishPerfStats();
   }
 };
 
-function runOneSimStep(options = null) {
-  const force = !!options?.force;
-  const useBuffer = options?.useBuffer !== false;
+function runOneSimStep() {
   try {
-    const buffered = useBuffer ? stepBuffer.consumeOneOrNull() : null;
-    if (buffered) {
-      store.dispatch({ type: "APPLY_BUFFERED_SIM_STEP", payload: { patches: buffered.patches } });
-    } else {
-      store.dispatch({ type: "SIM_STEP", payload: force ? { force: true } : {} });
-    }
+    store.dispatch({ type: "SIM_STEP", payload: {} });
     return true;
   } catch (err) {
     console.error("[runtime] SIM_STEP failed:", String(err?.message || err));
@@ -711,14 +355,7 @@ function runOneSimStep(options = null) {
 }
 
 function runDevBalanceChecks() {
-  if (!DevBalance.enabled) return;
-  const s = store.getState();
-  DevBalance.peakAlive = Math.max(DevBalance.peakAlive, s.sim.aliveCount);
-  if (s.sim.aliveCount === 0 && s.sim.tick > 10) {
-    DevBalance.onExtinction(s);
-  } else {
-    DevBalance.nudge(s);
-  }
+  return;
 }
 
 function runRender(perfHints) {
@@ -752,24 +389,6 @@ function runUiSync() {
   }
 }
 
-const publicApi = registerPublicApi({
-  windowObj: window,
-  store,
-  benchmark: Benchmark,
-  runOneSimStep,
-  runRender,
-  runUiSync,
-  publishPerfStats,
-  perfBudget: PerfBudget,
-});
-function renderGameToText() {
-  return publicApi.renderGameToText();
-}
-async function advanceTime(ms = 1000) {
-  return publicApi.advanceTime(ms);
-}
-window.render_game_to_text = renderGameToText;
-window.advanceTime = advanceTime;
 publishPerfStats();
 
 function tunePerformance(state) {
@@ -864,7 +483,6 @@ function loop(ts) {
     });
   }
   runUiSync();
-  if (Benchmark.isRunning) Benchmark.tick(PerfBudget);
   
   if (ts - PerfBudget.lastHudTs > 900) {
     PerfBudget.lastHudTs = ts;
@@ -880,4 +498,4 @@ function loop(ts) {
 
 requestAnimationFrame(loop);
 
-console.log(`LifeGameLab v${APP_VERSION} gestartet (Schema v${manifest.SCHEMA_VERSION}). store und __devBalance sind verfuegbar.`);
+console.log(`LifeGameLab v${APP_VERSION} gestartet (Schema v${manifest.SCHEMA_VERSION}). store ist verfuegbar.`);

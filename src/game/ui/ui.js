@@ -109,7 +109,6 @@ export class UI {
     this._bindGlobalKeys();
     this._bindCanvasPaint();
     this._bindViewportMode();
-    this._bindBenchmarkUpdates();
     queueMicrotask(() => this._applyResponsiveDefaults());
   }
 
@@ -390,7 +389,7 @@ export class UI {
       }
       if (this._store.getState().sim.running)
         this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:false } });
-      this._dispatch({ type:"SIM_STEP", payload:{ force:true } });
+      this._dispatch({ type:"SIM_STEP", payload:{} });
     });
     this._btnNew.addEventListener("click", () => {
       this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:false } });
@@ -421,17 +420,6 @@ export class UI {
     };
     if (typeof media.addEventListener === "function") media.addEventListener("change", onChange);
     else if (typeof media.addListener === "function") media.addListener(onChange);
-  }
-
-  _bindBenchmarkUpdates() {
-    if (typeof window === "undefined" || typeof window.addEventListener !== "function") return;
-    window.addEventListener("benchmark:update", () => {
-      if (this._activeContext !== "labor") return;
-      const state = this._store.getState();
-      const target = isDesktopLayout() ? this._sidebarBody : this._sheetBody;
-      if (!target) return;
-      this._renderPanelBody(target, state);
-    });
   }
 
   _applyResponsiveDefaults(forceReset = false) {
@@ -538,9 +526,7 @@ export class UI {
   }
 
   _getBenchmarkState() {
-    const bench = window.__lifeGameBenchmark;
-    if (!bench || typeof bench.getSnapshot !== "function") return null;
-    return bench.getSnapshot();
+    return null;
   }
 
   _isLabOnlyBrushMode(mode) {
@@ -725,17 +711,11 @@ export class UI {
             );
             rerenderPanel();
           },
-          advanceTime: async (ms, label) => {
-            if (typeof window.advanceTime !== "function") {
-              this._setActionFeedback({ ok: false, message: "advanceTime ist im aktuellen Runtime-Kontext nicht verfuegbar.", hint: "" });
-              return;
-            }
-            const beforeTick = Number(this._store.getState()?.sim?.tick || 0);
-            const result = await window.advanceTime(ms);
+          advanceTime: async (_ms, _label) => {
             this._setActionFeedback({
-              ok: true,
-              message: `${label} vorgespult.`,
-              hint: `Tick ${beforeTick} -> ${Number(result?.tick || beforeTick)} in ${Number(result?.steps || 0)} Schritten.`,
+              ok: false,
+              message: "Direktes Vorspulen wurde aus dem Live-Client entfernt.",
+              hint: "Determinismus-Beweise laufen nur noch ueber externe Evidence-Tests, nicht ueber Browser-Hooks.",
             });
             rerenderPanel();
           },
@@ -1172,49 +1152,12 @@ export class UI {
       detailRow.append(detailSel, el("div", "nx-note", detailDef?.desc || ""));
       accCard.appendChild(detailRow);
 
-      const benchState = this._getBenchmarkState();
       const benchCard = el("section", "nx-card nx-card-lab");
       benchCard.setAttribute("aria-labelledby", "systems-benchmark-title");
       const benchTitle = el("div", "nx-card-title", "Lab: Benchmark");
       benchTitle.id = "systems-benchmark-title";
       benchCard.appendChild(benchTitle);
-      const benchStatus = benchState?.isRunning
-        ? `Läuft: ${benchState.phase} (${benchState.frames}/${benchState.targetFrames})`
-        : benchState?.lastReport
-          ? `Letzter Lauf: ${benchState.lastReport.finishedAt}`
-          : "Noch kein Lauf vorhanden.";
-      benchCard.appendChild(el("div", "nx-note", benchStatus));
-
-      const benchActions = el("div", "nx-chip-grid");
-      const benchmarkBtn = el("button", "nx-btn", benchState?.isRunning ? "Benchmark läuft" : "Start Benchmark");
-      benchmarkBtn.setAttribute("aria-label", "Performance-Benchmark starten");
-      benchmarkBtn.disabled = !!benchState?.isRunning;
-      benchmarkBtn.addEventListener("click", () => this._dispatch({ type: "RUN_BENCHMARK" }));
-      benchActions.appendChild(benchmarkBtn);
-
-      const jsonBtn = el("button", "nx-btn nx-btn-ghost", "Log JSON");
-      jsonBtn.disabled = !benchState?.lastReport;
-      jsonBtn.addEventListener("click", () => window.__lifeGameBenchmark?.download?.("json"));
-      benchActions.appendChild(jsonBtn);
-
-      const csvBtn = el("button", "nx-btn nx-btn-ghost", "Log CSV");
-      csvBtn.disabled = !benchState?.lastReport;
-      csvBtn.addEventListener("click", () => window.__lifeGameBenchmark?.download?.("csv"));
-      benchActions.appendChild(csvBtn);
-      benchCard.appendChild(benchActions);
-
-      if (benchState?.lastReport?.phases) {
-        for (const phase of ["main", "worker"]) {
-          const phaseReport = benchState.lastReport.phases[phase];
-          if (!phaseReport) continue;
-          const row = el("div", "nx-stat-row");
-          row.append(
-            el("span", "nx-label", phase === "main" ? "Main Thread" : "Worker"),
-            el("span", "nx-mono", `${phaseReport.fps.avg.toFixed(1)} FPS · ${phaseReport.render.avg.toFixed(2)} ms`)
-          );
-          benchCard.appendChild(row);
-        }
-      }
+      benchCard.appendChild(el("div", "nx-note", "Benchmark-Laborpfad wurde entfernt. Deterministische Laufpfade bleiben nur noch im Main-Run und in den Evidence-Tests."));
       accCard.appendChild(benchCard);
 
       const phyCard = el("section","nx-card nx-card-lab");

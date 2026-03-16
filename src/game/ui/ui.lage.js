@@ -382,17 +382,8 @@ export function renderLagePanel({
   const timeCard = el("section", "nx-card");
   timeCard.appendChild(el("div", "nx-card-title", "Zeitfenster"));
   timeCard.appendChild(el("div", "nx-note", advisorModel.advisor.nextAction === "wait_and_advance_time"
-    ? "Beobachtung ist gerade die beste Hauptaktion. Vorspulen macht die naechste Diagnose sichtbar."
-    : "Vorspulen bleibt Analysewerkzeug. Nutze es, um die Wirkung deines letzten Eingriffs zu lesen."));
-  const timeGrid = el("div", "nx-chip-grid");
-  for (const [label, ms] of [["+1s", 1000], ["+5s", 5000], ["+15s", 15000]]) {
-    const btn = el("button", "nx-btn nx-btn-ghost", label);
-    btn.addEventListener("click", async () => {
-      await actions.advanceTime(ms, label);
-    });
-    timeGrid.appendChild(btn);
-  }
-  timeCard.appendChild(timeGrid);
+    ? "Beobachtung bleibt die empfohlene Hauptaktion. Direkte Browser-Vorspulfunktionen wurden entfernt, damit der Live-Client keinen Sonderpfad mehr besitzt."
+    : "Wirkungen werden nur noch ueber normale Run-Schritte und externe Evidence-Tests gelesen, nicht ueber Live-Vorspulen."));
   container.appendChild(timeCard);
 
   if (gateFeedback.length) {
