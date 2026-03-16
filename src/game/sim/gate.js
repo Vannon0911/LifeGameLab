@@ -58,6 +58,9 @@ export function assertSimPatchesAllowed(manifest, state, actionType, patches) {
   const worldSpec = gate.world?.keys || {};
   const simKeys = Array.isArray(gate.sim?.keys) ? gate.sim.keys : [];
   const simKeySet = new Set(simKeys);
+  const simBooleanKeys = new Set(Array.isArray(gate.sim?.booleanKeys) ? gate.sim.booleanKeys : []);
+  const simStringKeys = new Set(Array.isArray(gate.sim?.stringKeys) ? gate.sim.stringKeys : []);
+  const simObjectKeys = new Set(Array.isArray(gate.sim?.objectKeys) ? gate.sim.objectKeys : []);
 
   for (const p of patches) {
     if (!p || typeof p !== "object") throw new Error("SIM_GATE: patch must be object");
@@ -98,14 +101,11 @@ export function assertSimPatchesAllowed(manifest, state, actionType, patches) {
       if (!simKeySet.has(seg)) throw patchValueError(path, `unknown sim key '${seg}'`);
       if (p.op !== "set") throw patchValueError(path, "sim writes must be op:set");
       const v = p.value;
-      // String-typed sim keys are declared here so new enum-like fields fail closed until registered.
-      const STRING_SIM_KEYS = new Set(["gameResult", "winMode", "goal", "runPhase", "nextZoneUnlockKind", "infraBuildMode"]);
-      const OBJECT_SIM_KEYS = new Set(["patternCatalog", "patternBonuses"]);
-      if (seg === "running") {
+      if (simBooleanKeys.has(seg)) {
         if (typeof v !== "boolean") throw patchValueError(path, "expected boolean");
-      } else if (STRING_SIM_KEYS.has(seg)) {
+      } else if (simStringKeys.has(seg)) {
         if (typeof v !== "string") throw patchValueError(path, "expected string");
-      } else if (OBJECT_SIM_KEYS.has(seg)) {
+      } else if (simObjectKeys.has(seg)) {
         if (!isPlainObject(v)) throw patchValueError(path, "expected plain object");
       } else {
         if (!Number.isFinite(Number(v))) throw patchValueError(path, "expected finite number");
