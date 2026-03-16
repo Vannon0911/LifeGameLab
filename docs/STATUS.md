@@ -20,6 +20,9 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - `node tests/test-contract-no-bypass.mjs`
 - `node tests/test-dispatch-error-state-stability.mjs`
 - `node tests/test-deterministic-genesis.mjs`
+- `node tests/test-step-chain-determinism.mjs`
+- `node tests/test-readmodel-determinism.mjs`
+- `node tests/test-sim-gate-contract.mjs`
 - `node tests/test-llm-contract.mjs`
 - Letzte Gegenprobe auf aktuellem Branch: 2026-03-16, Proof `docs/traceability/w1-proof-summary.md`
 
@@ -88,11 +91,11 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 12. `P0-T12` Ergebnis fixieren: Manifestpfad + Kernhashes dokumentieren; bei Rot ersten Brecher als naechsten atomaren Task ausweisen. `[done 2026-03-16]`
 
 #### P1
-13. `P1-T13` Neues `tests/test-step-chain-determinism.mjs` (Replay pro Step, nicht nur Endzustand).
-14. `P1-T14` Neues `tests/test-readmodel-determinism.mjs` (ReadModel-Hash als eigener Pflichtanker).
+13. `P1-T13` Neues `tests/test-step-chain-determinism.mjs` (Replay pro Step, nicht nur Endzustand). `[done 2026-03-16]`
+14. `P1-T14` Neues `tests/test-readmodel-determinism.mjs` (ReadModel-Hash als eigener Pflichtanker). `[done 2026-03-16]`
 
 #### P2
-15. `P2-T15` `tests/test-llm-contract.mjs` auf Flake-Resistenz pruefen (stabile Preconditions, keine impliziten Dateinamenannahmen).
+15. `P2-T15` `tests/test-llm-contract.mjs` auf Flake-Resistenz pruefen (stabile Preconditions, keine impliziten Dateinamenannahmen). `[done 2026-03-16]`
 
 ### Bindende Reihenfolge
 1. `T0`
@@ -101,7 +104,8 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 4. `T6-T8`
 5. `T9-T10`
 6. `T11-T12`
-7. danach `T13-T15`
+7. danach `T13-T14`
+8. danach `T15`
 
 ### Abnahmekriterien
 - Kein Task wird gemischt umgesetzt; genau ein atomarer Scope pro Commit.
@@ -121,7 +125,7 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 4. Gate:
    `npm run test:quick`, `npm run test:truth`, `npm run test:stress` muessen nach den Aenderungen weiter gruen bleiben.
 
-### Milestone R2 (P1 RC-Haertung)
+### Milestone R2 (P1/P2 RC-Haertung)
 1. Legacy-Entkopplung:
    verbleibende `LEGACY_CONTEXT`-Pfade in UI/Renderer weiter reduzieren oder explizit als bewusst verbleibend klassifizieren.
 2. RC-Checklist finalisieren:
@@ -138,11 +142,11 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
    RC nur bei komplett gruener Gate-Lage; sonst NO-GO mit dokumentierter Restliste.
 
 ## Naechste Session Startpaket
-- Ziel: auf `P1-T13` bis `P2-T15` oder auf den naechsten RC-Block wechseln, ohne erneute Gate-Suche.
+- Ziel: auf den naechsten RC-Block wechseln, ohne erneute Gate-Suche.
 - LLM-Leseweg bis Gate verifiziert am 2026-03-15:
   `WORKFLOW -> docs/llm/ENTRY.md -> docs/llm/OPERATING_PROTOCOL.md -> TASK_ENTRY_MATRIX -> TASK_GATE_INDEX -> task-entry -> classify/ack/check`.
 - Handshake ist aktuell (`.llm/entry-ack.json`): `versioning`, `testing`, `ui`, `sim`, `contracts` vorhanden.
-- Sicherheitsnachweis aktuell: `node tests/test-llm-contract.mjs` und `node tools/run-all-tests.mjs --full` gruen (2026-03-16); P0-T0 bis P0-T12 sind dokumentiert abgeschlossen.
+- Sicherheitsnachweis aktuell: `node tests/test-llm-contract.mjs`, `node tests/test-sim-gate-contract.mjs` und `node tools/run-all-tests.mjs --full` gruen (2026-03-16); P0-T0 bis P2-T15 sind dokumentiert abgeschlossen.
 - Startkommandos fuer die naechste Session:
   1. `node tools/llm-preflight.mjs classify --paths <task-pfade>`
   2. `node tools/llm-preflight.mjs entry --paths <task-pfade> --mode work`
@@ -213,6 +217,19 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Registry/Suite wurden synchronisiert, damit `node tools/run-all-tests.mjs --full` beide Tests offiziell kennt; der bisherige Drift `realer Test existiert, aber Voll-Gate kennt ihn nicht` ist fuer diese beiden Tests geschlossen.
 - Wiederholungsprobe danach erneut grün: `output/evidence/2026-03-16T20-29-41-219Z-full-9ceb4c82/manifest.json`.
 - Dieser Nachtrag bedeutet nur, dass die beiden P1-Drift-Tests jetzt offizielle Truth sind; er behauptet nicht, dass der gesamte Repro-/RC-Audit bereits abgeschlossen ist.
+
+### 2026-03-16 session `sim-gate-contract-hardening`
+- `src/project/contract/simGate.js` fuehrt jetzt explizite `booleanKeys`, `stringKeys` und `objectKeys`, damit `zone2Unlocked`, `dnaZoneCommitted` und `infrastructureUnlocked` nicht mehr still ueber Zahl-Coercion durch das Gate rutschen.
+- `src/game/sim/gate.js` liest diese Typlisten direkt aus dem Contract und blockiert numerische Payloads fuer Boolean-Felder jetzt kausal mit `expected boolean`.
+- Stille Doppeldefinitionen fuer `zoneRole`, `zoneId` und `zoneMeta` wurden in `src/project/contract/simGate.js` und `src/game/sim/worldgen.js` entfernt; kanonisch bleiben `Int8Array` fuer `zoneRole` und `Uint16Array` fuer `zoneId`.
+- Neuer Regressionstest `tests/test-sim-gate-contract.mjs` ist aktiv und verankert Boolean-Gate-Haertung plus eindeutige Zone-Array-Contracts.
+- Neuer Vollnachweis danach erneut grün: `output/evidence/2026-03-16T20-56-41-704Z-full-01b86177/manifest.json`.
+
+### 2026-03-16 session `p2-llm-contract-flake-hardening`
+- `tests/test-llm-contract.mjs` sichert und restauriert jetzt den vorhandenen Workspace-`.llm`-Zustand, statt `entry-ack.json`, `entry-session.json` und `entry-proof/` blind als globale Vorbedingung zu loeschen.
+- Dadurch prueft der Test seine Preconditions weiter hart, greift aber nicht mehr destruktiv in fremde aktive Session-Artefakte ein.
+- Wichtige Einsicht aus der Verifikation: `test-llm-contract` und `run-all-tests --full` duerfen nicht parallel gegen denselben `.llm`-Ordner laufen; seriell bleibt die Linie stabil gruen.
+- Neuer Vollnachweis danach erneut grün: `output/evidence/2026-03-16T21-00-47-345Z-full-dda33471/manifest.json`.
 
 ### 2026-03-15 session `entry-naming-and-backup-anchor-audit`
 - Entry-Benennung fuer technische Checks entkoppelt: `llm:entry|ack|check` ersetzt durch `llm:preflight:start|ack|check`, damit Chat-Entry (Prozess) und CLI-Preflight (Technik) nicht verwechselt werden.
