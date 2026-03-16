@@ -35,6 +35,7 @@
       "tools/run-test-suite.mjs",
       "tools/run-all-tests.mjs",
       "tools/test-suites.mjs",
+      "tools/evidence-runner.mjs",
       "tools/git-llm-guard.mjs",
       "tools/install-git-hooks.mjs",
       ".githooks/",

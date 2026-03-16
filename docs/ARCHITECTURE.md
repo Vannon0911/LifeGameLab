@@ -15,7 +15,7 @@
 - `src/game/sim/*`: Simulationslogik, Worldgen, Step-Pipeline, Reducer
 - `src/game/render/*`: kanonischer Renderer plus Worker
 - `src/game/ui/*`: UI-Logik, Read-Model, DOM- und Feedback-Helfer
-- `src/app/*`: Boot, Public API, Runtime-Berichte
+- `src/app/*`: Boot, Runtime-Berichte, Fehlerstatus
 
 ## Laufende Wahrheiten
 - Operativer Reducerpfad bleibt `src/game/sim/reducer/index.js`.
@@ -29,22 +29,23 @@
 - Thin-Facades fuer `project.manifest.js`, `sim.js` und `reducer.js` aktiv
 - Tick-Orchestrierung in `step.js`, Phasenlogik in `stepPhases.js`, Runtime-Helfer in `stepRuntime.js`
 - Reducer-Control-Actions in `reducer/controlActions.js`
-- Public Browser API in `src/app/runtime/publicApi.js`
 - Runtime-Helfer in `worldStateLog.js`, `reportUtils.js`, `bootStatus.js`
 - Phase-E-Felder aktiv: `world.zoneRole`, `world.zoneId`, `world.zoneMeta`
 - Phase-E-Pattern-State aktiv: `sim.patternCatalog`, `sim.patternBonuses`
+- Keine globale Live-Surface fuer Store, Dispatch, Perf oder Textdiagnose. `window.__lifeGameStore`, `window.__worldStateLog`, `window.__lifeGamePerfStats`, `window.render_game_to_text` und `window.advanceTime` sind bewusst entfernt.
 
 ## Test- Und Gate-Basis
-- `npm test` und `npm run test:quick`: lokale Schnellgates
-- `npm run test:truth`: Determinismus-/Truth-Suite
-- `npm run test:stress`: Belastungssuite
-- `node tests/test-drift-negative-order.mjs`
-- `node tests/test-determinism-long.mjs`
-- `node tests/test-release-candidate-integrity.mjs`
+- Offizieller Einstieg: `node tools/evidence-runner.mjs --suite claims|regression|full`
+- Wrapper: `node tools/run-test-suite.mjs <suite>` und `node tools/run-all-tests.mjs --full`
+- Offizielle W1-Claims sind dispatch-only und deterministisch replay-pflichtig.
+- Aktive Regressionen:
+  - `node tests/test-contract-no-bypass.mjs`
+  - `node tests/test-deterministic-genesis.mjs`
+  - `node tests/test-llm-contract.mjs`
 
 ## Performance- Und Debug-Regeln
 - Performance bleibt offen, aber erst nach gruener Vollsuite optimieren.
-- Playwright-Debug laeuft ueber `tools/playwright-debug-loop.mjs`.
+- `tools/playwright-debug-loop.mjs` ist deaktiviert, weil globale Browser-Debug-Hooks bewusst entfernt wurden.
 - Benchmark-/Worker-Checks gehoeren in Labor, nicht in den Main-Run.
 
 ## Repo-Struktur
@@ -52,6 +53,6 @@
 - `src/core/`: Kernel und Runtime-Helfer
 - `src/game/`: Sim, Renderer, UI
 - `src/project/`: Manifest, Contracts, LLM-Glue
-- `tests/`: Gates, Determinismus, Gameplay, Contracts
+- `tests/`: minimale Determinismus-, Bypass- und LLM-Gate-Beweise
 - `tools/`: Test-Suiten, Debug, Profiling, Stress
 - `docs/`: nur vier kanonische Top-Level-Dokumente plus `docs/llm/`

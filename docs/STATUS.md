@@ -8,26 +8,23 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 ## Projektstand
 - Phasen A bis F sind produktiv abgeschlossen.
 - Phase G ist aktiv und auf Cleanup, Balance und RC-Haertung beschraenkt.
-- Reproduzierbarkeit ist auf Seed-/Guard-Ebene stark, aber global noch nicht beweisbar geschlossen; Audit vom 2026-03-16 hat offene Mutationspfade und ein unehrliches Voll-Gate dokumentiert.
+- Reproduzierbarkeit ist fuer den aktuellen W1-Scope wieder hart belegt: dispatch-only Claims, harte Payload-Validierung, kein globaler Browser-Storezugriff, kein Live-Vorspulen.
+- Global ist das Projekt noch nicht vollstaendig bewiesen; die aktuelle Truth deckt nur den kleinen kanonischen W1-Scope ab.
 - Neue Kernfeatures, neue Zone und neue Presets bleiben gesperrt.
 
 ## Aktive Release-Gates
 
 ### Verifiziert Gruen
-- `npm run test:quick`
-- `npm run test:truth`
-- `npm run test:stress`
-- `node tests/test-phase-e-integrity.mjs`
-- `node tests/test-phase-f-progression-integrity.mjs`
-- `node tests/test-release-candidate-integrity.mjs`
-- `node tests/test-phase-g-cleanup.mjs`
-- Letzte Gegenprobe auf aktuellem Branch: 2026-03-15 (`quick`, `truth`, `stress` gruen)
-- Audit-Vorbehalt seit 2026-03-16: diese gruene Suite-Lage ist noch kein vollstaendiger Repo-Beweis, weil `tools/run-all-tests.mjs --full` derzeit nicht alle realen Testdateien abdeckt.
+- `node tools/run-all-tests.mjs --full`
+- `node tools/evidence-runner.mjs --suite claims`
+- `node tests/test-contract-no-bypass.mjs`
+- `node tests/test-deterministic-genesis.mjs`
+- `node tests/test-llm-contract.mjs`
+- Letzte Gegenprobe auf aktuellem Branch: 2026-03-16, Manifest `output/evidence/2026-03-16T13-16-17-584Z-full-b50d1a83/manifest.json`
 
 ### Noch Offen
-- Testgate ehrlich machen: alle realen Repo-Tests verpflichtend in den Voll-Gate ziehen
-- offene Runtime-Mutationspfade (`APPLY_BUFFERED_SIM_STEP`, `DEV_BALANCE_RUN_AI`) aus der Repro-Truth entfernen
-- Fog-Intel-/Reachability-Bugs aus den aktuell ausgeschlossenen roten Tests kausal beheben
+- W1-Truth auf weitere fachliche Bereiche ausdehnen, ohne neue Sonderpfade einzufuehren
+- Fog-Intel-/Reachability-/Result-Logik in denselben kleinen deterministischen Evidence-Stil ueberfuehren
 - Perf-Budgets sauber messen und einhalten
 - Preset-Balance fuer `river_delta`, `dry_basin`, `wet_meadow`
 - Migration-Sicherheit explizit gegenpruefen
@@ -44,12 +41,12 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 ## Aktive Prioritaetenliste (Phase G)
 
 ### P0 (Blocker vor RC)
-1. Voll-Gate ehrlich machen und unregistrierte Tests in die Pflichtsuite ziehen
-2. offene Runtime-Mutationspfade aus der Repro-Truth entfernen
-3. Fog-Intel-/Reachability-Fehler aus dem Auditblock kausal beheben
+1. W1-Truth ohne Sonderpfade auf weitere Main-Run-Bereiche erweitern
+2. Fog-Intel-/Reachability-Fehler aus dem Auditblock kausal beheben
+3. Migration-Sicherheit explizit gegen neuen Drift pruefen
 4. Perf-Budgets messen und regressionssicher machen
 5. Preset-Balance fuer `river_delta`, `dry_basin`, `wet_meadow` abschliessen
-6. Migration-Sicherheit explizit gegenpruefen
+6. finale RC-Abbruchkriterien dokumentieren
 
 ### P1 (RC-Haertung)
 1. Legacy-Reste in Main-Run und Renderer weiter minimieren
@@ -92,7 +89,7 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - LLM-Leseweg bis Gate verifiziert am 2026-03-15:
   `WORKFLOW -> docs/llm/ENTRY.md -> docs/llm/OPERATING_PROTOCOL.md -> TASK_ENTRY_MATRIX -> TASK_GATE_INDEX -> task-entry -> classify/ack/check`.
 - Handshake ist aktuell (`.llm/entry-ack.json`): `versioning`, `testing`, `ui`, `sim`, `contracts` vorhanden.
-- Sicherheitsnachweis aktuell: `node tests/test-llm-contract.mjs` gruen (2026-03-15).
+- Sicherheitsnachweis aktuell: `node tests/test-llm-contract.mjs` und `node tools/run-all-tests.mjs --full` gruen (2026-03-16).
 - Startkommandos fuer die naechste Session:
   1. `node tools/llm-preflight.mjs classify --paths <task-pfade>`
   2. `node tools/llm-preflight.mjs entry --paths <task-pfade> --mode work`
@@ -135,6 +132,13 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Vollscan fuer Determinismus/Reproduzierbarkeit als Audit dokumentiert: `docs/audits/2026-03-16-determinism-repro-audit.md`.
 - Priorisierten kausalen Fixplan dokumentiert: `docs/audits/2026-03-16-determinism-repro-bugfix-plan.md`.
 - Statustruth gehaertet: gruene Quick/Truth/Stress-Laeufe bleiben historisch korrekt, gelten aber seit dem Audit nicht mehr als vollstaendiger Repo-Beweis.
+
+### 2026-03-16 session `w1-dispatch-only-truth-cut`
+- Globale Browser-Surfaces entfernt: kein `window.__lifeGameStore`, kein `window.__worldStateLog`, kein `window.__lifeGamePerfStats`, kein `window.render_game_to_text`, kein `window.advanceTime`.
+- `src/app/runtime/publicApi.js` geloescht; Live-Client hat keine offizielle Test- oder Debug-Sonderoberflaeche mehr.
+- `tools/evidence-runner.mjs` auf dispatch-only Evidence reduziert; Browser-Claims und global-hook-basierte Debugpfade sind nicht mehr Teil der offiziellen Truth.
+- Aktive Testlinie auf drei kleine Beweise reduziert: `test-contract-no-bypass`, `test-deterministic-genesis`, `test-llm-contract`.
+- Voll-Gate belegt mit `node tools/run-all-tests.mjs --full`, Manifest `output/evidence/2026-03-16T13-16-17-584Z-full-b50d1a83/manifest.json`.
 
 ### 2026-03-15 session `entry-naming-and-backup-anchor-audit`
 - Entry-Benennung fuer technische Checks entkoppelt: `llm:entry|ack|check` ersetzt durch `llm:preflight:start|ack|check`, damit Chat-Entry (Prozess) und CLI-Preflight (Technik) nicht verwechselt werden.
