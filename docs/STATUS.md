@@ -20,7 +20,7 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - `node tests/test-contract-no-bypass.mjs`
 - `node tests/test-deterministic-genesis.mjs`
 - `node tests/test-llm-contract.mjs`
-- Letzte Gegenprobe auf aktuellem Branch: 2026-03-16, Manifest `output/evidence/2026-03-16T13-16-17-584Z-full-b50d1a83/manifest.json`
+- Letzte Gegenprobe auf aktuellem Branch: 2026-03-16, Proof `docs/traceability/w1-proof-summary.md`
 
 ### Noch Offen
 - W1-Truth auf weitere fachliche Bereiche ausdehnen, ohne neue Sonderpfade einzufuehren
@@ -42,7 +42,7 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 
 ### P0 (Blocker vor RC)
 1. W1-Truth ohne Sonderpfade auf weitere Main-Run-Bereiche erweitern
-2. Fog-Intel-/Reachability-Fehler aus dem Auditblock kausal beheben
+2. Fog-Intel-/Reachability-Fehler im naechsten W1-Ausbau kausal beheben
 3. Migration-Sicherheit explizit gegen neuen Drift pruefen
 4. Perf-Budgets messen und regressionssicher machen
 5. Preset-Balance fuer `river_delta`, `dry_basin`, `wet_meadow` abschliessen
@@ -129,16 +129,14 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 
 ### 2026-03-16 session `repro-audit-and-bugfix-plan`
 - Versionierung bewusst nicht angehoben; `0.7.3` bleibt Produkt-Truth, bis der Repro-Auditblock kausal geschlossen ist.
-- Vollscan fuer Determinismus/Reproduzierbarkeit als Audit dokumentiert: `docs/audits/2026-03-16-determinism-repro-audit.md`.
-- Priorisierten kausalen Fixplan dokumentiert: `docs/audits/2026-03-16-determinism-repro-bugfix-plan.md`.
-- Statustruth gehaertet: gruene Quick/Truth/Stress-Laeufe bleiben historisch korrekt, gelten aber seit dem Audit nicht mehr als vollstaendiger Repo-Beweis.
+- Statustruth gehaertet: alte breite Suite-Laeufe sind nicht mehr die Quelle von Wahrheit; W1 lebt nur noch ueber den kleinen offiziellen Proof-Pfad.
 
 ### 2026-03-16 session `w1-dispatch-only-truth-cut`
 - Globale Browser-Surfaces entfernt: kein `window.__lifeGameStore`, kein `window.__worldStateLog`, kein `window.__lifeGamePerfStats`, kein `window.render_game_to_text`, kein `window.advanceTime`.
 - `src/app/runtime/publicApi.js` geloescht; Live-Client hat keine offizielle Test- oder Debug-Sonderoberflaeche mehr.
 - `tools/evidence-runner.mjs` auf dispatch-only Evidence reduziert; Browser-Claims und global-hook-basierte Debugpfade sind nicht mehr Teil der offiziellen Truth.
 - Aktive Testlinie auf drei kleine Beweise reduziert: `test-contract-no-bypass`, `test-deterministic-genesis`, `test-llm-contract`.
-- Voll-Gate belegt mit `node tools/run-all-tests.mjs --full`, Manifest `output/evidence/2026-03-16T13-16-17-584Z-full-b50d1a83/manifest.json`.
+- Voll-Gate belegt mit `node tools/run-all-tests.mjs --full`, Proof `docs/traceability/w1-proof-summary.md`.
 
 ### 2026-03-15 session `entry-naming-and-backup-anchor-audit`
 - Entry-Benennung fuer technische Checks entkoppelt: `llm:entry|ack|check` ersetzt durch `llm:preflight:start|ack|check`, damit Chat-Entry (Prozess) und CLI-Preflight (Technik) nicht verwechselt werden.

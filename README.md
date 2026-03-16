@@ -6,8 +6,6 @@
 
 Deterministisches Zell-Strategieprojekt ueber Kolonieaufbau, Kontrolle, Rework und die langsame Verwandlung eines Sandbox-Prototyps in ein echtes Spiel.
 
-![LifeGameLab Gameplay](docs/assets/lifegamelab-home.png)
-
 ## Die Geschichte dieses Projekts
 
 `LifeGameLab` hat nicht als sauberes Produkt angefangen. Der Kern war zuerst eine experimentelle Zell-Simulation mit vielen direkten Tools, Laborpfaden, Roh-Brushes und Legacy-Aktionen. Das war gut fuer schnelles Ausprobieren, aber schlecht fuer ein echtes Spiel: zu viele Parallelpfade, zu wenig klare Progression, zu viel implizite Logik.
@@ -16,18 +14,14 @@ Das aktuelle Projekt ist deshalb ein laufendes Rework mit harter Richtung: weg v
 
 Kurz gesagt: `LifeGameLab` ist heute nicht nur "ein Zellspiel", sondern die dokumentierte Umstellung eines chaotisch gewachsenen Sim-Prototyps auf ein kontrolliertes, testbares Strategieprodukt.
 
-## Audit-Stand 2026-03-16
+## W1-Stand 2026-03-16
 
-Der aktuelle Repro-/Determinismus-Audit ist nicht gruen. Die Seed-Pfade selbst sind stabil, aber der Audit hat noch offene Trust-Breaks gezeigt:
+Der aktuelle Repo-Kern ist auf eine kleine deterministische W1-Linie zurueckgeschnitten:
 
-- eine offene Buffered-Step-Mutationsflaeche
-- ein Dev-Mutationspfad in der Live-Runtime
-- ein unvollstaendiges "full"-Testgate
-
-Die Details liegen in:
-
-- `docs/audits/2026-03-16-determinism-repro-audit.md`
-- `docs/audits/2026-03-16-determinism-repro-bugfix-plan.md`
+- keine globale Browser-Debug- oder Store-Surface
+- harte Payload-Validierung statt stiller Sonderfelder
+- kleiner offizieller Vollpfad ueber `node tools/run-all-tests.mjs --full`
+- Rueckverfolgung ueber `docs/traceability/w1-proof-summary.md`
 
 ## Was das Spiel heute sein will
 
@@ -104,43 +98,12 @@ Diese Phasen sind nicht nur Ideen, sondern ueber Ticket-, Gate- und Integrity-Do
 - Deterministischer Advisor fuer Run-Pfad, Blocker und naechsten Ausbauhebel
 - Sichtbare Strukturreife von Einzelzellen ueber Gruendung bis zu Kern- und DNA-Zone
 - Echte Diagnose-Scanner fuer `energy`, `toxin`, `nutrient`, `territory`, `conflict`
-- Browser-Hooks fuer QA/Automation: `window.render_game_to_text`, `window.advanceTime`
+- Keine globalen Browser-Debug- oder Store-Hooks mehr im Live-Client
 
-## Screens
+## Rueckverfolgbarkeit
 
-| Home | Desktop Status |
-| --- | --- |
-| ![Home](docs/assets/lifegamelab-home.png) | ![Desktop Status](docs/assets/lifegamelab-desktop-status.png) |
-
-| Mobile Shell | Mobile Sheet |
-| --- | --- |
-| ![Mobile Control](docs/assets/lifegamelab-mobile-control.png) | ![Mobile Sheet](docs/assets/lifegamelab-mobile-sheet.png) |
-
-| Status Panel | Evolution Panel |
-| --- | --- |
-| ![Status Panel](docs/assets/lifegamelab-panel-status.png) | ![Evolution Panel](docs/assets/lifegamelab-panel-evolution.png) |
-
-| Tools Panel | Systems Panel |
-| --- | --- |
-| ![Tools Panel](docs/assets/lifegamelab-panel-tools.png) | ![Systems Panel](docs/assets/lifegamelab-panel-systems.png) |
-
-## Viewport-Vergleich (Playwright)
-
-Automatisch erstellt am **14.03.2026** via Playwright gegen `http://127.0.0.1:8080/`.
-
-| Desktop 1536x960 | Mobile 390x844 |
-| --- | --- |
-| ![Desktop 1536 Home](docs/assets/compare-desktop-1536x960-home.png) | ![Mobile 390 Home](docs/assets/compare-mobile-390x844-home.png) |
-
-| Desktop Tools | Mobile Tools |
-| --- | --- |
-| ![Desktop Tools](docs/assets/compare-desktop-1536x960-werkzeuge.png) | ![Mobile Tools](docs/assets/compare-mobile-390x844-werkzeuge.png) |
-
-| Desktop Evolution | Mobile Systeme |
-| --- | --- |
-| ![Desktop Evolution](docs/assets/compare-desktop-1536x960-evolution.png) | ![Mobile Systeme](docs/assets/compare-mobile-390x844-systeme.png) |
-
-Weitere Capture-Artefakte liegen in `docs/assets/`.
+- Produkt-/Status-Truth: `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/STATUS.md`
+- Aktueller kanonischer Vollbeleg: `docs/traceability/w1-proof-summary.md`
 
 ## Schnellstart
 
@@ -171,8 +134,7 @@ npm run test:stress
 ## Qualitätsgates
 
 - `npm test` = Quick-Suite (truth/stress bewusst aus, um grosse Testlaeufe nicht implizit zu triggern)
-- `npm run test:full` = Quick + Truth + Stress
-- Stand 2026-03-16: `test:full` ist noch kein vollstaendiger Repo-Beweis, weil der Audit unregistrierte Testdateien gefunden hat; die Reparatur dafuer ist als P0 dokumentiert
+- `node tools/run-all-tests.mjs --full` = offizieller W1-Vollbeleg
 - Keine Zufallsquellen außerhalb Kernel-RNG
 - State-Änderungen nur via `dispatch()` + Patches
 - Contract-Tests für String-/Dataflow-/Wrapper-Hardening aktiv
@@ -184,7 +146,7 @@ npm run test:stress
 - `src/game/` Sim, Renderer, UI
 - `src/project/` Manifest + projektseitige Entry-Points
 - `tests/` Gates, Determinismus, Gameplay, Contracts
-- `tools/` Profiling, Debug, Redteam
+- `tools/` Runner, Gate- und schlanke Hilfswerkzeuge
 - `docs/` vier kanonische Top-Level-Dokumente plus `docs/llm/`
 
 ## Aktueller Engineering-Status (ehrlich)
@@ -192,7 +154,7 @@ npm run test:stress
 - Contract-/Gate-Haertung ist umgesetzt und testgruen.
 - `Phase A-F` leben auf Codebasis.
 - `Phase G` ist der aktive Block fuer Cleanup, Balance und RC-Haertung.
-- Der Repro-Audit vom 2026-03-16 ist offen; globale Reproduzierbarkeits-Claims bleiben bis zum P0-P2-Fixblock nur vorlaeufig.
+- Der aktuelle W1-Kern ist belegt; weitergehende fachliche Bereiche muessen noch in denselben kleinen Beweisstil ueberfuehrt werden.
 - Performance-Ziel und finale Release-Haertung sind weiter offen.
 
 ## Was noch fehlt
@@ -201,7 +163,7 @@ Das Projekt ist noch kein "fertiges Release-Spiel". Es ist ein fortgeschrittenes
 
 - Perf-Budgets sauber messen und halten
 - Presets balancieren
-- globale Reproduzierbarkeitsblocker aus dem Audit kausal schliessen
+- weitere fachliche Bereiche ohne Sonderpfade in die W1-Truth ueberfuehren
 - Migration-Sicherheit und finale RC-Haertung abschliessen
 
 ## Wenn du das Repo lesen willst
@@ -216,9 +178,9 @@ Die beste Lesart ist nicht "welche Datei macht was?", sondern:
 
 Die wichtigsten Anker dafuer sind:
 
-- `progress.md`
 - `docs/WORKFLOW.md`
 - `docs/PRODUCT.md`
 - `docs/ARCHITECTURE.md`
 - `docs/STATUS.md`
+- `docs/traceability/w1-proof-summary.md`
 - `docs/llm/ENTRY.md`

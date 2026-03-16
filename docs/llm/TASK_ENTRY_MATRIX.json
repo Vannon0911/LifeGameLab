@@ -45,12 +45,14 @@
   },
   "versioning": {
     "triggerPrefixes": [
+      "README.md",
       "package.json",
       "src/project/contract/manifest.js",
       "docs/WORKFLOW.md",
       "docs/PRODUCT.md",
       "docs/ARCHITECTURE.md",
       "docs/STATUS.md",
+      "docs/traceability/",
       "docs/llm/TASK_ENTRY_MATRIX.json",
       "docs/llm/ENTRY.md",
       "docs/llm/OPERATING_PROTOCOL.md",
