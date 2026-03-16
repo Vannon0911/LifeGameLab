@@ -41,7 +41,21 @@ function listChangedPathsForPrePush() {
     mergeBase = "";
   }
   if (!mergeBase) return [];
-  const raw = runGit(`git diff --name-only --diff-filter=ACMR ${mergeBase}..HEAD`);
+  const commitsRaw = runGit(`git rev-list --reverse ${mergeBase}..HEAD`);
+  if (!commitsRaw) return [];
+  return commitsRaw
+    .split(/\r?\n/g)
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .map((commit) => ({
+      commit,
+      paths: listPathsForCommit(commit),
+    }))
+    .filter((entry) => entry.paths.length > 0);
+}
+
+function listPathsForCommit(commit) {
+  const raw = runGit(`git diff-tree --no-commit-id --name-only -r --diff-filter=ACMR ${commit}`);
   if (!raw) return [];
   return raw.split(/\r?\n/g).map((v) => v.trim()).filter(Boolean);
 }
@@ -73,13 +87,50 @@ function runCheck(paths) {
   }
 }
 
+function runPreflight(command, paths, extraArgs = []) {
+  if (!paths.length) return;
+  const csvPaths = toCsv(paths);
+  const res = spawnSync(
+    process.execPath,
+    [preflightScript, command, "--paths", csvPaths, ...extraArgs],
+    {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 30_000,
+    },
+  );
+  if (res.stdout) process.stdout.write(res.stdout);
+  if (res.stderr) process.stderr.write(res.stderr);
+  if (res.error) {
+    console.error(`[git-llm-guard] preflight execution failed: ${res.error.message}`);
+    process.exit(1);
+  }
+  if (res.status !== 0) {
+    console.error(
+      `[git-llm-guard] blocked during ${command}: run entry+ack for changed paths before commit/push.`,
+    );
+    process.exit(res.status ?? 1);
+  }
+}
+
+function runCheckForCommitSeries(entries) {
+  if (!entries.length) process.exit(0);
+  for (const entry of entries) {
+    console.log(`[git-llm-guard] verifying commit slice ${entry.commit}`);
+    runPreflight("entry", entry.paths, ["--mode", "work"]);
+    runPreflight("ack", entry.paths);
+    runPreflight("check", entry.paths);
+  }
+}
+
 if (mode === "pre-commit") {
   runCheck(listChangedPathsForPreCommit());
   process.exit(0);
 }
 
 if (mode === "pre-push") {
-  runCheck(listChangedPathsForPrePush());
+  runCheckForCommitSeries(listChangedPathsForPrePush());
   process.exit(0);
 }
 
