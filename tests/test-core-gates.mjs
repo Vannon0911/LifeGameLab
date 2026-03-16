@@ -47,9 +47,9 @@ function snapshotWorldArrays(world, keys) {
 function assertUnchanged(snap, label) {
   for (const k of Object.keys(snap)) {
     const { ref, hash, len } = snap[k];
-    assert(ref.length === len, `${label}: old world.${k} length changed (mutation bypass)`);
+    assert(ref.length === len, `${label}: old world.${k} length changed (mutation umgehung)`);
     const h2 = hashTypedArraySampled(ref);
-    assert(h2 === hash, `${label}: old world.${k} content changed (mutation bypass)`);
+    assert(h2 === hash, `${label}: old world.${k} content changed (mutation umgehung)`);
   }
 }
 
@@ -84,4 +84,4 @@ const s2 = store.getState();
 assertUnchanged(snap1, "step2");
 assertReplaced(snap1, s2.world, "step2");
 
-console.log("CORE_GATES_OK no TypedArray mutation bypass across SIM_STEP");
+console.log("CORE_GATES_OK no TypedArray mutation umgehung across SIM_STEP");

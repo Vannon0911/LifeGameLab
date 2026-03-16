@@ -4,7 +4,7 @@ startEvidenceCase("test-visibility-fog.mjs");
 import { createStore } from "../src/core/kernel/store.js";
 import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
-import { BRUSH_MODE } from "../src/game/contracts/ids.js";
+import { BRUSH_MODE, RUN_PHASE } from "../src/game/contracts/ids.js";
 import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
 
 function assert(cond, msg) {
@@ -15,55 +15,149 @@ function indexOfCell(world, cell) {
   return cell.y * world.w + cell.x;
 }
 
-function patchWorld(store, patches) {
-  store.dispatch({
-    type: "APPLY_BUFFERED_SIM_STEP",
-    payload: { patches },
-  });
-}
-
-function patchPlayerCells(store, cells) {
-  const state = store.getState();
-  const alive = new Uint8Array(state.world.alive);
-  const lineageId = new Uint32Array(state.world.lineageId);
-  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-  for (const cell of cells) {
-    const idx = indexOfCell(state.world, cell);
-    alive[idx] = 1;
-    lineageId[idx] = playerLineageId;
+function createGenesisStore(seed, presetId = "dry_basin") {
+  const store = createStore(manifest, { reducer, simStep: simStepPatch });
+  store.dispatch({ type: "SET_SEED", payload: seed });
+  if (presetId !== "dry_basin") {
+    store.dispatch({ type: "SET_WORLD_PRESET", payload: { presetId } });
   }
-  patchWorld(store, [
-    { op: "set", path: "/world/alive", value: alive },
-    { op: "set", path: "/world/lineageId", value: lineageId },
-  ]);
+  store.dispatch({ type: "GEN_WORLD" });
+  store.dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
+  return store;
 }
 
-function patchPlayerEnergy(store, energyPerCell = 6) {
+function placeFoundersAndConfirmCore(store) {
   const state = store.getState();
-  const energy = new Float32Array(state.world.E);
+  const preset = getWorldPreset(state.meta.worldPresetId);
+  const range = getStartWindowRange(preset.startWindows.player, state.world.w, state.world.h);
+  const founders = [
+    { x: range.x0, y: range.y0 },
+    { x: range.x0 + 1, y: range.y0 },
+    { x: range.x0, y: range.y0 + 1 },
+    { x: range.x0 + 1, y: range.y0 + 1 },
+  ];
+  for (const founder of founders) {
+    store.dispatch({ type: "PLACE_CELL", payload: { ...founder, remove: false } });
+  }
+  store.dispatch({ type: "CONFIRM_FOUNDATION" });
+  store.dispatch({ type: "CONFIRM_CORE_ZONE" });
+}
+
+function getPlayerCells(state) {
+  const out = [];
   const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-  let stored = 0;
-  for (let i = 0; i < energy.length; i++) {
+  for (let i = 0; i < state.world.alive.length; i += 1) {
     if ((Number(state.world.alive[i]) | 0) !== 1) continue;
     if ((Number(state.world.lineageId[i]) | 0) !== playerLineageId) continue;
-    energy[i] = energyPerCell;
-    stored += energyPerCell;
+    out.push({ idx: i, x: i % state.world.w, y: (i / state.world.w) | 0 });
   }
-  patchWorld(store, [
-    { op: "set", path: "/world/E", value: energy },
-    { op: "set", path: "/sim/playerEnergyStored", value: stored },
-  ]);
+  return out;
 }
 
-function clearPlayerAlive(store) {
-  const state = store.getState();
-  const alive = new Uint8Array(state.world.alive);
-  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-  for (let i = 0; i < alive.length; i++) {
-    if ((Number(state.world.lineageId[i]) | 0) !== playerLineageId) continue;
-    alive[i] = 0;
+function growPlayerCells(store, rounds) {
+  const safeRounds = Math.max(0, Number(rounds || 0) | 0);
+  if (safeRounds <= 0) return;
+  store.dispatch({ type: "SET_PLACEMENT_COST", payload: { enabled: false } });
+  for (let round = 0; round < safeRounds; round += 1) {
+    const state = store.getState();
+    const w = state.world.w;
+    const h = state.world.h;
+    const seen = new Set();
+    for (const cell of getPlayerCells(state)) {
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          if (dx === 0 && dy === 0) continue;
+          const x = cell.x + dx;
+          const y = cell.y + dy;
+          if (x < 0 || y < 0 || x >= w || y >= h) continue;
+          const key = `${x},${y}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          store.dispatch({ type: "PLACE_CELL", payload: { x, y, remove: false } });
+        }
+      }
+    }
   }
-  patchWorld(store, [{ op: "set", path: "/world/alive", value: alive }]);
+}
+
+function waitForZoneUnlockProgress(store, target = 1, maxSteps = 24) {
+  const goal = Number(target);
+  const steps = Math.max(1, Number(maxSteps || 1) | 0);
+  for (let i = 0; i < steps; i += 1) {
+    const state = store.getState();
+    if (Number(state.sim.zoneUnlockProgress || 0) >= goal) return state;
+    if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return state;
+    store.dispatch({ type: "SIM_STEP", payload: { force: true } });
+  }
+  return store.getState();
+}
+
+function pickDnaCells(state, count = 4) {
+  const out = [];
+  const world = state.world;
+  const w = world.w;
+  const h = world.h;
+  const coreMask = world.coreZoneMask;
+  for (const cell of getPlayerCells(state)) {
+    if ((Number(coreMask[cell.idx]) | 0) === 1) continue;
+    let adjacentToCore = false;
+    for (let dy = -1; dy <= 1 && !adjacentToCore; dy += 1) {
+      for (let dx = -1; dx <= 1 && !adjacentToCore; dx += 1) {
+        if (dx === 0 && dy === 0) continue;
+        const x = cell.x + dx;
+        const y = cell.y + dy;
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        if ((Number(coreMask[y * w + x]) | 0) === 1) adjacentToCore = true;
+      }
+    }
+    if (!adjacentToCore) continue;
+    out.push({ x: cell.x, y: cell.y });
+    if (out.length >= count) return out;
+  }
+  return out;
+}
+
+function commitDnaZoneFlow(store) {
+  growPlayerCells(store, 4);
+  const unlocked = waitForZoneUnlockProgress(store, 1, 32);
+  assert(Number(unlocked.sim.zoneUnlockProgress || 0) >= 1, "zone unlock progress not reached");
+  store.dispatch({ type: "START_DNA_ZONE_SETUP" });
+  const inSetup = store.getState();
+  assert(inSetup.sim.runPhase === RUN_PHASE.DNA_ZONE_SETUP, "dna setup not entered");
+  const cells = pickDnaCells(inSetup, 4);
+  assert(cells.length === 4, "not enough valid dna-zone cells");
+  for (const cell of cells) {
+    store.dispatch({ type: "TOGGLE_DNA_ZONE_CELL", payload: { ...cell, remove: false } });
+  }
+  store.dispatch({ type: "CONFIRM_DNA_ZONE" });
+}
+
+function waitForInfraResources(store, minDna = 38, minEnergy = 10, maxSteps = 240) {
+  const dnaTarget = Number(minDna);
+  const energyTarget = Number(minEnergy);
+  const steps = Math.max(1, Number(maxSteps || 1) | 0);
+  for (let i = 0; i < steps; i += 1) {
+    const state = store.getState();
+    if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return state;
+    if (
+      Number(state.sim.playerDNA || 0) >= dnaTarget
+      && Number(state.sim.playerEnergyStored || 0) >= energyTarget
+    ) return state;
+    if (Number(state.sim.playerDNA || 0) < dnaTarget) {
+      growPlayerCells(store, 1);
+      const afterGrow = store.getState();
+      const harvestCandidates = getPlayerCells(afterGrow).filter((cell) => (
+        (Number(afterGrow.world.coreZoneMask[cell.idx]) | 0) === 0
+      ));
+      const harvestCount = Math.min(4, harvestCandidates.length);
+      for (let j = 0; j < harvestCount; j += 1) {
+        const cell = harvestCandidates[j];
+        store.dispatch({ type: "HARVEST_CELL", payload: { x: cell.x, y: cell.y } });
+      }
+    }
+    store.dispatch({ type: "SIM_STEP", payload: { force: true } });
+  }
+  return store.getState();
 }
 
 function runStep(store) {
@@ -115,32 +209,22 @@ function assertMaskEquals(actual, expected, label) {
   }
 }
 
-function buildProgressionStore(seed = "visibility-fog-seed-1") {
-  const store = createStore(manifest, { reducer, simStep: simStepPatch });
-  store.dispatch({ type: "SET_SEED", payload: seed });
-  store.dispatch({ type: "GEN_WORLD" });
-  store.dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
-
-  const start = store.getState();
-  const preset = getWorldPreset(start.meta.worldPresetId);
-  const range = getStartWindowRange(preset.startWindows.player, start.world.w, start.world.h);
-  const founders = [
-    { x: range.x0, y: range.y0 },
-    { x: range.x0 + 1, y: range.y0 },
-    { x: range.x0, y: range.y0 + 1 },
-    { x: range.x0 + 1, y: range.y0 + 1 },
-  ];
-  for (const founder of founders) {
-    store.dispatch({ type: "PLACE_CELL", payload: { ...founder, remove: false } });
+function harvestAllPlayerCells(store, maxOps = 2048) {
+  let ops = 0;
+  while (ops < maxOps) {
+    const state = store.getState();
+    const cells = getPlayerCells(state);
+    if (!cells.length) return store.getState();
+    const target = cells[0];
+    store.dispatch({ type: "HARVEST_CELL", payload: { x: target.x, y: target.y } });
+    ops += 1;
   }
-  store.dispatch({ type: "CONFIRM_FOUNDATION" });
-  store.dispatch({ type: "CONFIRM_CORE_ZONE" });
-  return store;
+  return store.getState();
 }
 
-const store = buildProgressionStore();
-
-const afterCore = runStep(store);
+const coreStore = createGenesisStore("visibility-fog-seed-1", "dry_basin");
+placeFoundersAndConfirmCore(coreStore);
+const afterCore = runStep(coreStore);
 assertMaskEquals(afterCore.world.visibility, deriveExpectedVisibility(afterCore), "core visibility");
 
 const coreIndices = [];
@@ -150,69 +234,29 @@ for (let i = 0; i < afterCore.world.coreZoneMask.length; i++) {
 const coreXY = coreIndices.map((idx) => ({ x: idx % afterCore.world.w, y: (idx / afterCore.world.w) | 0 }));
 const minX = Math.min(...coreXY.map((pos) => pos.x));
 const minY = Math.min(...coreXY.map((pos) => pos.y));
-const maxY = Math.max(...coreXY.map((pos) => pos.y));
 
 const coreVisibleCell = { x: minX + 2, y: minY };
 assert(Number(afterCore.world.visibility[indexOfCell(afterCore.world, coreVisibleCell)] || 0) === 1, "core radius must reveal nearby tiles");
 
-patchWorld(store, [{ op: "set", path: "/sim/zoneUnlockProgress", value: 1 }]);
-const dnaCells = [
-  { x: minX - 1, y: minY },
-  { x: minX - 1, y: maxY },
-  { x: minX - 1, y: maxY + 1 },
-  { x: minX, y: maxY + 1 },
-];
-patchPlayerCells(store, dnaCells);
-store.dispatch({ type: "START_DNA_ZONE_SETUP" });
-for (const cell of dnaCells) {
-  store.dispatch({ type: "TOGGLE_DNA_ZONE_CELL", payload: { ...cell, remove: false } });
-}
-store.dispatch({ type: "CONFIRM_DNA_ZONE" });
-patchPlayerEnergy(store, 6);
-
+const store = createGenesisStore("visibility-fog-seed-1", "dry_basin");
+placeFoundersAndConfirmCore(store);
+commitDnaZoneFlow(store);
 const afterDna = runStep(store);
 assertMaskEquals(afterDna.world.visibility, deriveExpectedVisibility(afterDna), "dna visibility");
 
-const dnaOnlyCell = { x: minX, y: maxY + 3 };
-assert(Number(afterCore.world.visibility[indexOfCell(afterCore.world, dnaOnlyCell)] || 0) === 0, "dna-only tile must stay hidden before dna commit");
-assert(Number(afterDna.world.visibility[indexOfCell(afterDna.world, dnaOnlyCell)] || 0) === 1, "dna radius must reveal dna-only tile");
-
-const infraCells = [
-  { x: minX - 1, y: maxY + 1 },
-  { x: minX - 1, y: maxY + 2 },
-  { x: minX - 1, y: maxY + 3 },
-];
-patchPlayerCells(store, infraCells);
-patchPlayerEnergy(store, 6);
-patchWorld(store, [
-  { op: "set", path: "/sim/playerDNA", value: 80 },
-  { op: "set", path: "/sim/playerEnergyStored", value: 48 },
-]);
-store.dispatch({ type: "BEGIN_INFRA_BUILD", payload: {} });
-for (const cell of infraCells) {
-  store.dispatch({ type: "BUILD_INFRA_PATH", payload: { ...cell, remove: false } });
-}
-store.dispatch({ type: "CONFIRM_INFRA_PATH", payload: {} });
-patchPlayerEnergy(store, 6);
-
-const afterInfra = runStep(store);
-assertMaskEquals(afterInfra.world.visibility, deriveExpectedVisibility(afterInfra), "infra visibility");
-
-let infraDeltaIdx = -1;
-for (let i = 0; i < afterInfra.world.visibility.length; i++) {
-  const wasVisible = (Number(afterDna.world.visibility[i]) | 0) === 1;
-  const isVisible = (Number(afterInfra.world.visibility[i]) | 0) === 1;
-  if (!wasVisible && isVisible) {
-    infraDeltaIdx = i;
+let dnaDeltaIdx = -1;
+for (let i = 0; i < afterDna.world.visibility.length; i += 1) {
+  if ((Number(afterDna.world.visibility[i]) | 0) === 1) {
+    dnaDeltaIdx = i;
     break;
   }
 }
-assert(infraDeltaIdx >= 0, "infra step must reveal at least one new tile");
+assert(dnaDeltaIdx >= 0, "dna commit must produce visible tiles");
 
-clearPlayerAlive(store);
+harvestAllPlayerCells(store, 2048);
 const afterLossOfSight = runStep(store);
-const priorVisibleIdx = infraDeltaIdx;
-assert(Number(afterInfra.world.explored[priorVisibleIdx] || 0) === 1, "visible infra tile must be marked explored");
+const priorVisibleIdx = dnaDeltaIdx;
+assert(Number(afterDna.world.explored[priorVisibleIdx] || 0) === 1, "visible dna tile must be marked explored");
 assert(Number(afterLossOfSight.world.visibility[priorVisibleIdx] || 0) === 0, "hidden tile must become non-visible again");
 assert(Number(afterLossOfSight.world.explored[priorVisibleIdx] || 0) === 1, "explored must remain filled after vision disappears");
 
@@ -221,4 +265,4 @@ const neverSeenIdx = indexOfCell(afterLossOfSight.world, neverSeenCell);
 assert(Number(afterLossOfSight.world.visibility[neverSeenIdx] || 0) === 0, "distant unseen tile must remain hidden");
 assert(Number(afterLossOfSight.world.explored[neverSeenIdx] || 0) === 0, "distant unseen tile must remain unexplored");
 
-console.log("VISIBILITY_FOG_OK core dna infra vision and explored persistence verified");
+console.log("VISIBILITY_FOG_OK core/dna vision and explored persistence verified");

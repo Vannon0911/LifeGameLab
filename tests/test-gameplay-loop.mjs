@@ -9,7 +9,6 @@ startEvidenceCase("test-gameplay-loop.mjs");
     import { reducer, simStepPatch } from "../src/project/project.logic.js";
     import { GAME_MODE } from "../src/game/contracts/ids.js";
     import { deriveCommandScore } from "../src/game/techTree.js";
-    import { patchClusterRunRequirements } from "./support/phaseFTestUtils.mjs";
 
     function assert(cond, msg) {
       if (!cond) throw new Error(msg);
@@ -98,6 +97,29 @@ startEvidenceCase("test-gameplay-loop.mjs");
     function stepFor(store, ticks) {
       for (let i = 0; i < ticks; i++) store.dispatch({ type: "SIM_STEP", payload: { force: true } });
       return store.getState();
+    }
+
+    function countPatternClasses(sim) {
+      const catalog = sim?.patternCatalog || {};
+      let count = 0;
+      for (const key of Object.keys(catalog)) {
+        if (Number(catalog[key]?.count || 0) > 0) count += 1;
+      }
+      return count;
+    }
+
+    function waitForClusterRunRequirements(store, minCommand, minPatternClasses = 1, minNetworkRatio = 0.10, maxSteps = 320) {
+      let state = store.getState();
+      for (let i = 0; i < maxSteps; i += 1) {
+        const command = deriveCommandScore(state.sim);
+        const patternClasses = countPatternClasses(state.sim);
+        const network = Number(state.sim.networkRatio || 0);
+        if (command + 1e-9 >= minCommand && patternClasses >= minPatternClasses && network + 1e-9 >= minNetworkRatio) {
+          return state;
+        }
+        state = stepFor(store, 1);
+      }
+      return state;
     }
 
     let pass = 0;
@@ -246,7 +268,9 @@ startEvidenceCase("test-gameplay-loop.mjs");
         s = stepFor(store, 1);
         guard++;
       }
-      s = patchClusterRunRequirements(store);
+      s = waitForClusterRunRequirements(store, 0.10, 1, 0.10, 320);
+      assert(deriveCommandScore(s.sim) + 1e-9 >= 0.10, `Command score too low for cooperative_network: ${deriveCommandScore(s.sim)}`);
+      assert(Number(s.sim.networkRatio || 0) + 1e-9 >= 0.10, `Network ratio too low for cooperative_network: ${s.sim.networkRatio}`);
       dnaCost = 10;
       s = earnDNA(store, dnaCost);
       assert(s.sim.playerDNA >= dnaCost, `Not enough DNA for cooperative_network: ${s.sim.playerDNA} < ${dnaCost}`);
@@ -260,7 +284,9 @@ startEvidenceCase("test-gameplay-loop.mjs");
         s = stepFor(store, 1);
         guard++;
       }
-      s = patchClusterRunRequirements(store);
+      s = waitForClusterRunRequirements(store, 0.14, 1, 0.10, 360);
+      assert(deriveCommandScore(s.sim) + 1e-9 >= 0.14, `Command score too low for cluster_split: ${deriveCommandScore(s.sim)}`);
+      assert(Number(s.sim.networkRatio || 0) + 1e-9 >= 0.10, `Network ratio too low for cluster_split: ${s.sim.networkRatio}`);
       guard = 0;
       dnaCost = 10;
       while (Number(s.sim.playerDNA || 0) < dnaCost && guard < 32) {

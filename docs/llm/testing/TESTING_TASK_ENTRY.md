@@ -29,6 +29,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Kein Taskwechsel ohne neue Klassifikation + neues Ack.
 - Nur Test-/Gate-Scope.
 - Kein fachlicher SIM/UI/CONTRACT-Umbau ohne neuen Subtask mit eigener Klassifikation.
+- Umgehung (direkte State-/Patch-Injektion als Abkuerzung) ist untersagt, ausser nach expliziter Ruecksprache.
 
 ## DOKU (pflicht)
 - Zuerst testing-spezifische Doku.

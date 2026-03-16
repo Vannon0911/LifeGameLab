@@ -11,6 +11,55 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
+function getPlayerCells(state) {
+  const out = [];
+  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+  for (let i = 0; i < state.world.alive.length; i += 1) {
+    if ((Number(state.world.alive[i]) | 0) !== 1) continue;
+    if ((Number(state.world.lineageId[i]) | 0) !== playerLineageId) continue;
+    out.push({ idx: i, x: i % state.world.w, y: (i / state.world.w) | 0 });
+  }
+  return out;
+}
+
+function growPlayerCells(store, rounds) {
+  const safeRounds = Math.max(0, Number(rounds || 0) | 0);
+  if (safeRounds <= 0) return;
+  store.dispatch({ type: "SET_PLACEMENT_COST", payload: { enabled: false } });
+  for (let round = 0; round < safeRounds; round += 1) {
+    const state = store.getState();
+    const w = state.world.w;
+    const h = state.world.h;
+    const seen = new Set();
+    for (const cell of getPlayerCells(state)) {
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          if (dx === 0 && dy === 0) continue;
+          const x = cell.x + dx;
+          const y = cell.y + dy;
+          if (x < 0 || y < 0 || x >= w || y >= h) continue;
+          const key = `${x},${y}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          store.dispatch({ type: "PLACE_CELL", payload: { x, y, remove: false } });
+        }
+      }
+    }
+  }
+}
+
+function waitForZoneUnlockProgress(store, target = 1, maxSteps = 24) {
+  const goal = Number(target);
+  const steps = Math.max(1, Number(maxSteps || 1) | 0);
+  for (let i = 0; i < steps; i += 1) {
+    const state = store.getState();
+    if (Number(state.sim.zoneUnlockProgress || 0) >= goal) return state;
+    if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return state;
+    store.dispatch({ type: "SIM_STEP", payload: { force: true } });
+  }
+  return store.getState();
+}
+
 function createActiveCoreStore(seed, presetId = "river_delta") {
   const store = createStore(manifest, { reducer, simStep: simStepPatch });
   store.dispatch({ type: "SET_SEED", payload: seed });
@@ -50,16 +99,10 @@ function createActiveCoreStore(seed, presetId = "river_delta") {
 // success path: full meter moves RUN_ACTIVE -> DNA_ZONE_SETUP and allocates preset budget.
 {
   const store = createActiveCoreStore("start-dna-zone-setup-success-1", "wet_meadow");
-  const before = store.getState();
+  growPlayerCells(store, 3);
+  const before = waitForZoneUnlockProgress(store, 1, 32);
   const tileCount = before.world.w * before.world.h;
-  store.dispatch({
-    type: "APPLY_BUFFERED_SIM_STEP",
-    payload: {
-      patches: [
-        { op: "set", path: "/sim/zoneUnlockProgress", value: 1 },
-      ],
-    },
-  });
+  assert(Number(before.sim.zoneUnlockProgress || 0) >= 1, "setup success requires naturally reached unlock progress");
   store.dispatch({ type: "START_DNA_ZONE_SETUP" });
   const after = store.getState();
   assert(after.sim.runPhase === RUN_PHASE.DNA_ZONE_SETUP, "start dna zone setup must enter DNA_ZONE_SETUP");
@@ -83,14 +126,9 @@ function createActiveCoreStore(seed, presetId = "river_delta") {
 // repeated start is no-op once setup is already active.
 {
   const store = createActiveCoreStore("start-dna-zone-setup-repeat-1");
-  store.dispatch({
-    type: "APPLY_BUFFERED_SIM_STEP",
-    payload: {
-      patches: [
-        { op: "set", path: "/sim/zoneUnlockProgress", value: 1 },
-      ],
-    },
-  });
+  growPlayerCells(store, 3);
+  const unlocked = waitForZoneUnlockProgress(store, 1, 32);
+  assert(Number(unlocked.sim.zoneUnlockProgress || 0) >= 1, "repeat case requires naturally reached unlock progress");
   store.dispatch({ type: "START_DNA_ZONE_SETUP" });
   const sigAfterFirst = store.getSignature();
   store.dispatch({ type: "START_DNA_ZONE_SETUP" });

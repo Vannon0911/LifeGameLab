@@ -11,25 +11,78 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-function patchPlayerCells(store, cells) {
-  const state = store.getState();
-  const alive = new Uint8Array(state.world.alive);
-  const lineageId = new Uint32Array(state.world.lineageId);
+function getPlayerCells(state) {
+  const out = [];
   const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-  for (const { x, y } of cells) {
-    const idx = y * state.world.w + x;
-    alive[idx] = 1;
-    lineageId[idx] = playerLineageId;
+  for (let i = 0; i < state.world.alive.length; i += 1) {
+    if ((Number(state.world.alive[i]) | 0) !== 1) continue;
+    if ((Number(state.world.lineageId[i]) | 0) !== playerLineageId) continue;
+    out.push({ idx: i, x: i % state.world.w, y: (i / state.world.w) | 0 });
   }
-  store.dispatch({
-    type: "APPLY_BUFFERED_SIM_STEP",
-    payload: {
-      patches: [
-        { op: "set", path: "/world/alive", value: alive },
-        { op: "set", path: "/world/lineageId", value: lineageId },
-      ],
-    },
-  });
+  return out;
+}
+
+function growPlayerCells(store, rounds) {
+  const safeRounds = Math.max(0, Number(rounds || 0) | 0);
+  if (safeRounds <= 0) return;
+  store.dispatch({ type: "SET_PLACEMENT_COST", payload: { enabled: false } });
+  for (let round = 0; round < safeRounds; round += 1) {
+    const state = store.getState();
+    const w = state.world.w;
+    const h = state.world.h;
+    const seen = new Set();
+    for (const cell of getPlayerCells(state)) {
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          if (dx === 0 && dy === 0) continue;
+          const x = cell.x + dx;
+          const y = cell.y + dy;
+          if (x < 0 || y < 0 || x >= w || y >= h) continue;
+          const key = `${x},${y}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          store.dispatch({ type: "PLACE_CELL", payload: { x, y, remove: false } });
+        }
+      }
+    }
+  }
+}
+
+function waitForZoneUnlockProgress(store, target = 1, maxSteps = 24) {
+  const goal = Number(target);
+  const steps = Math.max(1, Number(maxSteps || 1) | 0);
+  for (let i = 0; i < steps; i += 1) {
+    const state = store.getState();
+    if (Number(state.sim.zoneUnlockProgress || 0) >= goal) return state;
+    if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return state;
+    store.dispatch({ type: "SIM_STEP", payload: { force: true } });
+  }
+  return store.getState();
+}
+
+function pickDnaCells(state, count = 4) {
+  const out = [];
+  const world = state.world;
+  const w = world.w;
+  const h = world.h;
+  const coreMask = world.coreZoneMask;
+  for (const cell of getPlayerCells(state)) {
+    if ((Number(coreMask[cell.idx]) | 0) === 1) continue;
+    let adjacentToCore = false;
+    for (let dy = -1; dy <= 1 && !adjacentToCore; dy += 1) {
+      for (let dx = -1; dx <= 1 && !adjacentToCore; dx += 1) {
+        if (dx === 0 && dy === 0) continue;
+        const x = cell.x + dx;
+        const y = cell.y + dy;
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        if ((Number(coreMask[y * w + x]) | 0) === 1) adjacentToCore = true;
+      }
+    }
+    if (!adjacentToCore) continue;
+    out.push({ x: cell.x, y: cell.y });
+    if (out.length >= count) return out;
+  }
+  return out;
 }
 
 function createPreparedDnaSetupStore(seed, presetId = "river_delta") {
@@ -54,30 +107,11 @@ function createPreparedDnaSetupStore(seed, presetId = "river_delta") {
   }
   store.dispatch({ type: "CONFIRM_FOUNDATION" });
   store.dispatch({ type: "CONFIRM_CORE_ZONE" });
-  store.dispatch({
-    type: "APPLY_BUFFERED_SIM_STEP",
-    payload: {
-      patches: [
-        { op: "set", path: "/sim/zoneUnlockProgress", value: 1 },
-      ],
-    },
-  });
-
-  const active = store.getState();
-  const coreIndices = [];
-  for (let i = 0; i < active.world.coreZoneMask.length; i++) {
-    if ((Number(active.world.coreZoneMask[i]) | 0) === 1) coreIndices.push(i);
-  }
-  const coreXY = coreIndices.map((idx) => ({ x: idx % active.world.w, y: (idx / active.world.w) | 0 }));
-  const minX = Math.min(...coreXY.map((pos) => pos.x));
-  const maxY = Math.max(...coreXY.map((pos) => pos.y));
-  const validCells = [
-    { x: minX - 1, y: coreXY[0].y },
-    { x: minX - 1, y: maxY },
-    { x: minX - 1, y: maxY + 1 },
-    { x: minX, y: maxY + 1 },
-  ];
-  patchPlayerCells(store, validCells);
+  growPlayerCells(store, presetId === "dry_basin" ? 4 : 3);
+  const active = waitForZoneUnlockProgress(store, 1, 32);
+  assert(Number(active.sim.zoneUnlockProgress || 0) >= 1, "dna setup preparation requires natural unlock progress");
+  const validCells = pickDnaCells(active, 4);
+  assert(validCells.length === 4, "dna setup preparation needs 4 valid cells");
   store.dispatch({ type: "START_DNA_ZONE_SETUP" });
   return { store, validCells };
 }

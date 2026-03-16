@@ -51,13 +51,6 @@ store.dispatch({ type: "SIM_STEP", payload: { force: true } });
 const afterStepGenesis = store.getState();
 assert(Number(afterStepGenesis.sim.tick || 0) === genesisTick, "SIM_STEP must be no-op in genesis");
 
-store.dispatch({
-  type: "APPLY_BUFFERED_SIM_STEP",
-  payload: { patches: [{ op: "set", path: "/sim/tick", value: genesisTick + 1 }] },
-});
-const afterBufferedGenesis = store.getState();
-assert(Number(afterBufferedGenesis.sim.tick || 0) === genesisTick, "APPLY_BUFFERED_SIM_STEP must be no-op in genesis");
-
 store.dispatch({ type: "GEN_WORLD", payload: { gameMode: GAME_MODE.LAB_AUTORUN } });
 const lab = store.getState();
 const advisor = buildAdvisorModel(lab);

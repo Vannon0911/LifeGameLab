@@ -5,7 +5,6 @@ import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
 import { GAME_MODE } from "../src/game/contracts/ids.js";
 import { deriveCommandScore } from "../src/game/techTree.js";
-import { patchClusterRunRequirements } from "./support/phaseFTestUtils.mjs";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
@@ -35,6 +34,29 @@ function stepFor(store, ticks) {
   return store.getState();
 }
 
+function countPatternClasses(sim) {
+  const catalog = sim?.patternCatalog || {};
+  let count = 0;
+  for (const key of Object.keys(catalog)) {
+    if (Number(catalog[key]?.count || 0) > 0) count += 1;
+  }
+  return count;
+}
+
+function waitForClusterRunRequirements(store, minCommand, minPatternClasses = 1, minNetworkRatio = 0.10, maxSteps = 320) {
+  let state = store.getState();
+  for (let i = 0; i < maxSteps; i += 1) {
+    const command = deriveCommandScore(state.sim);
+    const patternClasses = countPatternClasses(state.sim);
+    const network = Number(state.sim.networkRatio || 0);
+    if (command + 1e-9 >= minCommand && patternClasses >= minPatternClasses && network + 1e-9 >= minNetworkRatio) {
+      return state;
+    }
+    state = stepFor(store, 1);
+  }
+  return state;
+}
+
 function earnDNA(store, minimum) {
   let state = store.getState();
   let guard = 0;
@@ -62,6 +84,22 @@ function findEmptyClusterOrigin(state, size = 4) {
         }
       }
       if (clear) return { x, y };
+    }
+  }
+  return null;
+}
+
+function findOccupiedClusterOrigin(state, size = 4) {
+  const { w, h, alive } = state.world;
+  for (let y = 0; y <= h - size; y++) {
+    for (let x = 0; x <= w - size; x++) {
+      let occupied = 0;
+      for (let yy = y; yy < y + size; yy++) {
+        for (let xx = x; xx < x + size; xx++) {
+          if (alive[yy * w + xx] === 1) occupied += 1;
+        }
+      }
+      if (occupied >= 1 && occupied < (size * size)) return { x, y };
     }
   }
   return null;
@@ -107,7 +145,9 @@ function unlockSplit(store) {
     state = stepFor(store, 1);
     guard++;
   }
-  state = patchClusterRunRequirements(store);
+  state = waitForClusterRunRequirements(store, 0.10, 1, 0.10, 320);
+  assert(deriveCommandScore(state.sim) + 1e-9 >= 0.10, `Command score too low for cooperative_network: ${deriveCommandScore(state.sim)}`);
+  assert(Number(state.sim.networkRatio || 0) + 1e-9 >= 0.10, `Network ratio too low for cooperative_network: ${state.sim.networkRatio}`);
   state = earnDNA(store, 10);
   assert(state.sim.playerDNA >= 10, `Not enough DNA for cooperative_network: ${state.sim.playerDNA}`);
   store.dispatch({ type: "BUY_EVOLUTION", payload: { archetypeId: "cooperative_network" } });
@@ -119,7 +159,9 @@ function unlockSplit(store) {
     state = stepFor(store, 1);
     guard++;
   }
-  state = patchClusterRunRequirements(store);
+  state = waitForClusterRunRequirements(store, 0.14, 1, 0.10, 360);
+  assert(deriveCommandScore(state.sim) + 1e-9 >= 0.14, `Command score too low for cluster_split: ${deriveCommandScore(state.sim)}`);
+  assert(Number(state.sim.networkRatio || 0) + 1e-9 >= 0.10, `Network ratio too low for cluster_split: ${state.sim.networkRatio}`);
   guard = 0;
   while (Number(state.sim.playerDNA || 0) < 10 && guard < 40) {
     state = earnDNA(store, 10);
@@ -145,15 +187,18 @@ try {
   state = earnDNA(store, 8);
   assert(Number(state.sim.playerDNA || 0) >= 8, "Split test budget not reached");
 
-  const origin = findEmptyClusterOrigin(state, 4);
-  assert(origin, "No empty 4x4 region found for overlap gate");
-  const blockX = origin.x + 1;
-  const blockY = origin.y + 1;
-  const blockIdx = blockY * state.world.w + blockX;
-
-  store.dispatch({ type: "PLACE_CELL", payload: { x: blockX, y: blockY, remove: false } });
-  state = store.getState();
-  assert(state.world.alive[blockIdx] === 1, "Pre-block cell was not placed");
+  const origin = findOccupiedClusterOrigin(state, 4);
+  assert(origin, "No occupied 4x4 region found for overlap gate");
+  let blockIdx = -1;
+  for (let yy = origin.y; yy < origin.y + 4 && blockIdx < 0; yy++) {
+    for (let xx = origin.x; xx < origin.x + 4 && blockIdx < 0; xx++) {
+      const idx = yy * state.world.w + xx;
+      if (state.world.alive[idx] === 1) blockIdx = idx;
+    }
+  }
+  assert(blockIdx >= 0, "Overlap gate requires at least one occupied tile in target region");
+  const blockX = blockIdx % state.world.w;
+  const blockY = (blockIdx / state.world.w) | 0;
   const aliveBefore = countAliveInRegion(state, origin, 4);
 
   store.dispatch({ type: "SET_PLACEMENT_COST", payload: { enabled: true } });
