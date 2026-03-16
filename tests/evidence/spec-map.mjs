@@ -126,6 +126,14 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     status: "active",
     purpose: "prove same-seed replay and cross-seed divergence with after-core, step-1, and step-4 hash anchors",
   }),
+  "tests/test-readmodel-determinism.mjs": Object.freeze({
+    status: "active",
+    purpose: "P1 / Artefakt-/Read-Model-Drift: prove read-model hashes stay replay-stable at after-founders, after-core, step-1, and step-4",
+  }),
+  "tests/test-step-chain-determinism.mjs": Object.freeze({
+    status: "active",
+    purpose: "P1 / Runtime-Test-Drift: prove per-step signature, signature-material, read-model, and revision anchors stay replay-stable",
+  }),
   "tests/test-llm-contract.mjs": Object.freeze({
     status: "active",
     purpose: "prove entry/testing registry, wording contract, path-drift guard, and repeated check rotation stay wired",
