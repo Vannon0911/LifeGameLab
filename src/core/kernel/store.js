@@ -70,7 +70,7 @@ export function createStore(manifest, project, options = {}) {
 
     const reducerRng = createRngStreamsScoped(doc.state.meta.seed, `reducer:${clean.type}:${doc.revisionCount}`);
     const patches = runWithDeterminismGuard(
-      () => project.reducer(doc.state, clean, { rng: reducerRng }),
+      () => project.reducer(doc.state, clean, { rng: reducerRng, revisionCount: doc.revisionCount | 0 }),
       { enabled: guardDeterminism, actionType: clean.type, phase: "reducer" }
     );
 
