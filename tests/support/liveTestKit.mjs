@@ -1,34 +1,64 @@
-import { hrtime } from "node:process";
+import { createHash } from "node:crypto";
 
-function nowMs(startNs) {
-  const elapsedNs = hrtime.bigint() - startNs;
-  return Number(elapsedNs) / 1_000_000;
+import { createStore } from "../../src/core/kernel/store.js";
+import { createNullDriver } from "../../src/core/kernel/persistence.js";
+import { buildLlmReadModel } from "../../src/project/llm/readModel.js";
+import * as manifest from "../../src/project/project.manifest.js";
+import { reducer, simStepPatch } from "../../src/project/project.logic.js";
+import { BRUSH_MODE } from "../../src/game/contracts/ids.js";
+import { getStartWindowRange, getWorldPreset } from "../../src/game/sim/worldPresets.js";
+
+export function sha256Text(text) {
+  return createHash("sha256").update(String(text), "utf8").digest("hex");
 }
 
-export function startEvidenceCase(caseName) {
-  const startNs = hrtime.bigint();
-  const name = String(caseName || "unknown-test");
-  let closed = false;
+export function createDeterministicStore() {
+  return createStore(
+    manifest,
+    { reducer, simStep: simStepPatch },
+    { storageDriver: createNullDriver() },
+  );
+}
 
-  const finish = (status, detail = "") => {
-    if (closed) return;
-    closed = true;
-    const duration = nowMs(startNs).toFixed(2);
-    const extra = detail ? ` detail=${detail}` : "";
-    console.log(`[EVIDENCE] case=${name} status=${status} durationMs=${duration}${extra}`);
-  };
+export function getPlayerStartWindowSquare(state, size = 2) {
+  const preset = getWorldPreset(state.meta.worldPresetId);
+  const range = getStartWindowRange(preset.startWindows.player, state.world.w, state.world.h);
+  const tiles = [];
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      tiles.push({ x: range.x0 + x, y: range.y0 + y });
+    }
+  }
+  return tiles;
+}
 
-  console.log(`[EVIDENCE] case=${name} phase=start`);
+export function bootstrapMainRun(store) {
+  store.dispatch({ type: "GEN_WORLD", payload: {} });
+  store.dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
+  const tiles = getPlayerStartWindowSquare(store.getState(), 2);
+  for (const tile of tiles) {
+    store.dispatch({ type: "PLACE_CELL", payload: { x: tile.x, y: tile.y, remove: false } });
+  }
+  store.dispatch({ type: "CONFIRM_FOUNDATION", payload: {} });
+  store.dispatch({ type: "CONFIRM_CORE_ZONE", payload: {} });
+  return tiles;
+}
 
-  process.once("exit", (code) => finish(code === 0 ? "ok" : "fail", `exitCode=${code}`));
-  process.once("uncaughtException", (err) => {
-    process.exitCode = 1;
-    finish("fail", `uncaught=${String(err?.message || err)}`);
+export function stepMany(store, count) {
+  for (let i = 0; i < count; i += 1) {
+    store.dispatch({ type: "SIM_STEP", payload: {} });
+  }
+}
+
+export function snapshotStore(store) {
+  const state = store.getState();
+  const readModel = buildLlmReadModel(state, null);
+  return Object.freeze({
+    state,
+    readModel,
+    signature: store.getSignature(),
+    signatureHash: sha256Text(store.getSignature()),
+    signatureMaterialHash: sha256Text(store.getSignatureMaterial()),
+    readModelHash: sha256Text(JSON.stringify(readModel)),
   });
-  process.once("unhandledRejection", (reason) => {
-    process.exitCode = 1;
-    finish("fail", `unhandled=${String(reason?.message || reason)}`);
-  });
-
-  return { finish };
 }

@@ -19,9 +19,9 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Danach nur TESTING-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
-- `node tools/llm-preflight.mjs entry --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs --mode work`
-- `node tools/llm-preflight.mjs ack --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs`
-- `node tools/llm-preflight.mjs check --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs`
+- `node tools/llm-preflight.mjs entry --paths tests,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs --mode work`
+- `node tools/llm-preflight.mjs ack --paths tests,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs`
+- `node tools/llm-preflight.mjs check --paths tests,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs`
 
 ## SCHREIBEN (pflicht)
 - Kein Schreiben ohne `docs/llm/ENTRY.md` + passenden Task-Entry.
@@ -36,4 +36,4 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - `docs/STATUS.md` nur globale Fallback-Ansicht.
 
 ## Taskregel
-Kein Testlauf ohne Ack. Main-Run-UI-Checks bleiben zusaetzlich manuell belegpflichtig.
+Kein Testlauf ohne Ack. Offizielle Truth laeuft nur noch dispatch-basiert ueber `tools/evidence-runner.mjs`; globale Browser-Hooks oder Live-Client-Sonderpfade sind keine erlaubte Testsurface mehr.

@@ -10,6 +10,7 @@ const lockPath = path.join(root, "docs", "llm", "entry", "LLM_ENTRY_LOCK.json");
 const matrixPath = path.join(root, "docs", "llm", "TASK_ENTRY_MATRIX.json");
 const ackPath = path.join(root, ".llm", "entry-ack.json");
 const sessionPath = path.join(root, ".llm", "entry-session.json");
+const proofDir = path.join(root, ".llm", "entry-proof");
 const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 function fail(message) {
@@ -28,6 +29,10 @@ function readJson(absPath) {
 function sha256File(absPath) {
   const payload = fs.readFileSync(absPath);
   return crypto.createHash("sha256").update(payload).digest("hex");
+}
+
+function sha256Text(text) {
+  return crypto.createHash("sha256").update(String(text), "utf8").digest("hex");
 }
 
 function readOrderCount(absPath) {
@@ -145,6 +150,80 @@ function ensureTaskEntry(matrix, task) {
   };
 }
 
+function ensureProofDir() {
+  fs.mkdirSync(proofDir, { recursive: true });
+}
+
+function relativize(absPath) {
+  return path.relative(root, absPath).split(path.sep).join("/");
+}
+
+function buildProofMaterial(entryRef, taskCtx, taskEntryRef, mode, nonce) {
+  const entryText = fs.readFileSync(path.join(root, entryRef.entryPath), "utf8");
+  const taskEntryText = fs.readFileSync(path.join(root, taskEntryRef.requiredEntry), "utf8");
+  return [
+    `entryPath=${entryRef.entryPath}`,
+    `entrySha256=${entryRef.sha256}`,
+    `task=${taskCtx.task}`,
+    `mode=${mode}`,
+    `requiredEntry=${taskEntryRef.requiredEntry}`,
+    `requiredEntrySha256=${taskEntryRef.requiredEntrySha256}`,
+    `classifiedPaths=${taskCtx.paths.slice().sort().join("|")}`,
+    `nonce=${nonce}`,
+    entryText,
+    taskEntryText,
+  ].join("\n---\n");
+}
+
+function writeProofChallenge(entryRef, taskCtx, taskEntryRef, mode, previousFile = "") {
+  ensureProofDir();
+  const nonce = crypto.randomBytes(32).toString("hex");
+  const challengeId = crypto.randomBytes(12).toString("hex");
+  const abs = path.join(proofDir, `${challengeId}.json`);
+  const rel = relativize(abs);
+  const payload = {
+    challengeId,
+    nonce,
+    task: taskCtx.task,
+    mode,
+    entryPath: entryRef.entryPath,
+    entrySha256: entryRef.sha256,
+    requiredEntry: taskEntryRef.requiredEntry,
+    requiredEntrySha256: taskEntryRef.requiredEntrySha256,
+    classifiedPaths: taskCtx.paths,
+    previousFile,
+    createdAt: new Date().toISOString(),
+  };
+  fs.writeFileSync(abs, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  return {
+    challengeId,
+    challengeFile: rel,
+    proofHash: sha256Text(buildProofMaterial(entryRef, taskCtx, taskEntryRef, mode, nonce)),
+  };
+}
+
+function readChallengeOrFail(session, entryRef, taskCtx, taskEntryRef) {
+  const rel = String(session.challengeFile || "").trim();
+  if (!rel) fail("Session missing challenge file. Re-run entry.");
+  const abs = path.join(root, rel);
+  if (!fs.existsSync(abs)) fail("Challenge file missing. Re-run entry.");
+  const challenge = readJson(abs);
+  if (challenge.task !== taskCtx.task) fail("Challenge task drift. Re-run entry.");
+  if (challenge.mode !== session.mode) fail("Challenge mode drift. Re-run entry.");
+  if (challenge.entryPath !== entryRef.entryPath || challenge.entrySha256 !== entryRef.sha256) {
+    fail("Challenge entry drift. Re-run entry.");
+  }
+  if (challenge.requiredEntry !== taskEntryRef.requiredEntry || challenge.requiredEntrySha256 !== taskEntryRef.requiredEntrySha256) {
+    fail("Challenge task entry drift. Re-run entry.");
+  }
+  return {
+    rel,
+    abs,
+    payload: challenge,
+    expectedProofHash: sha256Text(buildProofMaterial(entryRef, taskCtx, taskEntryRef, session.mode, challenge.nonce)),
+  };
+}
+
 function resolveTaskContext(args, matrix, options = {}) {
   const requirePaths = Boolean(options.requirePaths);
   const paths = parsePaths(args);
@@ -182,6 +261,7 @@ function resolveTaskContext(args, matrix, options = {}) {
 
 function doAck(taskCtx, entryRef, taskEntryRef) {
   const session = readSessionOrFail(entryRef, taskCtx, taskEntryRef);
+  const challenge = readChallengeOrFail(session, entryRef, taskCtx, taskEntryRef);
   const dir = path.dirname(ackPath);
   fs.mkdirSync(dir, { recursive: true });
 
@@ -195,6 +275,9 @@ function doAck(taskCtx, entryRef, taskEntryRef) {
   tasks[taskCtx.task] = {
     requiredEntry: taskEntryRef.requiredEntry,
     requiredEntrySha256: taskEntryRef.requiredEntrySha256,
+    proofHash: challenge.expectedProofHash,
+    challengeId: challenge.payload.challengeId,
+    challengeFile: challenge.rel,
     ackedAt: now,
     mode: session.mode,
     classifiedPaths: taskCtx.paths,
@@ -209,12 +292,13 @@ function doAck(taskCtx, entryRef, taskEntryRef) {
 
   fs.writeFileSync(ackPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
   console.log(
-    `[llm-preflight] ACK_OK task=${taskCtx.task} entry=${entryRef.entryPath} taskEntry=${taskEntryRef.requiredEntry}`,
+    `[llm-preflight] ACK_OK task=${taskCtx.task} entry=${entryRef.entryPath} taskEntry=${taskEntryRef.requiredEntry} proof=${challenge.payload.challengeId}`,
   );
 }
 
 function doCheck(taskCtx, entryRef, taskEntryRef) {
   const session = readSessionOrFail(entryRef, taskCtx, taskEntryRef);
+  const challenge = readChallengeOrFail(session, entryRef, taskCtx, taskEntryRef);
   if (!fs.existsSync(ackPath)) {
     fail(`Missing ack file. Run: node tools/llm-preflight.mjs ack --paths ${taskCtx.paths.join(",")}`);
   }
@@ -236,15 +320,47 @@ function doCheck(taskCtx, entryRef, taskEntryRef) {
   if (String(taskAck.mode || "") !== String(session.mode || "")) {
     fail(`Ack/session mode mismatch for '${taskCtx.task}'. Re-run ack.`);
   }
+  if (String(taskAck.challengeId || "") !== String(challenge.payload.challengeId || "")) {
+    fail(`Ack challenge drift for '${taskCtx.task}'. Re-run ack.`);
+  }
+  if (String(taskAck.challengeFile || "") !== String(challenge.rel || "")) {
+    fail(`Ack challenge file drift for '${taskCtx.task}'. Re-run ack.`);
+  }
+  if (String(taskAck.proofHash || "") !== String(challenge.expectedProofHash || "")) {
+    fail(`Entry proof mismatch for '${taskCtx.task}'. Re-run entry+ack.`);
+  }
+
+  const rotated = writeProofChallenge(entryRef, taskCtx, taskEntryRef, session.mode, challenge.rel);
+  if (fs.existsSync(challenge.abs)) {
+    fs.rmSync(challenge.abs, { force: true });
+  }
+
+  const now = new Date().toISOString();
+  session.challengeId = rotated.challengeId;
+  session.challengeFile = rotated.challengeFile;
+  session.lastVerifiedAt = now;
+  fs.writeFileSync(sessionPath, `${JSON.stringify(session, null, 2)}\n`, "utf8");
+
+  ack.tasks[taskCtx.task] = {
+    ...taskAck,
+    proofHash: rotated.proofHash,
+    challengeId: rotated.challengeId,
+    challengeFile: rotated.challengeFile,
+    ackedAt: now,
+    classifiedPaths: taskCtx.paths,
+  };
+  ack.ackedAt = now;
+  fs.writeFileSync(ackPath, `${JSON.stringify(ack, null, 2)}\n`, "utf8");
 
   console.log(
-    `[llm-preflight] CHECK_OK task=${taskCtx.task} mode=${session.mode} taskEntry=${taskEntryRef.requiredEntry}`,
+    `[llm-preflight] CHECK_OK task=${taskCtx.task} mode=${session.mode} taskEntry=${taskEntryRef.requiredEntry} proof=${rotated.challengeId}`,
   );
 }
 
 function doEntry(taskCtx, entryRef, taskEntryRef, mode) {
   const dir = path.dirname(sessionPath);
   fs.mkdirSync(dir, { recursive: true });
+  const challenge = writeProofChallenge(entryRef, taskCtx, taskEntryRef, mode);
   const now = new Date().toISOString();
   const payload = {
     entryPath: entryRef.entryPath,
@@ -254,11 +370,13 @@ function doEntry(taskCtx, entryRef, taskEntryRef, mode) {
     requiredEntry: taskEntryRef.requiredEntry,
     requiredEntrySha256: taskEntryRef.requiredEntrySha256,
     classifiedPaths: taskCtx.paths,
+    challengeId: challenge.challengeId,
+    challengeFile: challenge.challengeFile,
     startedAt: now,
   };
   fs.writeFileSync(sessionPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
   console.log(
-    `[llm-preflight] ENTRY_OK task=${taskCtx.task} mode=${mode} taskEntry=${taskEntryRef.requiredEntry}`,
+    `[llm-preflight] ENTRY_OK task=${taskCtx.task} mode=${mode} taskEntry=${taskEntryRef.requiredEntry} proof=${challenge.challengeId}`,
   );
 }
 
@@ -278,6 +396,9 @@ function readSessionOrFail(entryRef, taskCtx, taskEntryRef) {
   }
   if (session.requiredEntrySha256 !== taskEntryRef.requiredEntrySha256) {
     fail(`Session requiredEntry hash drift for '${taskCtx.task}'. Re-run entry.`);
+  }
+  if (!session.challengeId || !session.challengeFile) {
+    fail("Session proof challenge missing. Re-run entry.");
   }
   const startedAtMs = Date.parse(String(session.startedAt || ""));
   if (!Number.isFinite(startedAtMs)) {

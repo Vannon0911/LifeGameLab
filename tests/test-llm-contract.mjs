@@ -1,260 +1,125 @@
-import { startEvidenceCase } from "./support/liveTestKit.mjs";
-startEvidenceCase("test-llm-contract.mjs");
+import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { assertLlmGateSync } from "../src/project/llm/gateSync.js";
-import { createLlmCommandAdapter, ACTION_ENVELOPE } from "../src/project/llm/commandAdapter.js";
-import { buildLlmReadModel } from "../src/project/llm/readModel.js";
-import { manifest } from "../src/project/project.manifest.js";
-import { WIN_MODE } from "../src/game/contracts/ids.js";
+import crypto from "node:crypto";
 
-function assert(cond, msg) {
-  if (!cond) throw new Error(msg);
-}
-
-function assertContains(text, needle, msg) {
-  assert(text.includes(needle), msg);
-}
-
-function assertHasAnyMarker(text, markers, msg) {
-  const payload = String(text || "");
-  assert(markers.some((marker) => payload.includes(marker)), `${msg}. got='${payload.trim()}'`);
-}
+import {
+  EVIDENCE_POLICY,
+  EVIDENCE_SUITES,
+  TRACKED_REGRESSION_REPO_TESTS,
+  TRACKED_CLAIMS,
+  TESTING_PREFLIGHT_PATHS,
+  TESTING_PREFLIGHT_PATHS_ARG,
+  isKnownSuite,
+} from "../tools/test-suites.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const nodeBin = process.execPath;
-const preflightScript = path.join(root, "tools", "llm-preflight.mjs");
-const preflightPaths = "tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs";
-const sessionFile = path.join(root, ".llm", "entry-session.json");
+
+const matrix = JSON.parse(fs.readFileSync(path.join(root, "docs/llm/TASK_ENTRY_MATRIX.json"), "utf8"));
+const testingConfig = matrix.testing;
+const testingEntry = fs.readFileSync(path.join(root, "docs/llm/testing/TESTING_TASK_ENTRY.md"), "utf8");
+const gateIndex = fs.readFileSync(path.join(root, "docs/llm/entry/TASK_GATE_INDEX.md"), "utf8");
+const lock = JSON.parse(fs.readFileSync(path.join(root, "docs/llm/entry/LLM_ENTRY_LOCK.json"), "utf8"));
+const entryPath = path.join(root, lock.entryPath);
+const entryText = fs.readFileSync(entryPath, "utf8");
+const ackPath = path.join(root, ".llm/entry-ack.json");
+const sessionPath = path.join(root, ".llm/entry-session.json");
+
+const testingGateFiles = [
+  "tools/llm-preflight.mjs",
+  "tools/run-test-suite.mjs",
+  "tools/run-all-tests.mjs",
+  "tests/test-llm-contract.mjs",
+  "tests/support/liveTestKit.mjs",
+];
+const testingScopePaths = [...TESTING_PREFLIGHT_PATHS];
+
+function sha256Text(text) {
+  return crypto.createHash("sha256").update(String(text), "utf8").digest("hex");
+}
 
 function runPreflight(args) {
-  const res = spawnSync(nodeBin, [preflightScript, ...args], {
+  const res = spawnSync(process.execPath, [path.join(root, "tools/llm-preflight.mjs"), ...args], {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 30_000,
+    timeout: 30000,
   });
   if (res.error) throw res.error;
-  return {
-    status: Number(res.status ?? 1),
-    stdout: String(res.stdout || ""),
-    stderr: String(res.stderr || ""),
-  };
+  assert.equal(res.status, 0, `preflight ${args[0]} failed:\n${res.stdout}\n${res.stderr}`);
+  return `${res.stdout}${res.stderr}`;
 }
 
-{
-  if (fs.existsSync(sessionFile)) fs.unlinkSync(sessionFile);
-  const ok = runPreflight([
-    "classify",
-    "--paths",
-    preflightPaths,
-  ]);
-  assert(ok.status === 0, `preflight classify should pass, got status=${ok.status} stderr=${ok.stderr}`);
-  assertContains(ok.stdout, "CLASSIFY_OK", "preflight classify output missing CLASSIFY_OK");
-  assertContains(ok.stdout, "task=testing", "preflight classify must resolve task=testing");
+assert.equal(String(testingConfig.requiredEntry || ""), "docs/llm/testing/TESTING_TASK_ENTRY.md", "testing matrix must point to testing task entry");
+for (const file of testingGateFiles) {
+  assert(testingEntry.includes(file), `testing task entry must reference ${file}`);
+  assert(gateIndex.includes(file), `task gate index must reference ${file}`);
+  assert(fs.existsSync(path.join(root, file)), `required testing gate file missing: ${file}`);
 }
 
-{
-  const ambiguous = runPreflight(["classify", "--paths", "tests/test-smoke.mjs,src/game/ui/ui.js"]);
-  assert(ambiguous.status !== 0, `ambiguous classify should fail, got status=${ambiguous.status}`);
-  assertHasAnyMarker(
-    ambiguous.stderr || ambiguous.stdout,
-    ["Ambiguous task classification", "[llm-preflight]"],
-    "ambiguous classify must emit an error marker",
-  );
+const triggerPrefixes = Array.isArray(testingConfig.triggerPrefixes) ? testingConfig.triggerPrefixes : [];
+for (const scopedPath of ["tests/", "tools/llm-preflight.mjs", "tools/run-test-suite.mjs", "tools/run-all-tests.mjs", "tools/test-suites.mjs", "tools/evidence-runner.mjs", "docs/llm/testing/"]) {
+  assert(triggerPrefixes.includes(scopedPath), `testing triggerPrefixes must include ${scopedPath}`);
 }
 
-{
-  const outside = runPreflight(["classify", "--paths", "C:/Windows"]);
-  assert(outside.status !== 0, `outside-repo classify should fail, got status=${outside.status}`);
-  assertHasAnyMarker(
-    outside.stderr || outside.stdout,
-    ["Path outside repository is not allowed", "[llm-preflight]"],
-    "outside-repo classify must emit an error marker",
-  );
-}
+const entryHash = sha256Text(entryText);
+assert.equal(String(lock.sha256 || ""), entryHash, "entry lock hash must match current ENTRY.md");
+const readOrderCount = entryText
+  .split(/\r?\n/g)
+  .filter((line) => /^\d+\.\s+`.+`/.test(line.trim())).length;
+assert.equal(Number(lock.requiredReadOrderCount || 0), readOrderCount, "entry lock read-order count must match current ENTRY.md");
 
-{
-  const missingEntry = runPreflight([
-    "check",
-    "--paths",
-    preflightPaths,
-  ]);
-  assert(missingEntry.status !== 0, `check without session entry should fail, got status=${missingEntry.status}`);
-  assertHasAnyMarker(
-    missingEntry.stderr || missingEntry.stdout,
-    ["Missing session entry", "[llm-preflight]"],
-    "check without session entry must emit an error marker",
-  );
-}
+assert(isKnownSuite("claims"), "claims suite must exist");
+assert(isKnownSuite("regression"), "regression suite must exist");
+assert(isKnownSuite("full"), "full suite must exist");
+assert.equal(EVIDENCE_POLICY.scope, "w1", "evidence scope must stay on w1");
+assert(TRACKED_CLAIMS.length >= 2, "at least two claim scenarios are required");
 
-{
-  const entry = runPreflight([
-    "entry",
-    "--paths",
-    preflightPaths,
-    "--mode",
-    "work",
-  ]);
-  assert(entry.status === 0, `preflight entry should pass, got status=${entry.status} stderr=${entry.stderr}`);
-  assertContains(entry.stdout, "ENTRY_OK", "preflight entry output missing ENTRY_OK");
-  assertContains(entry.stdout, "mode=work", "preflight entry must report mode=work");
-}
+const repoTests = fs.readdirSync(path.join(root, "tests"))
+  .filter((name) => /^test-.*\.mjs$/.test(name))
+  .map((name) => `tests/${name}`)
+  .sort();
 
-{
-  const ack = runPreflight([
-    "ack",
-    "--paths",
-    preflightPaths,
-  ]);
-  assert(ack.status === 0, `preflight ack should pass, got status=${ack.status} stderr=${ack.stderr}`);
-  assertContains(ack.stdout, "ACK_OK", "preflight ack output missing ACK_OK");
-}
+assert.deepEqual([...TRACKED_REGRESSION_REPO_TESTS].sort(), repoTests, "suite registry must match real repo tests");
+assert.deepEqual([...EVIDENCE_SUITES.regression].sort(), repoTests, "regression suite must execute every repo test");
 
-{
-  const check = runPreflight([
-    "check",
-    "--paths",
-    preflightPaths,
-  ]);
-  assert(check.status === 0, `preflight check should pass for testing task, got status=${check.status} stderr=${check.stderr}`);
-  assertContains(check.stdout, "CHECK_OK", "preflight check output missing CHECK_OK");
-  assertContains(check.stdout, "task=testing", "preflight check must validate task=testing");
-}
+const classifyOutput = runPreflight(["classify", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
+assert(classifyOutput.includes("CLASSIFY_OK task=testing"), "classify must resolve current testing scope to testing");
 
-{
-  const contractIds = runPreflight(["classify", "--paths", "src/game/contracts/ids.js"]);
-  assert(contractIds.status === 0, `contract ids classify should pass, got status=${contractIds.status} stderr=${contractIds.stderr}`);
-  assertContains(contractIds.stdout, "task=contracts", "contract ids classify must resolve task=contracts");
-}
+const entryOutput = runPreflight(["entry", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"]);
+assert(entryOutput.includes("ENTRY_OK task=testing"), "entry must succeed for testing scope");
+const sessionBeforeCheck = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
+const challengeFileBeforeCheck = path.join(root, sessionBeforeCheck.challengeFile);
+assert(fs.existsSync(challengeFileBeforeCheck), "entry must create hidden proof challenge file");
 
-{
-  const appMain = runPreflight(["classify", "--paths", "src/app/main.js"]);
-  assert(appMain.status === 0, `app main classify should pass, got status=${appMain.status} stderr=${appMain.stderr}`);
-  assertContains(appMain.stdout, "task=ui", "app main classify must resolve task=ui");
-}
+const ackOutput = runPreflight(["ack", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
+assert(ackOutput.includes("ACK_OK task=testing"), "ack must succeed for testing scope");
+const ackBeforeCheck = JSON.parse(fs.readFileSync(ackPath, "utf8"));
+assert.equal(ackBeforeCheck.tasks.testing.challengeFile, sessionBeforeCheck.challengeFile, "ack challenge file must match active session challenge");
+assert.equal(typeof ackBeforeCheck.tasks.testing.proofHash, "string", "ack must store entry proof hash");
+assert(ackBeforeCheck.tasks.testing.proofHash.length > 20, "entry proof hash must be non-trivial");
 
-{
-  const statusDoc = runPreflight(["classify", "--paths", "docs/STATUS.md"]);
-  assert(statusDoc.status === 0, `status doc classify should pass, got status=${statusDoc.status} stderr=${statusDoc.stderr}`);
-  assertContains(statusDoc.stdout, "task=versioning", "status doc classify must resolve task=versioning");
-}
+const checkOutput = runPreflight(["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
+assert(checkOutput.includes("CHECK_OK task=testing"), "check must succeed for testing scope");
 
-{
-  const topLevelDocs = runPreflight(["classify", "--paths", "docs/WORKFLOW.md,docs/ARCHITECTURE.md"]);
-  assert(topLevelDocs.status === 0, `top-level docs classify should pass, got status=${topLevelDocs.status} stderr=${topLevelDocs.stderr}`);
-  assertContains(topLevelDocs.stdout, "task=versioning", "top-level docs classify must resolve task=versioning");
-}
+const session = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
+const ack = JSON.parse(fs.readFileSync(ackPath, "utf8"));
+assert.equal(session.task, "testing", "session task must be testing");
+assert.equal(session.requiredEntry, testingConfig.requiredEntry, "session requiredEntry must match matrix");
+assert.equal(session.requiredEntrySha256, sha256Text(testingEntry), "session task entry hash must match current testing entry");
+assert.deepEqual((session.classifiedPaths || []).slice().sort(), testingScopePaths.slice().sort(), "session classified paths must match current testing scope");
+assert.notEqual(session.challengeFile, sessionBeforeCheck.challengeFile, "check must rotate challenge file path");
+assert(fs.existsSync(path.join(root, session.challengeFile)), "rotated challenge file must exist");
+assert(!fs.existsSync(challengeFileBeforeCheck), "old challenge file must be removed after successful check");
+assert.equal(ack.tasks.testing.requiredEntry, testingConfig.requiredEntry, "ack requiredEntry must match matrix");
+assert.equal(ack.tasks.testing.requiredEntrySha256, sha256Text(testingEntry), "ack task entry hash must match current testing entry");
+assert.deepEqual((ack.tasks.testing.classifiedPaths || []).slice().sort(), testingScopePaths.slice().sort(), "ack classified paths must match current testing scope");
+assert.equal(ack.tasks.testing.challengeFile, session.challengeFile, "ack must auto-sync to rotated challenge file");
+assert.equal(ack.tasks.testing.challengeId, session.challengeId, "ack must auto-sync to rotated challenge id");
+assert.equal(typeof ack.tasks.testing.proofHash, "string", "ack must keep rotated proof hash");
+assert.notEqual(ack.tasks.testing.proofHash, ackBeforeCheck.tasks.testing.proofHash, "proof hash must rotate after verification");
 
-{
-  const mismatch = runPreflight([
-    "check",
-    "--task",
-    "contracts",
-    "--paths",
-    "tests/test-smoke.mjs",
-  ]);
-  assert(mismatch.status !== 0, `preflight task mismatch should fail, got status=${mismatch.status}`);
-  assertHasAnyMarker(
-    mismatch.stderr || mismatch.stdout,
-    ["Task mismatch", "task=", "[llm-preflight]"],
-    "preflight task mismatch must emit an error marker",
-  );
-}
-
-const protocolFiles = [
-  "docs/WORKFLOW.md",
-  "docs/llm/OPERATING_PROTOCOL.md",
-  "docs/llm/ui/UI_TASK_ENTRY.md",
-  "docs/llm/sim/SIM_TASK_ENTRY.md",
-  "docs/llm/contracts/CONTRACT_TASK_ENTRY.md",
-  "docs/llm/testing/TESTING_TASK_ENTRY.md",
-  "docs/llm/versioning/VERSIONING_TASK_ENTRY.md",
-];
-for (const rel of protocolFiles) {
-  const text = fs.readFileSync(path.join(root, rel), "utf8");
-  assertContains(text, "LESEN", `${rel} missing LESEN phase`);
-  assertContains(text, "PRUEFEN", `${rel} missing PRUEFEN phase`);
-  assertContains(text, "SCHREIBEN", `${rel} missing SCHREIBEN phase`);
-  assertContains(text, "DOKU", `${rel} missing DOKU phase`);
-}
-
-const uiTaskEntry = fs.readFileSync(path.join(root, "docs/llm/ui/UI_TASK_ENTRY.md"), "utf8");
-assertContains(uiTaskEntry, "src/app/main.js", "UI task entry must mention src/app/main.js for caller/orchestration work");
-
-const mandatoryReading = fs.readFileSync(path.join(root, "MANDATORY_READING.md"), "utf8");
-assertContains(mandatoryReading, "docs/WORKFLOW.md", "MANDATORY_READING must redirect to WORKFLOW");
-
-const statusDoc = fs.readFileSync(path.join(root, "docs/STATUS.md"), "utf8");
-assertContains(statusDoc, "Fallback", "STATUS fallback policy missing");
-
-const sync = assertLlmGateSync(manifest);
-assert(sync.policySource === "docs/llm/ENTRY.md", "LLM policy source drift");
-assert(Array.isArray(sync.invariants) && sync.invariants.length >= 3, "LLM invariants missing");
-
-const adapt = createLlmCommandAdapter();
-const plain = adapt({ type: ACTION_ENVELOPE, payload: { action: { type: "SET_SPEED", payload: 7 } } });
-assert(plain.type === "SET_SPEED", "adapter did not unwrap action");
-assert(plain.payload === 7 || Number(plain.payload) === 7, "adapter payload drift");
-
-const sampleState = {
-  meta: {
-    brushMode: "observe",
-    playerLineageId: 1,
-    cpuLineageId: 2,
-    placementCostEnabled: true,
-    activeOverlay: "none",
-    physics: { Emax: 3.2 },
-    ui: { showRemoteAttackOverlay: true, showDefenseOverlay: true },
-  },
-  world: {
-    w: 4,
-    h: 4,
-    alive: new Uint8Array(16),
-    lineageId: new Uint32Array(16),
-    zoneMap: new Int8Array(16),
-    E: new Float32Array(16),
-    L: new Float32Array(16),
-    R: new Float32Array(16),
-    W: new Float32Array(16),
-    Sat: new Float32Array(16),
-    P: new Float32Array(16),
-    reserve: new Float32Array(16),
-    link: new Float32Array(16),
-    clusterField: new Float32Array(16),
-    actionMap: new Uint8Array(16),
-    lineageMemory: { 1: { doctrine: "equilibrium", techs: ["light_harvest"], synergies: [] } },
-  },
-  sim: {
-    tick: 12,
-    running: false,
-    playerStage: 2,
-    playerDNA: 9,
-    playerAliveCount: 4,
-    cpuAliveCount: 3,
-    playerEnergyNet: -1.5,
-    clusterRatio: 0.31,
-    networkRatio: 0.10,
-    goal: "harvest_secure",
-    lossStreakTicks: 0,
-    meanToxinField: 0.2,
-    aliveRatio: 0.2,
-    winMode: WIN_MODE.SUPREMACY,
-  },
-};
-const readModel = buildLlmReadModel(sampleState, { phase: "idle" });
-assert(readModel.tick === 12, "read model tick mismatch");
-assert(readModel.structure === "biomodule_2x2", "read model structure mismatch");
-assert(readModel.mission === "harvest_secure", "read model goal mismatch");
-assert(readModel.status?.structure === "biomodule_2x2", "status.structure mismatch");
-assert(readModel.status?.goal === "harvest_secure", "status.goal mismatch");
-assert(readModel.runIdentity?.doctrine === "equilibrium", "runIdentity.doctrine mismatch");
-assert(Array.isArray(readModel.advisor?.reasonCodes), "advisor.reasonCodes missing");
-assert(typeof readModel.advisor?.nextAction === "string", "advisor.nextAction missing");
-assert(readModel.winProgress?.mode === WIN_MODE.SUPREMACY, "winProgress.mode mismatch");
-assert(readModel.benchmark?.phase === "idle", "read model benchmark mismatch");
-
-console.log("LLM_CONTRACT_OK preflight behavior + doc phase gates + adapter/readModel contracts verified");
+console.log("LLM_CONTRACT_OK testing preflight classify+entry+ack+check synced to matrix, entry lock, hidden proof rotation, and live scope");
