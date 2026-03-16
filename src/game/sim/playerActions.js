@@ -172,8 +172,7 @@ export function handlePlaceCell(state, action) {
     : new Uint8Array(w * h);
   const founderMask = cloneTypedArray(founderMaskSrc);
 
-  if (isGenesis) {
-    if (!isGenesisSetup) return [];
+  if (isGenesis && isGenesisSetup) {
     if (String(state.meta.brushMode || BRUSH_MODE.OBSERVE) !== BRUSH_MODE.FOUNDER_PLACE) return [];
     const founderBudget = Math.max(0, Number(state.sim.founderBudget || 0) | 0);
     const founderPlaced = Math.max(0, Number(state.sim.founderPlaced || 0) | 0);
@@ -536,6 +535,16 @@ export function handleBuyEvolution(state, action, devMutationCatalog) {
       const patternCatalog = state.sim.patternCatalog || {};
       for (const key of Object.keys(patternCatalog)) {
         if (Number(patternCatalog[key]?.count || 0) > 0) count++;
+      }
+      if (
+        count <= 0
+        && normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) === GAME_MODE.LAB_AUTORUN
+      ) {
+        // LAB has no committed zone graph; use live cluster structure as fallback gate signal.
+        if (
+          Number(state.sim.clusterRatio || 0) > 0
+          || Number(state.sim.playerAliveCount || 0) >= 4
+        ) count = 1;
       }
       if (count < Number(req.minPatternClasses || 0)) return [];
     }

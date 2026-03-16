@@ -734,7 +734,8 @@ function runWorldSimV4(world, meta, sim, rng) {
   return { world: worldMutable, metrics };
 }
 
-export function reducer(state, action, { rng }) {
+export function reducer(state, action, ctx = {}) {
+  const { rng, revisionCount } = ctx;
   switch (action.type) {
 
     case "GEN_WORLD": {
@@ -1094,6 +1095,17 @@ export function reducer(state, action, { rng }) {
     case "APPLY_BUFFERED_SIM_STEP": {
       if (!shouldAdvanceSimulation(state)) return [];
       const src = action.payload && typeof action.payload === "object" ? action.payload : {};
+      const hasBaseRevision = Object.prototype.hasOwnProperty.call(src, "baseRevision");
+      const hasBaseSimTick = Object.prototype.hasOwnProperty.call(src, "baseSimTick");
+      if (hasBaseRevision || hasBaseSimTick) {
+        const expectedRevision = Number(revisionCount);
+        const baseRevision = Number(src.baseRevision);
+        const baseSimTick = Number(src.baseSimTick);
+        const currentSimTick = Number(state.sim?.tick || 0);
+        if (!Number.isFinite(expectedRevision) || !Number.isFinite(baseRevision)) return [];
+        if ((baseRevision | 0) !== (expectedRevision | 0)) return [];
+        if (!Number.isFinite(baseSimTick) || (baseSimTick | 0) !== (currentSimTick | 0)) return [];
+      }
       const patches = Array.isArray(src.patches) ? src.patches : [];
       // Specialized gate: reject drift / wrong typed arrays early.
       assertSimPatchesAllowed(manifest, state, "SIM_STEP", patches);
@@ -1393,7 +1405,7 @@ export function simStepPatch(state, action, ctx) {
     const preset = getWorldPreset(state.meta.worldPresetId);
     const dnaYieldScale = Math.max(0, Number(preset?.phaseC?.dnaYieldScale || 0));
     const alivePlayerDnaCells = countAlivePlayerRoleCells(worldMutable, playerLineageId, ZONE_ROLE.DNA);
-    simOut.playerDNA = Number(simOut.playerDNA || 0) + alivePlayerDnaCells * 0.1 * dnaYieldScale;
+    simOut.playerDNA = Number(state.sim.playerDNA || 0) + alivePlayerDnaCells * 0.1 * dnaYieldScale;
   }
   Object.assign(simOut, deriveStageState(worldMutable, simOut, state.meta));
   applyGoalCode(simOut, currentTick, state.meta);

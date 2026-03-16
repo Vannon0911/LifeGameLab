@@ -43,7 +43,7 @@ export const WORLD_PRESETS = Object.freeze({
       dnaPlacementBudget: 4,
       nextInfraUnlockCostDNA: 30,
       dnaZoneAdjacencyRule: "touch_core_or_owned",
-      dnaYieldScale: 1.0,
+      dnaYieldScale: 6.0,
     },
     phaseD: {
       infraBuildCostEnergy: 10,
@@ -94,7 +94,7 @@ export const WORLD_PRESETS = Object.freeze({
       dnaPlacementBudget: 4,
       nextInfraUnlockCostDNA: 30,
       dnaZoneAdjacencyRule: "touch_core_or_owned",
-      dnaYieldScale: 1.0,
+      dnaYieldScale: 6.0,
     },
     phaseD: {
       infraBuildCostEnergy: 10,
@@ -144,7 +144,7 @@ export const WORLD_PRESETS = Object.freeze({
       dnaPlacementBudget: 4,
       nextInfraUnlockCostDNA: 30,
       dnaZoneAdjacencyRule: "touch_core_or_owned",
-      dnaYieldScale: 1.0,
+      dnaYieldScale: 6.0,
     },
     phaseD: {
       infraBuildCostEnergy: 10,
