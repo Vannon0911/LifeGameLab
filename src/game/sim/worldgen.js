@@ -5,7 +5,6 @@
 import { TRAIT_DEFAULT, TRAIT_COUNT } from "./life.data.js";
 import { hashString, rng01 } from "../../core/kernel/rng.js";
 import { BIOME_IDS, getStartWindowRange, getWorldPreset, normalizeWorldPresetId } from "./worldPresets.js";
-import { GAME_MODE, normalizeGameMode } from "../contracts/ids.js";
 
 function clamp01(value) {
   return value < 0 ? 0 : value > 1 ? 1 : value;
@@ -313,10 +312,8 @@ export function seedDeterministicBootstrapCluster(world, seedStr, windowDef, lin
   return bestIndices;
 }
 
-export function generateWorld(w, h, seedStr, phy, presetId = "river_delta", options = {}) {
+export function generateWorld(w, h, seedStr, phy, presetId = "river_delta") {
   const normalizedPresetId = normalizeWorldPresetId(presetId);
-  const gameMode = normalizeGameMode(options?.gameMode, GAME_MODE.GENESIS);
-  const seedLineages = gameMode === GAME_MODE.LAB_AUTORUN;
   const preset = getWorldPreset(normalizedPresetId);
   const seedBase = hashString(`${seedStr || "life-seed"}:${normalizedPresetId}`);
   const descriptor = makeWorldDescriptor(seedBase, preset);
@@ -372,9 +369,6 @@ export function generateWorld(w, h, seedStr, phy, presetId = "river_delta", opti
   deriveBaseFields(state, preset, seedBase);
   placePlants(state, phy, preset, seedBase);
   capInitialPlantCoverage(state);
-  if (seedLineages) {
-    placeClusters(state, buildSpawnClusters(state, preset), seedBase);
-  }
   state.superId.fill(-1);
   return state;
 }

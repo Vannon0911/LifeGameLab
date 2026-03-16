@@ -48,9 +48,7 @@ export function simStep(world, phy, tick) {
   plantTiles = fieldPhase.plantTiles;
   const nutrientCappedTilesLastStep = fieldPhase.nutrientCappedTilesLastStep;
 
-  const worldPhase = runWorldSystemsPhase(world, phy, tick, {
-    gameMode: phy.gameMode,
-  });
+  const worldPhase = runWorldSystemsPhase(world, phy, tick, {});
   const plantsPrunedLastStep = worldPhase.plantsPrunedLastStep;
   for (let i = 0; i < N; i++) sumWater += Number(water?.[i] || 0);
 

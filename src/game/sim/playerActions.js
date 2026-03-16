@@ -21,15 +21,47 @@ import {
 } from "../techTree.js";
 import {
   BRUSH_MODE,
-  GAME_MODE,
   RUN_PHASE,
-  normalizeGameMode,
   normalizeRunPhase,
 } from "../contracts/ids.js";
 import { getWorldPreset, isTileInStartWindow } from "./worldPresets.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
+}
+
+function isPlayerVisibleTile(world, idx) {
+  return !!world?.visibility && ArrayBuffer.isView(world.visibility) && ((Number(world.visibility[idx]) | 0) === 1);
+}
+
+function isCommittedPlayerAnchorTile(world, idx, playerLineageId) {
+  return !!world?.alive
+    && !!world?.lineageId
+    && !!world?.link
+    && ArrayBuffer.isView(world.alive)
+    && ArrayBuffer.isView(world.lineageId)
+    && ArrayBuffer.isView(world.link)
+    && world.alive[idx] === 1
+    && ((Number(world.lineageId[idx]) | 0) === (playerLineageId | 0))
+    && Number(world.link[idx] || 0) >= 1;
+}
+
+function footprintTouchesCommittedPlayerAnchor(world, indices, w, h, playerLineageId) {
+  for (const idx of indices) {
+    if (isCommittedPlayerAnchorTile(world, idx, playerLineageId)) return true;
+    const x = idx % w;
+    const y = (idx / w) | 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const xx = x + dx;
+        const yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+        if (isCommittedPlayerAnchorTile(world, yy * w + xx, playerLineageId)) return true;
+      }
+    }
+  }
+  return false;
 }
 
 function findPlayerTraitSource({ alive, lineageId, playerLineageId, idx, w, h }) {
@@ -145,9 +177,8 @@ export function handlePlaceCell(state, action) {
   if (x < 0 || y < 0 || x >= w || y >= h) return [];
   const idx = y * w + x;
   const remove = !!action.payload?.remove;
-  const gameMode = normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS);
   const runPhase = normalizeRunPhase(state.sim.runPhase, RUN_PHASE.GENESIS_SETUP);
-  const isGenesis = gameMode === GAME_MODE.GENESIS;
+  const isGenesis = true;
   const isGenesisSetup = runPhase === RUN_PHASE.GENESIS_SETUP;
   if (runPhase === RUN_PHASE.RESULT) return [];
 
@@ -360,6 +391,9 @@ export function handlePlaceSplitCluster(state, action) {
     }
   }
   if (cells.length !== 16) return [];
+  const centerIdx = y * w + x;
+  if (!isPlayerVisibleTile(world, centerIdx)) return [];
+  if (!footprintTouchesCommittedPlayerAnchor(world, cells, w, h, playerLineageId)) return [];
 
   const totalCost = 16 * costPerCell;
   if (costEnabled && playerDNA < totalCost) return [];
@@ -467,6 +501,16 @@ export function handleSetZone(state, action) {
   const radius = Math.max(1, Math.min(64, Number(action.payload?.radius) | 0));
   const zoneType = Math.max(0, Math.min(5, Number(action.payload?.zoneType) | 0));
   if (x < 0 || y < 0 || x >= w || y >= h) return [];
+  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+  const targetIndices = [];
+  paintCircle({
+    w, h, x, y, radius,
+    cb: (idx) => { targetIndices.push(idx); },
+  });
+  if (!targetIndices.length) return [];
+  const centerIdx = y * w + x;
+  if (!isPlayerVisibleTile(world, centerIdx)) return [];
+  if (!footprintTouchesCommittedPlayerAnchor(world, targetIndices, w, h, playerLineageId)) return [];
 
   const zoneMap = cloneTypedArray(world.zoneMap);
   paintCircle({
@@ -535,16 +579,6 @@ export function handleBuyEvolution(state, action, devMutationCatalog) {
       const patternCatalog = state.sim.patternCatalog || {};
       for (const key of Object.keys(patternCatalog)) {
         if (Number(patternCatalog[key]?.count || 0) > 0) count++;
-      }
-      if (
-        count <= 0
-        && normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) === GAME_MODE.LAB_AUTORUN
-      ) {
-        // LAB has no committed zone graph; use live cluster structure as fallback gate signal.
-        if (
-          Number(state.sim.clusterRatio || 0) > 0
-          || Number(state.sim.playerAliveCount || 0) >= 4
-        ) count = 1;
       }
       if (count < Number(req.minPatternClasses || 0)) return [];
     }

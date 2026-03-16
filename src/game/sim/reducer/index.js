@@ -11,14 +11,12 @@ import { assertSimPatchesAllowed } from "../gate.js";
 import { clamp, cloneTypedArray, paintCircle } from "../shared.js";
 import {
   BRUSH_MODE,
-  GAME_MODE,
   GAME_RESULT,
   OVERLAY_MODE,
   RUN_PHASE,
   WIN_MODE,
   ZONE_ROLE,
   isBrushMode,
-  normalizeGameMode,
   normalizeRunPhase,
 } from "../../contracts/ids.js";
 import {
@@ -38,9 +36,9 @@ import {
   pushKeysPatches,
 } from "./metrics.js";
 import {
-  DEV_MUTATION_CATALOG,
   defaultGlobalLearning,
   defaultDevMutationVault,
+  DEV_MUTATION_CATALOG,
   mergeWorldLearningIntoBank,
   applyGlobalLearningToWorld,
 } from "./techTreeOps.js";
@@ -51,7 +49,6 @@ import {
   expandWorldPreserve,
 } from "./worldRules.js";
 import { applyWinConditions, applyGoalCode } from "./winConditions.js";
-import { handleDevBalanceRunAi } from "./cpuActions.js";
 import { buildSetOverlayPatches, buildSetWinModePatches } from "./controlActions.js";
 import {
   applyPresetPhysicsOverrides,
@@ -320,7 +317,6 @@ function spendPlayerEnergyFromCells(world, playerLineageId, amount) {
 }
 
 function canConfirmFoundation(state) {
-  if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return false;
   if (state.sim.runPhase !== RUN_PHASE.GENESIS_SETUP) return false;
   const world = state.world;
   if (!world?.alive || !world?.lineageId || !world?.founderMask) return false;
@@ -385,7 +381,6 @@ function collectMaskIndices(mask) {
 }
 
 function canConfirmCoreZone(state) {
-  if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return false;
   if (state.sim.runPhase !== RUN_PHASE.GENESIS_ZONE) return false;
   const founderIndices = collectFounderIndices(state);
   if (!founderIndices) return false;
@@ -398,13 +393,11 @@ function canConfirmCoreZone(state) {
 }
 
 function isGenesisSetupInStandardMode(state) {
-  return normalizeGameMode(state?.meta?.gameMode, GAME_MODE.GENESIS) === GAME_MODE.GENESIS
-    && normalizeRunPhase(state?.sim?.runPhase, RUN_PHASE.GENESIS_SETUP) === RUN_PHASE.GENESIS_SETUP;
+  return normalizeRunPhase(state?.sim?.runPhase, RUN_PHASE.GENESIS_SETUP) === RUN_PHASE.GENESIS_SETUP;
 }
 
 function isPreRunGenesisPhase(state) {
-  return normalizeGameMode(state?.meta?.gameMode, GAME_MODE.GENESIS) === GAME_MODE.GENESIS
-    && normalizeRunPhase(state?.sim?.runPhase, RUN_PHASE.GENESIS_SETUP) !== RUN_PHASE.RUN_ACTIVE;
+  return normalizeRunPhase(state?.sim?.runPhase, RUN_PHASE.GENESIS_SETUP) !== RUN_PHASE.RUN_ACTIVE;
 }
 
 function countAlivePlayerCoreCells(world, playerLineageId) {
@@ -577,13 +570,9 @@ function deriveBootstrapSimMetrics(world, meta, baseSim) {
   return nextSim;
 }
 
-function buildWorldGenerationPatches(state, presetId, gameModeOverride, patchGameMode = false) {
+function buildWorldGenerationPatches(state, presetId) {
   const meta = state.meta;
   const normalizedPresetId = normalizeWorldPresetId(presetId ?? meta.worldPresetId);
-  const nextGameMode = gameModeOverride === undefined
-    ? normalizeGameMode(meta.gameMode, GAME_MODE.GENESIS)
-    : normalizeGameMode(gameModeOverride, normalizeGameMode(meta.gameMode, GAME_MODE.GENESIS));
-  const isLabAutorun = nextGameMode === GAME_MODE.LAB_AUTORUN;
   const seededPhysics = seededStartPhysics(meta.seed, PHYSICS_DEFAULT);
   const tunedPhysics = applyPresetPhysicsOverrides(seededPhysics, normalizedPresetId);
   const world = generateWorld(
@@ -591,8 +580,7 @@ function buildWorldGenerationPatches(state, presetId, gameModeOverride, patchGam
     meta.gridH,
     meta.seed,
     tunedPhysics,
-    normalizedPresetId,
-    { gameMode: nextGameMode }
+    normalizedPresetId
   );
   applyGlobalLearningToWorld(world, meta.globalLearning);
   world.devMutationVault = cloneJson(meta.devMutationVault || defaultDevMutationVault());
@@ -603,7 +591,7 @@ function buildWorldGenerationPatches(state, presetId, gameModeOverride, patchGam
 
   const nextSim = deriveBootstrapSimMetrics(world, { ...meta, physics: tunedPhysics }, makeInitialState().sim);
   nextSim.running = false;
-  nextSim.runPhase = isLabAutorun ? RUN_PHASE.RUN_ACTIVE : RUN_PHASE.GENESIS_SETUP;
+  nextSim.runPhase = RUN_PHASE.GENESIS_SETUP;
   nextSim.founderBudget = 4;
   nextSim.founderPlaced = 0;
   const stageState = deriveStageState(world, nextSim, {
@@ -618,9 +606,6 @@ function buildWorldGenerationPatches(state, presetId, gameModeOverride, patchGam
     { op: "set", path: "/meta/worldPresetId", value: normalizedPresetId },
     { op: "set", path: "/meta/physics", value: tunedPhysics },
   ];
-  if (patchGameMode) {
-    patches.push({ op: "set", path: "/meta/gameMode", value: nextGameMode });
-  }
   pushKeysPatches(patches, world, WORLD_KEYS, "/world");
   pushKeysPatches(patches, nextSim, SIM_KEYS, "/sim");
   patches.push({ op: "set", path: "/meta/playerLineageId", value: 1 });
@@ -640,7 +625,6 @@ export function makeInitialState() {
       renderMode:  "combined",
       activeOverlay: OVERLAY_MODE.NONE,
       worldPresetId: "river_delta",
-      gameMode:    GAME_MODE.GENESIS,
       physics:     { ...PHYSICS_DEFAULT },
       ui: {
         panelOpen: false,
@@ -729,24 +713,16 @@ function runWorldSimV4(world, meta, sim, rng) {
     playerLineageId: (meta.playerLineageId | 0) || 1,
     cpuLineageId: (meta.cpuLineageId | 0) || 2,
     seasonLength: meta.physics?.seasonLength || 300,
-    gameMode: normalizeGameMode(meta.gameMode, GAME_MODE.GENESIS),
   }, sim.tick);
   return { world: worldMutable, metrics };
 }
 
 export function reducer(state, action, ctx = {}) {
-  const { rng, revisionCount } = ctx;
+  const { rng } = ctx;
   switch (action.type) {
 
     case "GEN_WORLD": {
-      const payload = action.payload && typeof action.payload === "object" ? action.payload : {};
-      const hasModeOverride = Object.prototype.hasOwnProperty.call(payload, "gameMode");
-      const patches = buildWorldGenerationPatches(
-        state,
-        state.meta.worldPresetId,
-        hasModeOverride ? payload.gameMode : undefined,
-        hasModeOverride
-      );
+      const patches = buildWorldGenerationPatches(state, state.meta.worldPresetId);
       assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
@@ -840,7 +816,6 @@ export function reducer(state, action, ctx = {}) {
 
     case "START_DNA_ZONE_SETUP":
     {
-      if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return [];
       if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
       if (Number(state.sim.unlockedZoneTier || 0) < 1) return [];
       if (String(state.sim.nextZoneUnlockKind || "") !== "DNA") return [];
@@ -867,7 +842,6 @@ export function reducer(state, action, ctx = {}) {
 
     case "TOGGLE_DNA_ZONE_CELL":
     {
-      if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return [];
       if (state.sim.runPhase !== RUN_PHASE.DNA_ZONE_SETUP) return [];
       if (!state.sim.zone2Unlocked || state.sim.dnaZoneCommitted) return [];
       const world = state.world;
@@ -910,7 +884,6 @@ export function reducer(state, action, ctx = {}) {
     }
 
     case "CONFIRM_DNA_ZONE": {
-      if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return [];
       if (state.sim.runPhase !== RUN_PHASE.DNA_ZONE_SETUP) return [];
       if (!state.sim.zone2Unlocked || state.sim.dnaZoneCommitted) return [];
       const world = state.world;
@@ -967,7 +940,6 @@ export function reducer(state, action, ctx = {}) {
     }
 
     case "BEGIN_INFRA_BUILD": {
-      if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return [];
       if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
       if (!state.sim.dnaZoneCommitted) return [];
       if (String(state.sim.nextZoneUnlockKind || "") !== "INFRA") return [];
@@ -988,7 +960,6 @@ export function reducer(state, action, ctx = {}) {
     }
 
     case "BUILD_INFRA_PATH": {
-      if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return [];
       if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
       if (String(state.sim.infraBuildMode || "") !== "path") return [];
       const world = state.world;
@@ -1022,7 +993,6 @@ export function reducer(state, action, ctx = {}) {
     }
 
     case "CONFIRM_INFRA_PATH": {
-      if (normalizeGameMode(state.meta.gameMode, GAME_MODE.GENESIS) !== GAME_MODE.GENESIS) return [];
       if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
       if (String(state.sim.infraBuildMode || "") !== "path") return [];
       const world = state.world;
@@ -1091,26 +1061,6 @@ export function reducer(state, action, ctx = {}) {
     case "SIM_STEP":
       // Core standard: SIM_STEP mutations happen in simStepPatch (separate phase + gate).
       return [];
-
-    case "APPLY_BUFFERED_SIM_STEP": {
-      if (!shouldAdvanceSimulation(state)) return [];
-      const src = action.payload && typeof action.payload === "object" ? action.payload : {};
-      const hasBaseRevision = Object.prototype.hasOwnProperty.call(src, "baseRevision");
-      const hasBaseSimTick = Object.prototype.hasOwnProperty.call(src, "baseSimTick");
-      if (hasBaseRevision || hasBaseSimTick) {
-        const expectedRevision = Number(revisionCount);
-        const baseRevision = Number(src.baseRevision);
-        const baseSimTick = Number(src.baseSimTick);
-        const currentSimTick = Number(state.sim?.tick || 0);
-        if (!Number.isFinite(expectedRevision) || !Number.isFinite(baseRevision)) return [];
-        if ((baseRevision | 0) !== (expectedRevision | 0)) return [];
-        if (!Number.isFinite(baseSimTick) || (baseSimTick | 0) !== (currentSimTick | 0)) return [];
-      }
-      const patches = Array.isArray(src.patches) ? src.patches : [];
-      // Specialized gate: reject drift / wrong typed arrays early.
-      assertSimPatchesAllowed(manifest, state, "SIM_STEP", patches);
-      return patches;
-    }
 
     case "SET_SPEED":
       return [{ op: "set", path: "/meta/speed", value: Math.max(1, Math.min(60, action.payload)) }];
@@ -1252,10 +1202,6 @@ export function reducer(state, action, ctx = {}) {
       return handlePlaceSplitCluster(state, action);
     }
 
-    case "DEV_BALANCE_RUN_AI": {
-      return handleDevBalanceRunAi(state, action, DEV_MUTATION_CATALOG);
-    }
-
     case "HARVEST_CELL": {
       if (isPreRunGenesisPhase(state)) return [];
       return handleHarvestCell(state, action);
@@ -1326,8 +1272,7 @@ export function simStepPatch(state, action, ctx) {
 
   if (!state.world) return [];
   if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
-  const force = !!action.payload?.force;
-  if (!state.sim.running && !force) return [];
+  if (!state.sim.running) return [];
 
   const currentTick = state.sim.tick;
   const { world: worldMutable, metrics } = runWorldSimV4(state.world, state.meta, state.sim, rngStreams);
