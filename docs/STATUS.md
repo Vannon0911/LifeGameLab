@@ -7,10 +7,11 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 
 ## Projektstand
 - Phasen A bis F sind produktiv abgeschlossen.
-- Phase G ist aktiv und auf Cleanup, Balance und RC-Haertung beschraenkt.
-- Reproduzierbarkeit ist fuer den aktuellen W1-Scope wieder hart belegt: dispatch-only Claims, harte Payload-Validierung, kein globaler Browser-Storezugriff, kein Live-Vorspulen.
-- Global ist das Projekt noch nicht vollstaendig bewiesen; die aktuelle Truth deckt nur den kleinen kanonischen W1-Scope ab.
-- Neue Kernfeatures, neue Zone und neue Presets bleiben gesperrt.
+- Die bisherige Phase-G-RC-Haertung bleibt dokumentierte Baseline, ist aber nicht mehr die aktive Arbeitsliste.
+- Aktiver Arbeitsblock ist jetzt der bindende MVP-Feature-Complete-Plan `A1 -> A2 -> A3 -> B1 -> B2 -> B3 -> C1 -> C2 -> C3 -> C4`.
+- Contract-Disziplin bleibt hart: keine Store-Seiteneffekte, keine verdeckten Mutationen, alle neuen Felder in Schema/Gate/Metrics/Mutation-Matrix registrieren.
+- Reproduzierbarkeit ist fuer den aktuellen Vor-MVP-W1-Scope hart belegt: dispatch-only Claims, harte Payload-Validierung, kein globaler Browser-Storezugriff, kein Live-Vorspulen.
+- Global ist das Projekt noch nicht vollstaendig bewiesen; die aktuelle Truth deckt den kleinen kanonischen W1-Scope ab und muss fuer den MVP-Block gezielt erweitert werden.
 
 ## Aktive Release-Gates
 
@@ -25,14 +26,14 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - `node tests/test-sim-gate-contract.mjs`
 - `node tests/test-llm-contract.mjs`
 - Letzte Gegenprobe auf aktuellem Branch: 2026-03-16, Proof `docs/traceability/w1-proof-summary.md`
+- Diese Gruenlage bezieht sich auf die Vor-MVP-Baseline vor A1-C4.
 
 ### Noch Offen
-- W1-Truth auf weitere fachliche Bereiche ausdehnen, ohne neue Sonderpfade einzufuehren
-- Fog-Intel-/Reachability-/Result-Logik in denselben kleinen deterministischen Evidence-Stil ueberfuehren
-- Perf-Budgets sauber messen und einhalten
-- Preset-Balance fuer `river_delta`, `dry_basin`, `wet_meadow`
-- Migration-Sicherheit explizit gegenpruefen
-- finale Release-Abnahme fuer Phase G dokumentieren
+- MVP-Feature-Complete-Block `A1-C4` vollstaendig umsetzen, ohne die bestehenden Dispatch-/Patch-Gates aufzuweichen
+- `cellPatternCounts`, `runSummary`, `meta.actionLog` und `meta.simStepCount` vollstaendig im Contract registrieren
+- UI-/Advisor-/Overlay-Pfade auf neue Sim-Felder verdrahten, ohne direkte State-Schreibpfade einzufuehren
+- Testlinie fuer Genesis, Step-Determinismus, Sim-Gate und No-Bypass auf den neuen Zustand erweitern
+- Voll-Gegenprobe fuer den neuen MVP-Zustand dokumentieren
 
 ## Phasenstatus
 - Phase A/B: Genesis, Core und Contract-Basis abgeschlossen
@@ -40,113 +41,70 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Phase D: Infrastruktur- und Sicht/Fog-Basis im Code vorhanden; Alt-TODO wurde in diese Statusdatei ueberfuehrt
 - Phase E: kanonische Zonen und Pattern-State abgeschlossen
 - Phase F: Tech-Gates, Progression und Result-only-Losepfade abgeschlossen
-- Phase G: Cleanup, Perf, Balance und RC-Haertung aktiv
+- Phase G: bisherige Cleanup-/RC-Baseline dokumentiert; aktiver Delivery-Block ist jetzt MVP-Feature-Complete
 
-## Aktive Prioritaetenliste (Phase G)
+## Aktive Prioritaetenliste (MVP-Feature-Complete)
 
-### P0 (Blocker vor RC)
-1. W1-Truth ohne Sonderpfade auf weitere Main-Run-Bereiche erweitern
-2. Fog-Intel-/Reachability-Fehler im naechsten W1-Ausbau kausal beheben
-3. Migration-Sicherheit explizit gegen neuen Drift pruefen
-4. Perf-Budgets messen und regressionssicher machen
-5. Preset-Balance fuer `river_delta`, `dry_basin`, `wet_meadow` abschliessen
-6. finale RC-Abbruchkriterien dokumentieren
+### Bindende Reihenfolge
+1. `A1`
+2. `A2`
+3. `A3`
+4. `B1`
+5. `B2`
+6. `B3`
+7. `C1`
+8. `C2`
+9. `C3`
+10. `C4`
 
-### P1 (RC-Haertung)
-1. Legacy-Reste in Main-Run und Renderer weiter minimieren
-2. Runtime/Test-Drift und Artefakt-Drift schliessen
-3. Release-Checklist finalisieren
-
-### P2 (Laufende Pflege)
-1. Doku und Testbelege auf RC-Stand halten
-
-## Atomare Test-TODO (fix, MVP unveraendert)
+## Atomare MVP-Tasks
 
 ### Ziel
-- dispatch-only Truth
-- seed/hash-basierte Determinismusbeweise
-- no-bypass Surface
-- LLM Entry/Gate Pflicht
-
-### Prioritaeten
-- `P0`: Luecken schliessen, die falsches Gruen erlauben koennen
-- `P1`: Determinismus-Beweise vertiefen (per-step, read-model)
-- `P2`: Gate-Robustheit/Flake-Resistenz
+- MVP feature complete, ohne Umgehung der bestehenden Dispatch-/Patch- und Contract-Gates
+- neue Runtime-Felder ausschliesslich ueber reducer/simStep + manifest/contract registrieren
+- deterministische Erweiterung der bestehenden Truth, nicht parallele Sonderpfade
+- UI/Renderer bleiben read-only gegenueber Gameplay-State
 
 ### Atomare Tasks
 
-#### P0
-0. `P0-T0` LLM-Entry-Regelrahmen und Entry-Contract-Test haerten; unsaubere Formulierungen und stiller Pfaddrift duerfen keinen Regelbruch mehr erlauben. `[done 2026-03-16]`
-1. `P0-T1` `tests/test-contract-no-bypass.mjs` um negativen `SET_BRUSH`-Fall erweitern. `[done 2026-03-16]`
-2. `P0-T2` `tests/test-contract-no-bypass.mjs` um negativen `SET_UI`-Fall erweitern. `[done 2026-03-16]`
-3. `P0-T3` `tests/test-contract-no-bypass.mjs` um negativen `SET_PHYSICS`-Fall erweitern. `[done 2026-03-16]`
-4. `P0-T4` `tests/test-contract-no-bypass.mjs` um negativen `SET_GLOBAL_LEARNING`-Fall erweitern. `[done 2026-03-16]`
-5. `P0-T5` Neues `tests/test-dispatch-error-state-stability.mjs` (kein Drift bei Fehl-Dispatch). `[done 2026-03-16]`
-6. `P0-T6` `tests/test-deterministic-genesis.mjs` um `same-seed` Replay-Block erweitern. `[done 2026-03-16]`
-7. `P0-T7` `tests/test-deterministic-genesis.mjs` um `cross-seed` Divergenzblock erweitern. `[done 2026-03-16]`
-8. `P0-T8` `tests/test-deterministic-genesis.mjs` um per-step Hash-Anker erweitern (`after-core`, `step-1`, `step-4`). `[done 2026-03-16]`
-9. `P0-T9` `tests/evidence/spec-map.mjs` aktualisieren (neue Tests `active`). `[done 2026-03-16]`
-10. `P0-T10` Registry-Konsistenz erzwingen (`tests/test-*.mjs` == `REGRESSION_TEST_STATUS` == `EVIDENCE_SUITES.regression`). `[done 2026-03-16]`
-11. `P0-T11` Vollnachweis laufen lassen: `node tools/run-all-tests.mjs --full`. `[done 2026-03-16]`
-12. `P0-T12` Ergebnis fixieren: Manifestpfad + Kernhashes dokumentieren; bei Rot ersten Brecher als naechsten atomaren Task ausweisen. `[done 2026-03-16]`
+1. `A1` KILL in `src/game/sim/worldgen.js` und `src/game/sim/reducer/index.js`: `generateWorld` ruft `placeClusters` fuer Spawn-Cluster nicht mehr auf. Worldgen erzeugt null lebende Zellen. Exklusiver CPU-Spawn bleibt `seedDeterministicBootstrapCluster` in `CONFIRM_CORE_ZONE`. `[open]`
+2. `A2` KILL in `src/game/sim/step.js`: Tick-Hardcode entfernen, der Spieler-Hue auf `210` und CPU-Hue auf `0` zuruecksetzt. `[open]`
+3. `A3` KILL in `src/game/sim/reducer/metrics.js`, `src/game/ui/ui.constants.js`, `src/game/sim/reducer/cpuActions.js`, `src/game/sim/worldAi.js`: `born` und `died` aus `WORLD_SIM_STEP_KEYS`-Exclusion entfernen, tote UI-Konstanten loeschen, `cpuActions.js` ausraeumen, `worldAiAudit`/`devAiLast`-Writes aus Production-State entfernen oder labor-guarded machen. `[open]`
+4. `B1` BUILD in `src/game/sim/cellPatterns.js`, `src/game/sim/stepPhases.js`, `src/game/sim/step.js`, `src/project/contract/stateSchema.js`, `src/project/contract/simGate.js`, `src/game/sim/reducer/metrics.js`: `scanCellTopologyPatterns(world, playerLineageId)` liefert `{ line, angle, triangle, loop }`. `runWorldSystemsPhase` wird auf Return `{ plantsPrunedLastStep, cellPatternCounts }` erweitert. `simStep` uebernimmt `worldPhase.cellPatternCounts` in sein Metrics-Return. `simStepPatch` patcht nur ueber `simOut`, nicht ueber `world`. `[open]`
+5. `B2` BUILD in `src/game/sim/worldAi.js`, `src/game/sim/stepPhases.js`, `src/game/sim/step.js`, `src/game/sim/reducer/index.js`: `applyWorldAi(world, tick, phy)` statt `options`. `runWorldSimV4` setzt `phy.worldSeedHash = hashString(\`${meta.seed || "life-seed"}:${normalizeWorldPresetId(meta.worldPresetId)}\`)`, `phy.playerAliveCount = Number(sim.playerAliveCount || 0)`, `phy.cpuAliveCount = Number(sim.cpuAliveCount || 0)`. `CONFIRM_CORE_ZONE` verwendet weiter `deriveBootstrapSimMetrics(...)`, damit die Counts schon vor dem ersten `SIM_STEP` korrekt sind. Strategiephase ist `hashMix32(phy.worldSeedHash, Math.floor(tick / 90)) % 3`. Override auf `PRESSURE`, wenn `phy.playerAliveCount > phy.cpuAliveCount * 1.5`. `EXPAND` spawnt max. 3 CPU-Zellen Richtung Spieler-Zentroid innerhalb CPU-Territorium `+2` Tiles. `HOLD` bleibt passiv. `PRESSURE` setzt `world.clusterAttackState[cpuLid].budget` auf Maximum. `[open]`
+6. `B3` BUILD via Weg A in `src/project/contract/stateSchema.js`, `src/project/contract/mutationMatrix.js`, `src/game/sim/reducer/index.js`: `meta.actionLog` und `meta.simStepCount` ergaenzen. Kein Store-Hook. Jeder nicht-`SIM_STEP`-Reducer-Case loggt selbst. Log-Limit ist verbindlich als ein einzelner `set`-Patch auf `/meta/actionLog`: `value: [...state.meta.actionLog.slice(-1999), newEntry]`. `SIM_STEP` erhoeht nur `meta.simStepCount`. `[open]`
+7. `C1` WIRE in `src/game/ui/ui.js` und `src/project/contract/dataflow.js`: Win-Mode-Selector im Welt-Panel vor Run-Start, Dispatch `SET_WIN_MODE`, disabled ab `sim.tick > 0`, selected state aus `sim.winMode`. `[open]`
+8. `C2` WIRE in `src/game/render/renderer.js`: committed `zoneRole`-Tiles immer sichtbar machen. `CORE` Cyan-Ring, `DNA` Violet-Ring, `INFRA` Teal-Ring, Radius `* 1.45`, Alpha `0.35`, aktiv bei `quality >= 1`. `[open]`
+9. `C3` WIRE in `src/game/ui/ui.lage.js` und `src/project/llm/advisorModel.js`: Sektion `Aktive Topologien` mit `line`, `angle`, `triangle`, `loop`, Nullwerte gedimmt sichtbar. `advisorModel.status.patternSummary` bekommt `cellTopology`. `loop > 0` ergaenzt den `dna_investment`-Hinweis. `[open]`
+10. `C4` BUILD in `src/app/runtime/dailySeed.js`, `src/game/sim/reducer/winConditions.js`, `src/project/contract/stateSchema.js`, `src/project/contract/simGate.js`, `src/game/sim/reducer/metrics.js`, `src/project/contract/mutationMatrix.js`, `src/game/ui/ui.js`: `sim.runSummary` vollstaendig im Contract registrieren. `winConditions.js` setzt bei `gameResult` `runSummary` mit `dominantPattern`, `cpuDelta`, `nextSeedSuggestion`, `seed`, `stage`, `tick`, `score`. `nextSeedSuggestion = hashString(seed + "_rematch").toString(36).slice(0, 8)`. `getDailySeed()` bleibt `String(Math.floor(Date.now() / 86400000))`. `getDailyScore(...)` persistiert Daily-Score mit fester Normalisierung `stage * 1000 + tick`, hoeher ist besser. GameOver-Overlay zeigt Summary + offene Frage + `REMATCH` + `DAILY CHALLENGE`. Welt-Panel bekommt `Daily Challenge`. `[open]`
 
-#### P1
-13. `P1-T13` Neues `tests/test-step-chain-determinism.mjs` (Replay pro Step, nicht nur Endzustand). `[done 2026-03-16]`
-14. `P1-T14` Neues `tests/test-readmodel-determinism.mjs` (ReadModel-Hash als eigener Pflichtanker). `[done 2026-03-16]`
-
-#### P2
-15. `P2-T15` `tests/test-llm-contract.mjs` auf Flake-Resistenz pruefen (stabile Preconditions, keine impliziten Dateinamenannahmen). `[done 2026-03-16]`
-
-### Bindende Reihenfolge
-1. `T0`
-2. `T1-T4`
-3. `T5`
-4. `T6-T8`
-5. `T9-T10`
-6. `T11-T12`
-7. danach `T13-T14`
-8. danach `T15`
+### Nicht-Blocker / Review-Notizen
+- `B3`: Boilerplate ist bewusst korrekt, aber trocken. Wenn der Patchblock fuer `meta.actionLog` in viele Reducer-Cases wandert, `buildActionLogPatch(state, type, payload)` als Helper erwägen.
+- `C4`: `runSummary` defaultet vor Spielende effektiv auf leeres/fehlendes Objekt. Das GameOver-Overlay muss `runSummary?.dominantPattern || null` abfangen, damit nie `undefined` gerendert wird.
+- `B2`: `phy.playerAliveCount` und `phy.cpuAliveCount` kommen bewusst aus `state.sim` des vorherigen abgeschlossenen Ticks. Der Ein-Tick-Delay ist akzeptierte Strategie-Logik, kein Bug.
 
 ### Abnahmekriterien
 - Kein Task wird gemischt umgesetzt; genau ein atomarer Scope pro Commit.
+- Kein Store-Hook fuer `B3`; Logging bleibt patch-only und reducer-lokal.
 - Kein Fake-Gruen: neue Tests muessen begruendet rot brechen oder reproduzierbar gruen belegen.
 - Kein Bypass-Backdoor-Pfad wird durch Tests geduldet.
-- `run-all-tests --full` bleibt offizieller Abschlussnachweis.
+- Alle neuen Felder muessen in Schema, Gate, Metrics und Mutation-Matrix registriert sein, bevor UI/Overlay darauf baut.
+- `run-all-tests --full` bleibt offizieller Abschlussnachweis fuer den integrierten Endstand.
 
-## Release-Plan (Phase G -> RC)
+## Test-Plan (MVP-Feature-Complete)
 
-### Milestone R1 (P0 schliessen)
-1. Perf-Budgets:
-   `tests/test-performance-budgets.mjs` anlegen/aktivieren und in `truth` oder `stress` registrieren.
-2. Preset-Balance:
-   `tests/test-preset-balance.mjs` + reproduzierbares Balance-Reporting fuer `river_delta`, `dry_basin`, `wet_meadow`.
-3. Migration-Sicherheit:
-   `tests/test-migration-safety.mjs` mit klaren Drift-Regeln (Schema, strict-Pfade, Snapshot-Stabilitaet).
-4. Gate:
-   `npm run test:quick`, `npm run test:truth`, `npm run test:stress` muessen nach den Aenderungen weiter gruen bleiben.
-
-### Milestone R2 (P1/P2 RC-Haertung)
-1. Legacy-Entkopplung:
-   verbleibende `LEGACY_CONTEXT`-Pfade in UI/Renderer weiter reduzieren oder explizit als bewusst verbleibend klassifizieren.
-2. RC-Checklist finalisieren:
-   eindeutiger Go/No-Go-Block in dieser Datei mit allen Pflichtgates und Abbruchkriterien.
-3. Gate:
-   `node tests/test-phase-g-cleanup.mjs` und `node tests/test-release-candidate-integrity.mjs` gruen.
-
-### Milestone R3 (RC-Freeze)
-1. Doku-Sync:
-   `README.md`, `docs/ARCHITECTURE.md`, `docs/STATUS.md` ohne Drift.
-2. Finale Gegenprobe:
-   Full run `quick/truth/stress` plus RC-Integritaetstest dokumentiert.
-3. Release-Entscheid:
-   RC nur bei komplett gruener Gate-Lage; sonst NO-GO mit dokumentierter Restliste.
+1. `tests/test-deterministic-genesis.mjs`: direkt nach `GEN_WORLD` expliziter Assert auf null lebende Zellen; nach `CONFIRM_CORE_ZONE` expliziter Assert auf genau eine CPU-Bootstrap-Population und korrekt gesetzte `sim.playerAliveCount`/`sim.cpuAliveCount`.
+2. `tests/test-step-chain-determinism.mjs`: explizite Gleichheit fuer `sim.cellPatternCounts` pro Anchor zusaetzlich zu Signature-/Read-Model-Checks.
+3. `tests/test-sim-gate-contract.mjs`: `cellPatternCounts` und `runSummary` im Sim-Contract validieren.
+4. `tests/test-contract-no-bypass.mjs`: bestaetigen, dass `B3` patch-only bleibt und kein Store-Bypass eingefuehrt wird.
+5. Determinismus-Checks ergaenzen fuer `meta.actionLog`, `meta.simStepCount` und `sim.runSummary`.
 
 ## Naechste Session Startpaket
-- Ziel: auf den naechsten RC-Block wechseln, ohne erneute Gate-Suche.
+- Ziel: den bindenden MVP-Block `A1 -> ... -> C4` ohne Scope-Mix und ohne Contract-Bypass abarbeiten.
 - LLM-Leseweg bis Gate verifiziert am 2026-03-15:
   `WORKFLOW -> docs/llm/ENTRY.md -> docs/llm/OPERATING_PROTOCOL.md -> TASK_ENTRY_MATRIX -> TASK_GATE_INDEX -> task-entry -> classify/ack/check`.
-- Handshake ist aktuell (`.llm/entry-ack.json`): `versioning`, `testing`, `ui`, `sim`, `contracts` vorhanden.
-- Sicherheitsnachweis aktuell: `node tests/test-llm-contract.mjs`, `node tests/test-sim-gate-contract.mjs` und `node tools/run-all-tests.mjs --full` gruen (2026-03-16); P0-T0 bis P2-T15 sind dokumentiert abgeschlossen.
+- Handshake ist aktuell (`.llm/entry-ack.json`), aber jeder A-/B-/C-Block braucht seinen eigenen Subtask-Preflight fuer die jeweils disjunkten Pfade.
+- Sicherheitsnachweis aktuell: `node tests/test-llm-contract.mjs`, `node tests/test-sim-gate-contract.mjs` und `node tools/run-all-tests.mjs --full` sind fuer die Vor-MVP-Baseline gruen (2026-03-16).
 - Startkommandos fuer die naechste Session:
   1. `node tools/llm-preflight.mjs classify --paths <task-pfade>`
   2. `node tools/llm-preflight.mjs entry --paths <task-pfade> --mode work`
@@ -183,6 +141,11 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Verifikation: `npm run test:quick` gruen, inklusive `test-advisor-model`, `test-overlay-diagnostics`, `test-string-contract`, `test-version-traceability`.
 
 ## Append-Only Change Log
+
+### 2026-03-16 session `status-sync-mvp-feature-complete-plan`
+- Die aktive Arbeitsliste wurde von der alten Phase-G-RC-Haertung auf den bindenden MVP-Feature-Complete-Plan `A1 -> A2 -> A3 -> B1 -> B2 -> B3 -> C1 -> C2 -> C3 -> C4` umgestellt.
+- `docs/STATUS.md` fuehrt jetzt die atomaren MVP-Tasks, den zugehoerigen Test-Plan und die zwei offenen Review-Notizen fuer `B3` und `C4` explizit an.
+- Die bisherige Gruenlage bleibt als Vor-MVP-Baseline dokumentiert; sie gilt nicht stillschweigend als Beweis fuer den neuen A1-C4-Zustand.
 
 ### 2026-03-16 session `repro-audit-and-bugfix-plan`
 - Versionierung bewusst nicht angehoben; `0.7.3` bleibt Produkt-Truth, bis der Repro-Auditblock kausal geschlossen ist.
