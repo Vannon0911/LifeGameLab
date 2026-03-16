@@ -29,6 +29,7 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - `docs/PRODUCT.md`: Produkt- und Scope-Basis
 - `docs/ARCHITECTURE.md`: technische Snapshot-Wahrheit
 - `docs/STATUS.md`: aktive Gates, Bugfixes, Release- und Change-Stand
+- `docs/STATUS.md` enthaelt auch die fixe atomare Test-TODO; keine separate TODO-Datei verwenden.
 
 ## Definition Of Done
 - Contract und Gates intakt

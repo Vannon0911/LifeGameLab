@@ -56,6 +56,56 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 ### P2 (Laufende Pflege)
 1. Doku und Testbelege auf RC-Stand halten
 
+## Atomare Test-TODO (fix, MVP unveraendert)
+
+### Ziel
+- dispatch-only Truth
+- seed/hash-basierte Determinismusbeweise
+- no-bypass Surface
+- LLM Entry/Gate Pflicht
+
+### Prioritaeten
+- `P0`: Luecken schliessen, die falsches Gruen erlauben koennen
+- `P1`: Determinismus-Beweise vertiefen (per-step, read-model)
+- `P2`: Gate-Robustheit/Flake-Resistenz
+
+### Atomare Tasks
+
+#### P0
+1. `P0-T1` `tests/test-contract-no-bypass.mjs` um negativen `SET_BRUSH`-Fall erweitern.
+2. `P0-T2` `tests/test-contract-no-bypass.mjs` um negativen `SET_UI`-Fall erweitern.
+3. `P0-T3` `tests/test-contract-no-bypass.mjs` um negativen `SET_PHYSICS`-Fall erweitern.
+4. `P0-T4` `tests/test-contract-no-bypass.mjs` um negativen `SET_GLOBAL_LEARNING`-Fall erweitern.
+5. `P0-T5` Neues `tests/test-dispatch-error-state-stability.mjs` (kein Drift bei Fehl-Dispatch).
+6. `P0-T6` `tests/test-deterministic-genesis.mjs` um `same-seed` Replay-Block erweitern.
+7. `P0-T7` `tests/test-deterministic-genesis.mjs` um `cross-seed` Divergenzblock erweitern.
+8. `P0-T8` `tests/test-deterministic-genesis.mjs` um per-step Hash-Anker erweitern (`after-core`, `step-1`, `step-4`).
+9. `P0-T9` `tests/evidence/spec-map.mjs` aktualisieren (neue Tests `active`).
+10. `P0-T10` Registry-Konsistenz erzwingen (`tests/test-*.mjs` == `REGRESSION_TEST_STATUS` == `EVIDENCE_SUITES.regression`).
+11. `P0-T11` Vollnachweis laufen lassen: `node tools/run-all-tests.mjs --full`.
+12. `P0-T12` Ergebnis fixieren: Manifestpfad + Kernhashes dokumentieren; bei Rot ersten Brecher als naechsten atomaren Task ausweisen.
+
+#### P1
+13. `P1-T13` Neues `tests/test-step-chain-determinism.mjs` (Replay pro Step, nicht nur Endzustand).
+14. `P1-T14` Neues `tests/test-readmodel-determinism.mjs` (ReadModel-Hash als eigener Pflichtanker).
+
+#### P2
+15. `P2-T15` `tests/test-llm-contract.mjs` auf Flake-Resistenz pruefen (stabile Preconditions, keine impliziten Dateinamenannahmen).
+
+### Bindende Reihenfolge
+1. `T1-T4`
+2. `T5`
+3. `T6-T8`
+4. `T9-T10`
+5. `T11-T12`
+6. danach `T13-T15`
+
+### Abnahmekriterien
+- Kein Task wird gemischt umgesetzt; genau ein atomarer Scope pro Commit.
+- Kein Fake-Gruen: neue Tests muessen begruendet rot brechen oder reproduzierbar gruen belegen.
+- Kein Bypass-Backdoor-Pfad wird durch Tests geduldet.
+- `run-all-tests --full` bleibt offizieller Abschlussnachweis.
+
 ## Release-Plan (Phase G -> RC)
 
 ### Milestone R1 (P0 schliessen)
