@@ -7,6 +7,4 @@ Thumbs.db
 *.zip
 
 # Generated runtime/debug artifacts
-output/*
-!output/reports/
-!output/reports/**
+output/

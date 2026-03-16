@@ -45,6 +45,7 @@
   },
   "versioning": {
     "triggerPrefixes": [
+      ".gitignore",
       "README.md",
       "package.json",
       "src/project/contract/manifest.js",
