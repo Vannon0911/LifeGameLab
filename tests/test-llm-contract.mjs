@@ -27,6 +27,7 @@ const entryPath = path.join(root, lock.entryPath);
 const entryText = fs.readFileSync(entryPath, "utf8");
 const ackPath = path.join(root, ".llm/entry-ack.json");
 const sessionPath = path.join(root, ".llm/entry-session.json");
+const proofDir = path.join(root, ".llm/entry-proof");
 
 const testingGateFiles = [
   "tools/llm-preflight.mjs",
@@ -52,6 +53,10 @@ function runPreflight(args) {
   assert.equal(res.status, 0, `preflight ${args[0]} failed:\n${res.stdout}\n${res.stderr}`);
   return `${res.stdout}${res.stderr}`;
 }
+
+fs.rmSync(ackPath, { force: true });
+fs.rmSync(sessionPath, { force: true });
+fs.rmSync(proofDir, { recursive: true, force: true });
 
 assert.equal(String(testingConfig.requiredEntry || ""), "docs/llm/testing/TESTING_TASK_ENTRY.md", "testing matrix must point to testing task entry");
 for (const file of testingGateFiles) {
