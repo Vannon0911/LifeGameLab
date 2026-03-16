@@ -12,7 +12,7 @@ export const CLAIM_SCENARIOS = Object.freeze([
     id: "claim.w1.no_bypass_surface",
     surface: "dispatch",
     replayCount: 1,
-    truthAnchor: "after-forced-step",
+    truthAnchor: "after-invalid",
     sotRefs: Object.freeze([
       "src/project/contract/manifest.js",
       "docs/ARCHITECTURE.md#determinismus",
@@ -22,6 +22,10 @@ export const CLAIM_SCENARIOS = Object.freeze([
       "RUN_BENCHMARK",
       "SIM_STEP.force",
       "GEN_WORLD.extra payload keys",
+      "SET_BRUSH.invalid brushMode",
+      "SET_UI.unknown keys",
+      "SET_PHYSICS.unknown keys",
+      "SET_GLOBAL_LEARNING.unknown keys",
     ]),
     steps: Object.freeze([
       Object.freeze({ id: "gen-world", kind: "dispatch", action: { type: "GEN_WORLD", payload: {} } }),
@@ -52,7 +56,7 @@ export const CLAIM_SCENARIOS = Object.freeze([
     id: "claim.w1.genesis_mainline_deterministic",
     surface: "dispatch",
     replayCount: 2,
-    truthAnchor: "after-steps",
+    truthAnchor: "step-4",
     sotRefs: Object.freeze([
       "src/project/contract/manifest.js",
       "docs/PRODUCT.md#main-run",
@@ -74,25 +78,29 @@ export const CLAIM_SCENARIOS = Object.freeze([
       Object.freeze({ id: "confirm-core", kind: "dispatch", action: { type: "CONFIRM_CORE_ZONE", payload: {} } }),
       Object.freeze({ id: "after-core", kind: "captureState", snapshot: "after-core" }),
       Object.freeze({ id: "step-1", kind: "dispatch", action: { type: "SIM_STEP", payload: {} } }),
+      Object.freeze({ id: "capture-step-1", kind: "captureState", snapshot: "step-1" }),
       Object.freeze({ id: "step-2", kind: "dispatch", action: { type: "SIM_STEP", payload: {} } }),
       Object.freeze({ id: "step-3", kind: "dispatch", action: { type: "SIM_STEP", payload: {} } }),
       Object.freeze({ id: "step-4", kind: "dispatch", action: { type: "SIM_STEP", payload: {} } }),
-      Object.freeze({ id: "after-steps", kind: "captureState", snapshot: "after-steps" }),
+      Object.freeze({ id: "capture-step-4", kind: "captureState", snapshot: "step-4" }),
     ]),
     assertions: Object.freeze([
       Object.freeze({ id: "founder-count", kind: "typedArrayCountEquals", snapshot: "after-founders", path: "world.founderMask", value: 1, expected: 4 }),
       Object.freeze({ id: "run-active", kind: "statePathEquals", snapshot: "after-core", path: "sim.runPhase", expected: "run_active" }),
       Object.freeze({ id: "running", kind: "statePathEquals", snapshot: "after-core", path: "sim.running", expected: true }),
-      Object.freeze({ id: "alive-has-energy-shape", kind: "sameLength", snapshot: "after-steps", leftPath: "world.alive", rightPath: "world.E" }),
-      Object.freeze({ id: "step-tick", kind: "statePathGte", snapshot: "after-steps", path: "sim.tick", expected: 4 }),
-      Object.freeze({ id: "step-signature-moved", kind: "signatureChanged", fromSnapshot: "after-core", toSnapshot: "after-steps" }),
+      Object.freeze({ id: "alive-has-energy-shape", kind: "sameLength", snapshot: "step-4", leftPath: "world.alive", rightPath: "world.E" }),
+      Object.freeze({ id: "step-tick", kind: "statePathGte", snapshot: "step-4", path: "sim.tick", expected: 4 }),
+      Object.freeze({ id: "step-signature-moved", kind: "signatureChanged", fromSnapshot: "after-core", toSnapshot: "step-4" }),
     ]),
     requiredArtifacts: Object.freeze([
       "after-founders.state",
       "after-core.state",
-      "after-steps.state",
-      "after-steps.read-model",
-      "after-steps.signature-material",
+      "step-1.state",
+      "step-1.read-model",
+      "step-1.signature-material",
+      "step-4.state",
+      "step-4.read-model",
+      "step-4.signature-material",
     ]),
   }),
 ]);
@@ -108,15 +116,19 @@ export const CLAIM_SUITES = Object.freeze({
 export const REGRESSION_TEST_STATUS = Object.freeze({
   "tests/test-contract-no-bypass.mjs": Object.freeze({
     status: "active",
-    purpose: "prove removed bypass surfaces stay absent and blocked",
+    purpose: "prove removed bypass surfaces stay absent and negative dispatch payloads stay state-stable",
+  }),
+  "tests/test-dispatch-error-state-stability.mjs": Object.freeze({
+    status: "active",
+    purpose: "prove failing dispatches keep state, signature material, read model, and revision stable",
   }),
   "tests/test-deterministic-genesis.mjs": Object.freeze({
     status: "active",
-    purpose: "prove deterministic genesis-to-mainline replay",
+    purpose: "prove same-seed replay and cross-seed divergence with after-core, step-1, and step-4 hash anchors",
   }),
   "tests/test-llm-contract.mjs": Object.freeze({
     status: "active",
-    purpose: "prove entry/testing registry and gate references stay wired",
+    purpose: "prove entry/testing registry, wording contract, path-drift guard, and repeated check rotation stay wired",
   }),
 });
 

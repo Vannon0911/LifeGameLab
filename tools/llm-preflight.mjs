@@ -259,6 +259,16 @@ function resolveTaskContext(args, matrix, options = {}) {
   };
 }
 
+function samePathSet(left, right) {
+  const a = Array.isArray(left) ? [...left].sort() : [];
+  const b = Array.isArray(right) ? [...right].sort() : [];
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 function doAck(taskCtx, entryRef, taskEntryRef) {
   const session = readSessionOrFail(entryRef, taskCtx, taskEntryRef);
   const challenge = readChallengeOrFail(session, entryRef, taskCtx, taskEntryRef);
@@ -319,6 +329,9 @@ function doCheck(taskCtx, entryRef, taskEntryRef) {
   }
   if (String(taskAck.mode || "") !== String(session.mode || "")) {
     fail(`Ack/session mode mismatch for '${taskCtx.task}'. Re-run ack.`);
+  }
+  if (!samePathSet(taskAck.classifiedPaths, taskCtx.paths)) {
+    fail(`Ack classifiedPaths drift for '${taskCtx.task}'. Re-run ack with the exact active path set.`);
   }
   if (String(taskAck.challengeId || "") !== String(challenge.payload.challengeId || "")) {
     fail(`Ack challenge drift for '${taskCtx.task}'. Re-run ack.`);
@@ -396,6 +409,9 @@ function readSessionOrFail(entryRef, taskCtx, taskEntryRef) {
   }
   if (session.requiredEntrySha256 !== taskEntryRef.requiredEntrySha256) {
     fail(`Session requiredEntry hash drift for '${taskCtx.task}'. Re-run entry.`);
+  }
+  if (!samePathSet(session.classifiedPaths, taskCtx.paths)) {
+    fail(`Session classifiedPaths drift for '${taskCtx.task}'. Re-run entry with the exact active path set.`);
   }
   if (!session.challengeId || !session.challengeFile) {
     fail("Session proof challenge missing. Re-run entry.");

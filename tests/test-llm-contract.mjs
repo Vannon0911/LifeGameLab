@@ -54,11 +54,29 @@ function runPreflight(args) {
   return `${res.stdout}${res.stderr}`;
 }
 
+function runPreflightExpectFail(args, expectedText) {
+  const res = spawnSync(process.execPath, [path.join(root, "tools/llm-preflight.mjs"), ...args], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30000,
+  });
+  if (res.error) throw res.error;
+  assert.notEqual(res.status, 0, `preflight ${args[0]} unexpectedly succeeded`);
+  const output = `${res.stdout}${res.stderr}`;
+  assert(output.includes(expectedText), `expected failing preflight output to include '${expectedText}', got:\n${output}`);
+  return output;
+}
+
 fs.rmSync(ackPath, { force: true });
 fs.rmSync(sessionPath, { force: true });
 fs.rmSync(proofDir, { recursive: true, force: true });
 
 assert.equal(String(testingConfig.requiredEntry || ""), "docs/llm/testing/TESTING_TASK_ENTRY.md", "testing matrix must point to testing task entry");
+assert(entryText.includes("classify -> entry -> ack -> check"), "ENTRY.md must define the exact preflight chain");
+assert(/Pfadmenge/.test(entryText), "ENTRY.md must forbid path drift between preflight steps");
+assert(fs.readFileSync(path.join(root, "docs/WORKFLOW.md"), "utf8").includes("classify --paths <paths>"), "WORKFLOW must document classify before entry");
+assert(fs.readFileSync(path.join(root, "docs/llm/OPERATING_PROTOCOL.md"), "utf8").includes("classify --paths <...>"), "OPERATING_PROTOCOL must document classify before entry");
 for (const file of testingGateFiles) {
   assert(testingEntry.includes(file), `testing task entry must reference ${file}`);
   assert(gateIndex.includes(file), `task gate index must reference ${file}`);
@@ -107,8 +125,15 @@ assert.equal(ackBeforeCheck.tasks.testing.challengeFile, sessionBeforeCheck.chal
 assert.equal(typeof ackBeforeCheck.tasks.testing.proofHash, "string", "ack must store entry proof hash");
 assert(ackBeforeCheck.tasks.testing.proofHash.length > 20, "entry proof hash must be non-trivial");
 
+runPreflightExpectFail(
+  ["check", "--paths", "tests,tools/llm-preflight.mjs"],
+  "Session classifiedPaths drift for 'testing'. Re-run entry with the exact active path set.",
+);
+
 const checkOutput = runPreflight(["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
 assert(checkOutput.includes("CHECK_OK task=testing"), "check must succeed for testing scope");
+const secondCheckOutput = runPreflight(["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
+assert(secondCheckOutput.includes("CHECK_OK task=testing"), "repeated check must stay green for the exact active testing scope");
 
 const session = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
 const ack = JSON.parse(fs.readFileSync(ackPath, "utf8"));
@@ -127,4 +152,4 @@ assert.equal(ack.tasks.testing.challengeId, session.challengeId, "ack must auto-
 assert.equal(typeof ack.tasks.testing.proofHash, "string", "ack must keep rotated proof hash");
 assert.notEqual(ack.tasks.testing.proofHash, ackBeforeCheck.tasks.testing.proofHash, "proof hash must rotate after verification");
 
-console.log("LLM_CONTRACT_OK testing preflight classify+entry+ack+check synced to matrix, entry lock, hidden proof rotation, and live scope");
+console.log("LLM_CONTRACT_OK testing preflight classify+entry+ack+check synced to matrix, entry lock, explicit path-drift guard, repeated check rotation, and live scope");

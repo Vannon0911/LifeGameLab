@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createDeterministicStore } from "./support/liveTestKit.mjs";
+import { snapshotStore } from "./support/liveTestKit.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -66,4 +67,41 @@ assert.throws(
   "SIM_STEP payload must reject removed force flag",
 );
 
-console.log("NO_BYPASS_OK benchmark action removed + forbidden payload keys rejected + forbidden strings absent");
+const ignoredPayloadCases = [
+  {
+    label: "set-brush-invalid-mode",
+    action: { type: "SET_BRUSH", payload: { brushMode: "dev_backdoor_mode" } },
+    select: (state) => state.meta.brushMode,
+  },
+  {
+    label: "set-ui-unknown-key",
+    action: { type: "SET_UI", payload: { debugBackdoor: true } },
+    select: (state) => state.meta.ui,
+  },
+  {
+    label: "set-physics-unknown-key",
+    action: { type: "SET_PHYSICS", payload: { hiddenKnob: 999 } },
+    select: (state) => state.meta.physics,
+  },
+  {
+    label: "set-global-learning-unknown-key",
+    action: { type: "SET_GLOBAL_LEARNING", payload: { hiddenKnob: 1 } },
+    select: (state) => state.meta.globalLearning,
+  },
+];
+
+const ignoredCaseAnchors = [];
+for (const testCase of ignoredPayloadCases) {
+  const store = createDeterministicStore();
+  store.dispatch({ type: "GEN_WORLD", payload: {} });
+  const before = snapshotStore(store);
+  store.dispatch(testCase.action);
+  const after = snapshotStore(store);
+  assert.deepEqual(testCase.select(after.state), testCase.select(before.state), `${testCase.label} must not mutate its guarded contract surface`);
+  assert.equal(after.signature, before.signature, `${testCase.label} must keep signature stable`);
+  assert.equal(after.signatureMaterialHash, before.signatureMaterialHash, `${testCase.label} must keep signature material stable`);
+  assert.equal(after.readModelHash, before.readModelHash, `${testCase.label} must keep read model stable`);
+  ignoredCaseAnchors.push(`${testCase.label}:${after.signature}:${after.signatureMaterialHash}:${after.readModelHash}`);
+}
+
+console.log(`NO_BYPASS_OK benchmark action removed + forbidden payload keys rejected + ignored negative cases stable anchors=${ignoredCaseAnchors.join(",")}`);

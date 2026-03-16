@@ -12,12 +12,16 @@ export function sha256Text(text) {
   return createHash("sha256").update(String(text), "utf8").digest("hex");
 }
 
-export function createDeterministicStore() {
-  return createStore(
+export function createDeterministicStore(options = {}) {
+  const store = createStore(
     manifest,
     { reducer, simStep: simStepPatch },
     { storageDriver: createNullDriver() },
   );
+  if (options.seed !== undefined) {
+    store.dispatch({ type: "SET_SEED", payload: String(options.seed) });
+  }
+  return store;
 }
 
 export function getPlayerStartWindowSquare(state, size = 2) {
@@ -53,12 +57,16 @@ export function stepMany(store, count) {
 export function snapshotStore(store) {
   const state = store.getState();
   const readModel = buildLlmReadModel(state, null);
+  const signatureMaterial = store.getSignatureMaterial();
+  const doc = store.getDoc();
   return Object.freeze({
     state,
     readModel,
     signature: store.getSignature(),
     signatureHash: sha256Text(store.getSignature()),
-    signatureMaterialHash: sha256Text(store.getSignatureMaterial()),
+    signatureMaterial,
+    signatureMaterialHash: sha256Text(signatureMaterial),
     readModelHash: sha256Text(JSON.stringify(readModel)),
+    revisionCount: doc.revisionCount,
   });
 }
