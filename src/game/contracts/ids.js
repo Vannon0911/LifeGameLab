@@ -39,16 +39,6 @@ export const ZONE_ROLE = Object.freeze({
   INFRA: 3,
 });
 
-export const GAME_MODE = Object.freeze({
-  GENESIS: "genesis",
-  LAB_AUTORUN: "lab_autorun",
-});
-
-export const GAME_MODE_VALUES = Object.freeze([
-  GAME_MODE.GENESIS,
-  GAME_MODE.LAB_AUTORUN,
-]);
-
 export const RUN_PHASE = Object.freeze({
   GENESIS_SETUP: "genesis_setup",
   GENESIS_ZONE: "genesis_zone",
@@ -150,7 +140,6 @@ const SETS = {
   winAny: new Set(Object.values(WIN_MODE)),
   goal: new Set(GOAL_CODE_VALUES),
   result: new Set(Object.values(GAME_RESULT)),
-  gameMode: new Set(GAME_MODE_VALUES),
   runPhase: new Set(RUN_PHASE_VALUES),
 };
 
@@ -170,10 +159,6 @@ export function isWinMode(value) {
   return SETS.winAny.has(String(value || ""));
 }
 
-export function isGameMode(value) {
-  return SETS.gameMode.has(String(value || ""));
-}
-
 export function isRunPhase(value) {
   return SETS.runPhase.has(String(value || ""));
 }
@@ -186,11 +171,6 @@ export function normalizeBrushMode(value, fallback = BRUSH_MODE.OBSERVE) {
 export function normalizeOverlayMode(value, fallback = OVERLAY_MODE.NONE) {
   const v = String(value || "");
   return SETS.overlay.has(v) ? v : fallback;
-}
-
-export function normalizeGameMode(value, fallback = GAME_MODE.GENESIS) {
-  const v = String(value || "");
-  return SETS.gameMode.has(v) ? v : fallback;
 }
 
 export function normalizeRunPhase(value, fallback = RUN_PHASE.GENESIS_SETUP) {

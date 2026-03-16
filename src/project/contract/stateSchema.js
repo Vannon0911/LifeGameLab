@@ -1,6 +1,5 @@
 import {
   BRUSH_MODE,
-  GAME_MODE,
   GAME_RESULT,
   GOAL_CODE,
   OVERLAY_MODE,
@@ -23,7 +22,6 @@ export const stateSchema = {
         renderMode: { type: "string", default: "combined" },
         activeOverlay: { type: "string", default: OVERLAY_MODE.NONE },
         worldPresetId: { type: "string", default: "river_delta" },
-        gameMode: { type: "string", default: GAME_MODE.GENESIS },
         physics: { type: "object", shape: {}, allowUnknown: true },
         ui: {
           type: "object",

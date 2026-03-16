@@ -1,5 +1,5 @@
 export const actionSchema = {
-  GEN_WORLD: { type: "object", shape: { gameMode: { type: "string" } } },
+  GEN_WORLD: { type: "object", shape: {} },
   CONFIRM_FOUNDATION: { type: "object", shape: {} },
   CONFIRM_CORE_ZONE: { type: "object", shape: {} },
   START_DNA_ZONE_SETUP: { type: "object", shape: {} },
@@ -9,7 +9,7 @@ export const actionSchema = {
   BUILD_INFRA_PATH: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, remove: { type: "boolean" } } },
   CONFIRM_INFRA_PATH: { type: "object", shape: {} },
   TOGGLE_RUNNING: { type: "object", shape: { running: { type: "boolean" } } },
-  SIM_STEP: { type: "object", shape: { force: { type: "boolean" } } },
+  SIM_STEP: { type: "object", shape: {} },
   SET_SPEED: { type: "number" },
   SET_SEED: { type: "string" },
   SET_SIZE: { type: "object", shape: { w: { type: "number" }, h: { type: "number" } } },
@@ -23,8 +23,6 @@ export const actionSchema = {
   PAINT_BRUSH: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, mode: { type: "string" }, radius: { type: "number" } } },
   PLACE_CELL: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, remove: { type: "boolean" } } },
   PLACE_SPLIT_CLUSTER: { type: "object", shape: { x: { type: "number" }, y: { type: "number" } } },
-  DEV_BALANCE_RUN_AI: { type: "object", shape: {}, allowUnknown: true },
-  APPLY_BUFFERED_SIM_STEP: { type: "object", shape: {}, allowUnknown: true },
   HARVEST_CELL: { type: "object", shape: { x: { type: "number" }, y: { type: "number" } } },
   HARVEST_PULSE: { type: "object", shape: {}, allowUnknown: true },
   PRUNE_CLUSTER: { type: "object", shape: {}, allowUnknown: true },
@@ -36,5 +34,4 @@ export const actionSchema = {
   SET_WIN_MODE: { type: "object", shape: { winMode: { type: "string" } } },
   SET_OVERLAY: { type: "string" },
   SET_PLACEMENT_COST: { type: "object", shape: { enabled: { type: "boolean" } } },
-  RUN_BENCHMARK: { type: "object", shape: {} },
 };

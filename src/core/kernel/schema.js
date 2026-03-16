@@ -2,6 +2,10 @@ export function sanitizeBySchema(value, schema) {
   return _sanitize(value, schema, null);
 }
 
+export function assertValidBySchema(value, schema, path = "value") {
+  _assertValid(value, schema, path);
+}
+
 const MAX_SAFE_LENGTH = 50 * 1024 * 1024;
 
 const TYPED_ARRAY_CTORS = {
@@ -105,5 +109,53 @@ function _sanitize(v, s, ctx) {
     }
     default:
       return s.default ?? null;
+  }
+}
+
+function _assertValid(v, s, path) {
+  if (!s) return;
+  if (v === undefined) return;
+  switch (s.type) {
+    case "string":
+      if (typeof v !== "string") throw new Error(`${path} must be string`);
+      return;
+    case "number":
+      if (typeof v !== "number" || !Number.isFinite(v)) throw new Error(`${path} must be finite number`);
+      return;
+    case "boolean":
+      if (typeof v !== "boolean") throw new Error(`${path} must be boolean`);
+      return;
+    case "enum": {
+      const allowed = Array.isArray(s.values) ? s.values : [];
+      if (!allowed.includes(v)) throw new Error(`${path} must be one of ${allowed.join(",")}`);
+      return;
+    }
+    case "array":
+      if (!Array.isArray(v) && !(v && v.buffer instanceof ArrayBuffer && v.byteLength !== undefined)) {
+        throw new Error(`${path} must be array`);
+      }
+      return;
+    case "ta":
+      if (!Array.isArray(v) && !ArrayBuffer.isView(v)) throw new Error(`${path} must be typed-array compatible`);
+      return;
+    case "object": {
+      if (v === null || typeof v !== "object" || Array.isArray(v)) throw new Error(`${path} must be object`);
+      const shape = s.shape || {};
+      if (s.allowUnknown !== true) {
+        for (const key of Object.keys(v)) {
+          if (!Object.prototype.hasOwnProperty.call(shape, key)) {
+            throw new Error(`${path}.${key} is not allowed`);
+          }
+        }
+      }
+      for (const key of Object.keys(shape)) {
+        if (Object.prototype.hasOwnProperty.call(v, key)) {
+          _assertValid(v[key], shape[key], `${path}.${key}`);
+        }
+      }
+      return;
+    }
+    default:
+      return;
   }
 }

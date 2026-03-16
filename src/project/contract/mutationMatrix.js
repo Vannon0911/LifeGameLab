@@ -1,5 +1,5 @@
 export const mutationMatrix = {
-  GEN_WORLD: ["/meta/worldPresetId", "/meta/physics", "/meta/gameMode", "/meta/playerLineageId", "/meta/cpuLineageId", "/world/", "/world/actionMap", "/sim/"],
+  GEN_WORLD: ["/meta/worldPresetId", "/meta/physics", "/meta/playerLineageId", "/meta/cpuLineageId", "/world/", "/world/actionMap", "/sim/"],
   CONFIRM_FOUNDATION: ["/sim/runPhase", "/sim/running"],
   CONFIRM_CORE_ZONE: [
     "/world/alive",
@@ -104,8 +104,6 @@ export const mutationMatrix = {
   PAINT_BRUSH: ["/world/L", "/world/R", "/world/W", "/world/Sat"],
   PLACE_CELL: ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/world/founderMask", "/sim/playerDNA", "/sim/founderPlaced"],
   PLACE_SPLIT_CLUSTER: ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/sim/playerDNA"],
-  DEV_BALANCE_RUN_AI: ["/meta/devMutationVault", "/world/devMutationVault", "/world/devAiLast", "/world/lineageMemory", "/world/trait", "/world/hue"],
-  APPLY_BUFFERED_SIM_STEP: ["/meta/globalLearning", "/meta/gridW", "/meta/gridH", "/world/", "/sim/"],
   HARVEST_CELL: ["/sim/playerDNA", "/sim/totalHarvested", "/world/alive", "/world/E"],
   HARVEST_PULSE: ["/world/P", "/world/R", "/world/Sat", "/world/lineageMemory", "/sim/playerDNA", "/sim/harvestYieldTotal", "/sim/meanWaterField", "/sim/stabilityScore", "/sim/ecologyScore", "/sim/stageProgressScore", "/sim/activeBiomeCount", "/sim/playerStage"],
   PRUNE_CLUSTER: ["/world/P", "/world/W", "/world/lineageMemory", "/sim/playerDNA", "/sim/pruneYieldTotal", "/sim/meanWaterField", "/sim/stabilityScore", "/sim/ecologyScore", "/sim/stageProgressScore", "/sim/activeBiomeCount", "/sim/playerStage"],
@@ -117,5 +115,4 @@ export const mutationMatrix = {
   SET_WIN_MODE: ["/sim/winMode"],
   SET_OVERLAY: ["/meta/activeOverlay"],
   SET_PLACEMENT_COST: ["/meta/placementCostEnabled"],
-  RUN_BENCHMARK: [],
 };

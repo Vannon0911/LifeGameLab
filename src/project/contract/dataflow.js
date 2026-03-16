@@ -26,8 +26,6 @@ const DISPATCH_SOURCES = Object.freeze({
   PAINT_BRUSH: ["src/game/ui/ui.js"],
   PLACE_CELL: ["src/game/ui/ui.js"],
   PLACE_SPLIT_CLUSTER: ["src/game/ui/ui.js"],
-  DEV_BALANCE_RUN_AI: ["src/app/main.js"],
-  APPLY_BUFFERED_SIM_STEP: ["src/app/main.js"],
   HARVEST_CELL: ["src/game/ui/ui.js"],
   HARVEST_PULSE: ["src/game/ui/ui.js"],
   PRUNE_CLUSTER: ["src/game/ui/ui.js"],
@@ -39,7 +37,6 @@ const DISPATCH_SOURCES = Object.freeze({
   SET_WIN_MODE: [],
   SET_OVERLAY: ["src/game/ui/ui.js"],
   SET_PLACEMENT_COST: [],
-  RUN_BENCHMARK: ["src/game/ui/ui.js"],
 });
 
 export const dataflow = {

@@ -1,7 +1,7 @@
 import { stableStringify } from "./stableStringify.js";
 import { hash32 } from "./hash32.js";
 import { applyPatches, assertPatchesAllowed } from "./patches.js";
-import { sanitizeBySchema } from "./schema.js";
+import { assertValidBySchema, sanitizeBySchema } from "./schema.js";
 import { createRngStreamsScoped } from "./rng.js";
 import { getDefaultDriver } from "./persistence.js";
 
@@ -58,6 +58,7 @@ export function createStore(manifest, project, options = {}) {
     if (typeof type !== "string") throw new Error("Action.type must be string");
     const schema = actionSchema[type];
     if (!schema) throw new Error(`Unknown action type: ${type}`);
+    assertValidBySchema(action.payload ?? {}, schema, `action.payload(${type})`);
     const cleanPayload = sanitizeBySchema(action.payload ?? {}, schema);
     return { type, payload: cleanPayload };
   }

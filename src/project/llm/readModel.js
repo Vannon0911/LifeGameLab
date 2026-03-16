@@ -1,4 +1,5 @@
 import { BRUSH_MODE } from "../../game/contracts/ids.js";
+import { applyFogIntelToAdvisorModel } from "../../game/render/fogOfWar.js";
 import { buildAdvisorModel } from "./advisorModel.js";
 
 const TOOL_ALIASES = Object.freeze({
@@ -12,7 +13,10 @@ const TOOL_ALIASES = Object.freeze({
 export function buildLlmReadModel(state, benchmark = null) {
   const safeState = state && typeof state === "object" ? state : {};
   const rawTool = String(safeState?.meta?.brushMode || BRUSH_MODE.OBSERVE);
-  const advisorModel = buildAdvisorModel(safeState, { benchmark });
+  const advisorModel = applyFogIntelToAdvisorModel(
+    buildAdvisorModel(safeState, { benchmark }),
+    safeState,
+  );
   return {
     ...advisorModel,
     tool: TOOL_ALIASES[rawTool] || rawTool,
