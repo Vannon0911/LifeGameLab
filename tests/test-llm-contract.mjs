@@ -28,6 +28,7 @@ const entryText = fs.readFileSync(entryPath, "utf8");
 const ackPath = path.join(root, ".llm/entry-ack.json");
 const sessionPath = path.join(root, ".llm/entry-session.json");
 const proofDir = path.join(root, ".llm/entry-proof");
+const llmDir = path.join(root, ".llm");
 
 const testingGateFiles = [
   "tools/llm-preflight.mjs",
@@ -68,88 +69,126 @@ function runPreflightExpectFail(args, expectedText) {
   return output;
 }
 
-fs.rmSync(ackPath, { force: true });
-fs.rmSync(sessionPath, { force: true });
-fs.rmSync(proofDir, { recursive: true, force: true });
-
-assert.equal(String(testingConfig.requiredEntry || ""), "docs/llm/testing/TESTING_TASK_ENTRY.md", "testing matrix must point to testing task entry");
-assert(entryText.includes("classify -> entry -> ack -> check"), "ENTRY.md must define the exact preflight chain");
-assert(/Pfadmenge/.test(entryText), "ENTRY.md must forbid path drift between preflight steps");
-assert(fs.readFileSync(path.join(root, "docs/WORKFLOW.md"), "utf8").includes("classify --paths <paths>"), "WORKFLOW must document classify before entry");
-assert(fs.readFileSync(path.join(root, "docs/llm/OPERATING_PROTOCOL.md"), "utf8").includes("classify --paths <...>"), "OPERATING_PROTOCOL must document classify before entry");
-for (const file of testingGateFiles) {
-  assert(testingEntry.includes(file), `testing task entry must reference ${file}`);
-  assert(gateIndex.includes(file), `task gate index must reference ${file}`);
-  assert(fs.existsSync(path.join(root, file)), `required testing gate file missing: ${file}`);
+function backupPath(absPath) {
+  if (!fs.existsSync(absPath)) return null;
+  const stats = fs.statSync(absPath);
+  if (stats.isDirectory()) {
+    return {
+      kind: "dir",
+      entries: fs.readdirSync(absPath, { withFileTypes: true }).map((entry) => ({
+        name: entry.name,
+        value: backupPath(path.join(absPath, entry.name)),
+      })),
+    };
+  }
+  return {
+    kind: "file",
+    data: fs.readFileSync(absPath),
+  };
 }
 
-const triggerPrefixes = Array.isArray(testingConfig.triggerPrefixes) ? testingConfig.triggerPrefixes : [];
-for (const scopedPath of ["tests/", "tools/llm-preflight.mjs", "tools/run-test-suite.mjs", "tools/run-all-tests.mjs", "tools/test-suites.mjs", "tools/evidence-runner.mjs", "docs/llm/testing/"]) {
-  assert(triggerPrefixes.includes(scopedPath), `testing triggerPrefixes must include ${scopedPath}`);
+function restorePath(absPath, snapshot) {
+  fs.rmSync(absPath, { recursive: true, force: true });
+  if (!snapshot) return;
+  if (snapshot.kind === "file") {
+    fs.mkdirSync(path.dirname(absPath), { recursive: true });
+    fs.writeFileSync(absPath, snapshot.data);
+    return;
+  }
+  fs.mkdirSync(absPath, { recursive: true });
+  for (const entry of snapshot.entries) {
+    restorePath(path.join(absPath, entry.name), entry.value);
+  }
 }
 
-const entryHash = sha256Text(entryText);
-assert.equal(String(lock.sha256 || ""), entryHash, "entry lock hash must match current ENTRY.md");
-const readOrderCount = entryText
-  .split(/\r?\n/g)
-  .filter((line) => /^\d+\.\s+`.+`/.test(line.trim())).length;
-assert.equal(Number(lock.requiredReadOrderCount || 0), readOrderCount, "entry lock read-order count must match current ENTRY.md");
+const llmBackup = backupPath(llmDir);
 
-assert(isKnownSuite("claims"), "claims suite must exist");
-assert(isKnownSuite("regression"), "regression suite must exist");
-assert(isKnownSuite("full"), "full suite must exist");
-assert.equal(EVIDENCE_POLICY.scope, "w1", "evidence scope must stay on w1");
-assert(TRACKED_CLAIMS.length >= 2, "at least two claim scenarios are required");
+try {
+  fs.rmSync(ackPath, { force: true });
+  fs.rmSync(sessionPath, { force: true });
+  fs.rmSync(proofDir, { recursive: true, force: true });
 
-const repoTests = fs.readdirSync(path.join(root, "tests"))
-  .filter((name) => /^test-.*\.mjs$/.test(name))
-  .map((name) => `tests/${name}`)
-  .sort();
+  assert.equal(String(testingConfig.requiredEntry || ""), "docs/llm/testing/TESTING_TASK_ENTRY.md", "testing matrix must point to testing task entry");
+  assert(entryText.includes("classify -> entry -> ack -> check"), "ENTRY.md must define the exact preflight chain");
+  assert(/Pfadmenge/.test(entryText), "ENTRY.md must forbid path drift between preflight steps");
+  assert(fs.readFileSync(path.join(root, "docs/WORKFLOW.md"), "utf8").includes("classify --paths <paths>"), "WORKFLOW must document classify before entry");
+  assert(fs.readFileSync(path.join(root, "docs/llm/OPERATING_PROTOCOL.md"), "utf8").includes("classify --paths <...>"), "OPERATING_PROTOCOL must document classify before entry");
+  for (const file of testingGateFiles) {
+    assert(testingEntry.includes(file), `testing task entry must reference ${file}`);
+    assert(gateIndex.includes(file), `task gate index must reference ${file}`);
+    assert(fs.existsSync(path.join(root, file)), `required testing gate file missing: ${file}`);
+  }
 
-assert.deepEqual([...TRACKED_REGRESSION_REPO_TESTS].sort(), repoTests, "suite registry must match real repo tests");
-assert.deepEqual([...EVIDENCE_SUITES.regression].sort(), repoTests, "regression suite must execute every repo test");
+  const triggerPrefixes = Array.isArray(testingConfig.triggerPrefixes) ? testingConfig.triggerPrefixes : [];
+  for (const scopedPath of ["tests/", "tools/llm-preflight.mjs", "tools/run-test-suite.mjs", "tools/run-all-tests.mjs", "tools/test-suites.mjs", "tools/evidence-runner.mjs", "docs/llm/testing/"]) {
+    assert(triggerPrefixes.includes(scopedPath), `testing triggerPrefixes must include ${scopedPath}`);
+  }
 
-const classifyOutput = runPreflight(["classify", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
-assert(classifyOutput.includes("CLASSIFY_OK task=testing"), "classify must resolve current testing scope to testing");
+  const entryHash = sha256Text(entryText);
+  assert.equal(String(lock.sha256 || ""), entryHash, "entry lock hash must match current ENTRY.md");
+  const readOrderCount = entryText
+    .split(/\r?\n/g)
+    .filter((line) => /^\d+\.\s+`.+`/.test(line.trim())).length;
+  assert.equal(Number(lock.requiredReadOrderCount || 0), readOrderCount, "entry lock read-order count must match current ENTRY.md");
 
-const entryOutput = runPreflight(["entry", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"]);
-assert(entryOutput.includes("ENTRY_OK task=testing"), "entry must succeed for testing scope");
-const sessionBeforeCheck = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
-const challengeFileBeforeCheck = path.join(root, sessionBeforeCheck.challengeFile);
-assert(fs.existsSync(challengeFileBeforeCheck), "entry must create hidden proof challenge file");
+  assert(isKnownSuite("claims"), "claims suite must exist");
+  assert(isKnownSuite("regression"), "regression suite must exist");
+  assert(isKnownSuite("full"), "full suite must exist");
+  assert.equal(EVIDENCE_POLICY.scope, "w1", "evidence scope must stay on w1");
+  assert(TRACKED_CLAIMS.length >= 2, "at least two claim scenarios are required");
 
-const ackOutput = runPreflight(["ack", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
-assert(ackOutput.includes("ACK_OK task=testing"), "ack must succeed for testing scope");
-const ackBeforeCheck = JSON.parse(fs.readFileSync(ackPath, "utf8"));
-assert.equal(ackBeforeCheck.tasks.testing.challengeFile, sessionBeforeCheck.challengeFile, "ack challenge file must match active session challenge");
-assert.equal(typeof ackBeforeCheck.tasks.testing.proofHash, "string", "ack must store entry proof hash");
-assert(ackBeforeCheck.tasks.testing.proofHash.length > 20, "entry proof hash must be non-trivial");
+  const repoTests = fs.readdirSync(path.join(root, "tests"))
+    .filter((name) => /^test-.*\.mjs$/.test(name))
+    .map((name) => `tests/${name}`)
+    .sort();
 
-runPreflightExpectFail(
-  ["check", "--paths", "tests,tools/llm-preflight.mjs"],
-  "Session classifiedPaths drift for 'testing'. Re-run entry with the exact active path set.",
-);
+  assert.deepEqual([...TRACKED_REGRESSION_REPO_TESTS].sort(), repoTests, "suite registry must match real repo tests");
+  assert.deepEqual([...EVIDENCE_SUITES.regression].sort(), repoTests, "regression suite must execute every repo test");
 
-const checkOutput = runPreflight(["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
-assert(checkOutput.includes("CHECK_OK task=testing"), "check must succeed for testing scope");
-const secondCheckOutput = runPreflight(["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
-assert(secondCheckOutput.includes("CHECK_OK task=testing"), "repeated check must stay green for the exact active testing scope");
+  const classifyOutput = runPreflight(["classify", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
+  assert(classifyOutput.includes("CLASSIFY_OK task=testing"), "classify must resolve current testing scope to testing");
 
-const session = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
-const ack = JSON.parse(fs.readFileSync(ackPath, "utf8"));
-assert.equal(session.task, "testing", "session task must be testing");
-assert.equal(session.requiredEntry, testingConfig.requiredEntry, "session requiredEntry must match matrix");
-assert.equal(session.requiredEntrySha256, sha256Text(testingEntry), "session task entry hash must match current testing entry");
-assert.deepEqual((session.classifiedPaths || []).slice().sort(), testingScopePaths.slice().sort(), "session classified paths must match current testing scope");
-assert.notEqual(session.challengeFile, sessionBeforeCheck.challengeFile, "check must rotate challenge file path");
-assert(fs.existsSync(path.join(root, session.challengeFile)), "rotated challenge file must exist");
-assert(!fs.existsSync(challengeFileBeforeCheck), "old challenge file must be removed after successful check");
-assert.equal(ack.tasks.testing.requiredEntry, testingConfig.requiredEntry, "ack requiredEntry must match matrix");
-assert.equal(ack.tasks.testing.requiredEntrySha256, sha256Text(testingEntry), "ack task entry hash must match current testing entry");
-assert.deepEqual((ack.tasks.testing.classifiedPaths || []).slice().sort(), testingScopePaths.slice().sort(), "ack classified paths must match current testing scope");
-assert.equal(ack.tasks.testing.challengeFile, session.challengeFile, "ack must auto-sync to rotated challenge file");
-assert.equal(ack.tasks.testing.challengeId, session.challengeId, "ack must auto-sync to rotated challenge id");
-assert.equal(typeof ack.tasks.testing.proofHash, "string", "ack must keep rotated proof hash");
-assert.notEqual(ack.tasks.testing.proofHash, ackBeforeCheck.tasks.testing.proofHash, "proof hash must rotate after verification");
+  const entryOutput = runPreflight(["entry", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"]);
+  assert(entryOutput.includes("ENTRY_OK task=testing"), "entry must succeed for testing scope");
+  const sessionBeforeCheck = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
+  const challengeFileBeforeCheck = path.join(root, sessionBeforeCheck.challengeFile);
+  assert(fs.existsSync(challengeFileBeforeCheck), "entry must create hidden proof challenge file");
 
-console.log("LLM_CONTRACT_OK testing preflight classify+entry+ack+check synced to matrix, entry lock, explicit path-drift guard, repeated check rotation, and live scope");
+  const ackOutput = runPreflight(["ack", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
+  assert(ackOutput.includes("ACK_OK task=testing"), "ack must succeed for testing scope");
+  const ackBeforeCheck = JSON.parse(fs.readFileSync(ackPath, "utf8"));
+  assert.equal(ackBeforeCheck.tasks.testing.challengeFile, sessionBeforeCheck.challengeFile, "ack challenge file must match active session challenge");
+  assert.equal(typeof ackBeforeCheck.tasks.testing.proofHash, "string", "ack must store entry proof hash");
+  assert(ackBeforeCheck.tasks.testing.proofHash.length > 20, "entry proof hash must be non-trivial");
+
+  runPreflightExpectFail(
+    ["check", "--paths", "tests,tools/llm-preflight.mjs"],
+    "Session classifiedPaths drift for 'testing'. Re-run entry with the exact active path set.",
+  );
+
+  const checkOutput = runPreflight(["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
+  assert(checkOutput.includes("CHECK_OK task=testing"), "check must succeed for testing scope");
+  const secondCheckOutput = runPreflight(["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
+  assert(secondCheckOutput.includes("CHECK_OK task=testing"), "repeated check must stay green for the exact active testing scope");
+
+  const session = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
+  const ack = JSON.parse(fs.readFileSync(ackPath, "utf8"));
+  assert.equal(session.task, "testing", "session task must be testing");
+  assert.equal(session.requiredEntry, testingConfig.requiredEntry, "session requiredEntry must match matrix");
+  assert.equal(session.requiredEntrySha256, sha256Text(testingEntry), "session task entry hash must match current testing entry");
+  assert.deepEqual((session.classifiedPaths || []).slice().sort(), testingScopePaths.slice().sort(), "session classified paths must match current testing scope");
+  assert.notEqual(session.challengeFile, sessionBeforeCheck.challengeFile, "check must rotate challenge file path");
+  assert(fs.existsSync(path.join(root, session.challengeFile)), "rotated challenge file must exist");
+  assert(!fs.existsSync(challengeFileBeforeCheck), "old challenge file must be removed after successful check");
+  assert.equal(ack.tasks.testing.requiredEntry, testingConfig.requiredEntry, "ack requiredEntry must match matrix");
+  assert.equal(ack.tasks.testing.requiredEntrySha256, sha256Text(testingEntry), "ack task entry hash must match current testing entry");
+  assert.deepEqual((ack.tasks.testing.classifiedPaths || []).slice().sort(), testingScopePaths.slice().sort(), "ack classified paths must match current testing scope");
+  assert.equal(ack.tasks.testing.challengeFile, session.challengeFile, "ack must auto-sync to rotated challenge file");
+  assert.equal(ack.tasks.testing.challengeId, session.challengeId, "ack must auto-sync to rotated challenge id");
+  assert.equal(typeof ack.tasks.testing.proofHash, "string", "ack must keep rotated proof hash");
+  assert.notEqual(ack.tasks.testing.proofHash, ackBeforeCheck.tasks.testing.proofHash, "proof hash must rotate after verification");
+
+  console.log("LLM_CONTRACT_OK testing preflight classify+entry+ack+check synced to matrix, entry lock, explicit path-drift guard, repeated check rotation, and live scope");
+} finally {
+  restorePath(llmDir, llmBackup);
+}
