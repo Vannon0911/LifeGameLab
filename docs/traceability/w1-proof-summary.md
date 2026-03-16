@@ -8,7 +8,7 @@ It replaces raw run dumps and screenshot archives with a small text summary.
 - command: `node tools/run-all-tests.mjs --full`
 - run date: `2026-03-16`
 - proof scope: `w1`
-- manifest: `output/evidence/2026-03-16T20-08-05-025Z-full-60d00ec1/manifest.json`
+- manifest: `output/evidence/2026-03-16T20-18-21-400Z-full-c2fce4ba/manifest.json`
 
 ## Outcome
 - overall: `evidence_match`
@@ -16,7 +16,7 @@ It replaces raw run dumps and screenshot archives with a small text summary.
 - regression status: `match`
 
 ## Anchors
-- event chain root: `7a785a3aa78514d8668c16ae988ae12ccd50afbbb2926d0622573f6744fd6c8a`
+- event chain root: `47e018cbcaad370b749e74887d15c3f560c1c1f754170e4df6ab48c521b54676`
 - no bypass surface signature: `1c33a493`
 - no bypass surface state hash: `2abfab6211965bcfc7d6ce18d7b769374ec33f1b7330baa122d87da4735c3932`
 - no bypass surface read-model hash: `14e196b34802f619a05e52550ab48861e3dccd01dfe57975eaba5daa2c87250c`
@@ -36,3 +36,4 @@ It replaces raw run dumps and screenshot archives with a small text summary.
 - No browser-global debug surface is part of this proof.
 - No screenshot or raw output archive is required to verify the current W1 state.
 - Entry-Governance and Entry-Contract were hardened before this run; the testing proof now enforces explicit path-drift failure and repeated `check` rotation.
+- Repetition probe on `2026-03-16` stayed green with the same canonical state/read-model anchors and a new event-chain root.

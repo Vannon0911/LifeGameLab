@@ -202,6 +202,11 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Evidence-/Registry-Sync nachgezogen: `tests/evidence/spec-map.mjs` fuehrt die vier aktiven Pflichtbeweise mit standardisierten Namen und Zwecken.
 - Offizieller Vollnachweis erneut grün: `node tools/run-all-tests.mjs --full`, Manifest `output/evidence/2026-03-16T20-08-05-025Z-full-60d00ec1/manifest.json`, Proof `docs/traceability/w1-proof-summary.md`.
 
+### 2026-03-16 session `p0-repetition-proof`
+- Wiederholungsprobe fuer den kanonischen `testing`-Scope erneut grün: `classify -> entry -> ack -> check` plus `node tools/run-all-tests.mjs --full`.
+- Neuer Vollnachweis: `output/evidence/2026-03-16T20-18-21-400Z-full-c2fce4ba/manifest.json`.
+- Ergebnis blieb stabil: `evidence_match`, Claims `match`, Regression `match`; nur die Event-Chain-Root rotierte erwartungsgemaess neu.
+
 ### 2026-03-15 session `entry-naming-and-backup-anchor-audit`
 - Entry-Benennung fuer technische Checks entkoppelt: `llm:entry|ack|check` ersetzt durch `llm:preflight:start|ack|check`, damit Chat-Entry (Prozess) und CLI-Preflight (Technik) nicht verwechselt werden.
 - Sicheres Backup-Anchor-Audit automatisiert: neues Script `tools/backup-anchor-audit.mjs` plus `npm run backup:audit`, `npm run backup:audit:apply` und `npm run backup:audit:fix-local`.
