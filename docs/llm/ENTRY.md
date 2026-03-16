@@ -9,8 +9,20 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 2. `docs/llm/OPERATING_PROTOCOL.md`
 3. `docs/llm/TASK_ENTRY_MATRIX.json` (Task klassifizieren)
 4. `docs/llm/entry/TASK_GATE_INDEX.md` (minimales Gate-Set je Task)
-5. Genau einen passenden Task-Entry lesen:
-6. `docs/llm/ui/UI_TASK_ENTRY.md` oder `docs/llm/sim/SIM_TASK_ENTRY.md` oder `docs/llm/contracts/CONTRACT_TASK_ENTRY.md` oder `docs/llm/testing/TESTING_TASK_ENTRY.md` oder `docs/llm/versioning/VERSIONING_TASK_ENTRY.md`
+5. Genau einen passenden Task-Entry lesen, nie mehrere:
+   - `docs/llm/ui/UI_TASK_ENTRY.md`
+   - `docs/llm/sim/SIM_TASK_ENTRY.md`
+   - `docs/llm/contracts/CONTRACT_TASK_ENTRY.md`
+   - `docs/llm/testing/TESTING_TASK_ENTRY.md`
+   - `docs/llm/versioning/VERSIONING_TASK_ENTRY.md`
+
+## Preflight-Vertrag
+- Jeder Task muss zuerst eindeutig ueber `docs/llm/TASK_ENTRY_MATRIX.json` klassifiziert werden.
+- Die technische Pflichtkette ist immer exakt `classify -> entry -> ack -> check`.
+- `entry`, `ack` und `check` sind nur gueltig, wenn sie mit exakt derselben Pfadmenge laufen wie die vorherige Klassifikation.
+- Ein Scope-Wechsel, auch innerhalb derselben Session, ist ohne neuen Subtask und neue Pflichtkette verboten.
+- Ein `check`-Fehler blockiert Schreiben und Testen vollstaendig. Danach ist fuer genau diesen Scope ein neuer `entry -> ack -> check`-Aufbau Pflicht.
+- Der Chat-Trigger `entry` ist nur der menschliche Startimpuls. Die technische Wahrheit lebt ausschliesslich in `tools/llm-preflight.mjs`.
 
 ## Kernel- Und Manifest-Pflichtgate (SoT)
 - `src/project/contract/manifest.js` ist Source of Truth fuer Felder, Actions und Contract-Kette.
@@ -37,3 +49,4 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - Pfadhygiene intakt
 - Doku und Code synchron
 - passende Tests gruen
+- aktiver Task-Preflight gueltig und driftfrei fuer den benutzten Scope

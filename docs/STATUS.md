@@ -18,6 +18,7 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - `node tools/run-all-tests.mjs --full`
 - `node tools/evidence-runner.mjs --suite claims`
 - `node tests/test-contract-no-bypass.mjs`
+- `node tests/test-dispatch-error-state-stability.mjs`
 - `node tests/test-deterministic-genesis.mjs`
 - `node tests/test-llm-contract.mjs`
 - Letzte Gegenprobe auf aktuellem Branch: 2026-03-16, Proof `docs/traceability/w1-proof-summary.md`
@@ -72,18 +73,19 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 ### Atomare Tasks
 
 #### P0
-1. `P0-T1` `tests/test-contract-no-bypass.mjs` um negativen `SET_BRUSH`-Fall erweitern.
-2. `P0-T2` `tests/test-contract-no-bypass.mjs` um negativen `SET_UI`-Fall erweitern.
-3. `P0-T3` `tests/test-contract-no-bypass.mjs` um negativen `SET_PHYSICS`-Fall erweitern.
-4. `P0-T4` `tests/test-contract-no-bypass.mjs` um negativen `SET_GLOBAL_LEARNING`-Fall erweitern.
-5. `P0-T5` Neues `tests/test-dispatch-error-state-stability.mjs` (kein Drift bei Fehl-Dispatch).
-6. `P0-T6` `tests/test-deterministic-genesis.mjs` um `same-seed` Replay-Block erweitern.
-7. `P0-T7` `tests/test-deterministic-genesis.mjs` um `cross-seed` Divergenzblock erweitern.
-8. `P0-T8` `tests/test-deterministic-genesis.mjs` um per-step Hash-Anker erweitern (`after-core`, `step-1`, `step-4`).
-9. `P0-T9` `tests/evidence/spec-map.mjs` aktualisieren (neue Tests `active`).
-10. `P0-T10` Registry-Konsistenz erzwingen (`tests/test-*.mjs` == `REGRESSION_TEST_STATUS` == `EVIDENCE_SUITES.regression`).
-11. `P0-T11` Vollnachweis laufen lassen: `node tools/run-all-tests.mjs --full`.
-12. `P0-T12` Ergebnis fixieren: Manifestpfad + Kernhashes dokumentieren; bei Rot ersten Brecher als naechsten atomaren Task ausweisen.
+0. `P0-T0` LLM-Entry-Regelrahmen und Entry-Contract-Test haerten; unsaubere Formulierungen und stiller Pfaddrift duerfen keinen Regelbruch mehr erlauben. `[done 2026-03-16]`
+1. `P0-T1` `tests/test-contract-no-bypass.mjs` um negativen `SET_BRUSH`-Fall erweitern. `[done 2026-03-16]`
+2. `P0-T2` `tests/test-contract-no-bypass.mjs` um negativen `SET_UI`-Fall erweitern. `[done 2026-03-16]`
+3. `P0-T3` `tests/test-contract-no-bypass.mjs` um negativen `SET_PHYSICS`-Fall erweitern. `[done 2026-03-16]`
+4. `P0-T4` `tests/test-contract-no-bypass.mjs` um negativen `SET_GLOBAL_LEARNING`-Fall erweitern. `[done 2026-03-16]`
+5. `P0-T5` Neues `tests/test-dispatch-error-state-stability.mjs` (kein Drift bei Fehl-Dispatch). `[done 2026-03-16]`
+6. `P0-T6` `tests/test-deterministic-genesis.mjs` um `same-seed` Replay-Block erweitern. `[done 2026-03-16]`
+7. `P0-T7` `tests/test-deterministic-genesis.mjs` um `cross-seed` Divergenzblock erweitern. `[done 2026-03-16]`
+8. `P0-T8` `tests/test-deterministic-genesis.mjs` um per-step Hash-Anker erweitern (`after-core`, `step-1`, `step-4`). `[done 2026-03-16]`
+9. `P0-T9` `tests/evidence/spec-map.mjs` aktualisieren (neue Tests `active`). `[done 2026-03-16]`
+10. `P0-T10` Registry-Konsistenz erzwingen (`tests/test-*.mjs` == `REGRESSION_TEST_STATUS` == `EVIDENCE_SUITES.regression`). `[done 2026-03-16]`
+11. `P0-T11` Vollnachweis laufen lassen: `node tools/run-all-tests.mjs --full`. `[done 2026-03-16]`
+12. `P0-T12` Ergebnis fixieren: Manifestpfad + Kernhashes dokumentieren; bei Rot ersten Brecher als naechsten atomaren Task ausweisen. `[done 2026-03-16]`
 
 #### P1
 13. `P1-T13` Neues `tests/test-step-chain-determinism.mjs` (Replay pro Step, nicht nur Endzustand).
@@ -93,12 +95,13 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 15. `P2-T15` `tests/test-llm-contract.mjs` auf Flake-Resistenz pruefen (stabile Preconditions, keine impliziten Dateinamenannahmen).
 
 ### Bindende Reihenfolge
-1. `T1-T4`
-2. `T5`
-3. `T6-T8`
-4. `T9-T10`
-5. `T11-T12`
-6. danach `T13-T15`
+1. `T0`
+2. `T1-T4`
+3. `T5`
+4. `T6-T8`
+5. `T9-T10`
+6. `T11-T12`
+7. danach `T13-T15`
 
 ### Abnahmekriterien
 - Kein Task wird gemischt umgesetzt; genau ein atomarer Scope pro Commit.
@@ -135,11 +138,11 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
    RC nur bei komplett gruener Gate-Lage; sonst NO-GO mit dokumentierter Restliste.
 
 ## Naechste Session Startpaket
-- Ziel: sofort mit P0-TODO starten, ohne erneute Gate-Suche.
+- Ziel: auf `P1-T13` bis `P2-T15` oder auf den naechsten RC-Block wechseln, ohne erneute Gate-Suche.
 - LLM-Leseweg bis Gate verifiziert am 2026-03-15:
   `WORKFLOW -> docs/llm/ENTRY.md -> docs/llm/OPERATING_PROTOCOL.md -> TASK_ENTRY_MATRIX -> TASK_GATE_INDEX -> task-entry -> classify/ack/check`.
 - Handshake ist aktuell (`.llm/entry-ack.json`): `versioning`, `testing`, `ui`, `sim`, `contracts` vorhanden.
-- Sicherheitsnachweis aktuell: `node tests/test-llm-contract.mjs` und `node tools/run-all-tests.mjs --full` gruen (2026-03-16).
+- Sicherheitsnachweis aktuell: `node tests/test-llm-contract.mjs` und `node tools/run-all-tests.mjs --full` gruen (2026-03-16); P0-T0 bis P0-T12 sind dokumentiert abgeschlossen.
 - Startkommandos fuer die naechste Session:
   1. `node tools/llm-preflight.mjs classify --paths <task-pfade>`
   2. `node tools/llm-preflight.mjs entry --paths <task-pfade> --mode work`
@@ -187,6 +190,17 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - `tools/evidence-runner.mjs` auf dispatch-only Evidence reduziert; Browser-Claims und global-hook-basierte Debugpfade sind nicht mehr Teil der offiziellen Truth.
 - Aktive Testlinie auf drei kleine Beweise reduziert: `test-contract-no-bypass`, `test-deterministic-genesis`, `test-llm-contract`.
 - Voll-Gate belegt mit `node tools/run-all-tests.mjs --full`, Proof `docs/traceability/w1-proof-summary.md`.
+
+### 2026-03-16 session `p0-entry-hardening-and-hash-proof`
+- Entry-Governance gehaertet: `docs/WORKFLOW.md`, `docs/llm/ENTRY.md`, `docs/llm/OPERATING_PROTOCOL.md` verbieten jetzt mehrdeutige Scope-Wechsel, unscharfe Preflight-Folgen und Weiterarbeit nach `check`-Rot explizit.
+- `tools/llm-preflight.mjs` meldet Pfaddrift jetzt kausal statt indirekt ueber Proof-Mismatch; `session.classifiedPaths` und `ack.classifiedPaths` werden explizit gegen die aktive Pfadmenge verifiziert.
+- P0-Testlinie auf vier kleine Pflichtbeweise erweitert:
+  - `tests/test-contract-no-bypass.mjs` deckt jetzt auch negative `SET_BRUSH`, `SET_UI`, `SET_PHYSICS` und `SET_GLOBAL_LEARNING`-Faelle mit stabilen Hashankern ab.
+  - neues `tests/test-dispatch-error-state-stability.mjs` beweist `revisionCount`-, `signatureMaterial`- und `readModel`-Stabilitaet bei Fehl-Dispatch.
+  - `tests/test-deterministic-genesis.mjs` prueft jetzt `same-seed`, `cross-seed` sowie die festen Anker `after-core`, `step-1`, `step-4`.
+  - `tests/test-llm-contract.mjs` erzwingt wording contract, explizite Pfaddrift-Fehler und wiederholbar gruene `check`-Rotation.
+- Evidence-/Registry-Sync nachgezogen: `tests/evidence/spec-map.mjs` fuehrt die vier aktiven Pflichtbeweise mit standardisierten Namen und Zwecken.
+- Offizieller Vollnachweis erneut grün: `node tools/run-all-tests.mjs --full`, Manifest `output/evidence/2026-03-16T20-08-05-025Z-full-60d00ec1/manifest.json`, Proof `docs/traceability/w1-proof-summary.md`.
 
 ### 2026-03-15 session `entry-naming-and-backup-anchor-audit`
 - Entry-Benennung fuer technische Checks entkoppelt: `llm:entry|ack|check` ersetzt durch `llm:preflight:start|ack|check`, damit Chat-Entry (Prozess) und CLI-Preflight (Technik) nicht verwechselt werden.

@@ -10,15 +10,21 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 
 ## PRUEFEN
 - Task ueber `docs/llm/TASK_ENTRY_MATRIX.json` klassifizieren
-- Session starten: `node tools/llm-preflight.mjs entry --paths <...> --mode work|security`
-- Ack ueber `tools/llm-preflight.mjs`
-- vor Test und Schreiben immer `check`
+- Session im Chat mit `entry` beginnen; das ist Pflicht, ersetzt aber keinen CLI-Preflight
+- technische Kette exakt einhalten:
+  1. `node tools/llm-preflight.mjs classify --paths <...>`
+  2. `node tools/llm-preflight.mjs entry --paths <...> --mode work|security`
+  3. `node tools/llm-preflight.mjs ack --paths <...>`
+  4. `node tools/llm-preflight.mjs check --paths <...>`
+- in allen vier Schritten dieselbe kanonische Pfadmenge verwenden
+- vor Test und Schreiben immer ein gruener `check` fuer genau diesen Scope
 - Hook-Guards einmal aktivieren: `npm run hooks:install`
 
 ## SCHREIBEN
 - kein Schreiben ohne gelesenen LLM-Entry plus passendem Task-Entry
 - kein Scope-Mix ohne neuen Subtask
 - task-spezifische Doku vor globaler Statuspflege
+- kein Weiterarbeiten nach `check`-Rot; erst neuen Scope-Preflight aufbauen
 - UMGEHUNG (z. B. direkte State-/Patch-Injektion zur Abkuerzung von Flows) ist nur mit expliziter Ruecksprache erlaubt.
 
 ## DOKU
