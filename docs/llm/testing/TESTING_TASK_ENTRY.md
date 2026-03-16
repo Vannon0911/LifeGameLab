@@ -34,6 +34,8 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 ## DOKU (pflicht)
 - Zuerst testing-spezifische Doku.
 - `docs/STATUS.md` nur globale Fallback-Ansicht.
+- Die atomare Test-TODO steht fix in `docs/STATUS.md` unter `Atomare Test-TODO (fix, MVP unveraendert)`.
+- Keine separate TODO-Datei anlegen; bestehende fixe Datei pflegen.
 
 ## Taskregel
 Kein Testlauf ohne Ack. Offizielle Truth laeuft nur noch dispatch-basiert ueber `tools/evidence-runner.mjs`; globale Browser-Hooks oder Live-Client-Sonderpfade sind keine erlaubte Testsurface mehr.
