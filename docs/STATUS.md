@@ -207,6 +207,13 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Neuer Vollnachweis: `output/evidence/2026-03-16T20-18-21-400Z-full-c2fce4ba/manifest.json`.
 - Ergebnis blieb stabil: `evidence_match`, Claims `match`, Regression `match`; nur die Event-Chain-Root rotierte erwartungsgemaess neu.
 
+### 2026-03-16 session `p1-drift-probes-promoted-to-truth`
+- `tests/test-step-chain-determinism.mjs` ist jetzt offizielle Regression-Truth mit Einordnung `P1 / Runtime-Test-Drift`.
+- `tests/test-readmodel-determinism.mjs` ist jetzt offizielle Regression-Truth mit Einordnung `P1 / Artefakt-/Read-Model-Drift`.
+- Registry/Suite wurden synchronisiert, damit `node tools/run-all-tests.mjs --full` beide Tests offiziell kennt; der bisherige Drift `realer Test existiert, aber Voll-Gate kennt ihn nicht` ist fuer diese beiden Tests geschlossen.
+- Wiederholungsprobe danach erneut grün: `output/evidence/2026-03-16T20-29-41-219Z-full-9ceb4c82/manifest.json`.
+- Dieser Nachtrag bedeutet nur, dass die beiden P1-Drift-Tests jetzt offizielle Truth sind; er behauptet nicht, dass der gesamte Repro-/RC-Audit bereits abgeschlossen ist.
+
 ### 2026-03-15 session `entry-naming-and-backup-anchor-audit`
 - Entry-Benennung fuer technische Checks entkoppelt: `llm:entry|ack|check` ersetzt durch `llm:preflight:start|ack|check`, damit Chat-Entry (Prozess) und CLI-Preflight (Technik) nicht verwechselt werden.
 - Sicheres Backup-Anchor-Audit automatisiert: neues Script `tools/backup-anchor-audit.mjs` plus `npm run backup:audit`, `npm run backup:audit:apply` und `npm run backup:audit:fix-local`.

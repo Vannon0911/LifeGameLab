@@ -8,7 +8,7 @@ It replaces raw run dumps and screenshot archives with a small text summary.
 - command: `node tools/run-all-tests.mjs --full`
 - run date: `2026-03-16`
 - proof scope: `w1`
-- manifest: `output/evidence/2026-03-16T20-18-21-400Z-full-c2fce4ba/manifest.json`
+- manifest: `output/evidence/2026-03-16T20-29-41-219Z-full-9ceb4c82/manifest.json`
 
 ## Outcome
 - overall: `evidence_match`
@@ -16,7 +16,7 @@ It replaces raw run dumps and screenshot archives with a small text summary.
 - regression status: `match`
 
 ## Anchors
-- event chain root: `47e018cbcaad370b749e74887d15c3f560c1c1f754170e4df6ab48c521b54676`
+- event chain root: `bfc9a4d66ab5b82c073c8c513cc7a2f3b640e28d491a50762f3e44148f36a6df`
 - no bypass surface signature: `1c33a493`
 - no bypass surface state hash: `2abfab6211965bcfc7d6ce18d7b769374ec33f1b7330baa122d87da4735c3932`
 - no bypass surface read-model hash: `14e196b34802f619a05e52550ab48861e3dccd01dfe57975eaba5daa2c87250c`
@@ -30,6 +30,8 @@ It replaces raw run dumps and screenshot archives with a small text summary.
 - `tests/test-contract-no-bypass.mjs`
 - `tests/test-dispatch-error-state-stability.mjs`
 - `tests/test-deterministic-genesis.mjs`
+- `tests/test-readmodel-determinism.mjs`
+- `tests/test-step-chain-determinism.mjs`
 - `tests/test-llm-contract.mjs`
 
 ## Notes
@@ -37,3 +39,4 @@ It replaces raw run dumps and screenshot archives with a small text summary.
 - No screenshot or raw output archive is required to verify the current W1 state.
 - Entry-Governance and Entry-Contract were hardened before this run; the testing proof now enforces explicit path-drift failure and repeated `check` rotation.
 - Repetition probe on `2026-03-16` stayed green with the same canonical state/read-model anchors and a new event-chain root.
+- P1 drift probes are now part of the official regression truth: `test-step-chain-determinism` for runtime-test drift and `test-readmodel-determinism` for artefact/read-model drift.
