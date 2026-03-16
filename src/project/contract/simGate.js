@@ -1,3 +1,24 @@
+const SIM_BOOLEAN_KEYS = Object.freeze([
+  "running",
+  "zone2Unlocked",
+  "dnaZoneCommitted",
+  "infrastructureUnlocked",
+]);
+
+const SIM_STRING_KEYS = Object.freeze([
+  "gameResult",
+  "winMode",
+  "goal",
+  "runPhase",
+  "nextZoneUnlockKind",
+  "infraBuildMode",
+]);
+
+const SIM_OBJECT_KEYS = Object.freeze([
+  "patternCatalog",
+  "patternBonuses",
+]);
+
 export const simGate = {
   limits: {
     maxPatches: 5000,
@@ -43,15 +64,12 @@ export const simGate = {
       lineageDefenseReadiness: { type: "object" },
       clusterAttackState: { type: "object" },
       zoneMap: { type: "ta", ctor: "Int8Array", len: "N" },
-      zoneRole: { type: "ta", ctor: "Uint8Array", len: "N" },
-      zoneId: { type: "ta", ctor: "Int32Array", len: "N" },
+      zoneRole: { type: "ta", ctor: "Int8Array", len: "N" },
+      zoneId: { type: "ta", ctor: "Uint16Array", len: "N" },
       zoneMeta: { type: "object" },
       coreZoneMask: { type: "ta", ctor: "Uint8Array", len: "N" },
       dnaZoneMask: { type: "ta", ctor: "Uint8Array", len: "N" },
       infraCandidateMask: { type: "ta", ctor: "Uint8Array", len: "N" },
-      zoneRole: { type: "ta", ctor: "Int8Array", len: "N" },
-      zoneId: { type: "ta", ctor: "Uint16Array", len: "N" },
-      zoneMeta: { type: "object" },
       founderMask: { type: "ta", ctor: "Uint8Array", len: "N" },
       visibility: { type: "ta", ctor: "Uint8Array", len: "N" },
       explored: { type: "ta", ctor: "Uint8Array", len: "N" },
@@ -75,5 +93,8 @@ export const simGate = {
       "energySupremacyTicks", "efficiencyTicks", "lossStreakTicks", "stockpileTicks",
       "cpuEnergyIn", "gameResult", "winMode", "gameEndTick", "goal",
     ],
+    booleanKeys: SIM_BOOLEAN_KEYS,
+    stringKeys: SIM_STRING_KEYS,
+    objectKeys: SIM_OBJECT_KEYS,
   },
 };
