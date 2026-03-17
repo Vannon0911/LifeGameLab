@@ -100,6 +100,29 @@ Artefakte pro Run:
 - Inhalte: `01_..06_*.png` plus `run-log.json`
 - Retention: Es bleiben automatisch nur die letzten `3` visuellen Runs erhalten.
 
+### Tagesstand (2026-03-17)
+
+Heute wurde der Foundation-/Runner-Block in getrennten Scopes abgeschlossen und danach auf RTS-Runtime live nachgetestet.
+
+- Referenz-Commits:
+  - `f08f792` `fix(testing): classify foundation visual runner in task matrix`
+  - `4c7f22e` `test(foundation): harden foundation flow and add visual runner with 3-run artifact retention`
+  - `2371839` `chore(versioning): update package metadata for foundation test tooling`
+  - `6f39eb7` `chore(versioning): align llm preflight protocol with task-sliced commit workflow`
+  - `d253729` `docs(versioning): document foundation visual runner and artifact retention`
+
+- Was heute live verifiziert wurde:
+  - Foundation -> Core -> RUN_ACTIVE schaltet korrekt um.
+  - RTS-Loop läuft sichtbar (Tick steigt), wenn der Run aktiv ist.
+  - Smoke-Sprint läuft nicht mehr sofort fest, endet aktuell aber nicht sauber im sichtbaren End-Overlay.
+
+- Verbleibender Engpass (Stand jetzt):
+  - Bei Smoke-Sprint stoppt der Lauf im Feldzustand (Tick friert, `Start` statt `Pause`), ohne dass das End-Overlay/Run-Summary zuverlässig angezeigt wird.
+
+- Nachweis-Befehle:
+  - Visual Goldpfad mit Artefakten: `npm run test:foundation:visual`
+  - Volltests: `node tools/run-all-tests.mjs --full`
+
 ## Repo-Struktur
 
 - `src/app/`
