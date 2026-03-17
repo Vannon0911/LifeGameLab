@@ -22,7 +22,6 @@ const WORLD_LOG_COLUMNS = [
   "pruned",
   "nCapTiles",
   "eClearTiles",
-  "worldMode",
   "ts",
 ];
 
@@ -83,7 +82,6 @@ export function createWorldStateLog(hashStringFn) {
       const tick = Number(state?.sim?.tick || 0);
       if (tick <= 0 || (tick % 100) !== 0 || tick === this.lastTrackedTick) return;
       const sim = state.sim || {};
-      const world = state.world || {};
       const entry = {
         t: tick,
         alive: Number(sim.aliveCount || 0),
@@ -108,7 +106,6 @@ export function createWorldStateLog(hashStringFn) {
         pruned: Number(sim.plantsPrunedLastStep || 0),
         nCapTiles: Number(sim.nutrientCappedTilesLastStep || 0),
         eClearTiles: Number(sim.energyClearedTilesLastStep || 0),
-        worldMode: String(world?.worldAiAudit?.mode || ""),
         ts: tick,
       };
 

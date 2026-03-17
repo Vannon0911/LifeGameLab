@@ -3,7 +3,7 @@
 // Pure: reads state, writes pixels. Never mutates state.
 // ============================================================
 
-import { OVERLAY_MODE } from "../contracts/ids.js";
+import { OVERLAY_MODE, ZONE_ROLE } from "../contracts/ids.js";
 import { FOG_HIDDEN, FOG_MEMORY, FOG_VISIBLE, applyFogToColor, getTileFogState } from "./fogOfWar.js";
 
 function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
@@ -987,6 +987,40 @@ function drawZoneOverlay(ctx, world, offX, offY, tilePx) {
   }
   ctx.restore();
 }
+
+function drawCommittedZoneRoleRings(ctx, world, offX, offY, tilePx) {
+  const zoneRole = world?.zoneRole;
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  if (!zoneRole || w <= 0 || h <= 0 || tilePx < 2) return;
+
+  const colorByRole = {
+    [ZONE_ROLE.CORE]: "rgba(64, 224, 255, 0.35)",   // Cyan
+    [ZONE_ROLE.DNA]: "rgba(170, 110, 255, 0.35)",   // Violet
+    [ZONE_ROLE.INFRA]: "rgba(48, 214, 184, 0.35)",  // Teal
+  };
+  const baseRadius = Math.max(1.2, tilePx * 0.34);
+  const ringRadius = baseRadius * 1.45;
+  const lineWidth = Math.max(0.8, tilePx * 0.10);
+
+  ctx.save();
+  ctx.lineWidth = lineWidth;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = y * w + x;
+      const role = Number(zoneRole[idx] || 0) | 0;
+      const stroke = colorByRole[role];
+      if (!stroke) continue;
+      const cx = offX + x * tilePx + tilePx * 0.5;
+      const cy = offY + y * tilePx + tilePx * 0.5;
+      ctx.strokeStyle = stroke;
+      ctx.beginPath();
+      ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
 
 export function render(canvas, state, perf = null) {
   const { world, meta, sim } = state;
@@ -1057,6 +1091,7 @@ export function drawFrame(ctx, state, perf = {}) {
   drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality);
   if (!overlayActive && !balanced && (quality >= 3 || userFocused) && lod.level <= 1 && !userMinimal) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
   if (!overlayActive && !tactical && quality >= 1 && !isHugeGrid && !userMinimal) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
+  if (quality >= 1) drawCommittedZoneRoleRings(ctx, world, offX, offY, tilePx);
   if (quality >= 1 && shouldDrawLegacyZoneOverlay(meta)) drawZoneOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level, detailMode);
   if (quality >= 1 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);

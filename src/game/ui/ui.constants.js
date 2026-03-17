@@ -55,6 +55,7 @@ export const WORLD_PRESET_OPTIONS = [
   { id: "river_delta", label: "River Delta", desc: "Hoher Wasserkorridor und stabile Expansion." },
   { id: "dry_basin", label: "Dry Basin", desc: "Wenig Wasser, hoher Lichtdruck und harte Gates." },
   { id: "wet_meadow", label: "Wet Meadow", desc: "Gleichmaessige Feuchte und weichere Fruehphase." },
+  { id: "smoke_sprint", label: "Smoke Sprint", desc: "Kurzer offizieller Endpfad fuer reproduzierbare Smoke-Runs." },
 ];
 
 export const RENDER_DETAIL_MODE_OPTIONS = [
