@@ -12,6 +12,7 @@
     "test": "node tools/run-all-tests.mjs",
     "test:quick": "node tools/run-test-suite.mjs quick",
     "test:truth": "node tools/run-test-suite.mjs truth",
-    "test:full": "node tools/run-all-tests.mjs"
+    "test:full": "node tools/run-all-tests.mjs",
+    "test:foundation:visual": "node tools/run-foundation-visual-playwright.mjs"
   }
 }
