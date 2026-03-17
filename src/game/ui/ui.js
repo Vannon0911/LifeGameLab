@@ -18,6 +18,7 @@ import {
   OVERLAY_MODE,
   OVERLAY_MODE_VALUES,
   RUN_PHASE,
+  WIN_MODE_SELECTABLE,
   WIN_MODE_RESULT_LABEL,
 } from "../contracts/ids.js";
 import {
@@ -642,14 +643,18 @@ export class UI {
             rerenderPanel();
           },
           confirmFoundation: () => {
-            this._dispatch(
-              { type: "CONFIRM_FOUNDATION", payload: {} },
-              {
-                ok: "Gruendung bestaetigt. Genesis-Zone aktiv, Energiekern wartet.",
-                blocked: "Gruendung blockiert.",
-                hint: "Erforderlich: exakt 4 eigene, zusammenhaengende Founder im Startfenster.",
-              }
-            );
+            this._store.dispatch({ type: "CONFIRM_FOUNDATION", payload: {} });
+            const nextState = this._store.getState();
+            const movedToGenesisZone = String(nextState?.sim?.runPhase || "") === RUN_PHASE.GENESIS_ZONE;
+            this._setActionFeedback({
+              ok: movedToGenesisZone,
+              message: movedToGenesisZone
+                ? "Gruendung bestaetigt. Genesis-Zone aktiv, Energiekern wartet."
+                : "Gruendung blockiert.",
+              hint: movedToGenesisZone
+                ? "Naechster Schritt: Energiekern bestaetigen."
+                : "Erforderlich: exakt 4 eigene, zusammenhaengende Founder im Startfenster.",
+            });
             rerenderPanel();
           },
           confirmCoreZone: () => {
@@ -904,6 +909,7 @@ export class UI {
       const worldTitle = el("div", "nx-card-title", "Welt");
       worldTitle.id = "world-settings-title";
       card.appendChild(worldTitle);
+      const winModeLocked = Number(sim.tick || 0) > 0 || String(sim.runPhase || "") === RUN_PHASE.RUN_ACTIVE;
 
       const presetRow = el("div", "nx-stack");
       presetRow.append(el("span", "nx-label", "Preset"));
@@ -924,6 +930,36 @@ export class UI {
       const presetDef = WORLD_PRESET_OPTIONS.find((entry) => entry.id === String(meta.worldPresetId || "river_delta"));
       presetRow.appendChild(el("div", "nx-note", presetDef?.desc || ""));
       card.appendChild(presetRow);
+
+      const winModeRow = el("div", "nx-stack");
+      winModeRow.append(el("span", "nx-label", "Run-Pfad"));
+      const winModeSel = document.createElement("select");
+      winModeSel.className = "nx-select";
+      winModeSel.setAttribute("aria-label", "Siegpfad waehlen");
+      for (const mode of WIN_MODE_SELECTABLE) {
+        const option = document.createElement("option");
+        option.value = mode;
+        option.textContent = WIN_MODE_RESULT_LABEL[mode] || mode;
+        if (String(sim.winMode || "") === mode) option.selected = true;
+        winModeSel.appendChild(option);
+      }
+      winModeSel.disabled = winModeLocked;
+      winModeSel.addEventListener("change", () => {
+        if (winModeLocked) return;
+        this._dispatch({ type: "SET_WIN_MODE", payload: { winMode: String(winModeSel.value || "") } });
+        queueMicrotask(() => this._renderPanelBody(container, this._store.getState()));
+      });
+      winModeRow.appendChild(winModeSel);
+      winModeRow.appendChild(
+        el(
+          "div",
+          "nx-note",
+          winModeLocked
+            ? "Siegpfad ist ab Run-Start gesperrt."
+            : "Siegpfad ist nur vor Run-Start waehlbar.",
+        ),
+      );
+      card.appendChild(winModeRow);
 
       const seedRow = el("div", "nx-stack");
       seedRow.append(el("span", "nx-label", "Seed"));
@@ -1246,34 +1282,72 @@ export class UI {
     // ── GAME OVER OVERLAY ───────────────────────────────────
 
   _showGameOverlay(sim) {
-    const isWin = sim.gameResult === GAME_RESULT.WIN;
-    const modeLbl = WIN_MODE_RESULT_LABEL[sim.winMode] || sim.winMode;
+    const summary = sim?.runSummary && typeof sim.runSummary === "object" ? sim.runSummary : {};
+    const result = String(summary.result || sim.gameResult || "");
+    const summaryWinMode = String(summary.winMode || sim.winMode || "");
+    const summaryTick = Number(summary.tick ?? sim.gameEndTick ?? 0);
+    const summaryStage = Number(summary.stage ?? sim.playerStage ?? 1);
+    const summaryCpuDelta = Number(
+      summary.cpuDelta
+      ?? ((Number(sim.playerAliveCount || 0) | 0) - (Number(sim.cpuAliveCount || 0) | 0)),
+    );
+    const summaryDNA = Number(summary.playerDNA ?? sim.playerDNA ?? 0);
+    const summaryEnergyNet = Number(summary.playerEnergyNet ?? sim.playerEnergyNet ?? 0);
+    const summaryHarvested = Number(summary.totalHarvested ?? sim.totalHarvested ?? 0);
+    const summaryActiveBiomes = Number(summary.activeBiomeCount ?? sim.activeBiomeCount ?? 0);
+    const summaryTopology = String(summary.dominantTopology || "");
+    const isWin = result === GAME_RESULT.WIN;
+    const modeLbl = WIN_MODE_RESULT_LABEL[summaryWinMode] || summaryWinMode;
     const inner = this._gameOverlayInner;
     inner.innerHTML = "";
     const icon  = el("div","nx-go-icon",  isWin?"🏆":"☠");
     const title = el("div","nx-go-title", isWin?"SIEG":"NIEDERLAGE");
     title.style.color = isWin?"var(--green)":"var(--red)";
     const sub  = el("div","nx-go-sub",   modeLbl);
-    const tick = el("div","nx-go-tick",  `Tick ${sim.gameEndTick}`);
+    const tick = el("div","nx-go-tick",  `Tick ${summaryTick}`);
+    const dominantPattern = summaryTopology || "keine";
+    const cpuDelta = summaryCpuDelta;
     const stats = el("div","nx-go-stats");
     for (const [label,val] of [
-      ["DNA gesammelt", (sim.playerDNA||0).toFixed(1)],
-      ["Gesamte Harvests", String(sim.totalHarvested||0)],
-      ["Stage erreicht", `${sim.playerStage||1} / 5`],
-      ["Energie gespeichert", (sim.playerEnergyStored||0).toFixed(2)],
-      ["Suprematie-Ticks", String(sim.energySupremacyTicks||0)],
+      ["Ausgang", isWin ? "Sieg" : "Niederlage"],
+      ["Siegpfad", modeLbl],
+      ["End-Tick", String(summaryTick || 0)],
+      ["Stage", `${summaryStage||1} / 5`],
+      ["Population", String(sim.playerAliveCount || 0)],
+      ["CPU Delta", `${cpuDelta >= 0 ? "+" : ""}${cpuDelta}`],
+      ["DNA", summaryDNA.toFixed(1)],
+      ["Energie Netto", `${summaryEnergyNet >= 0 ? "+" : ""}${fmt(summaryEnergyNet, 2)}`],
+      ["Harvest Total", String(summaryHarvested || 0)],
+      ["Aktive Biome", String(summaryActiveBiomes || 0)],
+      ["Dominante Topologie", dominantPattern],
     ]) {
       const row = el("div","nx-go-stat-row");
       row.append(el("span","nx-go-stat-label",label), el("span","nx-go-stat-val",val));
       stats.appendChild(row);
     }
+
+    const controls = el("div", "nx-chip-grid");
+    const btnRematch = el("button","nx-btn nx-go-btn","REMATCH");
+    btnRematch.addEventListener("click", () => {
+      const currentSeed = String(this._store.getState()?.meta?.seed || "life-seed");
+      const rematchSeed = `${currentSeed}_rematch`;
+      this._gameOverlay.classList.add("hidden");
+      this._lastGameResult = "";
+      this._dispatch({ type: "TOGGLE_RUNNING", payload: { running: false } });
+      this._dispatch({ type: "SET_SEED", payload: rematchSeed });
+      this._dispatch({ type: "GEN_WORLD", payload: {} });
+    });
+    const btnDaily = el("button","nx-btn nx-go-btn","DAILY CHALLENGE");
+    btnDaily.disabled = true;
+    btnDaily.title = "Daily Challenge wird erst mit einer deterministischen Daily-Quelle aktiviert.";
     const btnNew = el("button","nx-btn nx-btn-primary nx-go-btn","Neue Welt");
     btnNew.addEventListener("click", () => {
       this._gameOverlay.classList.add("hidden");
       this._lastGameResult = "";
       this._btnNew.click();
     });
-    inner.append(icon, title, sub, tick, stats, btnNew);
+    controls.append(btnRematch, btnDaily, btnNew);
+    inner.append(icon, title, sub, tick, stats, controls);
     this._gameOverlay.classList.remove("hidden");
   }
 
@@ -1534,6 +1608,7 @@ export class UI {
     if (sim.gameResult && sim.gameEndTick === sim.tick && sim.gameEndTick !== this._lastGameEndTick) {
       if (sim.gameResult === GAME_RESULT.WIN) this._announce(`Sieg! (${sim.winMode})`);
       else if (sim.gameResult === GAME_RESULT.LOSS) this._announce(`Niederlage! (${sim.winMode})`);
+      this._showGameOverlay(sim);
       this._lastGameEndTick = sim.gameEndTick;
     }
 
