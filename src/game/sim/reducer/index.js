@@ -53,9 +53,9 @@ import { buildSetOverlayPatches, buildSetWinModePatches } from "./controlActions
 import {
   applyPresetPhysicsOverrides,
   getWorldPreset,
-  isTileInStartWindow,
   normalizeWorldPresetId,
 } from "../worldPresets.js";
+import { evaluateFoundationEligibility } from "../foundationEligibility.js";
 import { deriveStageState } from "./progression.js";
 import {
   handleHarvestPulse,
@@ -317,35 +317,7 @@ function spendPlayerEnergyFromCells(world, playerLineageId, amount) {
 }
 
 function canConfirmFoundation(state) {
-  if (state.sim.runPhase !== RUN_PHASE.GENESIS_SETUP) return false;
-  const world = state.world;
-  if (!world?.alive || !world?.lineageId || !world?.founderMask) return false;
-  const w = Number(world.w || state.meta.gridW || 0) | 0;
-  const h = Number(world.h || state.meta.gridH || 0) | 0;
-  if (w <= 0 || h <= 0) return false;
-  const founderBudget = Math.max(0, Number(state.sim.founderBudget || 0) | 0);
-  const founderPlaced = Math.max(0, Number(state.sim.founderPlaced || 0) | 0);
-  if (founderBudget !== 4 || founderPlaced !== 4) return false;
-  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-  const preset = getWorldPreset(state.meta.worldPresetId);
-  const playerWindow = preset?.startWindows?.player;
-  if (!playerWindow) return false;
-
-  const founderIndices = [];
-  for (let i = 0; i < world.founderMask.length; i++) {
-    if ((Number(world.founderMask[i]) | 0) !== 1) continue;
-    founderIndices.push(i);
-  }
-  if (founderIndices.length !== 4) return false;
-
-  for (const idx of founderIndices) {
-    if ((Number(world.alive[idx]) | 0) !== 1) return false;
-    if ((Number(world.lineageId[idx]) | 0) !== playerLineageId) return false;
-    const x = idx % w;
-    const y = (idx / w) | 0;
-    if (!isTileInStartWindow(x, y, w, h, playerWindow)) return false;
-  }
-  return areFounderTilesConnected8(founderIndices, w, h);
+  return !!evaluateFoundationEligibility(state).eligible;
 }
 
 function collectFounderIndices(state) {
