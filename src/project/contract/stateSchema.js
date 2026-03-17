@@ -120,6 +120,12 @@ export const stateSchema = {
         defenseActivationsLastStep: { type: "number", default: 0 },
         resourceStolenLastStep: { type: "number", default: 0 },
         plantsPrunedLastStep: { type: "number", default: 0 },
+        cellPatternCounts: {
+          type: "object",
+          default: { line: 0, angle: 0, triangle: 0, loop: 0 },
+          shape: {},
+          allowUnknown: true,
+        },
         nutrientCappedTilesLastStep: { type: "number", default: 0 },
         energyClearedTilesLastStep: { type: "number", default: 0 },
         expansionCount: { type: "number", default: 0 },

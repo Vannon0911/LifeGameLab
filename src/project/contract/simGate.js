@@ -17,6 +17,7 @@ const SIM_STRING_KEYS = Object.freeze([
 const SIM_OBJECT_KEYS = Object.freeze([
   "patternCatalog",
   "patternBonuses",
+  "cellPatternCounts",
 ]);
 
 export const simGate = {
@@ -83,7 +84,7 @@ export const simGate = {
       "networkRatio", "clusterRatio", "birthsLastStep", "deathsLastStep", "mutationsLastStep",
       "raidEventsLastStep", "infectionsLastStep", "conflictKillsLastStep", "superCellsLastStep",
       "remoteAttacksLastStep", "remoteAttackKillsLastStep", "defenseActivationsLastStep", "resourceStolenLastStep",
-      "plantsPrunedLastStep", "nutrientCappedTilesLastStep", "energyClearedTilesLastStep",
+      "plantsPrunedLastStep", "cellPatternCounts", "nutrientCappedTilesLastStep", "energyClearedTilesLastStep",
       "expansionCount", "lastExpandTick", "expansionWork", "nextExpandCost",
       "playerAliveCount", "cpuAliveCount", "playerEnergyIn", "playerEnergyOut",
       "playerEnergyNet", "playerEnergyStored", "lightShare", "nutrientShare", "seasonPhase",
