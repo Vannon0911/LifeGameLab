@@ -1,5 +1,6 @@
 import { PLAYER_DOCTRINES, DOCTRINE_BY_ID, deriveCommandScore } from "../techTree.js";
 import { RUN_PHASE, ZONE_ROLE } from "../contracts/ids.js";
+import { evaluateFoundationEligibility } from "../sim/foundationEligibility.js";
 import {
   getActionState,
   getBottleneckState,
@@ -144,19 +145,30 @@ export function renderLagePanel({
   container.appendChild(alertCard);
 
   if (String(sim.runPhase || "") === RUN_PHASE.GENESIS_SETUP) {
+    const foundationEligibility = evaluateFoundationEligibility(state);
     const founderCard = el("section", "nx-card");
     founderCard.appendChild(el("div", "nx-card-title", "Genesis: Gruendung"));
     founderCard.appendChild(el("div", "nx-note", "Setze vier zusammenhaengende Founder im linken Startfenster und bestaetige danach die Gruendung."));
     const founderCount = el("div", "nx-active-tool");
     founderCount.append(
       el("div", "nx-active-tool-label", "Founder"),
-      el("div", "nx-active-tool-copy", `${Number(sim.founderPlaced || 0)}/${Number(sim.founderBudget || 4)}`),
+      el("div", "nx-active-tool-copy", `${foundationEligibility.founderMaskCount}/${foundationEligibility.founderBudget || 4}`),
     );
     founderCard.appendChild(founderCount);
+    founderCard.appendChild(
+      el(
+        "div",
+        foundationEligibility.eligible ? "nx-note nx-val-pos" : "nx-note",
+        foundationEligibility.eligible
+          ? "Foundation bereit: Gruendung kann bestaetigt werden."
+          : "Foundation noch nicht bereit: exakt 4 eigene, zusammenhaengende Founder im Startfenster erforderlich.",
+      ),
+    );
     const founderActions = el("div", "nx-chip-grid");
     const brushBtn = el("button", "nx-btn nx-btn-ghost", "Founder-Brush");
     brushBtn.addEventListener("click", actions.useFounderBrush);
     const confirmBtn = el("button", "nx-btn nx-btn-primary", "Gruendung bestaetigen");
+    confirmBtn.disabled = !foundationEligibility.eligible;
     confirmBtn.addEventListener("click", actions.confirmFoundation);
     founderActions.append(brushBtn, confirmBtn);
     founderCard.appendChild(founderActions);
