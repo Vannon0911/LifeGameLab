@@ -83,7 +83,22 @@ node tests/test-contract-no-bypass.mjs
 node tests/test-deterministic-genesis.mjs
 node tests/test-sim-gate-contract.mjs
 node tests/test-llm-contract.mjs
+npm run test:foundation:visual
 ```
+
+### Foundation Visual Runner
+
+Fester visueller Foundation-Goldpfad-Runner:
+
+- Start: `npm run test:foundation:visual`
+- Runner-Datei: `tools/run-foundation-visual-playwright.mjs`
+- Gepruefte Schritte: `app_loaded -> new_world -> foundation_not_ready -> foundation_ready -> core_visible -> run_active`
+
+Artefakte pro Run:
+
+- Run-Ordner: `output/playwright/foundation-block/<run-id>/`
+- Inhalte: `01_..06_*.png` plus `run-log.json`
+- Retention: Es bleiben automatisch nur die letzten `3` visuellen Runs erhalten.
 
 ## Repo-Struktur
 
