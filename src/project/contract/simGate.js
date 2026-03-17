@@ -18,6 +18,7 @@ const SIM_OBJECT_KEYS = Object.freeze([
   "patternCatalog",
   "patternBonuses",
   "cellPatternCounts",
+  "runSummary",
 ]);
 
 export const simGate = {
@@ -56,10 +57,8 @@ export const simGate = {
       actionMap: { type: "ta", ctor: "Uint8Array", len: "N" },
       balanceGovernor: { type: "object" },
       lastFounderTick: { type: "number" },
-      worldAiAudit: { type: "object" },
       globalLearning: { type: "object" },
       devMutationVault: { type: "object" },
-      devAiLast: { type: "object" },
       lineageMemory: { type: "object" },
       lineageThreatMemory: { type: "object" },
       lineageDefenseReadiness: { type: "object" },
@@ -92,7 +91,7 @@ export const simGate = {
       "harvestYieldTotal", "pruneYieldTotal", "recycleYieldTotal", "seedYieldTotal",
       "stabilityScore", "ecologyScore", "activeBiomeCount", "patternCatalog", "patternBonuses",
       "energySupremacyTicks", "efficiencyTicks", "lossStreakTicks", "stockpileTicks",
-      "cpuEnergyIn", "gameResult", "winMode", "gameEndTick", "goal",
+      "cpuEnergyIn", "gameResult", "winMode", "gameEndTick", "runSummary", "goal",
     ],
     booleanKeys: SIM_BOOLEAN_KEYS,
     stringKeys: SIM_STRING_KEYS,

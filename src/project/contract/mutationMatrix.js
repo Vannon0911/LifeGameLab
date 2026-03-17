@@ -93,7 +93,7 @@ export const mutationMatrix = {
     "/sim/running",
   ],
   TOGGLE_RUNNING: ["/sim/running"],
-  SIM_STEP: ["/meta/globalLearning", "/meta/gridW", "/meta/gridH", "/world/", "/sim/"],
+  SIM_STEP: ["/meta/globalLearning", "/meta/gridW", "/meta/gridH", "/meta/simStepCount", "/sim/runSummary", "/world/", "/sim/"],
   SET_SPEED: ["/meta/speed"],
   SET_SEED: ["/meta/seed"],
   SET_SIZE: ["/meta/gridW", "/meta/gridH"],

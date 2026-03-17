@@ -296,6 +296,16 @@ function buildPatternSummary(sim) {
   };
 }
 
+function buildCellTopologySummary(sim) {
+  const counts = sim?.cellPatternCounts || {};
+  return {
+    line: Math.max(0, Number(counts.line || 0) | 0),
+    angle: Math.max(0, Number(counts.angle || 0) | 0),
+    triangle: Math.max(0, Number(counts.triangle || 0) | 0),
+    loop: Math.max(0, Number(counts.loop || 0) | 0),
+  };
+}
+
 function getPatternClassCount(sim) {
   const patternCatalog = sim?.patternCatalog || {};
   let count = 0;
@@ -829,6 +839,7 @@ export function buildAdvisorModel(state, options = {}) {
   const synergies = normalizeTechArray(memory.synergies);
   const zoneSummary = buildCanonicalZoneSummary(safeState);
   const patternSummary = buildPatternSummary(sim);
+  patternSummary.cellTopology = buildCellTopologySummary(sim);
   const blockedTechReasonCodes = techTargets.blockedCandidate?.blockedReasonCodes || [];
   const blockedTechReasonLabels = buildBlockedTechReasonLabels(blockedTechReasonCodes);
   const resultReason = RESULT_REASON_LABELS[String(sim.winMode || "")] || null;
