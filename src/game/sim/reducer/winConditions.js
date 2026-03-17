@@ -32,6 +32,50 @@ function countMaskOnes(mask) {
   return count;
 }
 
+function deriveDominantTopology(cellPatternCounts) {
+  const counts = cellPatternCounts && typeof cellPatternCounts === "object"
+    ? cellPatternCounts
+    : {};
+  const entries = [
+    ["line", Math.max(0, Number(counts.line || 0) | 0)],
+    ["angle", Math.max(0, Number(counts.angle || 0) | 0)],
+    ["triangle", Math.max(0, Number(counts.triangle || 0) | 0)],
+    ["loop", Math.max(0, Number(counts.loop || 0) | 0)],
+  ];
+  let dominant = "none";
+  let value = 0;
+  for (const [key, count] of entries) {
+    if (count > value) {
+      value = count;
+      dominant = key;
+    }
+  }
+  return dominant;
+}
+
+function buildRunSummary(state, simOut, currentTick, gameResult, resolvedWinMode) {
+  const seed = String(state?.meta?.seed || "");
+  const playerAlive = Number(simOut?.playerAliveCount || 0) | 0;
+  const cpuAlive = Number(simOut?.cpuAliveCount || 0) | 0;
+  const stage = Math.max(1, Number(simOut?.playerStage || 1) | 0);
+  const tick = Math.max(0, Number(currentTick || 0) | 0);
+  return {
+    result: String(gameResult || GAME_RESULT.NONE),
+    winMode: String(resolvedWinMode || state?.sim?.winMode || WIN_MODE.SUPREMACY),
+    tick,
+    stage,
+    seed,
+    cpuDelta: playerAlive - cpuAlive,
+    playerDNA: Number(simOut?.playerDNA || 0),
+    playerEnergyNet: Number(simOut?.playerEnergyNet || 0),
+    totalHarvested: Number(simOut?.totalHarvested || 0),
+    activeBiomeCount: Number(simOut?.activeBiomeCount || 0) | 0,
+    dominantTopology: deriveDominantTopology(simOut?.cellPatternCounts || state?.sim?.cellPatternCounts),
+    nextSeedSuggestion: `${seed}_rematch`,
+    score: stage * 1000 + tick,
+  };
+}
+
 export function applyWinConditions(state, simOut, currentTick) {
   if (!state.sim.gameResult) {
     const pEIn = Number(simOut.playerEnergyIn || 0);
@@ -104,6 +148,7 @@ export function applyWinConditions(state, simOut, currentTick) {
       simOut.gameResult = gameResult;
       simOut.winMode = resolvedWinMode;
       simOut.gameEndTick = currentTick;
+      simOut.runSummary = buildRunSummary(state, simOut, currentTick, gameResult, resolvedWinMode);
       simOut.running = false;
       simOut.runPhase = RUN_PHASE.RESULT;
     }
@@ -116,6 +161,7 @@ export function applyWinConditions(state, simOut, currentTick) {
     simOut.lossStreakTicks = state.sim.lossStreakTicks;
     simOut.stockpileTicks = state.sim.stockpileTicks;
     simOut.cpuEnergyIn = state.sim.cpuEnergyIn;
+    simOut.runSummary = state.sim.runSummary || {};
     simOut.runPhase = RUN_PHASE.RESULT;
   }
 }

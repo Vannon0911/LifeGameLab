@@ -163,66 +163,6 @@ function deriveBaseFields(state, preset, seedBase) {
   }
 }
 
-function buildSpawnClusters(state, preset) {
-  const score = new Float32Array(state.L.length);
-  for (let i = 0; i < score.length; i++) {
-    score[i] = Number(state.L[i] || 0) * 0.55 + Number(state.water[i] || 0) * 0.45 + Number(state.baseSat[i] || 0) * 0.35;
-  }
-  const ranked = [...score.keys()].sort((a, b) => score[b] - score[a]);
-  const picks = [];
-  for (const idx of ranked) {
-    const x = idx % state.w;
-    const y = (idx / state.w) | 0;
-    if (x > state.w * 0.46 && x < state.w * 0.54) continue;
-    let farEnough = true;
-    for (const pick of picks) {
-      const dx = x - pick.x;
-      const dy = y - pick.y;
-      if (dx * dx + dy * dy < 36) {
-        farEnough = false;
-        break;
-      }
-    }
-    if (!farEnough) continue;
-    picks.push({ x, y });
-    if (picks.length >= 2) break;
-  }
-  if (picks.length < 2) picks.push({ x: Math.floor(state.w * 0.75), y: Math.floor(state.h * 0.65) });
-  return picks.map((pick, index) => ({
-    x: pick.x,
-    y: pick.y,
-    r: preset.id === "dry_basin" ? 3 : 4,
-    lineageId: index === 0 ? 1 : 2,
-  }));
-}
-
-function placeClusters(state, clusters, seedBase) {
-  let stream = 9000;
-  for (const cluster of clusters) {
-    for (let dy = -cluster.r; dy <= cluster.r; dy++) {
-      for (let dx = -cluster.r; dx <= cluster.r; dx++) {
-        if (dx * dx + dy * dy > cluster.r * cluster.r) continue;
-        const x = cluster.x + dx;
-        const y = cluster.y + dy;
-        if (x < 0 || y < 0 || x >= state.w || y >= state.h) continue;
-        if (rng01(seedBase, stream++) > 0.78) continue;
-        const idx = y * state.w + x;
-        state.alive[idx] = 1;
-        state.E[idx] = 0.46 + rng01(seedBase, stream++) * 0.42;
-        state.reserve[idx] = 0.12 + rng01(seedBase, stream++) * 0.12;
-        state.age[idx] = Math.floor(rng01(seedBase, stream++) * 80);
-        state.lineageId[idx] = cluster.lineageId;
-        state.hue[idx] = cluster.lineageId === 1 ? 210 : 0;
-        state.R[idx] = clamp01(Math.max(Number(state.R[idx] || 0), 0.24 + Number(state.water[idx] || 0) * 0.16));
-        state.P[idx] = clamp01(Math.max(Number(state.P[idx] || 0), 0.10 + Number(state.baseSat[idx] || 0) * 0.10));
-        state.Sat[idx] = clamp01(Math.max(Number(state.Sat[idx] || 0), Number(state.baseSat[idx] || 0)));
-        const o = idx * TRAIT_COUNT;
-        for (let t = 0; t < TRAIT_COUNT; t++) state.trait[o + t] = TRAIT_DEFAULT[t];
-      }
-    }
-  }
-}
-
 function placePlants(state, phy, preset, seedBase) {
   const count = Math.round(state.w * state.h * (0.032 + (preset.plantBoost || 0) * 0.04 + (phy.plantCloudDensity || 0.82) * 0.014));
   let stream = 12000;

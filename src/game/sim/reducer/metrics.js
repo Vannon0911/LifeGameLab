@@ -13,10 +13,8 @@ export const WORLD_KEYS = [
   "actionMap",
   "balanceGovernor",
   "lastFounderTick",
-  "worldAiAudit",
   "globalLearning",
   "devMutationVault",
-  "devAiLast",
   "lineageMemory",
   "lineageThreatMemory",
   "lineageDefenseReadiness",
@@ -59,7 +57,7 @@ export const SIM_KEYS = [
   "stageProgressScore", "harvestYieldTotal", "pruneYieldTotal", "recycleYieldTotal", "seedYieldTotal",
   "stabilityScore", "ecologyScore", "activeBiomeCount", "patternCatalog", "patternBonuses",
   "energySupremacyTicks", "efficiencyTicks", "lossStreakTicks", "stockpileTicks",
-  "cpuEnergyIn", "gameResult", "winMode", "gameEndTick", "goal",
+  "cpuEnergyIn", "gameResult", "winMode", "gameEndTick", "runSummary", "goal",
 ];
 
 export const UI_KEYS = new Set([

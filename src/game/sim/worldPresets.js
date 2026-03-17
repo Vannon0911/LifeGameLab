@@ -9,6 +9,7 @@ export const WORLD_PRESET_IDS = Object.freeze([
   "river_delta",
   "dry_basin",
   "wet_meadow",
+  "smoke_sprint",
 ]);
 
 export const BIOME_IDS = Object.freeze({
@@ -177,6 +178,57 @@ export const WORLD_PRESETS = Object.freeze({
       R_gen: 1.12,
       plantCloudDensity: 1.20,
       seasonAmp: 0.90,
+    },
+  },
+  smoke_sprint: {
+    id: "smoke_sprint",
+    label: "Smoke Sprint",
+    description: "Kurzer offizieller Endpfad fuer reproduzierbare Smoke- und Demo-Runs.",
+    waterBias: -0.34,
+    waterSpread: 0.22,
+    waterFan: 0.04,
+    lightBias: -0.14,
+    fertilityBias: -0.28,
+    plantBoost: -0.34,
+    coreZoneUnlockCostEnergy: 8,
+    phaseC: {
+      dnaPlacementBudget: 4,
+      nextInfraUnlockCostDNA: 30,
+      dnaZoneAdjacencyRule: "touch_core_or_owned",
+      dnaYieldScale: 6.0,
+    },
+    phaseD: {
+      infraBuildCostEnergy: 10,
+      infraBuildCostDNA: 8,
+      visionRadiusCore: 2,
+      visionRadiusDNA: 2,
+      visionRadiusInfra: 1,
+    },
+    phaseE: {
+      patternWeights: {
+        line: 1.0,
+        block: 1.0,
+        loop: 1.0,
+        branch: 1.0,
+        dense_cluster: 1.0,
+      },
+      bonusScale: {
+        energy: 1.0,
+        dna: 1.0,
+        stability: 1.0,
+        vision: 1.0,
+        defense: 1.0,
+        transport: 1.0,
+      },
+    },
+    startWindows: START_WINDOWS_DEFAULT,
+    physicsOverrides: {
+      L_mean: 0.55,
+      T_survive: 1.38,
+      U_base: 3.80,
+      R_gen: 0.30,
+      plantCloudDensity: 0.14,
+      W_decay: 0.58,
     },
   },
 });
