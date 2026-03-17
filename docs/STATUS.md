@@ -13,6 +13,18 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Reproduzierbarkeit ist fuer den aktuellen Vor-MVP-W1-Scope hart belegt: dispatch-only Claims, harte Payload-Validierung, kein globaler Browser-Storezugriff, kein Live-Vorspulen.
 - Global ist das Projekt noch nicht vollstaendig bewiesen; die aktuelle Truth deckt den kleinen kanonischen W1-Scope ab und muss fuer den MVP-Block gezielt erweitert werden.
 
+## Aktueller Umsetzungsstand (Code)
+- `A1`: abgeschlossen
+- `A2`: abgeschlossen
+- `A3`: abgeschlossen
+- `B1`: abgeschlossen
+- `B2`: abgeschlossen
+- `B3`: globales `actionLog` verworfen/zurueckgebaut; `simStepCount` bleibt im Code
+- `C1`: abgeschlossen
+- `C2`: abgeschlossen
+- `C3`: abgeschlossen
+- `C4`: abgeschlossen mit Restnote (UI-Summary nutzt noch nicht konsequent `sim.runSummary`)
+
 ## Aktive Release-Gates
 
 ### Verifiziert Gruen
@@ -29,9 +41,6 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Diese Gruenlage bezieht sich auf die Vor-MVP-Baseline vor A1-C4.
 
 ### Noch Offen
-- MVP-Feature-Complete-Block `A1-C4` vollstaendig umsetzen, ohne die bestehenden Dispatch-/Patch-Gates aufzuweichen
-- `cellPatternCounts`, `runSummary`, `meta.actionLog` und `meta.simStepCount` vollstaendig im Contract registrieren
-- UI-/Advisor-/Overlay-Pfade auf neue Sim-Felder verdrahten, ohne direkte State-Schreibpfade einzufuehren
 - Testlinie fuer Genesis, Step-Determinismus, Sim-Gate und No-Bypass auf den neuen Zustand erweitern
 - Voll-Gegenprobe fuer den neuen MVP-Zustand dokumentieren
 
@@ -67,25 +76,23 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 
 ### Atomare Tasks
 
-1. `A1` KILL in `src/game/sim/worldgen.js` und `src/game/sim/reducer/index.js`: `generateWorld` ruft `placeClusters` fuer Spawn-Cluster nicht mehr auf. Worldgen erzeugt null lebende Zellen. Exklusiver CPU-Spawn bleibt `seedDeterministicBootstrapCluster` in `CONFIRM_CORE_ZONE`. `[open]`
-2. `A2` KILL in `src/game/sim/step.js`: Tick-Hardcode entfernen, der Spieler-Hue auf `210` und CPU-Hue auf `0` zuruecksetzt. `[open]`
-3. `A3` KILL in `src/game/sim/reducer/metrics.js`, `src/game/ui/ui.constants.js`, `src/game/sim/reducer/cpuActions.js`, `src/game/sim/worldAi.js`: `born` und `died` aus `WORLD_SIM_STEP_KEYS`-Exclusion entfernen, tote UI-Konstanten loeschen, `cpuActions.js` ausraeumen, `worldAiAudit`/`devAiLast`-Writes aus Production-State entfernen oder labor-guarded machen. `[open]`
-4. `B1` BUILD in `src/game/sim/cellPatterns.js`, `src/game/sim/stepPhases.js`, `src/game/sim/step.js`, `src/project/contract/stateSchema.js`, `src/project/contract/simGate.js`, `src/game/sim/reducer/metrics.js`: `scanCellTopologyPatterns(world, playerLineageId)` liefert `{ line, angle, triangle, loop }`. `runWorldSystemsPhase` wird auf Return `{ plantsPrunedLastStep, cellPatternCounts }` erweitert. `simStep` uebernimmt `worldPhase.cellPatternCounts` in sein Metrics-Return. `simStepPatch` patcht nur ueber `simOut`, nicht ueber `world`. `[open]`
-5. `B2` BUILD in `src/game/sim/worldAi.js`, `src/game/sim/stepPhases.js`, `src/game/sim/step.js`, `src/game/sim/reducer/index.js`: `applyWorldAi(world, tick, phy)` statt `options`. `runWorldSimV4` setzt `phy.worldSeedHash = hashString(\`${meta.seed || "life-seed"}:${normalizeWorldPresetId(meta.worldPresetId)}\`)`, `phy.playerAliveCount = Number(sim.playerAliveCount || 0)`, `phy.cpuAliveCount = Number(sim.cpuAliveCount || 0)`. `CONFIRM_CORE_ZONE` verwendet weiter `deriveBootstrapSimMetrics(...)`, damit die Counts schon vor dem ersten `SIM_STEP` korrekt sind. Strategiephase ist `hashMix32(phy.worldSeedHash, Math.floor(tick / 90)) % 3`. Override auf `PRESSURE`, wenn `phy.playerAliveCount > phy.cpuAliveCount * 1.5`. `EXPAND` spawnt max. 3 CPU-Zellen Richtung Spieler-Zentroid innerhalb CPU-Territorium `+2` Tiles. `HOLD` bleibt passiv. `PRESSURE` setzt `world.clusterAttackState[cpuLid].budget` auf Maximum. `[open]`
-6. `B3` BUILD via Weg A in `src/project/contract/stateSchema.js`, `src/project/contract/mutationMatrix.js`, `src/game/sim/reducer/index.js`: `meta.actionLog` und `meta.simStepCount` ergaenzen. Kein Store-Hook. Jeder nicht-`SIM_STEP`-Reducer-Case loggt selbst. Log-Limit ist verbindlich als ein einzelner `set`-Patch auf `/meta/actionLog`: `value: [...state.meta.actionLog.slice(-1999), newEntry]`. `SIM_STEP` erhoeht nur `meta.simStepCount`. `[open]`
-7. `C1` WIRE in `src/game/ui/ui.js` und `src/project/contract/dataflow.js`: Win-Mode-Selector im Welt-Panel vor Run-Start, Dispatch `SET_WIN_MODE`, disabled ab `sim.tick > 0`, selected state aus `sim.winMode`. `[open]`
-8. `C2` WIRE in `src/game/render/renderer.js`: committed `zoneRole`-Tiles immer sichtbar machen. `CORE` Cyan-Ring, `DNA` Violet-Ring, `INFRA` Teal-Ring, Radius `* 1.45`, Alpha `0.35`, aktiv bei `quality >= 1`. `[open]`
-9. `C3` WIRE in `src/game/ui/ui.lage.js` und `src/project/llm/advisorModel.js`: Sektion `Aktive Topologien` mit `line`, `angle`, `triangle`, `loop`, Nullwerte gedimmt sichtbar. `advisorModel.status.patternSummary` bekommt `cellTopology`. `loop > 0` ergaenzt den `dna_investment`-Hinweis. `[open]`
-10. `C4` BUILD in `src/app/runtime/dailySeed.js`, `src/game/sim/reducer/winConditions.js`, `src/project/contract/stateSchema.js`, `src/project/contract/simGate.js`, `src/game/sim/reducer/metrics.js`, `src/project/contract/mutationMatrix.js`, `src/game/ui/ui.js`: `sim.runSummary` vollstaendig im Contract registrieren. `winConditions.js` setzt bei `gameResult` `runSummary` mit `dominantPattern`, `cpuDelta`, `nextSeedSuggestion`, `seed`, `stage`, `tick`, `score`. `nextSeedSuggestion = hashString(seed + "_rematch").toString(36).slice(0, 8)`. `getDailySeed()` bleibt `String(Math.floor(Date.now() / 86400000))`. `getDailyScore(...)` persistiert Daily-Score mit fester Normalisierung `stage * 1000 + tick`, hoeher ist besser. GameOver-Overlay zeigt Summary + offene Frage + `REMATCH` + `DAILY CHALLENGE`. Welt-Panel bekommt `Daily Challenge`. `[open]`
+1. `A1` KILL in `src/game/sim/worldgen.js` und `src/game/sim/reducer/index.js`: `generateWorld` ruft `placeClusters` fuer Spawn-Cluster nicht mehr auf. Worldgen erzeugt null lebende Zellen. Exklusiver CPU-Spawn bleibt `seedDeterministicBootstrapCluster` in `CONFIRM_CORE_ZONE`. `[done]`
+2. `A2` KILL in `src/game/sim/step.js`: Tick-Hardcode entfernen, der Spieler-Hue auf `210` und CPU-Hue auf `0` zuruecksetzt. `[done]`
+3. `A3` KILL in `src/game/sim/reducer/metrics.js`, `src/game/ui/ui.constants.js`, `src/game/sim/reducer/cpuActions.js`, `src/game/sim/worldAi.js`: `born` und `died` aus `WORLD_SIM_STEP_KEYS`-Exclusion entfernen, tote UI-Konstanten loeschen, `cpuActions.js` ausraeumen, `worldAiAudit`/`devAiLast`-Writes aus Production-State entfernen oder labor-guarded machen. `[done]`
+4. `B1` BUILD in `src/game/sim/cellPatterns.js`, `src/game/sim/stepPhases.js`, `src/game/sim/step.js`, `src/project/contract/stateSchema.js`, `src/project/contract/simGate.js`, `src/game/sim/reducer/metrics.js`: `scanCellTopologyPatterns(world, playerLineageId)` liefert `{ line, angle, triangle, loop }`. `runWorldSystemsPhase` wird auf Return `{ plantsPrunedLastStep, cellPatternCounts }` erweitert. `simStep` uebernimmt `worldPhase.cellPatternCounts` in sein Metrics-Return. `simStepPatch` patcht nur ueber `simOut`, nicht ueber `world`. `[done]`
+5. `B2` BUILD in `src/game/sim/worldAi.js`, `src/game/sim/stepPhases.js`, `src/game/sim/step.js`, `src/game/sim/reducer/index.js`: `applyWorldAi(world, tick, phy)` statt `options`. `runWorldSimV4` setzt `phy.worldSeedHash = hashString(\`${meta.seed || "life-seed"}:${normalizeWorldPresetId(meta.worldPresetId)}\`)`, `phy.playerAliveCount = Number(sim.playerAliveCount || 0)`, `phy.cpuAliveCount = Number(sim.cpuAliveCount || 0)`. `CONFIRM_CORE_ZONE` verwendet weiter `deriveBootstrapSimMetrics(...)`, damit die Counts schon vor dem ersten `SIM_STEP` korrekt sind. Strategiephase ist `hashMix32(phy.worldSeedHash, Math.floor(tick / 90)) % 3`. Override auf `PRESSURE`, wenn `phy.playerAliveCount > phy.cpuAliveCount * 1.5`. `EXPAND` spawnt max. 3 CPU-Zellen Richtung Spieler-Zentroid innerhalb CPU-Territorium `+2` Tiles. `HOLD` bleibt passiv. `PRESSURE` setzt `world.clusterAttackState[cpuLid].budget` auf Maximum. `[done]`
+6. `B3` STATUS: globales `actionLog` wurde verworfen/zurueckgebaut; `meta.simStepCount` bleibt im Code (`SIM_STEP` erhoeht nur `meta.simStepCount`). `[done-with-rollback]`
+7. `C1` WIRE in `src/game/ui/ui.js` und `src/project/contract/dataflow.js`: Win-Mode-Selector im Welt-Panel vor Run-Start, Dispatch `SET_WIN_MODE`, disabled ab `sim.tick > 0`, selected state aus `sim.winMode`. `[done]`
+8. `C2` WIRE in `src/game/render/renderer.js`: committed `zoneRole`-Tiles immer sichtbar machen. `CORE` Cyan-Ring, `DNA` Violet-Ring, `INFRA` Teal-Ring, Radius `* 1.45`, Alpha `0.35`, aktiv bei `quality >= 1`. `[done]`
+9. `C3` WIRE in `src/game/ui/ui.lage.js` und `src/project/llm/advisorModel.js`: Sektion `Aktive Topologien` mit `line`, `angle`, `triangle`, `loop`, Nullwerte gedimmt sichtbar. `advisorModel.status.patternSummary` bekommt `cellTopology`. `loop > 0` ergaenzt den `dna_investment`-Hinweis. `[done]`
+10. `C4` BUILD in `src/game/sim/reducer/winConditions.js`, `src/project/contract/stateSchema.js`, `src/project/contract/simGate.js`, `src/game/sim/reducer/metrics.js`, `src/project/contract/mutationMatrix.js`, `src/game/ui/ui.js`: `sim.runSummary` ist im Contract registriert und wird bei `gameResult` gesetzt; Overlay/Summary ist sichtbar, Daily bleibt derzeit nicht aktiv verdrahtet. `[done-with-note]`
 
 ### Nicht-Blocker / Review-Notizen
-- `B3`: Boilerplate ist bewusst korrekt, aber trocken. Wenn der Patchblock fuer `meta.actionLog` in viele Reducer-Cases wandert, `buildActionLogPatch(state, type, payload)` als Helper erwägen.
-- `C4`: `runSummary` defaultet vor Spielende effektiv auf leeres/fehlendes Objekt. Das GameOver-Overlay muss `runSummary?.dominantPattern || null` abfangen, damit nie `undefined` gerendert wird.
+- `C4`: offizielles `sim.runSummary` ist vorhanden; UI-Overlay liest Summary-Werte aktuell noch nicht konsequent direkt aus `sim.runSummary`.
 - `B2`: `phy.playerAliveCount` und `phy.cpuAliveCount` kommen bewusst aus `state.sim` des vorherigen abgeschlossenen Ticks. Der Ein-Tick-Delay ist akzeptierte Strategie-Logik, kein Bug.
 
 ### Abnahmekriterien
 - Kein Task wird gemischt umgesetzt; genau ein atomarer Scope pro Commit.
-- Kein Store-Hook fuer `B3`; Logging bleibt patch-only und reducer-lokal.
 - Kein Fake-Gruen: neue Tests muessen begruendet rot brechen oder reproduzierbar gruen belegen.
 - Kein Bypass-Backdoor-Pfad wird durch Tests geduldet.
 - Alle neuen Felder muessen in Schema, Gate, Metrics und Mutation-Matrix registriert sein, bevor UI/Overlay darauf baut.
@@ -96,8 +103,8 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 1. `tests/test-deterministic-genesis.mjs`: direkt nach `GEN_WORLD` expliziter Assert auf null lebende Zellen; nach `CONFIRM_CORE_ZONE` expliziter Assert auf genau eine CPU-Bootstrap-Population und korrekt gesetzte `sim.playerAliveCount`/`sim.cpuAliveCount`.
 2. `tests/test-step-chain-determinism.mjs`: explizite Gleichheit fuer `sim.cellPatternCounts` pro Anchor zusaetzlich zu Signature-/Read-Model-Checks.
 3. `tests/test-sim-gate-contract.mjs`: `cellPatternCounts` und `runSummary` im Sim-Contract validieren.
-4. `tests/test-contract-no-bypass.mjs`: bestaetigen, dass `B3` patch-only bleibt und kein Store-Bypass eingefuehrt wird.
-5. Determinismus-Checks ergaenzen fuer `meta.actionLog`, `meta.simStepCount` und `sim.runSummary`.
+4. `tests/test-contract-no-bypass.mjs`: bestaetigen, dass kein Store-Bypass eingefuehrt wird und der B3-Rollback (`kein globales actionLog`) stabil bleibt.
+5. Determinismus-Checks ergaenzen fuer `meta.simStepCount` und `sim.runSummary`.
 
 ## Naechste Session Startpaket
 - Ziel: den bindenden MVP-Block `A1 -> ... -> C4` ohne Scope-Mix und ohne Contract-Bypass abarbeiten.
