@@ -1,9 +1,11 @@
 import { clamp } from "./shared.js";
 import { hashMix32 } from "../../core/kernel/rng.js";
-import { TRAIT_DEFAULT } from "./life.data.js";
-import { TRAITS } from "./constants.js";
+import { TRAIT_COUNT, TRAIT_DEFAULT } from "./life.data.js";
 
-const WORLD_AI_RESEED_COOLDOWN = 90;
+const AI_MODE_HOLD = 0;
+const AI_MODE_EXPAND = 1;
+const AI_MODE_PRESSURE = 2;
+const CLUSTER_ATTACK_BUDGET_MAX = 1.1;
 
 function getBalanceGovernor(world) {
   const { w, h, R, W, P, Sat } = world;
@@ -27,51 +29,130 @@ function getBalanceGovernor(world) {
   return (world.balanceGovernor = { plants });
 }
 
-function seedFoundersIfEmpty(world, tick) {
-  const { w, h, alive, E, reserve, hue, lineageId, trait, born } = world;
-  let aliveCount = 0;
-  for (let i = 0; i < alive.length; i++) if (alive[i] === 1) aliveCount++;
-  if (aliveCount > 1) return 0;
-  if (tick - Number(world.lastFounderTick ?? -999999) < WORLD_AI_RESEED_COOLDOWN) return 0;
-
-  const picks = [
-    { x: Math.max(1, Math.floor(w * 0.22)), y: Math.floor(h * 0.50) },
-    { x: Math.min(w - 2, Math.floor(w * 0.78)), y: Math.floor(h * 0.50) },
-  ];
-  let placed = 0;
-  const offsets = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]];
-
-  for (let n = 0; n < picks.length; n++) {
-    const p = picks[n];
-    const founderId = (hashMix32((p.y * w + p.x) ^ tick ^ (n * 7919), 13) >>> 0) || (n + 1);
-    for (const [dx, dy] of offsets) {
-      const x = p.x + dx;
-      const y = p.y + dy;
-      if (x < 0 || x >= w || y < 0 || y >= h) continue;
-      const idx = y * w + x;
-      if (alive[idx] === 1) continue;
-      alive[idx] = 1;
-      born[idx] = 1;
-      E[idx] = 0.40;
-      reserve[idx] = 0.10;
-      hue[idx] = 0;
-      lineageId[idx] = founderId;
-      for (let k = 0; k < TRAITS; k++) trait[idx * TRAITS + k] = TRAIT_DEFAULT[k];
-      placed++;
-    }
+function ensureClusterAttackState(world) {
+  if (!world.clusterAttackState || typeof world.clusterAttackState !== "object") {
+    world.clusterAttackState = {};
   }
-
-  world.lastFounderTick = tick;
-  return placed;
+  return world.clusterAttackState;
 }
 
-export function applyWorldAi(world, tick) {
-  const foundersPlaced = 0;
-  const gov = getBalanceGovernor(world);
-  world.worldAiAudit = {
-    tick,
-    mode: "genesis_plants_only",
-    foundersPlaced,
-    governor: { plants: gov.plants },
-  };
+function getLineageCentroid(world, lineage) {
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  const N = w * h;
+  let sumX = 0;
+  let sumY = 0;
+  let count = 0;
+  for (let i = 0; i < N; i++) {
+    if ((Number(world?.alive?.[i] || 0) | 0) !== 1) continue;
+    if ((Number(world?.lineageId?.[i] || 0) | 0) !== (lineage | 0)) continue;
+    sumX += i % w;
+    sumY += (i / w) | 0;
+    count++;
+  }
+  if (!count) return null;
+  return { x: sumX / count, y: sumY / count, count };
+}
+
+function distanceSq(ax, ay, bx, by) {
+  const dx = ax - bx;
+  const dy = ay - by;
+  return dx * dx + dy * dy;
+}
+
+function collectCpuExpandCandidates(world, cpuLid) {
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  const N = w * h;
+  const cpuSeeds = [];
+  for (let i = 0; i < N; i++) {
+    if ((Number(world?.alive?.[i] || 0) | 0) !== 1) continue;
+    if ((Number(world?.lineageId?.[i] || 0) | 0) !== (cpuLid | 0)) continue;
+    cpuSeeds.push(i);
+  }
+  if (!cpuSeeds.length) return [];
+  const candidates = new Set();
+  for (let s = 0; s < cpuSeeds.length; s++) {
+    const idx = cpuSeeds[s];
+    const x = idx % w;
+    const y = (idx / w) | 0;
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const xx = x + dx;
+        const yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+        const j = yy * w + xx;
+        if ((Number(world?.alive?.[j] || 0) | 0) === 1) continue;
+        candidates.add(j);
+      }
+    }
+  }
+  return [...candidates];
+}
+
+function spawnCpuExpansionCells(world, tick, cpuLid, playerLid, maxSpawn = 3) {
+  const w = Number(world?.w || 0) | 0;
+  const cpuCentroid = getLineageCentroid(world, cpuLid);
+  const playerCentroid = getLineageCentroid(world, playerLid);
+  if (!cpuCentroid || !playerCentroid) return 0;
+  const targetX = playerCentroid.x;
+  const targetY = playerCentroid.y;
+  const cands = collectCpuExpandCandidates(world, cpuLid);
+  if (!cands.length) return 0;
+
+  cands.sort((a, b) => {
+    const ax = a % w;
+    const ay = (a / w) | 0;
+    const bx = b % w;
+    const by = (b / w) | 0;
+    const da = distanceSq(ax, ay, targetX, targetY);
+    const db = distanceSq(bx, by, targetX, targetY);
+    if (da !== db) return da - db;
+    return a - b;
+  });
+
+  let spawned = 0;
+  for (let i = 0; i < cands.length && spawned < maxSpawn; i++) {
+    const idx = cands[i];
+    if ((Number(world?.alive?.[idx] || 0) | 0) === 1) continue;
+    world.alive[idx] = 1;
+    world.E[idx] = 0.38;
+    world.reserve[idx] = 0.10;
+    world.link[idx] = 0;
+    world.lineageId[idx] = cpuLid >>> 0;
+    world.hue[idx] = 0;
+    world.age[idx] = 0;
+    if (world.born) world.born[idx] = 1;
+    if (world.died) world.died[idx] = 0;
+    const o = idx * TRAIT_COUNT;
+    for (let t = 0; t < TRAIT_COUNT; t++) world.trait[o + t] = TRAIT_DEFAULT[t];
+    spawned++;
+  }
+  void tick;
+  return spawned;
+}
+
+function resolveAiMode(phy, tick) {
+  const baseMode = Number(hashMix32(Number(phy?.worldSeedHash || 0) >>> 0, Math.floor(Number(tick || 0) / 90)) % 3) | 0;
+  const playerAlive = Number(phy?.playerAliveCount || 0);
+  const cpuAlive = Number(phy?.cpuAliveCount || 0);
+  if (playerAlive > cpuAlive * 1.5) return AI_MODE_PRESSURE;
+  return baseMode;
+}
+
+export function applyWorldAi(world, tick, phy = {}) {
+  getBalanceGovernor(world);
+  const cpuLid = (Number(phy?.cpuLineageId || 0) | 0) || 2;
+  const playerLid = (Number(phy?.playerLineageId || 0) | 0) || 1;
+  const mode = resolveAiMode(phy, tick);
+
+  if (mode === AI_MODE_HOLD) return;
+  if (mode === AI_MODE_EXPAND) {
+    spawnCpuExpansionCells(world, tick, cpuLid, playerLid, 3);
+    return;
+  }
+  const state = ensureClusterAttackState(world);
+  const key = String(cpuLid);
+  const prev = state[key] && typeof state[key] === "object" ? state[key] : { cooldown: 0, budget: 0.4 };
+  state[key] = { ...prev, budget: CLUSTER_ATTACK_BUDGET_MAX };
 }

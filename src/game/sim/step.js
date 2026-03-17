@@ -50,6 +50,7 @@ export function simStep(world, phy, tick) {
 
   const worldPhase = runWorldSystemsPhase(world, phy, tick, {});
   const plantsPrunedLastStep = worldPhase.plantsPrunedLastStep;
+  const cellPatternCounts = worldPhase.cellPatternCounts || { line: 0, angle: 0, triangle: 0, loop: 0 };
   for (let i = 0; i < N; i++) sumWater += Number(water?.[i] || 0);
 
   let totalBirths = 0, totalDeaths = 0, totalMutations = 0;
@@ -68,13 +69,6 @@ export function simStep(world, phy, tick) {
 
     const lid = Number(lineageId[i]) | 0;
     
-    // P3-03: Visual differentiation by Hue
-    if (playerLid && lid === playerLid) {
-      hue[i] = 210; // Player = Cyan
-    } else if (cpuLid && lid === cpuLid) {
-      hue[i] = 0;   // CPU = Red
-    }
-
     const scarcity = clampScarcityByNutrient(R[i]);
     const zone = zoneMap ? (zoneMap[i] | 0) : 0;
     const nexusBonus = zone === 4 ? 1.2 : 1.0;   // NEXUS: +20% Energie-Einkommen
@@ -258,6 +252,7 @@ W[i] = clamp(W[i] + wTarget * wTransfer, 0, 1);
     conflictKillsLastStep: remote.kills || 0,
     superCellsLastStep: 0,
     plantsPrunedLastStep,
+    cellPatternCounts,
     nutrientCappedTilesLastStep,
     energyClearedTilesLastStep,
     // P1-04: Fraktions- und Energie-Metriken

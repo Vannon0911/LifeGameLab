@@ -8,6 +8,7 @@ import { computeClusterAndLinks } from "./network.js";
 import { PLANT_ACTIVE_THRESHOLD } from "./constants.js";
 import { ZONE_ROLE } from "../contracts/ids.js";
 import { hasZoneRole } from "./canonicalZones.js";
+import { scanCellTopologyPatterns } from "./cellPatterns.js";
 
 function applyCircularVision(mask, w, h, idx, radius) {
   const r = Math.max(0, Number(radius) | 0);
@@ -121,13 +122,15 @@ export function runFieldPhase(world, phy, tick, traitHarvestFn) {
 }
 
 export function runWorldSystemsPhase(world, phy, tick, options = {}) {
+  void options;
   applyPlantLifecycle(world, phy, tick);
   const plantsPrunedLastStep = enforcePlantTileCap(world);
-  applyWorldAi(world, tick, options);
+  applyWorldAi(world, tick, phy);
   applyDynamicDamping(world);
   computeClusterAndLinks(world, phy);
   recomputeVisibility(world, phy);
-  return { plantsPrunedLastStep };
+  const cellPatternCounts = scanCellTopologyPatterns(world, Number(phy?.playerLineageId || 0) | 0);
+  return { plantsPrunedLastStep, cellPatternCounts };
 }
 
 export function runFinalizePopulationPhase(world, phy) {

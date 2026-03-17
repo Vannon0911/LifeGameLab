@@ -34,7 +34,7 @@ export const WORLD_KEYS = [
 ];
 
 export const WORLD_SIM_STEP_KEYS = WORLD_KEYS.filter(
-  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "coreZoneMask" && k !== "dnaZoneMask" && k !== "infraCandidateMask" && k !== "zoneRole" && k !== "zoneId" && k !== "zoneMeta" && k !== "superId" && k !== "actionMap" && k !== "born" && k !== "died" && k !== "founderMask" && k !== "visibility" && k !== "explored"
+  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "coreZoneMask" && k !== "dnaZoneMask" && k !== "infraCandidateMask" && k !== "zoneRole" && k !== "zoneId" && k !== "zoneMeta" && k !== "superId" && k !== "actionMap" && k !== "founderMask" && k !== "visibility" && k !== "explored"
 );
 
 export const SIM_KEYS = [
@@ -50,7 +50,7 @@ export const SIM_KEYS = [
   "birthsLastStep", "deathsLastStep", "mutationsLastStep",
   "raidEventsLastStep", "infectionsLastStep", "conflictKillsLastStep", "superCellsLastStep",
   "remoteAttacksLastStep", "remoteAttackKillsLastStep", "defenseActivationsLastStep", "resourceStolenLastStep",
-  "plantsPrunedLastStep", "nutrientCappedTilesLastStep", "energyClearedTilesLastStep",
+  "plantsPrunedLastStep", "cellPatternCounts", "nutrientCappedTilesLastStep", "energyClearedTilesLastStep",
   "expansionCount", "lastExpandTick", "expansionWork", "nextExpandCost",
   "playerAliveCount", "cpuAliveCount",
   "playerEnergyIn", "playerEnergyOut", "playerEnergyNet", "playerEnergyStored",

@@ -707,12 +707,15 @@ function runWorldSimV4(world, meta, sim, rng) {
   worldMutable.lineageThreatMemory = cloneJson(world?.lineageThreatMemory || {});
   worldMutable.lineageDefenseReadiness = cloneJson(world?.lineageDefenseReadiness || {});
   if (world?.balanceGovernor && typeof world.balanceGovernor === "object") worldMutable.balanceGovernor = cloneJson(world.balanceGovernor);
-  if (world?.worldAiAudit && typeof world.worldAiAudit === "object") worldMutable.worldAiAudit = cloneJson(world.worldAiAudit);
+  const worldSeedHash = hashString(`${meta?.seed || "life-seed"}:${normalizeWorldPresetId(meta?.worldPresetId)}`);
   const metrics = simStep(worldMutable, {
     ...meta.physics,
     playerLineageId: (meta.playerLineageId | 0) || 1,
     cpuLineageId: (meta.cpuLineageId | 0) || 2,
     seasonLength: meta.physics?.seasonLength || 300,
+    worldSeedHash,
+    playerAliveCount: Number(sim?.playerAliveCount || 0),
+    cpuAliveCount: Number(sim?.cpuAliveCount || 0),
   }, sim.tick);
   return { world: worldMutable, metrics };
 }
@@ -783,6 +786,17 @@ export function reducer(state, action, ctx = {}) {
         state.meta.worldPresetId,
         Number(state.meta.playerLineageId || 1) | 0,
       );
+      const bootstrapMetrics = deriveBootstrapSimMetrics(
+        {
+          ...bootstrapWorld,
+          coreZoneMask,
+          zoneRole: canonicalState.zoneRole,
+          zoneId: canonicalState.zoneId,
+          zoneMeta: canonicalState.zoneMeta,
+        },
+        state.meta,
+        state.sim,
+      );
       const patches = [
         { op: "set", path: "/world/alive", value: alive },
         { op: "set", path: "/world/E", value: E },
@@ -808,6 +822,9 @@ export function reducer(state, action, ctx = {}) {
         { op: "set", path: "/sim/cpuBootstrapDone", value: cpuSpawn.length ? 1 : Number(state.sim.cpuBootstrapDone || 0) },
         { op: "set", path: "/sim/runPhase", value: RUN_PHASE.RUN_ACTIVE },
         { op: "set", path: "/sim/running", value: true },
+        { op: "set", path: "/sim/aliveCount", value: Number(bootstrapMetrics.aliveCount || 0) },
+        { op: "set", path: "/sim/playerAliveCount", value: Number(bootstrapMetrics.playerAliveCount || 0) },
+        { op: "set", path: "/sim/cpuAliveCount", value: Number(bootstrapMetrics.cpuAliveCount || 0) },
       ];
       pushCanonicalRuntimePatches(patches, canonicalState);
       assertSimPatchesAllowed(manifest, state, action.type, patches);
