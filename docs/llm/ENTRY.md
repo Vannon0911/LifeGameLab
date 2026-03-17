@@ -21,6 +21,7 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - Die technische Pflichtkette ist immer exakt `classify -> entry -> ack -> check`.
 - `entry`, `ack` und `check` sind nur gueltig, wenn sie mit exakt derselben Pfadmenge laufen wie die vorherige Klassifikation.
 - Ein Scope-Wechsel, auch innerhalb derselben Session, ist ohne neuen Subtask und neue Pflichtkette verboten.
+- Commits werden aus isoliertem Stage gebaut und bleiben task-rein; gemischte Tasks sind in getrennte Commit-Slices aufzuteilen.
 - Ein `check`-Fehler blockiert Schreiben und Testen vollstaendig. Danach ist fuer genau diesen Scope ein neuer `entry -> ack -> check`-Aufbau Pflicht.
 - Der Chat-Trigger `entry` ist nur der menschliche Startimpuls. Die technische Wahrheit lebt ausschliesslich in `tools/llm-preflight.mjs`.
 

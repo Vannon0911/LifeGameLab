@@ -18,11 +18,16 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
   4. `node tools/llm-preflight.mjs check --paths <...>`
 - in allen vier Schritten dieselbe kanonische Pfadmenge verwenden
 - vor Test und Schreiben immer ein gruener `check` fuer genau diesen Scope
+- vor Commit Scope immer isolieren (`git restore --staged .`, dann nur Zielpfade stagen)
+- Preflight immer seriell pro Commit-Scope fahren; keine Scope-Mischung in einer Kette
 - Hook-Guards einmal aktivieren: `npm run hooks:install`
 
 ## SCHREIBEN
 - kein Schreiben ohne gelesenen LLM-Entry plus passendem Task-Entry
 - kein Scope-Mix ohne neuen Subtask
+- Commits sind task-rein:
+  - ein Commit enthaelt nur Pfade aus genau einem klassifizierten Task
+  - gemischte Tasks (`testing` + `versioning` usw.) werden in getrennte Commits gesplittet
 - task-spezifische Doku vor globaler Statuspflege
 - kein Weiterarbeiten nach `check`-Rot; erst neuen Scope-Preflight aufbauen
 - UMGEHUNG (z. B. direkte State-/Patch-Injektion zur Abkuerzung von Flows) ist nur mit expliziter Ruecksprache erlaubt.
