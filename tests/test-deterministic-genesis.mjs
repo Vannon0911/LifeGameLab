@@ -42,6 +42,16 @@ function assertFoundationBlockedUntilEligible(seed) {
 function runScenario(seed) {
   const store = createDeterministicStore({ seed });
   store.dispatch({ type: "GEN_WORLD", payload: {} });
+  const afterGenWorld = snapshotStore(store);
+  assert.equal(
+    Array.from(afterGenWorld.state.world.alive).some((v) => (Number(v) | 0) === 1),
+    false,
+    "GEN_WORLD must start with zero alive world cells",
+  );
+  assert.equal(afterGenWorld.state.sim.aliveCount, 0, "GEN_WORLD must set sim.aliveCount=0");
+  assert.equal(afterGenWorld.state.sim.playerAliveCount, 0, "GEN_WORLD must set sim.playerAliveCount=0");
+  assert.equal(afterGenWorld.state.sim.cpuAliveCount, 0, "GEN_WORLD must set sim.cpuAliveCount=0");
+
   store.dispatch({ type: "SET_BRUSH", payload: { brushMode: "founder_place" } });
   const founderTiles = getPlayerStartWindowSquare(store.getState(), 2);
   for (const tile of founderTiles) {
@@ -70,6 +80,9 @@ function runScenario(seed) {
   assert.equal(afterFounders.state.sim.founderPlaced, 4, "four founders must be committed");
   assert.equal(afterCore.state.sim.runPhase, "run_active", "core confirmation must transition state to run_active");
   assert.equal(afterCore.state.sim.running, true, "core confirmation must activate running=true");
+  assert.equal(afterCore.state.sim.cpuBootstrapDone, 1, "core confirmation must set cpuBootstrapDone=1");
+  assert.equal(afterCore.state.sim.playerAliveCount, 4, "core confirmation must keep playerAliveCount=4");
+  assert(afterCore.state.sim.cpuAliveCount > 0, "core confirmation must spawn cpu bootstrap population");
   return {
     seed,
     founderTiles,

@@ -22,6 +22,10 @@ assert.deepEqual(
   ["running", "zone2Unlocked", "dnaZoneCommitted", "infrastructureUnlocked"],
   "simGate boolean key contract must stay explicit and fail closed",
 );
+assert(simGate.sim.objectKeys.includes("cellPatternCounts"), "simGate objectKeys must include cellPatternCounts");
+assert(simGate.sim.objectKeys.includes("runSummary"), "simGate objectKeys must include runSummary");
+assert(simGate.sim.keys.includes("cellPatternCounts"), "simGate sim.keys must include cellPatternCounts");
+assert(simGate.sim.keys.includes("runSummary"), "simGate sim.keys must include runSummary");
 assert.equal(simGate.world.keys.zoneRole.ctor, "Int8Array", "zoneRole gate ctor must stay canonical");
 assert.equal(simGate.world.keys.zoneId.ctor, "Uint16Array", "zoneId gate ctor must stay canonical");
 
@@ -43,6 +47,26 @@ for (const validPatch of [
   { op: "set", path: "/sim/zone2Unlocked", value: false },
   { op: "set", path: "/sim/dnaZoneCommitted", value: true },
   { op: "set", path: "/sim/infrastructureUnlocked", value: false },
+  { op: "set", path: "/sim/cellPatternCounts", value: { line: 1, angle: 2, triangle: 3, loop: 4 } },
+  {
+    op: "set",
+    path: "/sim/runSummary",
+    value: {
+      result: "WIN",
+      winMode: "SUPREMACY",
+      tick: 123,
+      stage: 3,
+      seed: "gate-seed",
+      cpuDelta: 9,
+      playerDNA: 42,
+      playerEnergyNet: 1.5,
+      totalHarvested: 17,
+      activeBiomeCount: 4,
+      dominantTopology: "loop",
+      nextSeedSuggestion: "gate-seed-rematch",
+      score: 3123,
+    },
+  },
   { op: "set", path: "/world/zoneRole", value: new Int8Array(16) },
   { op: "set", path: "/world/zoneId", value: new Uint16Array(16) },
 ]) {

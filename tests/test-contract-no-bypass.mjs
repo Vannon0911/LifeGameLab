@@ -48,6 +48,25 @@ for (const relPath of scanTargets) {
   }
 }
 
+const reducerSource = fs.readFileSync(path.join(root, "src/game/sim/reducer/index.js"), "utf8");
+const stateSchemaSource = fs.readFileSync(path.join(root, "src/project/contract/stateSchema.js"), "utf8");
+assert.equal(reducerSource.includes("actionLog"), false, "reducer must not reintroduce actionLog");
+assert.equal(stateSchemaSource.includes("actionLog"), false, "state schema must not register actionLog");
+
+const rollbackStore = createDeterministicStore();
+rollbackStore.dispatch({ type: "GEN_WORLD", payload: {} });
+const rollbackSnapshot = snapshotStore(rollbackStore);
+assert.equal(
+  Object.prototype.hasOwnProperty.call(rollbackSnapshot.state.meta || {}, "actionLog"),
+  false,
+  "meta.actionLog must stay absent after GEN_WORLD",
+);
+assert.equal(
+  Object.prototype.hasOwnProperty.call(rollbackSnapshot.state.sim || {}, "actionLog"),
+  false,
+  "sim.actionLog must stay absent after GEN_WORLD",
+);
+
 const blockedActionStore = createDeterministicStore();
 assert.throws(
   () => blockedActionStore.dispatch({ type: "RUN_BENCHMARK", payload: {} }),
