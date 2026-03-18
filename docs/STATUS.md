@@ -38,6 +38,7 @@ Maschinenlesbare Truth liegt in `output/current-truth.json` (letzter gueltiger T
 - `node tests/test-kernel-replay-truth.mjs`
 - `node tests/test-sim-gate-contract.mjs`
 - `node tests/test-llm-contract.mjs`
+- A1-C4-Gegenprobe (current-truth): `2026-03-18` · commit `306d1788d53d06212d2de77da331a4cb580ce1cb` · manifest `output/evidence/2026-03-18T14-22-50-366Z-full-f4f8d895/manifest.json`
 - Letzte Gegenprobe auf aktuellem Branch: 2026-03-16, Proof `docs/traceability/w1-proof-summary.md`
 - Diese Gruenlage bezieht sich auf die Vor-MVP-Baseline vor A1-C4.
 
@@ -121,6 +122,15 @@ Maschinenlesbare Truth liegt in `output/current-truth.json` (letzter gueltiger T
   5. danach erst schreiben/testen.
 - Commit-/Push-Guard aktivieren: `npm run hooks:install` (einmal pro Clone).
 - Wichtiger Hinweis: `src/project/contract/manifest.js` klassifiziert matrix-bedingt mehrdeutig (`contracts` + `versioning`); fuer Vertragsarbeit deshalb disjunkte Contract-Pfade nutzen (z. B. `src/project/contract/stateSchema.js`) oder Task strikt trennen.
+
+### Aktuell gueltig ab 2026-03-18
+- Preflight-Commands laut `tools/llm-preflight.mjs`: `classify`, `entry`, `ack`, `check`, `audit`.
+- Empfohlene Reihenfolge fuer Schreibarbeit:
+  1. `node tools/llm-preflight.mjs classify --paths <task-pfade>`
+  2. `node tools/llm-preflight.mjs entry --paths <task-pfade> --mode work`
+  3. `node tools/llm-preflight.mjs ack --paths <task-pfade>`
+  4. `node tools/llm-preflight.mjs check --paths <task-pfade> --mode work`
+- Optionaler Audit vor Start: `node tools/llm-preflight.mjs audit --paths <task-pfade>`.
 
 ## Bugfix-Log
 

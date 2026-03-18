@@ -1283,18 +1283,15 @@ export class UI {
 
   _showGameOverlay(sim) {
     const summary = sim?.runSummary && typeof sim.runSummary === "object" ? sim.runSummary : {};
-    const result = String(summary.result || sim.gameResult || "");
-    const summaryWinMode = String(summary.winMode || sim.winMode || "");
-    const summaryTick = Number(summary.tick ?? sim.gameEndTick ?? 0);
-    const summaryStage = Number(summary.stage ?? sim.playerStage ?? 1);
-    const summaryCpuDelta = Number(
-      summary.cpuDelta
-      ?? ((Number(sim.playerAliveCount || 0) | 0) - (Number(sim.cpuAliveCount || 0) | 0)),
-    );
-    const summaryDNA = Number(summary.playerDNA ?? sim.playerDNA ?? 0);
-    const summaryEnergyNet = Number(summary.playerEnergyNet ?? sim.playerEnergyNet ?? 0);
-    const summaryHarvested = Number(summary.totalHarvested ?? sim.totalHarvested ?? 0);
-    const summaryActiveBiomes = Number(summary.activeBiomeCount ?? sim.activeBiomeCount ?? 0);
+    const result = String(summary.result || "");
+    const summaryWinMode = String(summary.winMode || "");
+    const summaryTick = Number(summary.tick ?? 0);
+    const summaryStage = Number(summary.stage ?? 1);
+    const summaryCpuDelta = Number(summary.cpuDelta ?? 0);
+    const summaryDNA = Number(summary.playerDNA ?? 0);
+    const summaryEnergyNet = Number(summary.playerEnergyNet ?? 0);
+    const summaryHarvested = Number(summary.totalHarvested ?? 0);
+    const summaryActiveBiomes = Number(summary.activeBiomeCount ?? 0);
     const summaryTopology = String(summary.dominantTopology || "");
     const isWin = result === GAME_RESULT.WIN;
     const modeLbl = WIN_MODE_RESULT_LABEL[summaryWinMode] || summaryWinMode;
@@ -1606,8 +1603,9 @@ export class UI {
     this._lastStage = sim.playerStage;
 
     if (sim.gameResult && sim.gameEndTick === sim.tick && sim.gameEndTick !== this._lastGameEndTick) {
-      if (sim.gameResult === GAME_RESULT.WIN) this._announce(`Sieg! (${sim.winMode})`);
-      else if (sim.gameResult === GAME_RESULT.LOSS) this._announce(`Niederlage! (${sim.winMode})`);
+      const resultWinMode = String(sim?.runSummary?.winMode || sim.winMode || "");
+      if (sim.gameResult === GAME_RESULT.WIN) this._announce(`Sieg! (${resultWinMode})`);
+      else if (sim.gameResult === GAME_RESULT.LOSS) this._announce(`Niederlage! (${resultWinMode})`);
       this._showGameOverlay(sim);
       this._lastGameEndTick = sim.gameEndTick;
     }
