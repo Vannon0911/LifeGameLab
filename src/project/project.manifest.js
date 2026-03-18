@@ -1,5 +1,5 @@
 // Compatibility facade. The contract implementation lives in src/project/contract/*.
-export {
+import {
   SCHEMA_VERSION,
   APP_VERSION,
   stateSchema,
@@ -7,5 +7,13 @@ export {
   mutationMatrix,
   simGate,
   dataflow,
-  manifest,
+  manifest as contractManifest,
 } from "./contract/manifest.js";
+import { assertDomainPatchesAllowed } from "../game/plugin/gates.js";
+
+export { SCHEMA_VERSION, APP_VERSION, stateSchema, actionSchema, mutationMatrix, simGate, dataflow };
+
+export const manifest = {
+  ...contractManifest,
+  domainPatchGate: assertDomainPatchesAllowed,
+};

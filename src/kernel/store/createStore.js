@@ -2,6 +2,7 @@ import { stableStringify, hash32 } from "./signature.js";
 import { applyPatches, assertPatchesAllowed } from "./applyPatches.js";
 import { sanitizeBySchema } from "../validation/validateState.js";
 import { validateActionAgainstSchema } from "../validation/validateAction.js";
+import { assertDomainPatchesAllowed } from "../validation/assertDomainPatchesAllowed.js";
 import { createRngStreamsScoped } from "../determinism/rng.js";
 import { runWithDeterminismGuard, deepFreeze } from "../determinism/runtimeGuards.js";
 import { getDefaultDriver } from "./persistence.js";
@@ -68,6 +69,7 @@ export function createStore(manifest, project, options = {}) {
 
     if (!Array.isArray(patches)) throw new Error("Reducer must return patches array");
     assertPatchesAllowed(patches, actionAllowed);
+    assertDomainPatchesAllowed(manifest, doc.state, clean.type, patches);
 
     let nextState = applyPatches(doc.state, patches);
     nextState = sanitizeBySchema(nextState, stateSchema);
@@ -80,6 +82,7 @@ export function createStore(manifest, project, options = {}) {
       );
       if (!Array.isArray(simPatches)) throw new Error("simStep must return patches array");
       assertPatchesAllowed(simPatches, mutationMatrix.SIM_STEP);
+      assertDomainPatchesAllowed(manifest, nextState, "SIM_STEP", simPatches);
       if (simPatches.length) {
         nextState = applyPatches(nextState, simPatches);
         nextState = sanitizeBySchema(nextState, stateSchema);
