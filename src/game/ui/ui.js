@@ -10,8 +10,11 @@ export class UI {
     this._canvas = canvas;
     this._rInfo = null;
     this._selected = null;
+    this._lastHarvestValue = null;
+    this._hud = null;
     this._onPointerDown = (ev) => this._handlePointerDown(ev);
     this._canvas?.addEventListener?.("mousedown", this._onPointerDown);
+    this._ensureHud();
   }
 
   setRenderInfo(info) {
@@ -27,9 +30,46 @@ export class UI {
     if (this._onPointerDown) {
       this._canvas.addEventListener("mousedown", this._onPointerDown);
     }
+    this._positionHud();
   }
 
-  sync(_state) {}
+  sync(_state) {
+    const state = this._store.getState();
+    const nextValue = Math.max(0, Math.floor(Number(state?.sim?.totalHarvested || 0)));
+    this._positionHud();
+    if (this._lastHarvestValue === nextValue) return;
+    this._lastHarvestValue = nextValue;
+    if (this._hud) this._hud.textContent = `🌿 ${nextValue}`;
+  }
+
+  _ensureHud() {
+    if (this._hud) return;
+    const hud = document.createElement("div");
+    hud.setAttribute("data-ui-harvest-hud", "1");
+    hud.style.position = "fixed";
+    hud.style.left = "12px";
+    hud.style.top = "12px";
+    hud.style.zIndex = "30";
+    hud.style.pointerEvents = "none";
+    hud.style.padding = "6px 10px";
+    hud.style.borderRadius = "8px";
+    hud.style.background = "rgba(6, 14, 10, 0.78)";
+    hud.style.color = "#d7ffdc";
+    hud.style.fontFamily = "\"Segoe UI Emoji\", \"Noto Color Emoji\", sans-serif";
+    hud.style.fontSize = "16px";
+    hud.style.lineHeight = "1";
+    hud.textContent = "🌿 0";
+    (document.body || document.documentElement).appendChild(hud);
+    this._hud = hud;
+    this._positionHud();
+  }
+
+  _positionHud() {
+    if (!this._hud || !this._canvas?.getBoundingClientRect) return;
+    const rect = this._canvas.getBoundingClientRect();
+    this._hud.style.left = `${Math.max(8, Math.floor(rect.left) + 8)}px`;
+    this._hud.style.top = `${Math.max(8, Math.floor(rect.top) + 8)}px`;
+  }
 
   _handlePointerDown(ev) {
     const state = this._store.getState();
