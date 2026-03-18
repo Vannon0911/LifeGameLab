@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { verifyEvidenceAttestation } from "./evidence-attestation.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -49,6 +50,16 @@ function assertLatestFullEvidence() {
       `Full evidence mismatch: outcome=${outcome}, claims=${claimOutcome}, regression=${regressionOutcome}`,
     );
   }
+  const attestationRelPath = String(manifest?.attestation?.relPath || "");
+  if (!attestationRelPath) {
+    throw new Error("Missing attestation reference in full manifest.");
+  }
+  const attestationPath = path.join(path.dirname(manifestPath), attestationRelPath);
+  if (!fs.existsSync(attestationPath)) {
+    throw new Error(`Missing attestation file: ${attestationPath}`);
+  }
+  const attestation = JSON.parse(fs.readFileSync(attestationPath, "utf8"));
+  verifyEvidenceAttestation({ attestation, manifestPath });
   console.log(`[verification-session] OK full manifest ${manifestRel}`);
 }
 
