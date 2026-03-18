@@ -10,6 +10,7 @@ export const SOT_SOURCES = Object.freeze([
 export const CLAIM_SCENARIOS = Object.freeze([
   Object.freeze({
     id: "claim.w1.no_bypass_surface",
+    status: "verified",
     surface: "dispatch",
     replayCount: 1,
     truthAnchor: "after-invalid",
@@ -27,6 +28,15 @@ export const CLAIM_SCENARIOS = Object.freeze([
       "SET_PHYSICS.unknown keys",
       "SET_GLOBAL_LEARNING.unknown keys",
     ]),
+    counterProbe: Object.freeze({
+      kind: "negative_payload_block_and_signature_stability",
+      intent: "verifies forbidden payload perturbations are rejected without state/signature drift",
+      checks: Object.freeze([
+        "blocked-game-mode.errorMatched === true",
+        "blocked-force.errorMatched === true",
+        "before-invalid.signature == after-invalid.signature",
+      ]),
+    }),
     steps: Object.freeze([
       Object.freeze({ id: "gen-world", kind: "dispatch", action: { type: "GEN_WORLD", payload: {} } }),
       Object.freeze({ id: "before-invalid", kind: "captureState", snapshot: "before-invalid" }),
@@ -54,6 +64,7 @@ export const CLAIM_SCENARIOS = Object.freeze([
   }),
   Object.freeze({
     id: "claim.w1.genesis_mainline_deterministic",
+    status: "verified",
     surface: "dispatch",
     replayCount: 2,
     truthAnchor: "step-4",
@@ -69,6 +80,14 @@ export const CLAIM_SCENARIOS = Object.freeze([
       "direct reducer()",
       "direct simStepPatch()",
     ]),
+    counterProbe: Object.freeze({
+      kind: "replay_consistency_with_perturbation_guard",
+      intent: "verifies deterministic replay anchor stability and blocks reducer/simStep injection vectors",
+      checks: Object.freeze([
+        "attempt[1].truthAnchor == attempt[2].truthAnchor",
+        "counterexamplesBlocked contains direct reducer()/simStepPatch()/state injection/patch injection",
+      ]),
+    }),
     steps: Object.freeze([
       Object.freeze({ id: "gen-world", kind: "dispatch", action: { type: "GEN_WORLD", payload: {} } }),
       Object.freeze({ id: "set-founder-brush", kind: "dispatch", action: { type: "SET_BRUSH", payload: { brushMode: "founder_place" } } }),
@@ -115,36 +134,44 @@ export const CLAIM_SUITES = Object.freeze({
 
 export const REGRESSION_TEST_STATUS = Object.freeze({
   "tests/test-contract-no-bypass.mjs": Object.freeze({
-    status: "active",
+    status: "verified",
     purpose: "prove removed bypass surfaces stay absent and negative dispatch payloads stay state-stable",
+    counterProbe: "negative dispatch payload perturbation remains blocked and state-stable",
   }),
   "tests/test-dispatch-error-state-stability.mjs": Object.freeze({
-    status: "active",
+    status: "verified",
     purpose: "prove failing dispatches keep state, signature material, read model, and revision stable",
+    counterProbe: "error-path perturbations do not mutate state/signature/revision",
   }),
   "tests/test-deterministic-genesis.mjs": Object.freeze({
-    status: "active",
+    status: "verified",
     purpose: "prove same-seed replay and cross-seed divergence with after-core, step-1, and step-4 hash anchors",
+    counterProbe: "cross-seed perturbation must diverge while same-seed replay remains identical",
   }),
   "tests/test-readmodel-determinism.mjs": Object.freeze({
-    status: "active",
+    status: "verified",
     purpose: "P1 / Artefakt-/Read-Model-Drift: prove read-model hashes stay replay-stable at after-founders, after-core, step-1, and step-4",
+    counterProbe: "read-model hash perturbation check across replay attempts",
   }),
   "tests/test-kernel-replay-truth.mjs": Object.freeze({
-    status: "active",
+    status: "verified",
     purpose: "prove seed + action replay yields stable signature chain and cross-seed divergence",
+    counterProbe: "signature chain diverges under seed perturbation and matches under identical replay",
   }),
   "tests/test-sim-gate-contract.mjs": Object.freeze({
-    status: "active",
+    status: "verified",
     purpose: "prove simGate rejects numeric coercion for boolean sim fields and keeps canonical zone array contracts without duplicate source definitions",
+    counterProbe: "boolean coercion perturbation remains rejected by simGate",
   }),
   "tests/test-step-chain-determinism.mjs": Object.freeze({
-    status: "active",
+    status: "verified",
     purpose: "P1 / Runtime-Test-Drift: prove per-step signature, signature-material, read-model, and revision anchors stay replay-stable",
+    counterProbe: "step-sequence perturbation breaks anchors while replayed sequence stays stable",
   }),
   "tests/test-llm-contract.mjs": Object.freeze({
-    status: "active",
+    status: "verified",
     purpose: "prove entry/testing registry, wording contract, path-drift guard, and repeated check rotation stay wired",
+    counterProbe: "registry/path perturbation is detected and reported as drift",
   }),
 });
 
