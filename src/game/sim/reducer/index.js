@@ -350,6 +350,76 @@ function collectMaskIndices(mask) {
   return indices;
 }
 
+function findNextStepBfs4(world, fromIdx, targetIdx, w, h) {
+  if (fromIdx === targetIdx) return fromIdx;
+  const total = w * h;
+  if (fromIdx < 0 || targetIdx < 0 || fromIdx >= total || targetIdx >= total) return -1;
+  const alive = world?.alive;
+  if (!alive || !ArrayBuffer.isView(alive)) return -1;
+
+  const prev = new Int32Array(total);
+  prev.fill(-1);
+  const seen = new Uint8Array(total);
+  const queue = new Int32Array(total);
+  let qh = 0;
+  let qt = 0;
+  queue[qt++] = fromIdx;
+  seen[fromIdx] = 1;
+
+  while (qh < qt) {
+    const idx = queue[qh++];
+    if (idx === targetIdx) break;
+    const x = idx % w;
+    const y = (idx / w) | 0;
+    const candidates = [
+      [x - 1, y],
+      [x + 1, y],
+      [x, y - 1],
+      [x, y + 1],
+    ];
+    for (const [nx, ny] of candidates) {
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+      const nIdx = ny * w + nx;
+      if (seen[nIdx]) continue;
+      if (nIdx !== targetIdx && (Number(alive[nIdx] || 0) | 0) === 1) continue;
+      seen[nIdx] = 1;
+      prev[nIdx] = idx;
+      queue[qt++] = nIdx;
+    }
+  }
+
+  if (!seen[targetIdx]) return -1;
+  let step = targetIdx;
+  while (prev[step] !== -1 && prev[step] !== fromIdx) {
+    step = prev[step];
+  }
+  return prev[step] === fromIdx ? step : targetIdx;
+}
+
+function moveEntityTile(world, fromIdx, toIdx) {
+  if (fromIdx === toIdx) return;
+  const scalarKeys = ["E", "reserve", "link", "lineageId", "hue", "age", "born", "died", "W", "clusterField", "superId"];
+  for (const key of scalarKeys) {
+    const arr = world?.[key];
+    if (!arr || !ArrayBuffer.isView(arr)) continue;
+    arr[toIdx] = arr[fromIdx];
+    arr[fromIdx] = 0;
+  }
+  if (world?.alive && ArrayBuffer.isView(world.alive)) {
+    world.alive[toIdx] = 1;
+    world.alive[fromIdx] = 0;
+  }
+  const trait = world?.trait;
+  if (trait && ArrayBuffer.isView(trait)) {
+    const fromOff = fromIdx * 7;
+    const toOff = toIdx * 7;
+    for (let i = 0; i < 7; i++) {
+      trait[toOff + i] = trait[fromOff + i];
+      trait[fromOff + i] = 0;
+    }
+  }
+}
+
 function canConfirmCoreZone(state) {
   if (state.sim.runPhase !== RUN_PHASE.GENESIS_ZONE) return false;
   const founderIndices = collectFounderIndices(state);
@@ -665,7 +735,7 @@ function runWorldSimV4(world, meta, sim, rng) {
   // Arrays mutated by sim.js (kept explicit to avoid copying read-only fields).
   const TA_MUT_KEYS = [
     "alive", "E", "L", "R", "W", "Sat", "P", "B", "plantKind",
-    "reserve", "link", "clusterField", "hue", "lineageId", "trait", "age", "born", "died",
+    "reserve", "link", "clusterField", "superId", "hue", "lineageId", "trait", "age", "born", "died",
     // lazily-created buffers inside sim.js:
     "actionMap",
   ];
@@ -1290,6 +1360,73 @@ export function simStepPatch(state, action, ctx) {
     expansionWork: state.sim.expansionWork || 0,
     nextExpandCost: state.sim.nextExpandCost || 120,
   };
+  simOut.selectedUnit = Number(state.sim.selectedUnit ?? -1);
+  simOut.unitOrder = state.sim.unitOrder && typeof state.sim.unitOrder === "object"
+    ? { ...state.sim.unitOrder }
+    : { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+  simOut.lastCommand = String(state.sim.lastCommand || "");
+  simOut.lastAutoAction = "";
+
+  const activeOrder = simOut.unitOrder;
+  if (activeOrder?.active) {
+    const w = Number(worldMutable?.w || state.meta.gridW || 0) | 0;
+    const h = Number(worldMutable?.h || state.meta.gridH || 0) | 0;
+    const fromX = Number(activeOrder.fromX) | 0;
+    const fromY = Number(activeOrder.fromY) | 0;
+    const targetX = Number(activeOrder.targetX) | 0;
+    const targetY = Number(activeOrder.targetY) | 0;
+    const targetIdx = targetY * w + targetX;
+    const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+    let unitIdx = Number(simOut.selectedUnit ?? -1) | 0;
+    if (unitIdx < 0 || unitIdx >= w * h || (Number(worldMutable.alive?.[unitIdx] || 0) | 0) !== 1) {
+      unitIdx = fromY * w + fromX;
+    }
+    const validUnit =
+      unitIdx >= 0 &&
+      unitIdx < w * h &&
+      (Number(worldMutable.alive?.[unitIdx] || 0) | 0) === 1 &&
+      (Number(worldMutable.lineageId?.[unitIdx] || 0) | 0) === playerLineageId;
+
+    if (!validUnit || targetX < 0 || targetY < 0 || targetX >= w || targetY >= h) {
+      simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+      simOut.selectedUnit = -1;
+      simOut.lastAutoAction = "ORDER_ABORTED";
+    } else if (unitIdx === targetIdx) {
+      const rv = Math.max(0, Number(worldMutable.R?.[targetIdx] || 0));
+      const harvested = Math.min(0.16, rv);
+      if (worldMutable.R && ArrayBuffer.isView(worldMutable.R)) {
+        worldMutable.R[targetIdx] = Math.max(0, rv - harvested);
+      }
+      if (harvested > 0) {
+        simOut.playerDNA = Number(simOut.playerDNA || 0) + harvested * 3.5;
+        simOut.totalHarvested = Number(simOut.totalHarvested || 0) + harvested;
+      }
+      simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+      simOut.selectedUnit = unitIdx;
+      simOut.lastAutoAction = harvested > 0 ? `HARVEST_AUTO:${targetX},${targetY}` : "ARRIVE_NO_RESOURCE";
+    } else {
+      const nextIdx = findNextStepBfs4(worldMutable, unitIdx, targetIdx, w, h);
+      if (nextIdx < 0 || (Number(worldMutable.alive?.[nextIdx] || 0) | 0) === 1) {
+        simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+        simOut.selectedUnit = unitIdx;
+        simOut.lastAutoAction = "ORDER_PATH_BLOCKED";
+      } else {
+        moveEntityTile(worldMutable, unitIdx, nextIdx);
+        const nx = nextIdx % w;
+        const ny = (nextIdx / w) | 0;
+        simOut.selectedUnit = nextIdx;
+        simOut.unitOrder = {
+          active: true,
+          fromX: nx,
+          fromY: ny,
+          targetX,
+          targetY,
+        };
+        simOut.lastAutoAction = `MOVE_STEP:${nx},${ny}`;
+      }
+    }
+  }
+
   simOut.expansionWork = Math.max(0, simOut.expansionWork + expansionWorkGain(simOut));
   simOut.nextExpandCost = expansionWorkCost(worldMutable, simOut);
   const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
