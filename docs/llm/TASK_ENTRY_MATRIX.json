@@ -23,6 +23,7 @@
     "triggerPrefixes": [
       "src/game/contracts/",
       "src/project/contract/",
+      "src/project/project.manifest.js",
       "src/project/llm/",
       "src/core/kernel/",
       "src/kernel/",
