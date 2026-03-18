@@ -7,12 +7,14 @@
 - Command-Chain `Select -> Move -> Arrive -> Harvest` ist aktiv (`ISSUE_ORDER`, 1 Tile pro Tick, Auto-Harvest).
 - Pattern-Objekt-Symbol wird bei `triangle/loop` sichtbar auf Zone gerendert.
 - Tick-Determinismus-Gates laufen gruen.
+- Sim-Runtime ist als Block explizit deaktiviert (App/UI/Render), Kernel bleibt unangetastet.
 
 ## Verifizierter Ist-Stand
-- Sim-Runtime-Flag im aktuellen Head: `SIM_RUNTIME_DISABLED = false` in `src/app/main.js`.
+- Sim-Runtime-Flag im aktuellen Head: `SIM_RUNTIME_DISABLED = true` in `src/app/main.js`.
 - Tick-Loop: `dt = Math.max(0, ts - lastTs)` und `while (acc >= stepMs)`.
 - Foundation-Eligibility verlangt exakt `founderBudget === 1` und `founderPlaced === 1`.
-- UI-Input dispatcht `ISSUE_ORDER` ueber Canvas-`mousedown`.
+- UI ist neutraler Adapter ohne sim-getriebene Dispatch-Interaktion.
+- Sim-Archivbeleg: `docs/traceability/sim-runtime-archive-2026-03-18.md`.
 
 ## Gates / Nachweise (aktuell gruen)
 - `node tools/run-all-tests.mjs --full`

@@ -22,10 +22,11 @@
 ## Laufende Wahrheiten (Head)
 - Operativer Reducerpfad: `src/game/sim/reducer/index.js`.
 - `src/game/sim/reducer.js` bleibt Compatibility-Fassade.
-- Runtime-Flag: `SIM_RUNTIME_DISABLED = false` (Sim aktuell aktiv).
+- Runtime-Flag: `SIM_RUNTIME_DISABLED = true` (Sim-Runtime aktuell blockiert).
 - Tick-Loop ist deterministisch gehaertet: kein dt-cap, kein catchup-cap, catch-up via `while (acc >= stepMs)`.
 - Render-Mode wird beim Boot auf `cells` gesetzt.
 - UI-Hauptklasse in `src/game/ui/ui.js` ist no-op und haelt nur API-Form fuer Wiring stabil.
+- Runtime-Archiv (Begründung + Guardrails): `docs/traceability/sim-runtime-archive-2026-03-18.md`.
 
 ## Contract-Status
 - Thin-Facades fuer `project.manifest.js`, `sim.js`, `reducer.js` und `src/game/sim/gate.js` aktiv.
