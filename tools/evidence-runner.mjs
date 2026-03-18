@@ -11,6 +11,7 @@ import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
 import { buildLlmReadModel } from "../src/project/llm/readModel.js";
 import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
+import { createEvidenceAttestation, verifyEvidenceAttestation } from "./evidence-attestation.mjs";
 import {
   EVIDENCE_POLICY,
   EVIDENCE_SUITES,
@@ -520,6 +521,7 @@ function runRegressionFile(runCtx, relPath) {
   const mapping = REGRESSION_REGISTRY[relPath];
   const abs = path.join(root, relPath);
   assert(fs.existsSync(abs), `Regression target missing: ${relPath}`);
+  const startedAt = Date.now();
   runCtx.journal.append({
     scenarioId: relPath,
     stepId: "regression-start",
@@ -550,6 +552,11 @@ function runRegressionFile(runCtx, relPath) {
   });
   if (res.error) throw res.error;
   const outcome = res.status === 0 ? "match" : "mismatch";
+  const elapsedMs = Date.now() - startedAt;
+  const budgetMs = Number(mapping?.budgetMs || 0);
+  if (budgetMs > 0) {
+    assert(elapsedMs <= budgetMs, `Regression test budget exceeded: ${relPath} elapsed=${elapsedMs}ms budget=${budgetMs}ms`);
+  }
   runCtx.journal.append({
     scenarioId: relPath,
     stepId: "regression-finish",
@@ -557,6 +564,8 @@ function runRegressionFile(runCtx, relPath) {
     payload: {
       outcome,
       exitCode: res.status,
+      elapsedMs,
+      budgetMs: budgetMs || null,
       stdoutArtifact: stdoutArtifact.relPath,
       stderrArtifact: stderrArtifact.relPath,
     },
@@ -567,6 +576,8 @@ function runRegressionFile(runCtx, relPath) {
     mode: "regression",
     outcome,
     exitCode: Number(res.status ?? 1),
+    elapsedMs,
+    budgetMs: budgetMs || null,
     mapping,
   });
 }
@@ -661,7 +672,14 @@ async function runPlan(runCtx, plan) {
         assert(scenario, `Missing claim '${id}'`);
         const status = String(scenario.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
         runCtx.logger.out(`[evidence] claim=${scenario.id} status=${status.toUpperCase()} mode=${batch.mode} surface=${scenario.surface}`);
-        claimResults.push(await runDispatchScenario(runCtx, scenario, batch.mode));
+        const startedAt = Date.now();
+        const result = await runDispatchScenario(runCtx, scenario, batch.mode);
+        const elapsedMs = Date.now() - startedAt;
+        const budgetMs = Number(scenario?.budgetMs || 0);
+        if (budgetMs > 0) {
+          assert(elapsedMs <= budgetMs, `Claim budget exceeded: ${scenario.id} elapsed=${elapsedMs}ms budget=${budgetMs}ms`);
+        }
+        claimResults.push(Object.freeze({ ...result, elapsedMs, budgetMs: budgetMs || null }));
       }
       continue;
     }
@@ -756,6 +774,13 @@ async function main() {
   const regressionStatus = summarizeResults(regressionResults);
   const counterexamplesBlocked = collectCounterexamplesBlocked(claimResults);
   const overallOutcome = exitCode === 0 ? "evidence_match" : "evidence_mismatch";
+  const verificationPolicy = {
+    rule: "only_verified_tests_are_valid",
+    blockedIfUnverified: true,
+    unverifiedCount: unverified.length,
+    budgetPolicy: "hard_fail_on_budget_exceeded",
+    attestationPolicy: "ed25519_manifest_attestation_required_on_match",
+  };
   const manifestPayload = {
     runId: runCtx.runId,
     scope: EVIDENCE_POLICY.scope,
@@ -778,15 +803,28 @@ async function main() {
     artifacts: runCtx.artifacts,
     eventChainRootHash: runCtx.journal.prevHash,
     budgets: TEST_BUDGETS_MS,
-    verificationPolicy: {
-      rule: "only_verified_tests_are_valid",
-      blockedIfUnverified: true,
-      unverifiedCount: unverified.length,
-    },
+    verificationPolicy,
   };
+  if (overallOutcome === "evidence_match") {
+    manifestPayload.attestation = {
+      relPath: "attestation.json",
+      status: "verified",
+    };
+  }
   const manifestPath = path.join(runCtx.runDir, "manifest.json");
   fs.writeFileSync(manifestPath, `${stableStringify(toSerializable(manifestPayload))}\n`, "utf8");
   if (overallOutcome === "evidence_match") {
+    const attestation = createEvidenceAttestation({
+      manifestPath,
+      commitSha: resolveHeadSha(),
+      runId: runCtx.runId,
+      suite,
+      outcome: overallOutcome,
+      verificationPolicy,
+    });
+    const attestationPath = path.join(runCtx.runDir, "attestation.json");
+    fs.writeFileSync(attestationPath, `${stableStringify(attestation)}\n`, "utf8");
+    verifyEvidenceAttestation({ attestation, manifestPath });
     writeCurrentTruth({
       manifestPath,
       runId: runCtx.runId,
