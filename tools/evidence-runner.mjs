@@ -18,6 +18,7 @@ import {
   REGRESSION_REGISTRY,
   TEST_BUDGETS_MS,
   TRACKED_REGRESSION_REPO_TESTS,
+  VERIFICATION_STATUS,
   isKnownSuite,
   resolveSuiteName,
 } from "./test-suites.mjs";
@@ -595,6 +596,60 @@ function selectRunPlan(args) {
   throw new Error(`Unknown scenario '${args.scenario}'.`);
 }
 
+function collectUnverifiedFromPlan(plan) {
+  const unverified = [];
+  for (const batch of plan) {
+    if (batch.kind === "claims") {
+      for (const id of batch.ids) {
+        const scenario = CLAIM_REGISTRY[id];
+        const status = String(scenario?.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
+        if (status !== VERIFICATION_STATUS.VERIFIED) {
+          unverified.push({ kind: "claim", id, status });
+        }
+      }
+      continue;
+    }
+    if (batch.kind === "regression") {
+      for (const file of batch.files) {
+        const mapping = REGRESSION_REGISTRY[file];
+        const status = String(mapping?.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
+        if (status !== VERIFICATION_STATUS.VERIFIED) {
+          unverified.push({ kind: "regression", id: file, status });
+        }
+      }
+    }
+  }
+  return unverified;
+}
+
+function assertVerificationMetadataForPlan(plan) {
+  const missingCounterProbes = [];
+  for (const batch of plan) {
+    if (batch.kind === "claims") {
+      for (const id of batch.ids) {
+        const scenario = CLAIM_REGISTRY[id];
+        const status = String(scenario?.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
+        if (status === VERIFICATION_STATUS.VERIFIED && (!scenario?.counterProbe || typeof scenario.counterProbe !== "object")) {
+          missingCounterProbes.push(`claim:${id}`);
+        }
+      }
+      continue;
+    }
+    if (batch.kind === "regression") {
+      for (const file of batch.files) {
+        const mapping = REGRESSION_REGISTRY[file];
+        const status = String(mapping?.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
+        if (status === VERIFICATION_STATUS.VERIFIED && !String(mapping?.counterProbe || "").trim()) {
+          missingCounterProbes.push(`regression:${file}`);
+        }
+      }
+    }
+  }
+  if (missingCounterProbes.length) {
+    throw new Error(`Verification metadata invalid: verified entries require counterProbe metadata: ${missingCounterProbes.join(", ")}`);
+  }
+}
+
 async function runPlan(runCtx, plan) {
   const claimResults = [];
   const regressionResults = [];
@@ -604,14 +659,16 @@ async function runPlan(runCtx, plan) {
       for (const id of batch.ids) {
         const scenario = CLAIM_REGISTRY[id];
         assert(scenario, `Missing claim '${id}'`);
-        runCtx.logger.out(`[evidence] claim=${scenario.id} mode=${batch.mode} surface=${scenario.surface}`);
+        const status = String(scenario.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
+        runCtx.logger.out(`[evidence] claim=${scenario.id} status=${status.toUpperCase()} mode=${batch.mode} surface=${scenario.surface}`);
         claimResults.push(await runDispatchScenario(runCtx, scenario, batch.mode));
       }
       continue;
     }
     if (batch.kind === "regression") {
       for (const file of batch.files) {
-        runCtx.logger.out(`[evidence] regression=${file}`);
+        const status = String(REGRESSION_REGISTRY[file]?.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
+        runCtx.logger.out(`[evidence] regression=${file} status=${status.toUpperCase()}`);
         regressionResults.push(runRegressionFile(runCtx, file));
       }
     }
@@ -647,6 +704,12 @@ async function main() {
 
   const suite = resolveSuiteName(args.suite);
   const plan = selectRunPlan(args);
+  assertVerificationMetadataForPlan(plan);
+  const unverified = collectUnverifiedFromPlan(plan);
+  if (unverified.length) {
+    const details = unverified.map((entry) => `${entry.kind}:${entry.id}`).join(", ");
+    throw new Error(`Verification gate blocked: unverified tests are invalid for execution: ${details}`);
+  }
   const startedMs = Date.now();
   let claimResults = [];
   let regressionResults = [];
@@ -715,6 +778,11 @@ async function main() {
     artifacts: runCtx.artifacts,
     eventChainRootHash: runCtx.journal.prevHash,
     budgets: TEST_BUDGETS_MS,
+    verificationPolicy: {
+      rule: "only_verified_tests_are_valid",
+      blockedIfUnverified: true,
+      unverifiedCount: unverified.length,
+    },
   };
   const manifestPath = path.join(runCtx.runDir, "manifest.json");
   fs.writeFileSync(manifestPath, `${stableStringify(toSerializable(manifestPayload))}\n`, "utf8");
