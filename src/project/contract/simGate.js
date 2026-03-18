@@ -12,6 +12,8 @@ const SIM_STRING_KEYS = Object.freeze([
   "runPhase",
   "nextZoneUnlockKind",
   "infraBuildMode",
+  "lastCommand",
+  "lastAutoAction",
 ]);
 
 const SIM_OBJECT_KEYS = Object.freeze([
@@ -19,6 +21,7 @@ const SIM_OBJECT_KEYS = Object.freeze([
   "patternBonuses",
   "cellPatternCounts",
   "runSummary",
+  "unitOrder",
 ]);
 
 export const simGate = {
@@ -77,7 +80,7 @@ export const simGate = {
   },
   sim: {
     keys: [
-      "tick", "running", "runPhase", "founderBudget", "founderPlaced", "unlockedZoneTier", "nextZoneUnlockKind", "nextZoneUnlockCostEnergy", "zoneUnlockProgress", "coreEnergyStableTicks", "zone2Unlocked", "zone2PlacementBudget", "dnaZoneCommitted", "nextInfraUnlockCostDNA", "infrastructureUnlocked", "infraBuildMode", "infraBuildCostEnergy", "infraBuildCostDNA", "cpuBootstrapDone", "patternCatalog", "patternBonuses", "aliveCount", "aliveRatio", "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
+      "tick", "running", "runPhase", "founderBudget", "founderPlaced", "selectedUnit", "unitOrder", "lastCommand", "lastAutoAction", "unlockedZoneTier", "nextZoneUnlockKind", "nextZoneUnlockCostEnergy", "zoneUnlockProgress", "coreEnergyStableTicks", "zone2Unlocked", "zone2PlacementBudget", "dnaZoneCommitted", "nextInfraUnlockCostDNA", "infrastructureUnlocked", "infraBuildMode", "infraBuildCostEnergy", "infraBuildCostDNA", "cpuBootstrapDone", "patternCatalog", "patternBonuses", "aliveCount", "aliveRatio", "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
       "meanNutrientField", "meanToxinField", "meanSaturationField", "meanPlantField", "meanBiochargeField", "meanWaterField",
       "plantTileRatio", "dominantHueRatio", "lineageDiversity", "evolutionStageMean", "evolutionStageMax",
       "networkRatio", "clusterRatio", "birthsLastStep", "deathsLastStep", "mutationsLastStep",

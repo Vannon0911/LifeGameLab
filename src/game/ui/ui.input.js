@@ -171,18 +171,16 @@ export function installUiInput(UI) {
       const isOwnAliveTile =
         (Number(state.world?.alive?.[idx] || 0) | 0) === 1 &&
         (Number(state.world?.lineageId?.[idx] || 0) | 0) === playerLineageId;
-      const isEmptyTile = (Number(state.world?.alive?.[idx] || 0) | 0) === 0;
-      const placementCostEnabled = !!state.meta.placementCostEnabled;
-      const placementCost = 0.5;
-      const hasPlacementBudget = Number(state.sim?.playerDNA || 0) >= placementCost;
+      const resourceValue = Number(state.world?.R?.[idx] || 0);
+      const isResourceTile = resourceValue > 0.05;
 
       if (!this._moveSelection) {
         if (!isOwnAliveTile) return;
         this._moveSelection = { x: wx, y: wy, idx };
         this._setActionFeedback({
           ok: true,
-          message: "Quelle markiert.",
-          hint: "Waehle jetzt ein freies Ziel-Tile fuer die Bewegung.",
+          message: "Zelle markiert.",
+          hint: "Waehle jetzt ein Ressource-Tile als Ziel.",
         });
         return;
       }
@@ -202,54 +200,40 @@ export function installUiInput(UI) {
         this._moveSelection = { x: wx, y: wy, idx };
         this._setActionFeedback({
           ok: true,
-          message: "Quelle umgestellt.",
-          hint: "Waehle jetzt ein freies Ziel-Tile fuer die Bewegung.",
+          message: "Zelle umgestellt.",
+          hint: "Waehle jetzt ein Ressource-Tile als Ziel.",
         });
         return;
       }
 
-      if (!isEmptyTile) {
+      if (!isResourceTile) {
         this._setActionFeedback({
           ok: false,
-          message: "Ziel ist belegt.",
-          hint: "Waehle ein freies Tile als Ziel.",
-        });
-        return;
-      }
-      if (placementCostEnabled && !hasPlacementBudget) {
-        this._setActionFeedback({
-          ok: false,
-          message: "Bewegung blockiert.",
-          hint: "Zu wenig DNA fuer das Ziel-Tile (Kosten 0.5).",
+          message: "Kein Ressourcen-Ziel.",
+          hint: "Waehle ein Tile mit sichtbarer Ressource.",
         });
         return;
       }
 
-      const placed = this._dispatch({ type: "PLACE_CELL", payload: { x: wx, y: wy, remove: false } });
-      if (!placed) {
+      const selected = this._moveSelection;
+      const ordered = this._dispatch({
+        type: "ISSUE_ORDER",
+        payload: { fromX: selected.x, fromY: selected.y, targetX: wx, targetY: wy },
+      });
+      if (!ordered) {
         this._setActionFeedback({
           ok: false,
-          message: "Bewegung blockiert.",
-          hint: "Ziel konnte nicht gesetzt werden.",
+          message: "Order blockiert.",
+          hint: "Pruefe Startzelle und Ressourcen-Ziel.",
         });
-        return;
-      }
-      const removed = this._dispatch({ type: "PLACE_CELL", payload: { x: selected.x, y: selected.y, remove: true } });
-      if (!removed) {
+      } else {
         this._setActionFeedback({
-          ok: false,
-          message: "Quelle konnte nicht entfernt werden.",
-          hint: "Bitte Zustand pruefen; Ziel wurde bereits gesetzt.",
+          ok: true,
+          message: "Order gesetzt.",
+          hint: "Die Zelle bewegt sich tickbasiert zum Ressourcen-Ziel.",
         });
-        this._moveSelection = null;
-        return;
       }
       this._moveSelection = null;
-      this._setActionFeedback({
-        ok: true,
-        message: "Zelle bewegt.",
-        hint: "Naechster Schritt: Main-Run-Aktion auswaehlen.",
-      });
       return;
     }
     if (mode === BRUSH_MODE.CELL_HARVEST) {

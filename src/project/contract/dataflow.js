@@ -25,6 +25,7 @@ const DISPATCH_SOURCES = Object.freeze({
   RESET_GLOBAL_LEARNING: ["src/game/ui/ui.js"],
   PAINT_BRUSH: ["src/game/ui/ui.js"],
   PLACE_CELL: ["src/game/ui/ui.js"],
+  ISSUE_ORDER: ["src/game/ui/ui.js"],
   PLACE_SPLIT_CLUSTER: ["src/game/ui/ui.js"],
   HARVEST_CELL: ["src/game/ui/ui.js"],
   HARVEST_PULSE: ["src/game/ui/ui.js"],

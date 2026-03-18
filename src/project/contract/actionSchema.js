@@ -22,6 +22,7 @@ export const actionSchema = {
   RESET_GLOBAL_LEARNING: { type: "object", shape: {} },
   PAINT_BRUSH: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, mode: { type: "string" }, radius: { type: "number" } } },
   PLACE_CELL: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, remove: { type: "boolean" } } },
+  ISSUE_ORDER: { type: "object", shape: { fromX: { type: "number" }, fromY: { type: "number" }, targetX: { type: "number" }, targetY: { type: "number" } } },
   PLACE_SPLIT_CLUSTER: { type: "object", shape: { x: { type: "number" }, y: { type: "number" } } },
   HARVEST_CELL: { type: "object", shape: { x: { type: "number" }, y: { type: "number" } } },
   HARVEST_PULSE: { type: "object", shape: {}, allowUnknown: true },

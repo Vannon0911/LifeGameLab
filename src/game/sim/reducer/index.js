@@ -611,6 +611,10 @@ export function makeInitialState() {
     world: null,
     sim: {
       tick: 0, running: false, runPhase: RUN_PHASE.GENESIS_SETUP, founderBudget: 1, founderPlaced: 0,
+      selectedUnit: -1,
+      unitOrder: { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 },
+      lastCommand: "",
+      lastAutoAction: "",
       unlockedZoneTier: 0, nextZoneUnlockKind: "", nextZoneUnlockCostEnergy: 0, zoneUnlockProgress: 0, coreEnergyStableTicks: 0, zone2Unlocked: false, zone2PlacementBudget: 0, dnaZoneCommitted: false, nextInfraUnlockCostDNA: 0, infrastructureUnlocked: false, infraBuildMode: "", infraBuildCostEnergy: 0, infraBuildCostDNA: 0, cpuBootstrapDone: 0,
       aliveCount: 0, aliveRatio: 0,
       meanLAlive: 0, meanEnergyAlive: 0, meanReserveAlive: 0,
@@ -1165,6 +1169,35 @@ export function reducer(state, action, ctx = {}) {
 
     case "PLACE_CELL": {
       return handlePlaceCell(state, action);
+    }
+
+    case "ISSUE_ORDER": {
+      if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
+      const world = state.world;
+      if (!world?.alive || !world?.lineageId || !world?.R) return [];
+      const w = Number(world.w || state.meta.gridW || 0) | 0;
+      const h = Number(world.h || state.meta.gridH || 0) | 0;
+      const fromX = Number(action.payload?.fromX) | 0;
+      const fromY = Number(action.payload?.fromY) | 0;
+      const targetX = Number(action.payload?.targetX) | 0;
+      const targetY = Number(action.payload?.targetY) | 0;
+      if (fromX < 0 || fromY < 0 || fromX >= w || fromY >= h) return [];
+      if (targetX < 0 || targetY < 0 || targetX >= w || targetY >= h) return [];
+      const fromIdx = fromY * w + fromX;
+      const targetIdx = targetY * w + targetX;
+      if (fromIdx === targetIdx) return [];
+      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+      const isOwnAlive =
+        (Number(world.alive[fromIdx] || 0) | 0) === 1 &&
+        (Number(world.lineageId[fromIdx] || 0) | 0) === playerLineageId;
+      if (!isOwnAlive) return [];
+      if (Number(world.R[targetIdx] || 0) <= 0.05) return [];
+      const order = { active: true, fromX, fromY, targetX, targetY };
+      return [
+        { op: "set", path: "/sim/selectedUnit", value: fromIdx },
+        { op: "set", path: "/sim/unitOrder", value: order },
+        { op: "set", path: "/sim/lastCommand", value: `ISSUE_ORDER:${fromX},${fromY}->${targetX},${targetY}` },
+      ];
     }
 
     case "PLACE_SPLIT_CLUSTER": {
