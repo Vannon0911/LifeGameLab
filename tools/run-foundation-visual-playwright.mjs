@@ -3,6 +3,7 @@ import path from "node:path";
 import net from "node:net";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -182,16 +183,31 @@ async function main() {
     const box = await canvas.boundingBox();
     if (!box) throw new Error("Canvas not found for founder placement.");
     const grid = 64;
-    const cellW = box.width / grid;
-    const cellH = box.height / grid;
+    const preset = getWorldPreset("river_delta");
+    const playerWindow = preset?.startWindows?.player;
+    const range = getStartWindowRange(playerWindow, grid, grid);
+    const dpr = await page.evaluate(() => Number(window.devicePixelRatio || 1));
+    const canvasMetrics = await canvas.evaluate((el) => ({
+      pixelWidth: Number(el.width || 0),
+      pixelHeight: Number(el.height || 0),
+    }));
+    const tilePx = Math.max(1, Math.floor(Math.min(canvasMetrics.pixelWidth / grid, canvasMetrics.pixelHeight / grid)));
+    const imageW = grid * tilePx;
+    const imageH = grid * tilePx;
+    const offX = Math.floor((canvasMetrics.pixelWidth - imageW) / 2);
+    const offY = Math.floor((canvasMetrics.pixelHeight - imageH) / 2);
     const founders = [
-      { gx: 4, gy: 4 },
-      { gx: 5, gy: 4 },
-      { gx: 4, gy: 5 },
-      { gx: 5, gy: 5 },
+      { gx: range.x0, gy: range.y0 },
+      { gx: range.x0 + 1, gy: range.y0 },
+      { gx: range.x0, gy: range.y0 + 1 },
+      { gx: range.x0 + 1, gy: range.y0 + 1 },
     ];
     for (const tile of founders) {
-      await page.mouse.click(box.x + (tile.gx + 0.5) * cellW, box.y + (tile.gy + 0.5) * cellH);
+      const sx = box.x + (offX + (tile.gx + 0.5) * tilePx) / dpr;
+      const sy = box.y + (offY + (tile.gy + 0.5) * tilePx) / dpr;
+      await page.mouse.move(sx, sy);
+      await page.mouse.down();
+      await page.mouse.up();
       await page.waitForTimeout(110);
     }
     await page.waitForTimeout(250);
