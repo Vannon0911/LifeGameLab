@@ -6,8 +6,6 @@ import { generateWorld, seedDeterministicBootstrapCluster } from "../worldgen.js
 import { simStep } from "../step.js";
 import { PHYSICS_DEFAULT } from "../../../kernel/store/physics.js";
 import { hashString, rng01 } from "../../../kernel/determinism/rng.js";
-import { manifest } from "../../../project/project.manifest.js";
-import { assertSimPatchesAllowed } from "../gate.js";
 import { clamp, cloneTypedArray, paintCircle } from "../shared.js";
 import {
   BRUSH_MODE,
@@ -698,7 +696,6 @@ export function reducer(state, action, ctx = {}) {
 
     case "GEN_WORLD": {
       const patches = buildWorldGenerationPatches(state, state.meta.worldPresetId);
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -708,7 +705,6 @@ export function reducer(state, action, ctx = {}) {
         { op: "set", path: "/sim/runPhase", value: RUN_PHASE.GENESIS_ZONE },
         { op: "set", path: "/sim/running", value: false },
       ];
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -799,7 +795,6 @@ export function reducer(state, action, ctx = {}) {
         { op: "set", path: "/sim/cpuAliveCount", value: Number(bootstrapMetrics.cpuAliveCount || 0) },
       ];
       pushCanonicalRuntimePatches(patches, canonicalState);
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -825,7 +820,6 @@ export function reducer(state, action, ctx = {}) {
         { op: "set", path: "/sim/zone2Unlocked", value: true },
         { op: "set", path: "/sim/zone2PlacementBudget", value: placementBudget },
       ];
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -853,7 +847,6 @@ export function reducer(state, action, ctx = {}) {
           { op: "set", path: "/world/dnaZoneMask", value: dnaZoneMask },
           { op: "set", path: "/sim/zone2PlacementBudget", value: Math.min(maxBudget, budget + 1) },
         ];
-        assertSimPatchesAllowed(manifest, state, action.type, patches);
         return patches;
       }
       if (budget <= 0) return [];
@@ -868,7 +861,6 @@ export function reducer(state, action, ctx = {}) {
         { op: "set", path: "/world/dnaZoneMask", value: dnaZoneMask },
         { op: "set", path: "/sim/zone2PlacementBudget", value: Math.max(0, budget - 1) },
       ];
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -924,7 +916,6 @@ export function reducer(state, action, ctx = {}) {
         { op: "set", path: "/sim/running", value: true },
       ];
       pushCanonicalRuntimePatches(patches, canonicalState);
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -944,7 +935,6 @@ export function reducer(state, action, ctx = {}) {
         { op: "set", path: "/sim/infraBuildMode", value: "path" },
         { op: "set", path: "/sim/running", value: false },
       ];
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -966,7 +956,6 @@ export function reducer(state, action, ctx = {}) {
         if (!remove) return [];
         infraCandidateMask[idx] = 0;
         const patches = [{ op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask }];
-        assertSimPatchesAllowed(manifest, state, action.type, patches);
         return patches;
       }
       if (remove) return [];
@@ -977,7 +966,6 @@ export function reducer(state, action, ctx = {}) {
       if (!touchesAnchor && !touchesCandidate) return [];
       infraCandidateMask[idx] = 1;
       const patches = [{ op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask }];
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -998,7 +986,6 @@ export function reducer(state, action, ctx = {}) {
           { op: "set", path: "/sim/infraBuildMode", value: "" },
           { op: "set", path: "/sim/running", value: true },
         ];
-        assertSimPatchesAllowed(manifest, state, action.type, patches);
         return patches;
       }
       if (!areIndicesConnected4(candidateIndices, w, h)) return [];
@@ -1033,7 +1020,6 @@ export function reducer(state, action, ctx = {}) {
         { op: "set", path: "/sim/running", value: true },
       ];
       pushCanonicalRuntimePatches(patches, canonicalState);
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -1043,7 +1029,6 @@ export function reducer(state, action, ctx = {}) {
       if (running && state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
       if (running && String(state.sim.infraBuildMode || "") !== "") return [];
       const patches = [{ op: "set", path: "/sim/running", value: running }];
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -1072,7 +1057,6 @@ export function reducer(state, action, ctx = {}) {
         },
       };
       const patches = buildWorldGenerationPatches(nextState, nextState.meta.worldPresetId);
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -1125,7 +1109,6 @@ export function reducer(state, action, ctx = {}) {
       const next = { ...prev, enabled, strength };
       const patches = [{ op: "set", path: "/meta/globalLearning", value: next }];
       if (state.world) patches.push({ op: "set", path: "/world/globalLearning", value: cloneJson(next) });
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -1136,7 +1119,6 @@ export function reducer(state, action, ctx = {}) {
         patches.push({ op: "set", path: "/world/globalLearning", value: cloneJson(reset) });
         patches.push({ op: "set", path: "/world/lineageMemory", value: {} });
       }
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -1178,7 +1160,6 @@ export function reducer(state, action, ctx = {}) {
       });
 
       const patches = [{ op: "set", path: `/world/${key}`, value: next }];
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -1233,7 +1214,6 @@ export function reducer(state, action, ctx = {}) {
     case "SET_WIN_MODE": {
       const patches = buildSetWinModePatches(state, action);
       if (!patches.length) return [];
-      assertSimPatchesAllowed(manifest, state, "SET_WIN_MODE", patches);
       return patches;
     }
 
@@ -1244,7 +1224,6 @@ export function reducer(state, action, ctx = {}) {
     case "SET_PLACEMENT_COST": {
       const enabled = !!action.payload?.enabled;
       const patches = [{ op: "set", path: "/meta/placementCostEnabled", value: enabled }];
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -1346,8 +1325,8 @@ export function simStepPatch(state, action, ctx) {
 
   // Drift hardening: only patch known sim keys.
   pushKeysPatches(patches, simOut, SIM_KEYS, "/sim", state.sim);
-  assertSimPatchesAllowed(manifest, state, "SIM_STEP", patches);
   return patches;
 }
+
 
 

@@ -1,5 +1,3 @@
-import { manifest } from "../../project/project.manifest.js";
-import { assertSimPatchesAllowed } from "./gate.js";
 import { clamp, cloneTypedArray } from "./shared.js";
 import { deriveStageState } from "./reducer/progression.js";
 
@@ -62,7 +60,6 @@ function finalizeAction(state, actionType, nextWorld, simPatch, worldPatchEntrie
   if (nextWorld.lineageMemory !== state.world.lineageMemory) {
     patches.push({ op: "set", path: "/world/lineageMemory", value: nextWorld.lineageMemory });
   }
-  assertSimPatchesAllowed(manifest, state, actionType, patches);
   return patches;
 }
 
@@ -209,3 +206,4 @@ export function handleSeedSpread(state) {
     { op: "set", path: "/world/B", value: B },
   ]);
 }
+

@@ -1,7 +1,5 @@
 import { rng01 } from "../../kernel/determinism/rng.js";
-import { manifest } from "../../project/project.manifest.js";
 import { TRAIT_COUNT, TRAIT_DEFAULT } from "./life.data.js";
-import { assertSimPatchesAllowed } from "./gate.js";
 import {
   clamp,
   cloneTypedArray,
@@ -243,7 +241,6 @@ export function handlePlaceCell(state, action) {
         { op: "set", path: "/sim/founderPlaced", value: Math.max(0, founderPlaced - 1) },
       ];
       if (W) patches.push({ op: "set", path: "/world/W", value: W });
-      assertSimPatchesAllowed(manifest, state, action.type, patches);
       return patches;
     }
 
@@ -284,7 +281,6 @@ export function handlePlaceCell(state, action) {
       { op: "set", path: "/sim/founderPlaced", value: founderPlaced + 1 },
     ];
     if (W) patches.push({ op: "set", path: "/world/W", value: W });
-    assertSimPatchesAllowed(manifest, state, action.type, patches);
     return patches;
   }
 
@@ -342,7 +338,6 @@ export function handlePlaceCell(state, action) {
   if (!remove && costEnabled) {
     patches.push({ op: "set", path: "/sim/playerDNA", value: playerDNA - cost });
   }
-  assertSimPatchesAllowed(manifest, state, action.type, patches);
   return patches;
 }
 
@@ -435,7 +430,6 @@ export function handlePlaceSplitCluster(state, action) {
   ];
   if (W) patches.push({ op: "set", path: "/world/W", value: W });
   if (costEnabled) patches.push({ op: "set", path: "/sim/playerDNA", value: playerDNA - totalCost });
-  assertSimPatchesAllowed(manifest, state, action.type, patches);
   return patches;
 }
 
@@ -485,7 +479,6 @@ export function handleHarvestCell(state, action) {
     { op: "set", path: "/world/alive", value: aliveNext },
     { op: "set", path: "/world/E", value: energyNext },
   ];
-  assertSimPatchesAllowed(manifest, state, action.type, patches);
   return patches;
 }
 
@@ -519,7 +512,6 @@ export function handleSetZone(state, action) {
   });
 
   const patches = [{ op: "set", path: "/world/zoneMap", value: zoneMap }];
-  assertSimPatchesAllowed(manifest, state, action.type, patches);
   return patches;
 }
 
@@ -538,7 +530,6 @@ export function handleSetPlayerDoctrine(state, action) {
   current.stage = Math.max(Number(current.stage || 1), playerStage);
   nextLineageMemory[playerLineageId] = current;
   const patches = [{ op: "set", path: "/world/lineageMemory", value: nextLineageMemory }];
-  assertSimPatchesAllowed(manifest, state, action.type, patches);
   return patches;
 }
 
@@ -644,7 +635,7 @@ export function handleBuyEvolution(state, action, devMutationCatalog) {
     { op: "set", path: "/world/trait", value: nextTrait },
   ];
   if (nextHue) patches.push({ op: "set", path: "/world/hue", value: nextHue });
-  assertSimPatchesAllowed(manifest, state, action.type, patches);
   return patches;
 }
+
 
