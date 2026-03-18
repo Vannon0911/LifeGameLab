@@ -3,198 +3,106 @@
 Version: 1.0
 
 ## Produktkern
-LifeGameLab ist ein deterministisches Colony-Aufbauspiel fuer kurze Mobile-Sessions.
-Der Spieler startet jede Runde mit exakt vier Gruenderzellen, platziert sie bewusst im Grid und baut daraus eine Kolonie, deren Funktionen aus Zelltopologien statt aus klassischen Gebaeuden entstehen.
+LifeGameLab ist ein deterministisches Browser-RTS, das mit genau einer Zelle beginnt.
+Kein Tutorial, keine Gebaeudemenues und keine versteckten Startskripte.
+Der erste Zug ist immer direkt: Zelle bewegen, Ressource abbauen, Wirtschaft aufbauen.
 
-Jede Runde laeuft unter einem Seed und ist vollstaendig reproduzierbar.
-Der Kern des MVP ist nicht maximale Feature-Breite, sondern der Beweis eines starken, wiederholbaren Gameplay-Loops.
+Die zentrale Entscheidung bleibt ueber das ganze Match gleich:
+- Zelle als Worker weiter nutzen
+- oder Zelle dauerhaft in Muster und Infrastruktur investieren
 
-## Kernidee
-LifeGameLab soll vier Effekte zugleich beweisen:
-- Die Gruenderplatzierung fuehlt sich bedeutend an.
-- Zellverbindungen erzeugen ueberraschende Funktionen.
-- Die CPU wirkt wie ein realer Gegner.
-- Nach einer Runde entsteht der Wunsch nach einer zweiten.
+Aus dieser Entscheidung entstehen Wirtschaft, Zonen, Muster-zu-Objekt-Erkennung,
+Automatisierung, Kampf und emergente Militaerkombinationen.
 
-Wenn diese vier Punkte nicht erreicht werden, ist das MVP nicht erfolgreich, auch wenn die Technik formal laeuft.
+## Welt
+Die Welt ist seedbasiert und reproduzierbar.
+- gleicher Seed -> gleiche Welt
+- gleiche Inputs -> gleiche Ergebnisse
 
-## Designprinzipien
+Die Karte ist fair, aber nicht trivial gespiegelt.
+Beide Seiten erhalten vergleichbare Startchancen.
 
-### Determinismus als Infrastruktur
-- Gleicher Seed plus gleiche Aktionen muessen zum identischen Ergebnis fuehren.
-- Determinismus ist nicht nur Debug-Hygiene, sondern Basis fuer Replays, Leaderboards, Shadow Fights und CPU-Vergleichbarkeit.
-- Nicht-deterministische Sonderpfade sind Produktbruch.
+Der Spannungsbogen kommt aus der Weltstruktur:
+- Stabilisierung
+- Expansion
+- Konflikt
 
-### Muster erzeugen Funktionen
-- Es gibt keine klassischen Gebaeude als primaere Funktionsquelle.
-- Funktionen entstehen aus Zelltyp, Verbindungsrichtung und topologischer Struktur.
-- Wichtige Strukturtypen fuer das MVP:
-  - lineare Ketten
-  - Winkelstrukturen
-  - Dreiecke
-  - Schleifen
-  - groessere Netzwerke
+## Start
+Jeder Spieler startet mit genau einer Zelle.
+Die Zelle wird wie ein RTS-Worker gesteuert:
+- zur Ressource bewegen
+- abbauen
+- zweite Zelle erzeugen
 
-### Strategische Entschleunigung
-- Das Spiel beginnt klein und lesbar.
-- Wachstum entsteht durch funktionierende Systeme, nicht durch Ressourcen-Spam.
-- Expansion ist Konsequenz stabiler Produktion, nicht Knopfdruck-Fuetterung.
+Kein vorgeschaltetes Tutorial.
+Die erste Interaktion erklaert das Spiel selbst.
 
-### Session-First
-- Eine einzelne Runde soll grob zwanzig Minuten tragen.
-- Das Ziel ist nicht maximale Sitzungslaenge, sondern ein klarer Wiederspielimpuls nach einem abgeschlossenen Run.
+## Wachstum
+Mit zwei Zellen beginnt der erste Effizienzsprung.
+Frueher Kernloop:
+- Ressourcen abbauen
+- neue Zellen erzeugen
+- Einkommen stabilisieren
+- erste Zone vorbereiten
 
-## Spielstart - Genesis
-- Der Spieler startet mit einem kleinen Grid und exakt vier Gruenderzellen.
-- Ablauf des Starts:
-  1. Welt-Preset waehlen
-  2. vier Gruenderzellen im Startfenster platzieren
-  3. Formation auf Zusammenhang validieren
-  4. Formation bestaetigen
-- Diese Formation definiert den Energiekern der Kolonie.
-- Erst nach dieser Bestaetigung erscheint die CPU-Kolonie deterministisch im gegnerischen Startfenster.
-- Der Spieler beginnt immer zuerst.
+## Zonen
+Zonen sind feste quadratische Flaechen im Grid:
+- 2x2
+- 4x4
+- 6x6
+- 8x8
 
-## Grid und Wachstum
-- Das Spielfeld startet bewusst klein.
-- Das Grid erweitert sich automatisch, wenn die Kolonie systemisch Druck erzeugt.
-- Expansion wird nicht direkt per Button gekauft, sondern aus Koloniezustand abgeleitet.
-- Typische Expansionstreiber im MVP:
-  - Koloniegroesse
-  - Produktionsdruck
-  - Energieueberschuss
+Zonentyp wird beim Setzen festgelegt:
+- Abbauzone
+- Weiterverarbeitungszone
+- Herstellungszone
 
-## Zonenstruktur
+Je groesser die Zone, desto hoeher Kosten und Kombinationsraum.
 
-### Zone 1 - Energie
-- Die Gruenderformation bildet den Energiekern.
-- Energie ist primaere Ressource fuer Erhalt, Expansion und Wettbewerbsvergleich gegen die CPU.
-- Energieueberschuss gewinnt Zeit.
-- Energiedefizit kostet Stabilitaet.
+## Muster und Objekte
+Ab mindestens vier Zellen in einer Zone koennen Verbindungen gesetzt werden.
+Das System erkennt Muster und erzeugt daraus Objekte/Funktionen.
 
-### Zone 2 - DNA
-- DNA wird erst bei stabiler Energieproduktion freigeschaltet.
-- DNA ist Investitionsressource fuer Technologie, Verbindungsmodifikationen und Musterverstaerkungen.
-- DNA soll nicht folgenlos gehortet werden koennen.
+Prinzip:
+- keine Gebaeude aus Liste anklicken
+- Funktionen durch raeumliche Muster entdecken
 
-### Zone 3+ - Technologie
-- Mit wachsender DNA-Akkumulation oeffnen sich Tech-Pfade.
-- Der MVP rechnet mit fuenf Entwicklungslinien, die unterschiedliche Spielstile und Schwaechen erzeugen.
+## Wirtschaft
+Drei Stufen:
+1. Abbau
+2. Weiterverarbeitung
+3. Herstellung
 
-## Zellverbindungssystem
-- Der Spieler verbindet Zellen ueber Linien.
-- Wirkung entsteht aus:
-  - Zelltyp
-  - Verbindungsrichtung
-  - topologischer Struktur
-- Wichtige Strukturtypen:
-  - lineare Ketten
-  - Winkelverbindungen
-  - Dreiecke
-  - geschlossene Schleifen
-  - Netzwerke
-- Diese Strukturen sollen emergente Effekte erzeugen.
-- Der Spieler lernt die Regeln primar durch Konsequenzen, nicht durch lange Erklaertexte.
+Ziel des Early Games:
+Grundversorgung so stabilisieren, dass sie sich selbst traegt.
 
-## Produktionsketten
-- Zellen bilden Produktionsketten statt isolierter Einzelobjekte.
-- Beispielrollen fuer den MVP:
-  - Energiezellen erzeugen Energie
-  - Transportzellen leiten Ressourcen weiter
-  - DNA-Zellen erzeugen Investitionsressourcen
-  - Tech-Zellen veraendern Systemparameter
-- Verbindungen beeinflussen Effizienz und Stabilitaet der Ketten.
-- Eine funktionierende Kolonie mit etwa 1200 lebenden Zellen gilt als sichtbarer Stabilitaetsbeweis des Systems.
+## Spielphasen
+- Early Game: Ueberleben, erste Stabilisierung
+- Mid Game: Automatisierung, Spezialisierung
+- Endgame: Militaerische Kombinationen und strategischer Druck
 
-## CPU-Gegner
-- Die CPU startet pro Runde deterministisch aus dem Seed.
-- Ihr Grundverhalten muss reproduzierbar sein.
-- Zusaetzlich besitzt die CPU ein rundenuebergreifendes Lernsystem, das Spielerstrategien in komprimierter Form aggregiert.
-- Das Modell enthaelt acht Dimensionswerte, zum Beispiel:
-  - Aggressivitaet
-  - Expansionstempo
-  - Verbindungskomplexitaet
-  - Technologieprioritaet
-  - Energieeffizienz
-  - DNA-Fokus
-  - Risiko-Toleranz
-  - defensives Verhalten
-- Diese Anpassung soll subtil sein. Die CPU soll glaubwuerdig wirken, nicht wie ein offener Rubber-Band-Trick.
+## Konflikt und Niederlage
+Konflikt entsteht aus gemeinsam attraktiven Ressourcenraeumen.
+Kein kuenstliches Event muss Kampf erzwingen.
 
-## Async-Multiplayer
-- LifeGameLab verzichtet im MVP bewusst auf Echtzeit-Multiplayer.
-- Wettbewerb entsteht ueber deterministische Vergleichssysteme.
+Loss Condition:
+- letzte Zelle eines Spielers stirbt -> Match verloren
+- kein Respawn
 
-### Daily Seed
-- Pro Tag existiert ein globaler Seed mit identischen Startbedingungen.
-- Alle Spieler starten unter denselben Voraussetzungen.
-
-### Leaderboards
-- Seed plus Aktionslog muessen einen Endzustand reproduzierbar belegen.
-- Leaderboards vergleichen verifizierbare Endzustaende statt bloe Statuswerte.
-
-### Shadow Fights
-- Ein Spieler kann gegen den Replay-Geist einer erfolgreichen Runde antreten.
-- Beide Runs basieren auf demselben Seed.
-- Der Unterschied liegt in den Entscheidungen, nicht in versteckter Varianz.
-
-## Sim-Modus
-- Der Sim-Modus ist ein passiver Beobachtungsmodus.
-- Er dient als Showcase fuer grosse Kolonien, als Simulationsdemonstration und als visuelles Archiv.
-- Er erzeugt keine spielmechanischen Vorteile fuer den Main-Run.
-
-## Plattformstrategie
-
-### Phase 1 - WebApp
-- Sofortiger Zugang
-- keine Installationsbarriere
-- schnelle Validierung des Gameplay-Loops
-
-### Phase 2 - Android APK
-- Wrapper um die WebApp fuer fruehe Mobile-Tests
-- Distribution ueber alternative Stores
-- Fokus auf Feedback und Retention-Daten
-
-### Phase 3 - Google Play
-- offizielle Mobile-Verbreitung erst nach validiertem Gameplay-Loop
-- iOS ist kein MVP-Ziel und wird erst nach erfolgreicher Mobile-Validierung betrachtet
-
-## Technische Grundlagen
-
-### Deterministische Simulation
-- seedbasierter PRNG
-- keine nicht-deterministischen Systemaufrufe im Spielkern
-- stabile Iterationsreihenfolge
-
-### Replay-System
-- Jede Spieleraktion wird protokolliert.
-- Ein Replay enthaelt:
-  - Seed
-  - Aktionssequenz
-  - Zeitindex
-- Damit muss jede Runde vollstaendig reproduzierbar sein.
-
-### Verifizierbare Endzustaende
-- Endzustaende sollen ueber Hashes belegbar sein.
-- Das ist die technische Basis gegen Manipulation in Leaderboards und Shadow-Fight-Vergleichen.
+## Technische Leitplanken
+- Vanilla JavaScript
+- deterministischer Kern
+- 24 Ticks pro Sekunde
+- renderAlpha-Interpolation im Renderpfad
+- UI dispatcht nur, UI mutiert nie direkt
 
 ## MVP-Beweisziele
-Das MVP beantwortet genau diese vier Fragen:
-1. Bedeutungsvolle Genesis: Fuehlt sich die Platzierung der vier Gruenderzellen strategisch relevant an?
-2. Entdeckungsmechanik: Erleben Spieler ueberraschende Effekte durch Zellverbindungen und Topologien?
-3. Glaubwuerdiger Gegner: Wirkt die CPU wie eine echte Kolonie mit eigener Strategie?
-4. Wiederspielimpuls: Startet der Spieler freiwillig eine zweite Runde?
-
-Alles Weitere ist Backlog, nicht Kernbeweis.
-
-## Endziel
-LifeGameLab soll ein Systemspiel sein.
-Es soll nicht primar ueber lange Texte erklaert, sondern ueber Konsequenzen entdeckt werden.
-Der Spieler lernt nicht "Regeln", sondern liest Systemverhalten.
-Die Kolonie soll sich wie ein groesseres Ganzes anfuehlen als jede einzelne Entscheidung.
-Und jede Runde beginnt wieder mit denselben vier Zellen.
+1. Eine Zelle als Start fuehlt sich sofort spielbar an.
+2. Worker-vs-Investment erzeugt echte Strategie.
+3. Muster-zu-Objekt ist im Grid sichtbar und relevant.
+4. Die Welt erzeugt den Bogen Stabilisierung -> Expansion -> Konflikt ohne Script-Tricks.
 
 ## Harte Prioritaet bei Konflikten
 1. Contract- und Kernel-Invarianten
-2. aktive technische Gates und bindende Arbeitsreihenfolge in `docs/STATUS.md`
-3. diese Produktbasis
+2. Aktiver technischer Status in `docs/STATUS.md`
+3. Diese Produktbasis
