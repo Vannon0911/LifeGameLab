@@ -1,6 +1,6 @@
 import { clamp } from "./shared.js";
 import { ACTION_REMOTE_ATTACK } from "./constants.js";
-import { hashMix32 } from "../../core/kernel/rng.js";
+import { hashMix32 } from "../../kernel/determinism/rng.js";
 
 export function runRemoteClusterAttacks(world, phy, tick, actionMap) {
   const { w, h, alive, E, W, R, link, reserve, lineageId, clusterField } = world;
@@ -81,4 +81,5 @@ export function runRemoteClusterAttacks(world, phy, tick, actionMap) {
 
   return { attacks, kills, stolen, defAct };
 }
+
 

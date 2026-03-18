@@ -1,4 +1,4 @@
-import { rng01 } from "../../core/kernel/rng.js";
+import { rng01 } from "../../kernel/determinism/rng.js";
 import { manifest } from "../../project/project.manifest.js";
 import { TRAIT_COUNT, TRAIT_DEFAULT } from "./life.data.js";
 import { assertSimPatchesAllowed } from "./gate.js";
@@ -647,3 +647,4 @@ export function handleBuyEvolution(state, action, devMutationCatalog) {
   assertSimPatchesAllowed(manifest, state, action.type, patches);
   return patches;
 }
+

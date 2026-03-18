@@ -1,5 +1,5 @@
 import { clamp } from "./shared.js";
-import { hashMix32 } from "../../core/kernel/rng.js";
+import { hashMix32 } from "../../kernel/determinism/rng.js";
 import { TRAIT_COUNT, TRAIT_DEFAULT } from "./life.data.js";
 
 const AI_MODE_HOLD = 0;
@@ -156,3 +156,4 @@ export function applyWorldAi(world, tick, phy = {}) {
   const prev = state[key] && typeof state[key] === "object" ? state[key] : { cooldown: 0, budget: 0.4 };
   state[key] = { ...prev, budget: CLUSTER_ATTACK_BUDGET_MAX };
 }
+

@@ -1,4 +1,4 @@
-import { rng01 } from "../../../core/kernel/rng.js";
+import { rng01 } from "../../../kernel/determinism/rng.js";
 import { clamp, defaultLineageMemory } from "../shared.js";
 
 function lerp(a, b, t) {
@@ -203,3 +203,4 @@ export function applyGlobalLearningToWorld(world, learning) {
     world.lineageMemory[lid] = m;
   }
 }
+

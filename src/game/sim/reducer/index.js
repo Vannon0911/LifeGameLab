@@ -4,8 +4,8 @@
 
 import { generateWorld, seedDeterministicBootstrapCluster } from "../worldgen.js";
 import { simStep } from "../step.js";
-import { PHYSICS_DEFAULT } from "../../../core/kernel/physics.js";
-import { hashString, rng01 } from "../../../core/kernel/rng.js";
+import { PHYSICS_DEFAULT } from "../../../kernel/store/physics.js";
+import { hashString, rng01 } from "../../../kernel/determinism/rng.js";
 import { manifest } from "../../../project/project.manifest.js";
 import { assertSimPatchesAllowed } from "../gate.js";
 import { clamp, cloneTypedArray, paintCircle } from "../shared.js";
@@ -1349,3 +1349,5 @@ export function simStepPatch(state, action, ctx) {
   assertSimPatchesAllowed(manifest, state, "SIM_STEP", patches);
   return patches;
 }
+
+

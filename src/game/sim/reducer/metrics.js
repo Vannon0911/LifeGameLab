@@ -1,4 +1,4 @@
-import { PHYSICS_DEFAULT } from "../../../core/kernel/physics.js";
+import { PHYSICS_DEFAULT } from "../../../kernel/store/physics.js";
 
 export const WORLD_KEYS = [
   "w", "h",
@@ -82,3 +82,4 @@ export function pushKeysPatches(patches, obj, keys, prefix, prevObj = null) {
     patches.push({ op: "set", path: `${prefix}/${k}`, value: src[k] });
   }
 }
+

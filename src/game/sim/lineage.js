@@ -1,4 +1,4 @@
-import { rng01, hashMix32 } from "../../core/kernel/rng.js";
+import { rng01, hashMix32 } from "../../kernel/determinism/rng.js";
 import { clamp, wrapHue, renormTraits, defaultLineageMemory } from "./shared.js";
 import { TRAIT_DEFAULT, TRAIT_COUNT } from "./life.data.js";
 import { LINEAGE_PRUNE_AGE, MAX_LINEAGE_MEMORY } from "./constants.js";
@@ -96,4 +96,5 @@ export function seedTraitsDefault(trait, idx) {
   const o = idx * TRAITS;
   for (let t = 0; t < TRAITS; t++) trait[o + t] = TRAIT_DEFAULT[t];
 }
+
 

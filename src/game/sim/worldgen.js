@@ -3,7 +3,7 @@
 // ============================================================
 
 import { TRAIT_DEFAULT, TRAIT_COUNT } from "./life.data.js";
-import { hashString, rng01 } from "../../core/kernel/rng.js";
+import { hashString, rng01 } from "../../kernel/determinism/rng.js";
 import { BIOME_IDS, getStartWindowRange, getWorldPreset, normalizeWorldPresetId } from "./worldPresets.js";
 
 function clamp01(value) {
@@ -309,3 +309,4 @@ export function generateWorld(w, h, seedStr, phy, presetId = "river_delta") {
   state.superId.fill(-1);
   return state;
 }
+
