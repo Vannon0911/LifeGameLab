@@ -1,5 +1,9 @@
 {
   "ui": {
+    "dependsOn": [
+      "sim",
+      "contracts"
+    ],
     "triggerPrefixes": [
       "src/app/",
       "src/game/ui/",
@@ -10,6 +14,9 @@
     "requiredEntry": "docs/llm/ui/UI_TASK_ENTRY.md"
   },
   "sim": {
+    "dependsOn": [
+      "contracts"
+    ],
     "triggerPrefixes": [
       "src/game/sim/",
       "src/game/plugin/",
@@ -20,6 +27,7 @@
     "requiredEntry": "docs/llm/sim/SIM_TASK_ENTRY.md"
   },
   "contracts": {
+    "dependsOn": [],
     "triggerPrefixes": [
       "src/game/contracts/",
       "src/project/contract/",
@@ -32,6 +40,9 @@
     "requiredEntry": "docs/llm/contracts/CONTRACT_TASK_ENTRY.md"
   },
   "testing": {
+    "dependsOn": [
+      "contracts"
+    ],
     "triggerPrefixes": [
       "tests/",
       "tools/llm-preflight.mjs",
@@ -48,6 +59,9 @@
     "requiredEntry": "docs/llm/testing/TESTING_TASK_ENTRY.md"
   },
   "versioning": {
+    "dependsOn": [
+      "contracts"
+    ],
     "triggerPrefixes": [
       ".gitignore",
       "README.md",

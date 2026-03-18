@@ -9,7 +9,7 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 2. `docs/llm/OPERATING_PROTOCOL.md`
 3. `docs/llm/TASK_ENTRY_MATRIX.json` (Task klassifizieren)
 4. `docs/llm/entry/TASK_GATE_INDEX.md` (minimales Gate-Set je Task)
-5. Genau einen passenden Task-Entry lesen, nie mehrere:
+5. Passende Task-Entries fuer alle klassifizierten Scopes lesen:
    - `docs/llm/ui/UI_TASK_ENTRY.md`
    - `docs/llm/sim/SIM_TASK_ENTRY.md`
    - `docs/llm/contracts/CONTRACT_TASK_ENTRY.md`
@@ -17,12 +17,12 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
    - `docs/llm/versioning/VERSIONING_TASK_ENTRY.md`
 
 ## Preflight-Vertrag
-- Jeder Task muss zuerst eindeutig ueber `docs/llm/TASK_ENTRY_MATRIX.json` klassifiziert werden.
+- Jeder Task wird ueber `docs/llm/TASK_ENTRY_MATRIX.json` dependency-basiert als `taskScope[]` klassifiziert.
 - Die technische Pflichtkette ist immer exakt `classify -> entry -> ack -> check`.
-- `entry`, `ack` und `check` sind nur gueltig, wenn sie mit exakt derselben Pfadmenge laufen wie die vorherige Klassifikation.
-- Ein Scope-Wechsel, auch innerhalb derselben Session, ist ohne neuen Subtask und neue Pflichtkette verboten.
-- Commits werden aus isoliertem Stage gebaut und bleiben task-rein; gemischte Tasks sind in getrennte Commit-Slices aufzuteilen.
-- Ein `check`-Fehler blockiert Schreiben und Testen vollstaendig. Danach ist fuer genau diesen Scope ein neuer `entry -> ack -> check`-Aufbau Pflicht.
+- Bei Pfadwechsel ist Auto-Reclassify Pflicht; Scope-Erweiterung ist erlaubt und keine Ambiguitaet.
+- `entry`, `ack` und `check` blockieren Schreiboperationen; reine Read-/Analyse-/Testlaeufe bleiben erlaubt.
+- Commits werden aus isoliertem Stage gebaut; Multi-Scope-Commits sind erlaubt, wenn die Pfade kausal gekoppelt sind.
+- Ein `check`-Fehler blockiert Schreiben. Testlaeufe bleiben moeglich und liefern weiterhin Wahrheit.
 - Der Chat-Trigger `entry` ist nur der menschliche Startimpuls. Die technische Wahrheit lebt ausschliesslich in `tools/llm-preflight.mjs`.
 
 ## Kernel- Und Manifest-Pflichtgate (SoT)
@@ -41,8 +41,8 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 ## Globale Pflichtquellen
 - `docs/PRODUCT.md`: Produkt- und Scope-Basis
 - `docs/ARCHITECTURE.md`: technische Snapshot-Wahrheit
-- `docs/STATUS.md`: aktive Gates, Bugfixes, Release- und Change-Stand
-- `docs/STATUS.md` enthaelt auch die fixe atomare Test-TODO; keine separate TODO-Datei verwenden.
+- `output/current-truth.json`: maschinenlesbare Truth (`manifest + commit SHA`)
+- `docs/STATUS.md`: Kommentar-/Entscheidungslog fuer Gates, Bugfixes, Release- und Change-Stand
 
 ## Definition Of Done
 - Contract und Gates intakt

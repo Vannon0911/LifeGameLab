@@ -1,9 +1,9 @@
 # STATUS — v0.7.3
 
 ## Zweck
-Diese Datei ist die einzige Status-, Bugfix-, Release- und Changelog-Quelle.
+Diese Datei ist ein Kommentar-/Entscheidungslog fuer Status, Bugfixes, Releases und Changelog.
 Sie wird append-only gepflegt.
-Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fragen.
+Maschinenlesbare Truth liegt in `output/current-truth.json` (letzter gueltiger Testlauf + Commit-SHA).
 
 ## Projektstand
 - Phasen A bis F sind produktiv abgeschlossen.
