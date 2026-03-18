@@ -6,6 +6,8 @@
 - Status-SoT liegt ausschliesslich in `tests/evidence/spec-map.mjs`.
 - Keine Umbenennung von Testdateien; Labeling erfolgt textuell ueber Status-Ausgabe im Runner.
 - `verified` ohne `counterProbe`-Metadaten wird als Konfigurationsfehler blockiert.
+- Laufzeit-Budgets sind harte Gates: `budgetMs` Ueberschreitung blockiert den Run.
+- `evidence_match` erzeugt verpflichtend eine kryptografische Attestation (`attestation.json`), die sofort verifiziert wird.
 
 ## Verifikationsprotokoll (Gegenprobe-Pflicht)
 - Jeder Test/Claim braucht eine Gegenprobe (negative oder perturbation probe).
@@ -22,9 +24,18 @@
 ## Test/Guard SoT
 - tests/* determinism + replay + contract checks
 - tools/evidence-runner.mjs
+- tools/evidence-attestation.mjs
 - tools/llm-preflight.mjs
 - tools/git-llm-guard.mjs
 - tools/run-verification-session.mjs (`npm run test:session` = quick -> truth -> full + full-manifest-check)
+- tools/export-truth-anchors.mjs + tools/verify-cross-platform-truth.mjs (Cross-Platform-Anchor-Compare)
+
+## Cross-Platform Repro-Gate
+- Workflow: `.github/workflows/evidence-cross-platform.yml`
+- Matrix: `ubuntu-latest`, `windows-latest`, `macos-latest`
+- Jede Plattform erzeugt `truth-anchors.json` aus der aktuellen Truth-Manifest-Kette.
+- Vergleichsjob blockiert bei Anchor-Drift zwischen OS.
+- Nach erfolgreichem Compare laeuft Linux Full-Session (`npm run test:session`) inkl. Attestation-Check.
 
 ## Funktionale Matrix
 | File | Line | Symbol | Kind |
