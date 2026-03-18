@@ -12,6 +12,7 @@
   "sim": {
     "triggerPrefixes": [
       "src/game/sim/",
+      "src/game/plugin/",
       "src/core/runtime/",
       "src/project/project.logic.js",
       "docs/llm/sim/"
@@ -24,6 +25,7 @@
       "src/project/contract/",
       "src/project/llm/",
       "src/core/kernel/",
+      "src/kernel/",
       "docs/llm/contracts/"
     ],
     "requiredEntry": "docs/llm/contracts/CONTRACT_TASK_ENTRY.md"
