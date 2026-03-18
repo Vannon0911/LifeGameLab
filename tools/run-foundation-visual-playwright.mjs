@@ -151,14 +151,14 @@ async function main() {
     await page.screenshot({ path: shot, fullPage: true });
     const newWorldBody = await getBodyText(page);
     const newWorldSeen = {
-      founderCount: (newWorldBody.match(/Founder\s*\n\s*(\d\/4)/i) || [null, null])[1],
+      founderCount: (newWorldBody.match(/Founder\s*\n\s*(\d\/\d)/i) || [null, null])[1],
     };
     logStep({
       step: "new_world",
       action: "Neue Welt erzeugt.",
-      expect: "Genesis-Setup frisch initialisiert (Founder 0/4).",
+      expect: "Genesis-Setup frisch initialisiert (Founder 0/1).",
       seen: newWorldSeen,
-      state: newWorldSeen.founderCount === "0/4" ? "ok" : "unklar",
+      state: newWorldSeen.founderCount === "0/1" ? "ok" : "unklar",
       screenshot: shot,
     });
 
@@ -196,12 +196,7 @@ async function main() {
     const imageH = grid * tilePx;
     const offX = Math.floor((canvasMetrics.pixelWidth - imageW) / 2);
     const offY = Math.floor((canvasMetrics.pixelHeight - imageH) / 2);
-    const founders = [
-      { gx: range.x0, gy: range.y0 },
-      { gx: range.x0 + 1, gy: range.y0 },
-      { gx: range.x0, gy: range.y0 + 1 },
-      { gx: range.x0 + 1, gy: range.y0 + 1 },
-    ];
+    const founders = [{ gx: range.x0, gy: range.y0 }];
     for (const tile of founders) {
       const sx = box.x + (offX + (tile.gx + 0.5) * tilePx) / dpr;
       const sy = box.y + (offY + (tile.gy + 0.5) * tilePx) / dpr;
@@ -215,16 +210,16 @@ async function main() {
     await page.screenshot({ path: shot, fullPage: true });
     const readyBody = await getBodyText(page);
     const foundationReadySeen = {
-      founderCount: (readyBody.match(/Founder\s*\n\s*(\d\/4)/i) || [null, null])[1],
+      founderCount: (readyBody.match(/Founder\s*\n\s*(\d\/\d)/i) || [null, null])[1],
       foundationReadyLine: readyBody.split("\n").find((line) => /Foundation\s+bereit/i.test(line)) || null,
       confirmDisabled: await page.getByRole("button", { name: "Gruendung bestaetigen" }).isDisabled(),
     };
     logStep({
       step: "foundation_ready",
-      action: "Gueltige Founder-Konstellation gesetzt (2x2, zusammenhaengend).",
+      action: "Gueltige Founder-Konstellation gesetzt (1x1 im Startfenster).",
       expect: "Foundation bereit und Confirm aktiviert.",
       seen: foundationReadySeen,
-      state: foundationReadySeen.founderCount === "4/4" && foundationReadySeen.confirmDisabled === false ? "ok" : "bug",
+      state: foundationReadySeen.founderCount === "1/1" && foundationReadySeen.confirmDisabled === false ? "ok" : "bug",
       screenshot: shot,
     });
 

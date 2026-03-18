@@ -17,10 +17,11 @@ export function installUiInput(UI) {
       const state = this._store.getState();
       const runPhase = String(state?.sim?.runPhase || "");
       if (runPhase === RUN_PHASE.GENESIS_SETUP) {
+        const founderTarget = Math.max(1, Number(state?.sim?.founderBudget || 1) | 0);
         this._setActionFeedback({
           ok: false,
-          message: "Genesis-Setup aktiv: erst vier Founder setzen und Gründung bestätigen.",
-          hint: "Tool: Founder Place · Ziel: 4/4 zusammenhängend im Startfenster.",
+          message: "Genesis-Setup aktiv: erst Founder setzen und Gründung bestätigen.",
+          hint: `Tool: Founder Place · Ziel: ${founderTarget}/${founderTarget} im Startfenster.`,
         });
         return;
       }
@@ -49,10 +50,11 @@ export function installUiInput(UI) {
       const state = this._store.getState();
       const runPhase = String(state?.sim?.runPhase || "");
       if (runPhase === RUN_PHASE.GENESIS_SETUP) {
+        const founderTarget = Math.max(1, Number(state?.sim?.founderBudget || 1) | 0);
         this._setActionFeedback({
           ok: false,
           message: "Step ist im Genesis-Setup gesperrt.",
-          hint: "Setze vier Founder und bestätige die Gründung.",
+          hint: `Setze ${founderTarget} Founder und bestätige die Gründung.`,
         });
         return;
       }
@@ -77,6 +79,7 @@ export function installUiInput(UI) {
       this._dispatch({ type:"SIM_STEP", payload:{} });
     });
     this._btnNew.addEventListener("click", () => {
+      this._moveSelection = null;
       this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:false } });
       this._dispatch({ type:"GEN_WORLD" });
     });
@@ -157,7 +160,98 @@ export function installUiInput(UI) {
       );
       return;
     }
-    if (mode === BRUSH_MODE.OBSERVE) return;
+    if (mode === BRUSH_MODE.OBSERVE) {
+      if (!start) return;
+      if (String(state.sim?.runPhase || "") !== RUN_PHASE.RUN_ACTIVE) {
+        this._moveSelection = null;
+        return;
+      }
+      const idx = wy * state.meta.gridW + wx;
+      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+      const isOwnAliveTile =
+        (Number(state.world?.alive?.[idx] || 0) | 0) === 1 &&
+        (Number(state.world?.lineageId?.[idx] || 0) | 0) === playerLineageId;
+      const isEmptyTile = (Number(state.world?.alive?.[idx] || 0) | 0) === 0;
+      const placementCostEnabled = !!state.meta.placementCostEnabled;
+      const placementCost = 0.5;
+      const hasPlacementBudget = Number(state.sim?.playerDNA || 0) >= placementCost;
+
+      if (!this._moveSelection) {
+        if (!isOwnAliveTile) return;
+        this._moveSelection = { x: wx, y: wy, idx };
+        this._setActionFeedback({
+          ok: true,
+          message: "Quelle markiert.",
+          hint: "Waehle jetzt ein freies Ziel-Tile fuer die Bewegung.",
+        });
+        return;
+      }
+
+      const selected = this._moveSelection;
+      if (selected.idx === idx) {
+        this._moveSelection = null;
+        this._setActionFeedback({
+          ok: true,
+          message: "Bewegung abgebrochen.",
+          hint: "",
+        });
+        return;
+      }
+
+      if (isOwnAliveTile) {
+        this._moveSelection = { x: wx, y: wy, idx };
+        this._setActionFeedback({
+          ok: true,
+          message: "Quelle umgestellt.",
+          hint: "Waehle jetzt ein freies Ziel-Tile fuer die Bewegung.",
+        });
+        return;
+      }
+
+      if (!isEmptyTile) {
+        this._setActionFeedback({
+          ok: false,
+          message: "Ziel ist belegt.",
+          hint: "Waehle ein freies Tile als Ziel.",
+        });
+        return;
+      }
+      if (placementCostEnabled && !hasPlacementBudget) {
+        this._setActionFeedback({
+          ok: false,
+          message: "Bewegung blockiert.",
+          hint: "Zu wenig DNA fuer das Ziel-Tile (Kosten 0.5).",
+        });
+        return;
+      }
+
+      const placed = this._dispatch({ type: "PLACE_CELL", payload: { x: wx, y: wy, remove: false } });
+      if (!placed) {
+        this._setActionFeedback({
+          ok: false,
+          message: "Bewegung blockiert.",
+          hint: "Ziel konnte nicht gesetzt werden.",
+        });
+        return;
+      }
+      const removed = this._dispatch({ type: "PLACE_CELL", payload: { x: selected.x, y: selected.y, remove: true } });
+      if (!removed) {
+        this._setActionFeedback({
+          ok: false,
+          message: "Quelle konnte nicht entfernt werden.",
+          hint: "Bitte Zustand pruefen; Ziel wurde bereits gesetzt.",
+        });
+        this._moveSelection = null;
+        return;
+      }
+      this._moveSelection = null;
+      this._setActionFeedback({
+        ok: true,
+        message: "Zelle bewegt.",
+        hint: "Naechster Schritt: Main-Run-Aktion auswaehlen.",
+      });
+      return;
+    }
     if (mode === BRUSH_MODE.CELL_HARVEST) {
       if (!start) return;
       this._dispatch(
@@ -191,7 +285,7 @@ export function installUiInput(UI) {
         {
           ok: isOwnFounder ? "Founder entfernt." : "Founder platziert.",
           blocked: "Founder-Aktion blockiert.",
-          hint: "Nur im Startfenster, maximal 4 Founder, vor Bestätigung entfernbar.",
+          hint: `Nur im Startfenster, maximal ${Math.max(1, Number(state.sim?.founderBudget || 1) | 0)} Founder, vor Bestaetigung entfernbar.`,
         }
       );
       return;

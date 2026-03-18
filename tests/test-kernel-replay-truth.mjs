@@ -12,7 +12,7 @@ function buildReplayActions(seed) {
   const prep = createDeterministicStore({ seed });
   prep.dispatch({ type: "GEN_WORLD", payload: {} });
   prep.dispatch({ type: "SET_BRUSH", payload: { brushMode: "founder_place" } });
-  const founderTiles = getPlayerStartWindowSquare(prep.getState(), 2);
+  const founderTiles = getPlayerStartWindowSquare(prep.getState(), 1);
   const placeFounderActions = founderTiles.map((tile) => ({
     type: "PLACE_CELL",
     payload: { x: tile.x, y: tile.y, remove: false },

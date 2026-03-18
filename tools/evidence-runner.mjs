@@ -315,7 +315,7 @@ function snapshotDispatchState(runCtx, scenarioId, harness, snapshotName) {
   return record;
 }
 
-function getPlayerStartWindowSquareTiles(state, size = 2) {
+function getPlayerStartWindowSquareTiles(state, size = 1) {
   const preset = getWorldPreset(state.meta.worldPresetId);
   const range = getStartWindowRange(preset.startWindows.player, state.world.w, state.world.h);
   const out = [];
@@ -372,7 +372,7 @@ function executeDispatchStep(runCtx, scenario, harness, step) {
   }
 
   if (step.kind === "placePlayerStartWindowSquare") {
-    const tiles = getPlayerStartWindowSquareTiles(harness.store.getState(), step.size || 2);
+    const tiles = getPlayerStartWindowSquareTiles(harness.store.getState(), step.size || 1);
     for (const tile of tiles) {
       harness.store.dispatch({ type: "PLACE_CELL", payload: { x: tile.x, y: tile.y, remove: !!step.remove } });
     }
@@ -380,7 +380,7 @@ function executeDispatchStep(runCtx, scenario, harness, step) {
       scenarioId: scenario.id,
       stepId: step.id,
       kind: "place_player_start_window_square",
-      payload: { size: step.size || 2, remove: !!step.remove, tiles },
+      payload: { size: step.size || 1, remove: !!step.remove, tiles },
     });
     return;
   }

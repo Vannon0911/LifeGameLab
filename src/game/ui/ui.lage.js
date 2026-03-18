@@ -112,7 +112,8 @@ export function renderLagePanel({
   let statusText = "Kolonie beobachtet ihr Umfeld. Autonomes Wachstum hat Vorrang.";
   let statusColor = "var(--cyan)";
   if (String(sim.runPhase || "") === RUN_PHASE.GENESIS_SETUP) {
-    statusText = "Genesis-Setup aktiv. Vier zusammenhaengende Founder im Startfenster bilden die Gruendung.";
+    const founderTarget = Math.max(1, Number(sim.founderBudget || 1) | 0);
+    statusText = `Genesis-Setup aktiv. ${founderTarget} Founder im Startfenster bilden die Gruendung.`;
     statusColor = "var(--gold)";
   } else if (String(sim.runPhase || "") === RUN_PHASE.GENESIS_ZONE) {
     statusText = "Genesis-Zone aktiv. Die Founder sind fixiert, der Energiekern muss jetzt explizit bestaetigt werden.";
@@ -146,13 +147,14 @@ export function renderLagePanel({
 
   if (String(sim.runPhase || "") === RUN_PHASE.GENESIS_SETUP) {
     const foundationEligibility = evaluateFoundationEligibility(state);
+    const founderTarget = Math.max(1, Number(foundationEligibility.founderBudget || 1) | 0);
     const founderCard = el("section", "nx-card");
     founderCard.appendChild(el("div", "nx-card-title", "Genesis: Gruendung"));
-    founderCard.appendChild(el("div", "nx-note", "Setze vier zusammenhaengende Founder im linken Startfenster und bestaetige danach die Gruendung."));
+    founderCard.appendChild(el("div", "nx-note", `Setze ${founderTarget} Founder im linken Startfenster und bestaetige danach die Gruendung.`));
     const founderCount = el("div", "nx-active-tool");
     founderCount.append(
       el("div", "nx-active-tool-label", "Founder"),
-      el("div", "nx-active-tool-copy", `${foundationEligibility.founderMaskCount}/${foundationEligibility.founderBudget || 4}`),
+      el("div", "nx-active-tool-copy", `${foundationEligibility.founderMaskCount}/${founderTarget}`),
     );
     founderCard.appendChild(founderCount);
     founderCard.appendChild(
@@ -161,7 +163,7 @@ export function renderLagePanel({
         foundationEligibility.eligible ? "nx-note nx-val-pos" : "nx-note",
         foundationEligibility.eligible
           ? "Foundation bereit: Gruendung kann bestaetigt werden."
-          : "Foundation noch nicht bereit: exakt 4 eigene, zusammenhaengende Founder im Startfenster erforderlich.",
+          : `Foundation noch nicht bereit: exakt ${founderTarget} eigene Founder im Startfenster erforderlich.`,
       ),
     );
     const founderActions = el("div", "nx-chip-grid");

@@ -331,7 +331,7 @@ function collectFounderIndices(state) {
     if ((Number(world.founderMask[i]) | 0) !== 1) continue;
     founderIndices.push(i);
   }
-  if (founderIndices.length !== 4) return null;
+  if (founderIndices.length !== 1) return null;
 
   for (const idx of founderIndices) {
     if ((Number(world.alive[idx]) | 0) !== 1) return null;
@@ -562,7 +562,7 @@ function buildWorldGenerationPatches(state, presetId) {
   const nextSim = deriveBootstrapSimMetrics(world, { ...meta, physics: tunedPhysics }, makeInitialState().sim);
   nextSim.running = false;
   nextSim.runPhase = RUN_PHASE.GENESIS_SETUP;
-  nextSim.founderBudget = 4;
+  nextSim.founderBudget = 1;
   nextSim.founderPlaced = 0;
   const stageState = deriveStageState(world, nextSim, {
     ...meta,
@@ -610,7 +610,7 @@ export function makeInitialState() {
     },
     world: null,
     sim: {
-      tick: 0, running: false, runPhase: RUN_PHASE.GENESIS_SETUP, founderBudget: 4, founderPlaced: 0,
+      tick: 0, running: false, runPhase: RUN_PHASE.GENESIS_SETUP, founderBudget: 1, founderPlaced: 0,
       unlockedZoneTier: 0, nextZoneUnlockKind: "", nextZoneUnlockCostEnergy: 0, zoneUnlockProgress: 0, coreEnergyStableTicks: 0, zone2Unlocked: false, zone2PlacementBudget: 0, dnaZoneCommitted: false, nextInfraUnlockCostDNA: 0, infrastructureUnlocked: false, infraBuildMode: "", infraBuildCostEnergy: 0, infraBuildCostDNA: 0, cpuBootstrapDone: 0,
       aliveCount: 0, aliveRatio: 0,
       meanLAlive: 0, meanEnergyAlive: 0, meanReserveAlive: 0,

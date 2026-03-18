@@ -24,6 +24,7 @@ export class UI {
     this._physicsInputs = {};
     this._activeContext = null;
     this._activeZoneType = 1;
+    this._moveSelection = null;
     this._lastGameResult = "";
     this._lastDNA         = 0;
     this._lastStage       = 1;

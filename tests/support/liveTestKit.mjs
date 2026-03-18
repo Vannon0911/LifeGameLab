@@ -24,7 +24,7 @@ export function createDeterministicStore(options = {}) {
   return store;
 }
 
-export function getPlayerStartWindowSquare(state, size = 2) {
+export function getPlayerStartWindowSquare(state, size = 1) {
   const preset = getWorldPreset(state.meta.worldPresetId);
   const range = getStartWindowRange(preset.startWindows.player, state.world.w, state.world.h);
   const tiles = [];
@@ -39,7 +39,7 @@ export function getPlayerStartWindowSquare(state, size = 2) {
 export function bootstrapMainRun(store) {
   store.dispatch({ type: "GEN_WORLD", payload: {} });
   store.dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
-  const tiles = getPlayerStartWindowSquare(store.getState(), 2);
+  const tiles = getPlayerStartWindowSquare(store.getState(), 1);
   for (const tile of tiles) {
     store.dispatch({ type: "PLACE_CELL", payload: { x: tile.x, y: tile.y, remove: false } });
   }

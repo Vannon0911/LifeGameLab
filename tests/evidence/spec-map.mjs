@@ -72,7 +72,7 @@ export const CLAIM_SCENARIOS = Object.freeze([
     steps: Object.freeze([
       Object.freeze({ id: "gen-world", kind: "dispatch", action: { type: "GEN_WORLD", payload: {} } }),
       Object.freeze({ id: "set-founder-brush", kind: "dispatch", action: { type: "SET_BRUSH", payload: { brushMode: "founder_place" } } }),
-      Object.freeze({ id: "place-founders", kind: "placePlayerStartWindowSquare", size: 2 }),
+      Object.freeze({ id: "place-founders", kind: "placePlayerStartWindowSquare", size: 1 }),
       Object.freeze({ id: "after-founders", kind: "captureState", snapshot: "after-founders" }),
       Object.freeze({ id: "confirm-foundation", kind: "dispatch", action: { type: "CONFIRM_FOUNDATION", payload: {} } }),
       Object.freeze({ id: "confirm-core", kind: "dispatch", action: { type: "CONFIRM_CORE_ZONE", payload: {} } }),
@@ -85,7 +85,7 @@ export const CLAIM_SCENARIOS = Object.freeze([
       Object.freeze({ id: "capture-step-4", kind: "captureState", snapshot: "step-4" }),
     ]),
     assertions: Object.freeze([
-      Object.freeze({ id: "founder-count", kind: "typedArrayCountEquals", snapshot: "after-founders", path: "world.founderMask", value: 1, expected: 4 }),
+      Object.freeze({ id: "founder-count", kind: "typedArrayCountEquals", snapshot: "after-founders", path: "world.founderMask", value: 1, expected: 1 }),
       Object.freeze({ id: "run-active", kind: "statePathEquals", snapshot: "after-core", path: "sim.runPhase", expected: "run_active" }),
       Object.freeze({ id: "running", kind: "statePathEquals", snapshot: "after-core", path: "sim.running", expected: true }),
       Object.freeze({ id: "alive-has-energy-shape", kind: "sameLength", snapshot: "step-4", leftPath: "world.alive", rightPath: "world.E" }),

@@ -83,7 +83,7 @@ export function evaluateFoundationEligibility(state) {
       reason: "wrong_phase",
     };
   }
-  if (founderBudget !== 4 || founderPlaced !== 4) {
+  if (founderBudget !== 1 || founderPlaced !== 1) {
     return {
       eligible: false,
       founderBudget,
@@ -92,7 +92,7 @@ export function evaluateFoundationEligibility(state) {
       reason: "counter_mismatch",
     };
   }
-  if (founderMaskCount !== 4) {
+  if (founderMaskCount !== 1) {
     return {
       eligible: false,
       founderBudget,

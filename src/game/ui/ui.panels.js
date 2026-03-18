@@ -259,7 +259,7 @@ export function installUiPanels(UI) {
       label: map[mode] || mode,
       detail:
         mode === BRUSH_MODE.OBSERVE ? "Autonomes Wachstum läuft selbst. Dein Einfluss liegt in Prioritäten, Evolution und Split-Seeds." :
-        mode === BRUSH_MODE.FOUNDER_PLACE ? "Setze bis zu vier Founder im linken Startfenster. Eigene Founder können vor Bestätigung entfernt werden." :
+        mode === BRUSH_MODE.FOUNDER_PLACE ? `Setze bis zu ${Math.max(1, Number(state?.sim?.founderBudget || 1) | 0)} Founder im linken Startfenster. Eigene Founder koennen vor Bestaetigung entfernt werden.` :
         mode === BRUSH_MODE.SPLIT_PLACE ? "Ein Klick setzt einen neuen 4x4-Cluster als strategischen Seed." :
         mode === BRUSH_MODE.CELL_HARVEST ? "Ein Klick erntet eine eigene Zelle für DNA." :
         mode === BRUSH_MODE.ZONE_PAINT && zone ? zone.desc : "",
@@ -329,7 +329,7 @@ export function installUiPanels(UI) {
                 : "Gruendung blockiert.",
               hint: movedToGenesisZone
                 ? "Naechster Schritt: Energiekern bestaetigen."
-                : "Erforderlich: exakt 4 eigene, zusammenhaengende Founder im Startfenster.",
+                : `Erforderlich: exakt ${Math.max(1, Number(nextState?.sim?.founderBudget || 1) | 0)} eigene Founder im Startfenster.`,
             });
             rerenderPanel();
           },
@@ -1003,8 +1003,9 @@ export function installUiPanels(UI) {
     const netSign = energyNet >= 0;
     if (inGenesisSetup) {
       this._dangerChip.textContent = "◎ Gruenden";
-      this._goalChip.textContent = "🎯 4 Founder setzen";
-      this._goalChip.title = "Genesis-Setup: Vier zusammenhaengende Founder im Startfenster setzen und Gruendung bestaetigen.";
+      const founderTarget = Math.max(1, Number(sim.founderBudget || 1) | 0);
+      this._goalChip.textContent = `🎯 ${founderTarget} Founder setzen`;
+      this._goalChip.title = `Genesis-Setup: ${founderTarget} Founder im Startfenster setzen und Gruendung bestaetigen.`;
     } else if (inGenesisZone) {
       this._dangerChip.textContent = "◎ Energiekern";
       this._goalChip.textContent = "🎯 Kern bestaetigen";
@@ -1024,7 +1025,8 @@ export function installUiPanels(UI) {
     this._hudEnergyVal.textContent   = `${netSign ? "+" : ""}${energyNet.toFixed(1)} ⚡`;
     this._hudEnergy.style.color      = netSign ? "var(--green)" : "var(--red)";
     if (inGenesisSetup) {
-      this._hudTool.textContent = "Genesis-Setup | Founder Place: 4/4 zusammenhaengend im Startfenster";
+      const founderTarget = Math.max(1, Number(sim.founderBudget || 1) | 0);
+      this._hudTool.textContent = `Genesis-Setup | Founder Place: ${founderTarget}/${founderTarget} im Startfenster`;
     } else if (inGenesisZone) {
       this._hudTool.textContent = "Genesis-Zone | Energiekern bestaetigen, dann startet RUN_ACTIVE";
     } else if (inDnaZoneSetup) {

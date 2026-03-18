@@ -73,7 +73,7 @@ export const stateSchema = {
         tick: { type: "number", default: 0 },
         running: { type: "boolean", default: false },
         runPhase: { type: "string", default: RUN_PHASE.GENESIS_SETUP },
-        founderBudget: { type: "number", default: 4 },
+        founderBudget: { type: "number", default: 1 },
         founderPlaced: { type: "number", default: 0 },
         unlockedZoneTier: { type: "number", default: 0 },
         nextZoneUnlockKind: { type: "string", default: "" },
