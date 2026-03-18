@@ -16,7 +16,7 @@ export const stateSchema = {
         seed: { type: "string", default: "life-light" },
         gridW: { type: "number", default: 16 },
         gridH: { type: "number", default: 16 },
-        speed: { type: "number", default: 2 },
+        speed: { type: "number", default: 24 },
         brushMode: { type: "string", default: BRUSH_MODE.OBSERVE },
         brushRadius: { type: "number", default: 3 },
         renderMode: { type: "string", default: "combined" },

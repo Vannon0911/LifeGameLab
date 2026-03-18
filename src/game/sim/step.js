@@ -5,7 +5,6 @@
 import { clamp } from "./shared.js";
 import { TRAITS } from "./constants.js";
 import { applyCorpseRelease } from "./resources.js";
-import { runRemoteClusterAttacks } from "./conflict.js";
 import { updateLineageMemory, pruneLineageMemory, mutateNewbornByEnvironment } from "./lineage.js";
 import { prepareStepBuffers } from "./buffers.js";
 import { forNeighbours8 } from "./neighbors.js";
@@ -20,6 +19,7 @@ export function simStep(world, phy, tick) {
   const { Sat, reserve, age, actionMap } = prepareStepBuffers(world, N);
   const B = world.B;
   const link = world.link;
+  const autoCellDeathEnabled = false;
 
   let sumR = 0, sumW = 0, sumSat = 0, sumP = 0, sumB = 0, sumWater = 0;
   let plantTiles = 0;
@@ -54,7 +54,7 @@ export function simStep(world, phy, tick) {
   for (let i = 0; i < N; i++) sumWater += Number(water?.[i] || 0);
 
   let totalBirths = 0, totalDeaths = 0, totalMutations = 0;
-  const remote = runRemoteClusterAttacks(world, phy, tick, actionMap) || { attacks: 0, kills: 0, stolen: 0, defAct: 0 };
+  const remote = { attacks: 0, kills: 0, stolen: 0, defAct: 0 };
   const lineageRuntimeCache = new Map();
 
   const hueBins = new Uint32Array(12);
@@ -146,7 +146,7 @@ W[i] = clamp(W[i] + wTarget * wTransfer, 0, 1);
     const isolated = neighbours < 1;
     const minEnergyToLive = Math.max(0.004, 0.01 - runtime.survivalBonus * 0.05);
     const toxinKillThreshold = Math.min(0.98, 0.90 + runtime.survivalBonus * 0.40 + (runtime.toxinMul - 1) * 0.10);
-    if (isolated || E[i] < minEnergyToLive || W[i] > toxinKillThreshold || (L[i] < minL && E[i] < Math.max(0.08, 0.12 - runtime.survivalBonus * 0.08))) {
+    if (autoCellDeathEnabled && (isolated || E[i] < minEnergyToLive || W[i] > toxinKillThreshold || (L[i] < minL && E[i] < Math.max(0.08, 0.12 - runtime.survivalBonus * 0.08)))) {
       alive[i] = 0;
       world.died[i] = 1;
       applyCorpseRelease(world, i);
