@@ -2,7 +2,7 @@
 // Reducer — V4 COMPATIBLE (Patch-based)
 // ============================================================
 
-import { generateWorld, seedDeterministicBootstrapCluster } from "../worldgen.js";
+import { generateWorld } from "../worldgen.js";
 import { simStep } from "../step.js";
 import { PHYSICS_DEFAULT } from "../../../kernel/store/physics.js";
 import { hashString, rng01 } from "../../../kernel/determinism/rng.js";
@@ -50,6 +50,7 @@ import { applyWinConditions, applyGoalCode } from "./winConditions.js";
 import { buildSetOverlayPatches, buildSetWinModePatches } from "./controlActions.js";
 import {
   applyPresetPhysicsOverrides,
+  getStartWindowRange,
   getWorldPreset,
   normalizeWorldPresetId,
 } from "../worldPresets.js";
@@ -67,6 +68,10 @@ import { derivePatternBonuses, derivePatternCatalog } from "../patterns.js";
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
 }
+
+const TICKS_PER_SECOND = 24;
+const HARVEST_SECONDS = 5;
+const HARVEST_TICKS = TICKS_PER_SECOND * HARVEST_SECONDS;
 
 function areFounderTilesConnected8(indices, w, h) {
   if (indices.length === 0) return false;
@@ -331,7 +336,7 @@ function collectFounderIndices(state) {
     if ((Number(world.founderMask[i]) | 0) !== 1) continue;
     founderIndices.push(i);
   }
-  if (founderIndices.length !== 4) return null;
+  if (founderIndices.length !== 1) return null;
 
   for (const idx of founderIndices) {
     if ((Number(world.alive[idx]) | 0) !== 1) return null;
@@ -348,6 +353,89 @@ function collectMaskIndices(mask) {
     if ((Number(mask[i]) | 0) === 1) indices.push(i);
   }
   return indices;
+}
+
+function findNextStepBfs4(world, fromIdx, targetIdx, w, h) {
+  if (fromIdx === targetIdx) return fromIdx;
+  const total = w * h;
+  if (fromIdx < 0 || targetIdx < 0 || fromIdx >= total || targetIdx >= total) return -1;
+  const alive = world?.alive;
+  if (!alive || !ArrayBuffer.isView(alive)) return -1;
+
+  const prev = new Int32Array(total);
+  prev.fill(-1);
+  const seen = new Uint8Array(total);
+  const queue = new Int32Array(total);
+  let qh = 0;
+  let qt = 0;
+  queue[qt++] = fromIdx;
+  seen[fromIdx] = 1;
+
+  while (qh < qt) {
+    const idx = queue[qh++];
+    if (idx === targetIdx) break;
+    const x = idx % w;
+    const y = (idx / w) | 0;
+    const candidates = [
+      [x - 1, y],
+      [x + 1, y],
+      [x, y - 1],
+      [x, y + 1],
+    ];
+    for (const [nx, ny] of candidates) {
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+      const nIdx = ny * w + nx;
+      if (seen[nIdx]) continue;
+      if (nIdx !== targetIdx && (Number(alive[nIdx] || 0) | 0) === 1) continue;
+      seen[nIdx] = 1;
+      prev[nIdx] = idx;
+      queue[qt++] = nIdx;
+    }
+  }
+
+  if (!seen[targetIdx]) return -1;
+  let step = targetIdx;
+  while (prev[step] !== -1 && prev[step] !== fromIdx) {
+    step = prev[step];
+  }
+  return prev[step] === fromIdx ? step : targetIdx;
+}
+
+function moveEntityTile(world, fromIdx, toIdx) {
+  if (fromIdx === toIdx) return;
+  const scalarKeys = ["E", "reserve", "link", "lineageId", "hue", "age", "born", "died", "W", "clusterField", "superId"];
+  for (const key of scalarKeys) {
+    const arr = world?.[key];
+    if (!arr || !ArrayBuffer.isView(arr)) continue;
+    arr[toIdx] = arr[fromIdx];
+    arr[fromIdx] = 0;
+  }
+  if (world?.alive && ArrayBuffer.isView(world.alive)) {
+    world.alive[toIdx] = 1;
+    world.alive[fromIdx] = 0;
+  }
+  const trait = world?.trait;
+  if (trait && ArrayBuffer.isView(trait)) {
+    const fromOff = fromIdx * 7;
+    const toOff = toIdx * 7;
+    for (let i = 0; i < 7; i++) {
+      trait[toOff + i] = trait[fromOff + i];
+      trait[fromOff + i] = 0;
+    }
+  }
+}
+
+function createEmptyActiveOrder() {
+  return {
+    active: false,
+    type: "",
+    fromX: -1,
+    fromY: -1,
+    targetX: -1,
+    targetY: -1,
+    progress: 0,
+    maxProgress: HARVEST_TICKS,
+  };
 }
 
 function canConfirmCoreZone(state) {
@@ -562,7 +650,7 @@ function buildWorldGenerationPatches(state, presetId) {
   const nextSim = deriveBootstrapSimMetrics(world, { ...meta, physics: tunedPhysics }, makeInitialState().sim);
   nextSim.running = false;
   nextSim.runPhase = RUN_PHASE.GENESIS_SETUP;
-  nextSim.founderBudget = 4;
+  nextSim.founderBudget = 1;
   nextSim.founderPlaced = 0;
   const stageState = deriveStageState(world, nextSim, {
     ...meta,
@@ -587,12 +675,12 @@ export function makeInitialState() {
   return {
     meta: {
       seed:        "life-light",
-      gridW:       16,
-      gridH:       16,
-      speed:       2,
+      gridW:       64,
+      gridH:       64,
+      speed:       24,
       brushMode:   BRUSH_MODE.OBSERVE,
       brushRadius: 3,
-      renderMode:  "combined",
+      renderMode:  "cells",
       activeOverlay: OVERLAY_MODE.NONE,
       worldPresetId: "river_delta",
       physics:     { ...PHYSICS_DEFAULT },
@@ -610,7 +698,11 @@ export function makeInitialState() {
     },
     world: null,
     sim: {
-      tick: 0, running: false, runPhase: RUN_PHASE.GENESIS_SETUP, founderBudget: 4, founderPlaced: 0,
+      tick: 0, running: false, runPhase: RUN_PHASE.GENESIS_SETUP, founderBudget: 1, founderPlaced: 0,
+      selectedUnit: -1,
+      unitOrder: { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 },
+      lastCommand: "",
+      lastAutoAction: "",
       unlockedZoneTier: 0, nextZoneUnlockKind: "", nextZoneUnlockCostEnergy: 0, zoneUnlockProgress: 0, coreEnergyStableTicks: 0, zone2Unlocked: false, zone2PlacementBudget: 0, dnaZoneCommitted: false, nextInfraUnlockCostDNA: 0, infrastructureUnlocked: false, infraBuildMode: "", infraBuildCostEnergy: 0, infraBuildCostDNA: 0, cpuBootstrapDone: 0,
       aliveCount: 0, aliveRatio: 0,
       meanLAlive: 0, meanEnergyAlive: 0, meanReserveAlive: 0,
@@ -661,7 +753,7 @@ function runWorldSimV4(world, meta, sim, rng) {
   // Arrays mutated by sim.js (kept explicit to avoid copying read-only fields).
   const TA_MUT_KEYS = [
     "alive", "E", "L", "R", "W", "Sat", "P", "B", "plantKind",
-    "reserve", "link", "clusterField", "hue", "lineageId", "trait", "age", "born", "died",
+    "reserve", "link", "clusterField", "superId", "hue", "lineageId", "trait", "age", "born", "died",
     // lazily-created buffers inside sim.js:
     "actionMap",
   ];
@@ -727,6 +819,8 @@ export function reducer(state, action, ctx = {}) {
       const born = cloneTypedArray(state.world.born);
       const died = cloneTypedArray(state.world.died);
       const W = state.world.W ? cloneTypedArray(state.world.W) : null;
+      const w = Number(state.world.w || state.meta.gridW || 0) | 0;
+      const h = Number(state.world.h || state.meta.gridH || 0) | 0;
       const bootstrapWorld = {
         ...state.world,
         alive,
@@ -741,14 +835,31 @@ export function reducer(state, action, ctx = {}) {
         died,
         W,
       };
-      const cpuSpawn = Number(state.sim.cpuBootstrapDone || 0) === 0
-        ? seedDeterministicBootstrapCluster(
-          bootstrapWorld,
-          state.meta.seed,
-          preset?.startWindows?.cpu,
-          Number(state.meta.cpuLineageId || 2) | 0,
-        )
-        : [];
+      const cpuSpawn = [];
+      if (Number(state.sim.cpuBootstrapDone || 0) === 0) {
+        const cpuWindow = preset?.startWindows?.cpu;
+        const cpuLineageId = Number(state.meta.cpuLineageId || 2) | 0;
+        if (cpuWindow) {
+          const cpuRange = getStartWindowRange(cpuWindow, w, h);
+          const cx = Number(cpuRange?.x0 ?? -1) | 0;
+          const cy = Number(cpuRange?.y0 ?? -1) | 0;
+          if (cx >= 0 && cy >= 0 && cx < w && cy < h) {
+            const cIdx = cy * w + cx;
+            if ((Number(alive[cIdx] || 0) | 0) !== 1) {
+              alive[cIdx] = 1;
+              lineageId[cIdx] = cpuLineageId;
+              E[cIdx] = Math.max(0.6, Number(E[cIdx] || 0));
+              reserve[cIdx] = Math.max(0.2, Number(reserve[cIdx] || 0));
+              link[cIdx] = 0;
+              hue[cIdx] = 8;
+              age[cIdx] = 0;
+              if (born) born[cIdx] = 1;
+              if (died) died[cIdx] = 0;
+              cpuSpawn.push(cIdx);
+            }
+          }
+        }
+      }
       const canonicalState = buildCanonicalRuntimeState(
         { ...state.world, coreZoneMask, alive, lineageId, link },
         state.meta.worldPresetId,
@@ -1122,7 +1233,7 @@ export function reducer(state, action, ctx = {}) {
       return patches;
     }
 
-    case "PAINT_BRUSH": {
+    case "SET_TILE": {
       const world = state.world;
       if (!world) return [];
       const w = Number(world.w || state.meta.gridW || 0) | 0;
@@ -1130,41 +1241,68 @@ export function reducer(state, action, ctx = {}) {
       const x = Number(action.payload?.x) | 0;
       const y = Number(action.payload?.y) | 0;
       if (x < 0 || y < 0 || x >= w || y >= h) return [];
-      const mode = String(action.payload?.mode || "light");
+      const mode = String(action.payload?.mode || "set");
       const radius = Math.max(1, Math.min(10, Number(action.payload?.radius) | 0));
-
-      let key = null;
-      let delta = 0;
-      let op = "add";
-      if (mode === "light") { key = "L"; delta = +0.12; }
-      else if (mode === "light_remove") { key = "L"; delta = -0.12; }
-      else if (mode === "nutrient") { key = "R"; delta = +0.12; }
-      else if (mode === "toxin") { key = "W"; delta = +0.12; }
-      else if (mode === "saturation_reset") { key = "Sat"; op = "reset"; }
-      else return [];
-
-      const base = world[key];
+      const base = world.R;
       if (!base || !ArrayBuffer.isView(base)) return [];
       const next = cloneTypedArray(base);
+      const clear = !!action.payload?.clear || mode === "clear" || mode === "erase" || mode === "remove";
+      const rawValue = Number(action.payload?.value);
+      const value = clear ? 0 : clamp(Number.isFinite(rawValue) ? rawValue : 1, 0, 1);
 
       paintCircle({
         w, h, x, y, radius,
-        cb: (idx, falloff) => {
-          if (op === "reset") {
-            next[idx] = 0;
-            return;
-          }
-          const v = Number(next[idx] || 0) + delta * falloff;
-          next[idx] = clamp(v, 0, 1);
+        cb: (idx) => {
+          next[idx] = value;
         }
       });
 
-      const patches = [{ op: "set", path: `/world/${key}`, value: next }];
+      const patches = [{ op: "set", path: "/world/R", value: next }];
       return patches;
     }
 
     case "PLACE_CELL": {
       return handlePlaceCell(state, action);
+    }
+
+    case "ISSUE_ORDER": {
+      if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
+      const world = state.world;
+      if (!world?.alive || !world?.lineageId || !world?.R) return [];
+      const w = Number(world.w || state.meta.gridW || 0) | 0;
+      const h = Number(world.h || state.meta.gridH || 0) | 0;
+      const fromX = Number(action.payload?.fromX) | 0;
+      const fromY = Number(action.payload?.fromY) | 0;
+      const targetX = Number(action.payload?.targetX) | 0;
+      const targetY = Number(action.payload?.targetY) | 0;
+      if (fromX < 0 || fromY < 0 || fromX >= w || fromY >= h) return [];
+      if (targetX < 0 || targetY < 0 || targetX >= w || targetY >= h) return [];
+      const fromIdx = fromY * w + fromX;
+      const targetIdx = targetY * w + targetX;
+      if (fromIdx === targetIdx) return [];
+      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+      const isOwnAlive =
+        (Number(world.alive[fromIdx] || 0) | 0) === 1 &&
+        (Number(world.lineageId[fromIdx] || 0) | 0) === playerLineageId;
+      if (!isOwnAlive) return [];
+      if (Number(world.R[targetIdx] || 0) <= 0.05) return [];
+      const order = { active: true, fromX, fromY, targetX, targetY };
+      const activeOrder = {
+        active: true,
+        type: "HARVEST",
+        fromX,
+        fromY,
+        targetX,
+        targetY,
+        progress: 0,
+        maxProgress: HARVEST_TICKS,
+      };
+      return [
+        { op: "set", path: "/sim/selectedUnit", value: fromIdx },
+        { op: "set", path: "/sim/unitOrder", value: order },
+        { op: "set", path: "/sim/activeOrder", value: activeOrder },
+        { op: "set", path: "/sim/lastCommand", value: `ISSUE_ORDER:${fromX},${fromY}->${targetX},${targetY}` },
+      ];
     }
 
     case "PLACE_SPLIT_CLUSTER": {
@@ -1257,6 +1395,110 @@ export function simStepPatch(state, action, ctx) {
     expansionWork: state.sim.expansionWork || 0,
     nextExpandCost: state.sim.nextExpandCost || 120,
   };
+  simOut.selectedUnit = Number(state.sim.selectedUnit ?? -1);
+  simOut.unitOrder = state.sim.unitOrder && typeof state.sim.unitOrder === "object"
+    ? { ...state.sim.unitOrder }
+    : { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+  simOut.activeOrder = state.sim.activeOrder && typeof state.sim.activeOrder === "object"
+    ? { ...state.sim.activeOrder }
+    : {
+      ...createEmptyActiveOrder(),
+      active: !!simOut.unitOrder?.active,
+      type: simOut.unitOrder?.active ? "HARVEST" : "",
+      fromX: Number(simOut.unitOrder?.fromX ?? -1),
+      fromY: Number(simOut.unitOrder?.fromY ?? -1),
+      targetX: Number(simOut.unitOrder?.targetX ?? -1),
+      targetY: Number(simOut.unitOrder?.targetY ?? -1),
+    };
+  simOut.lastCommand = String(state.sim.lastCommand || "");
+  simOut.lastAutoAction = "";
+
+  const activeOrder = simOut.activeOrder;
+  if (activeOrder?.active) {
+    const w = Number(worldMutable?.w || state.meta.gridW || 0) | 0;
+    const h = Number(worldMutable?.h || state.meta.gridH || 0) | 0;
+    const fromX = Number(activeOrder.fromX) | 0;
+    const fromY = Number(activeOrder.fromY) | 0;
+    const targetX = Number(activeOrder.targetX) | 0;
+    const targetY = Number(activeOrder.targetY) | 0;
+    const targetIdx = targetY * w + targetX;
+    const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+    let unitIdx = Number(simOut.selectedUnit ?? -1) | 0;
+    if (unitIdx < 0 || unitIdx >= w * h || (Number(worldMutable.alive?.[unitIdx] || 0) | 0) !== 1) {
+      unitIdx = fromY * w + fromX;
+    }
+    const validUnit =
+      unitIdx >= 0 &&
+      unitIdx < w * h &&
+      (Number(worldMutable.alive?.[unitIdx] || 0) | 0) === 1 &&
+      (Number(worldMutable.lineageId?.[unitIdx] || 0) | 0) === playerLineageId;
+
+    if (!validUnit || targetX < 0 || targetY < 0 || targetX >= w || targetY >= h) {
+      simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+      simOut.activeOrder = createEmptyActiveOrder();
+      simOut.selectedUnit = -1;
+      simOut.lastAutoAction = "ORDER_ABORTED";
+    } else if (unitIdx === targetIdx) {
+      const maxProgress = Math.max(1, Number(activeOrder.maxProgress || HARVEST_TICKS) | 0);
+      const nextProgress = Math.min(maxProgress, (Number(activeOrder.progress || 0) | 0) + 1);
+      if (nextProgress < maxProgress) {
+        simOut.activeOrder = {
+          ...activeOrder,
+          active: true,
+          type: "HARVEST",
+          fromX: unitIdx % w,
+          fromY: (unitIdx / w) | 0,
+          targetX,
+          targetY,
+          progress: nextProgress,
+          maxProgress,
+        };
+        simOut.unitOrder = { active: true, fromX: unitIdx % w, fromY: (unitIdx / w) | 0, targetX, targetY };
+        simOut.selectedUnit = unitIdx;
+        simOut.lastAutoAction = `HARVEST_PROGRESS:${nextProgress}/${maxProgress}`;
+      } else {
+        simOut.playerDNA = Number(simOut.playerDNA || 0) + 1;
+        simOut.totalHarvested = Number(simOut.totalHarvested || 0) + 1;
+        simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+        simOut.activeOrder = createEmptyActiveOrder();
+        simOut.selectedUnit = unitIdx;
+        simOut.lastAutoAction = `HARVEST_AUTO:${targetX},${targetY}`;
+      }
+    } else {
+      const nextIdx = findNextStepBfs4(worldMutable, unitIdx, targetIdx, w, h);
+      if (nextIdx < 0 || (Number(worldMutable.alive?.[nextIdx] || 0) | 0) === 1) {
+        simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+        simOut.activeOrder = createEmptyActiveOrder();
+        simOut.selectedUnit = unitIdx;
+        simOut.lastAutoAction = "ORDER_PATH_BLOCKED";
+      } else {
+        moveEntityTile(worldMutable, unitIdx, nextIdx);
+        const nx = nextIdx % w;
+        const ny = (nextIdx / w) | 0;
+        simOut.selectedUnit = nextIdx;
+        simOut.unitOrder = {
+          active: true,
+          fromX: nx,
+          fromY: ny,
+          targetX,
+          targetY,
+        };
+        simOut.activeOrder = {
+          ...activeOrder,
+          active: true,
+          type: "HARVEST",
+          fromX: nx,
+          fromY: ny,
+          targetX,
+          targetY,
+          progress: Number(activeOrder.progress || 0) | 0,
+          maxProgress: Math.max(1, Number(activeOrder.maxProgress || HARVEST_TICKS) | 0),
+        };
+        simOut.lastAutoAction = `MOVE_STEP:${nx},${ny}`;
+      }
+    }
+  }
+
   simOut.expansionWork = Math.max(0, simOut.expansionWork + expansionWorkGain(simOut));
   simOut.nextExpandCost = expansionWorkCost(worldMutable, simOut);
   const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;

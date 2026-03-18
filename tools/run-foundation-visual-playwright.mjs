@@ -3,6 +3,7 @@ import path from "node:path";
 import net from "node:net";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -150,14 +151,14 @@ async function main() {
     await page.screenshot({ path: shot, fullPage: true });
     const newWorldBody = await getBodyText(page);
     const newWorldSeen = {
-      founderCount: (newWorldBody.match(/Founder\s*\n\s*(\d\/4)/i) || [null, null])[1],
+      founderCount: (newWorldBody.match(/Founder\s*\n\s*(\d\/\d)/i) || [null, null])[1],
     };
     logStep({
       step: "new_world",
       action: "Neue Welt erzeugt.",
-      expect: "Genesis-Setup frisch initialisiert (Founder 0/4).",
+      expect: "Genesis-Setup frisch initialisiert (Founder 0/1).",
       seen: newWorldSeen,
-      state: newWorldSeen.founderCount === "0/4" ? "ok" : "unklar",
+      state: newWorldSeen.founderCount === "0/1" ? "ok" : "unklar",
       screenshot: shot,
     });
 
@@ -181,17 +182,27 @@ async function main() {
     const canvas = page.locator("canvas").first();
     const box = await canvas.boundingBox();
     if (!box) throw new Error("Canvas not found for founder placement.");
-    const grid = 16;
-    const cellW = box.width / grid;
-    const cellH = box.height / grid;
-    const founders = [
-      { gx: 4, gy: 4 },
-      { gx: 5, gy: 4 },
-      { gx: 4, gy: 5 },
-      { gx: 5, gy: 5 },
-    ];
+    const grid = 64;
+    const preset = getWorldPreset("river_delta");
+    const playerWindow = preset?.startWindows?.player;
+    const range = getStartWindowRange(playerWindow, grid, grid);
+    const dpr = await page.evaluate(() => Number(window.devicePixelRatio || 1));
+    const canvasMetrics = await canvas.evaluate((el) => ({
+      pixelWidth: Number(el.width || 0),
+      pixelHeight: Number(el.height || 0),
+    }));
+    const tilePx = Math.max(1, Math.floor(Math.min(canvasMetrics.pixelWidth / grid, canvasMetrics.pixelHeight / grid)));
+    const imageW = grid * tilePx;
+    const imageH = grid * tilePx;
+    const offX = Math.floor((canvasMetrics.pixelWidth - imageW) / 2);
+    const offY = Math.floor((canvasMetrics.pixelHeight - imageH) / 2);
+    const founders = [{ gx: range.x0, gy: range.y0 }];
     for (const tile of founders) {
-      await page.mouse.click(box.x + (tile.gx + 0.5) * cellW, box.y + (tile.gy + 0.5) * cellH);
+      const sx = box.x + (offX + (tile.gx + 0.5) * tilePx) / dpr;
+      const sy = box.y + (offY + (tile.gy + 0.5) * tilePx) / dpr;
+      await page.mouse.move(sx, sy);
+      await page.mouse.down();
+      await page.mouse.up();
       await page.waitForTimeout(110);
     }
     await page.waitForTimeout(250);
@@ -199,16 +210,16 @@ async function main() {
     await page.screenshot({ path: shot, fullPage: true });
     const readyBody = await getBodyText(page);
     const foundationReadySeen = {
-      founderCount: (readyBody.match(/Founder\s*\n\s*(\d\/4)/i) || [null, null])[1],
+      founderCount: (readyBody.match(/Founder\s*\n\s*(\d\/\d)/i) || [null, null])[1],
       foundationReadyLine: readyBody.split("\n").find((line) => /Foundation\s+bereit/i.test(line)) || null,
       confirmDisabled: await page.getByRole("button", { name: "Gruendung bestaetigen" }).isDisabled(),
     };
     logStep({
       step: "foundation_ready",
-      action: "Gueltige Founder-Konstellation gesetzt (2x2, zusammenhaengend).",
+      action: "Gueltige Founder-Konstellation gesetzt (1x1 im Startfenster).",
       expect: "Foundation bereit und Confirm aktiviert.",
       seen: foundationReadySeen,
-      state: foundationReadySeen.founderCount === "4/4" && foundationReadySeen.confirmDisabled === false ? "ok" : "bug",
+      state: foundationReadySeen.founderCount === "1/1" && foundationReadySeen.confirmDisabled === false ? "ok" : "bug",
       screenshot: shot,
     });
 

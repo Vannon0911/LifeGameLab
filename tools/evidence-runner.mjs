@@ -11,6 +11,7 @@ import * as manifest from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/project/project.logic.js";
 import { buildLlmReadModel } from "../src/project/llm/readModel.js";
 import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
+import { createEvidenceAttestation, verifyEvidenceAttestation } from "./evidence-attestation.mjs";
 import {
   EVIDENCE_POLICY,
   EVIDENCE_SUITES,
@@ -18,6 +19,7 @@ import {
   REGRESSION_REGISTRY,
   TEST_BUDGETS_MS,
   TRACKED_REGRESSION_REPO_TESTS,
+  VERIFICATION_STATUS,
   isKnownSuite,
   resolveSuiteName,
 } from "./test-suites.mjs";
@@ -315,7 +317,7 @@ function snapshotDispatchState(runCtx, scenarioId, harness, snapshotName) {
   return record;
 }
 
-function getPlayerStartWindowSquareTiles(state, size = 2) {
+function getPlayerStartWindowSquareTiles(state, size = 1) {
   const preset = getWorldPreset(state.meta.worldPresetId);
   const range = getStartWindowRange(preset.startWindows.player, state.world.w, state.world.h);
   const out = [];
@@ -372,7 +374,7 @@ function executeDispatchStep(runCtx, scenario, harness, step) {
   }
 
   if (step.kind === "placePlayerStartWindowSquare") {
-    const tiles = getPlayerStartWindowSquareTiles(harness.store.getState(), step.size || 2);
+    const tiles = getPlayerStartWindowSquareTiles(harness.store.getState(), step.size || 1);
     for (const tile of tiles) {
       harness.store.dispatch({ type: "PLACE_CELL", payload: { x: tile.x, y: tile.y, remove: !!step.remove } });
     }
@@ -380,7 +382,7 @@ function executeDispatchStep(runCtx, scenario, harness, step) {
       scenarioId: scenario.id,
       stepId: step.id,
       kind: "place_player_start_window_square",
-      payload: { size: step.size || 2, remove: !!step.remove, tiles },
+      payload: { size: step.size || 1, remove: !!step.remove, tiles },
     });
     return;
   }
@@ -519,6 +521,7 @@ function runRegressionFile(runCtx, relPath) {
   const mapping = REGRESSION_REGISTRY[relPath];
   const abs = path.join(root, relPath);
   assert(fs.existsSync(abs), `Regression target missing: ${relPath}`);
+  const startedAt = Date.now();
   runCtx.journal.append({
     scenarioId: relPath,
     stepId: "regression-start",
@@ -549,6 +552,11 @@ function runRegressionFile(runCtx, relPath) {
   });
   if (res.error) throw res.error;
   const outcome = res.status === 0 ? "match" : "mismatch";
+  const elapsedMs = Date.now() - startedAt;
+  const budgetMs = Number(mapping?.budgetMs || 0);
+  if (budgetMs > 0) {
+    assert(elapsedMs <= budgetMs, `Regression test budget exceeded: ${relPath} elapsed=${elapsedMs}ms budget=${budgetMs}ms`);
+  }
   runCtx.journal.append({
     scenarioId: relPath,
     stepId: "regression-finish",
@@ -556,6 +564,8 @@ function runRegressionFile(runCtx, relPath) {
     payload: {
       outcome,
       exitCode: res.status,
+      elapsedMs,
+      budgetMs: budgetMs || null,
       stdoutArtifact: stdoutArtifact.relPath,
       stderrArtifact: stderrArtifact.relPath,
     },
@@ -566,6 +576,8 @@ function runRegressionFile(runCtx, relPath) {
     mode: "regression",
     outcome,
     exitCode: Number(res.status ?? 1),
+    elapsedMs,
+    budgetMs: budgetMs || null,
     mapping,
   });
 }
@@ -595,6 +607,60 @@ function selectRunPlan(args) {
   throw new Error(`Unknown scenario '${args.scenario}'.`);
 }
 
+function collectUnverifiedFromPlan(plan) {
+  const unverified = [];
+  for (const batch of plan) {
+    if (batch.kind === "claims") {
+      for (const id of batch.ids) {
+        const scenario = CLAIM_REGISTRY[id];
+        const status = String(scenario?.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
+        if (status !== VERIFICATION_STATUS.VERIFIED) {
+          unverified.push({ kind: "claim", id, status });
+        }
+      }
+      continue;
+    }
+    if (batch.kind === "regression") {
+      for (const file of batch.files) {
+        const mapping = REGRESSION_REGISTRY[file];
+        const status = String(mapping?.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
+        if (status !== VERIFICATION_STATUS.VERIFIED) {
+          unverified.push({ kind: "regression", id: file, status });
+        }
+      }
+    }
+  }
+  return unverified;
+}
+
+function assertVerificationMetadataForPlan(plan) {
+  const missingCounterProbes = [];
+  for (const batch of plan) {
+    if (batch.kind === "claims") {
+      for (const id of batch.ids) {
+        const scenario = CLAIM_REGISTRY[id];
+        const status = String(scenario?.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
+        if (status === VERIFICATION_STATUS.VERIFIED && (!scenario?.counterProbe || typeof scenario.counterProbe !== "object")) {
+          missingCounterProbes.push(`claim:${id}`);
+        }
+      }
+      continue;
+    }
+    if (batch.kind === "regression") {
+      for (const file of batch.files) {
+        const mapping = REGRESSION_REGISTRY[file];
+        const status = String(mapping?.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
+        if (status === VERIFICATION_STATUS.VERIFIED && !String(mapping?.counterProbe || "").trim()) {
+          missingCounterProbes.push(`regression:${file}`);
+        }
+      }
+    }
+  }
+  if (missingCounterProbes.length) {
+    throw new Error(`Verification metadata invalid: verified entries require counterProbe metadata: ${missingCounterProbes.join(", ")}`);
+  }
+}
+
 async function runPlan(runCtx, plan) {
   const claimResults = [];
   const regressionResults = [];
@@ -604,14 +670,23 @@ async function runPlan(runCtx, plan) {
       for (const id of batch.ids) {
         const scenario = CLAIM_REGISTRY[id];
         assert(scenario, `Missing claim '${id}'`);
-        runCtx.logger.out(`[evidence] claim=${scenario.id} mode=${batch.mode} surface=${scenario.surface}`);
-        claimResults.push(await runDispatchScenario(runCtx, scenario, batch.mode));
+        const status = String(scenario.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
+        runCtx.logger.out(`[evidence] claim=${scenario.id} status=${status.toUpperCase()} mode=${batch.mode} surface=${scenario.surface}`);
+        const startedAt = Date.now();
+        const result = await runDispatchScenario(runCtx, scenario, batch.mode);
+        const elapsedMs = Date.now() - startedAt;
+        const budgetMs = Number(scenario?.budgetMs || 0);
+        if (budgetMs > 0) {
+          assert(elapsedMs <= budgetMs, `Claim budget exceeded: ${scenario.id} elapsed=${elapsedMs}ms budget=${budgetMs}ms`);
+        }
+        claimResults.push(Object.freeze({ ...result, elapsedMs, budgetMs: budgetMs || null }));
       }
       continue;
     }
     if (batch.kind === "regression") {
       for (const file of batch.files) {
-        runCtx.logger.out(`[evidence] regression=${file}`);
+        const status = String(REGRESSION_REGISTRY[file]?.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
+        runCtx.logger.out(`[evidence] regression=${file} status=${status.toUpperCase()}`);
         regressionResults.push(runRegressionFile(runCtx, file));
       }
     }
@@ -647,6 +722,12 @@ async function main() {
 
   const suite = resolveSuiteName(args.suite);
   const plan = selectRunPlan(args);
+  assertVerificationMetadataForPlan(plan);
+  const unverified = collectUnverifiedFromPlan(plan);
+  if (unverified.length) {
+    const details = unverified.map((entry) => `${entry.kind}:${entry.id}`).join(", ");
+    throw new Error(`Verification gate blocked: unverified tests are invalid for execution: ${details}`);
+  }
   const startedMs = Date.now();
   let claimResults = [];
   let regressionResults = [];
@@ -693,6 +774,13 @@ async function main() {
   const regressionStatus = summarizeResults(regressionResults);
   const counterexamplesBlocked = collectCounterexamplesBlocked(claimResults);
   const overallOutcome = exitCode === 0 ? "evidence_match" : "evidence_mismatch";
+  const verificationPolicy = {
+    rule: "only_verified_tests_are_valid",
+    blockedIfUnverified: true,
+    unverifiedCount: unverified.length,
+    budgetPolicy: "hard_fail_on_budget_exceeded",
+    attestationPolicy: "ed25519_manifest_attestation_required_on_match",
+  };
   const manifestPayload = {
     runId: runCtx.runId,
     scope: EVIDENCE_POLICY.scope,
@@ -715,10 +803,28 @@ async function main() {
     artifacts: runCtx.artifacts,
     eventChainRootHash: runCtx.journal.prevHash,
     budgets: TEST_BUDGETS_MS,
+    verificationPolicy,
   };
+  if (overallOutcome === "evidence_match") {
+    manifestPayload.attestation = {
+      relPath: "attestation.json",
+      status: "verified",
+    };
+  }
   const manifestPath = path.join(runCtx.runDir, "manifest.json");
   fs.writeFileSync(manifestPath, `${stableStringify(toSerializable(manifestPayload))}\n`, "utf8");
   if (overallOutcome === "evidence_match") {
+    const attestation = createEvidenceAttestation({
+      manifestPath,
+      commitSha: resolveHeadSha(),
+      runId: runCtx.runId,
+      suite,
+      outcome: overallOutcome,
+      verificationPolicy,
+    });
+    const attestationPath = path.join(runCtx.runDir, "attestation.json");
+    fs.writeFileSync(attestationPath, `${stableStringify(attestation)}\n`, "utf8");
+    verifyEvidenceAttestation({ attestation, manifestPath });
     writeCurrentTruth({
       manifestPath,
       runId: runCtx.runId,

@@ -36,7 +36,7 @@ export const WORLD_SIM_STEP_KEYS = WORLD_KEYS.filter(
 );
 
 export const SIM_KEYS = [
-  "tick", "running", "runPhase", "founderBudget", "founderPlaced", "unlockedZoneTier", "nextZoneUnlockKind", "nextZoneUnlockCostEnergy", "zoneUnlockProgress", "coreEnergyStableTicks", "zone2Unlocked", "zone2PlacementBudget", "dnaZoneCommitted", "nextInfraUnlockCostDNA", "infrastructureUnlocked", "infraBuildMode", "infraBuildCostEnergy", "infraBuildCostDNA", "cpuBootstrapDone",
+  "tick", "running", "runPhase", "founderBudget", "founderPlaced", "selectedUnit", "unitOrder", "activeOrder", "lastCommand", "lastAutoAction", "unlockedZoneTier", "nextZoneUnlockKind", "nextZoneUnlockCostEnergy", "zoneUnlockProgress", "coreEnergyStableTicks", "zone2Unlocked", "zone2PlacementBudget", "dnaZoneCommitted", "nextInfraUnlockCostDNA", "infrastructureUnlocked", "infraBuildMode", "infraBuildCostEnergy", "infraBuildCostDNA", "cpuBootstrapDone",
   "aliveCount", "aliveRatio",
   "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
   "meanNutrientField", "meanToxinField", "meanSaturationField", "meanPlantField", "meanBiochargeField",

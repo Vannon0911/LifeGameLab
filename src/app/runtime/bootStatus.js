@@ -20,8 +20,14 @@ function ensureBootStatus() {
 }
 
 export function setBootStatus(text, color = "rgba(180,200,240,0.92)") {
+  const next = String(text || "");
+  if (!next) {
+    const existing = document.getElementById("boot-status");
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    return;
+  }
   const el = ensureBootStatus();
-  el.textContent = text;
+  el.textContent = next;
   el.style.color = color;
 }
 

@@ -22,7 +22,7 @@ import {
   RUN_PHASE,
   normalizeRunPhase,
 } from "../contracts/ids.js";
-import { getWorldPreset, isTileInStartWindow } from "./worldPresets.js";
+import { getStartWindowRange, getWorldPreset, isTileInStartWindow } from "./worldPresets.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
@@ -207,6 +207,9 @@ export function handlePlaceCell(state, action) {
     const founderPlaced = Math.max(0, Number(state.sim.founderPlaced || 0) | 0);
     const preset = getWorldPreset(state.meta.worldPresetId);
     const playerWindow = preset?.startWindows?.player;
+    const playerRange = playerWindow ? getStartWindowRange(playerWindow, w, h) : null;
+    const fixedStartX = Number(playerRange?.x0 ?? -1) | 0;
+    const fixedStartY = Number(playerRange?.y0 ?? -1) | 0;
 
     if (remove) {
       if (alive[idx] !== 1) return [];
@@ -246,6 +249,7 @@ export function handlePlaceCell(state, action) {
 
     if (alive[idx] === 1) return [];
     if (!playerWindow || !isTileInStartWindow(x, y, w, h, playerWindow)) return [];
+    if (x !== fixedStartX || y !== fixedStartY) return [];
     if (founderPlaced >= founderBudget) return [];
     if (!populatePlayerCell({
       idx,

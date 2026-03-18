@@ -16,46 +16,38 @@
 - `src/game/plugin/*`: Game-Adapter (`logic.js`) und konkrete Domain-Gates (`gates.js`)
 - `src/game/sim/*`: Simulationslogik, Worldgen, Step-Pipeline, Reducer
 - `src/game/render/*`: kanonischer Renderer plus Worker
-- `src/game/ui/*`: UI-Logik, Read-Model, DOM- und Feedback-Helfer
-- `src/app/*`: Boot, Runtime-Berichte, Fehlerstatus
+- `src/game/ui/*`: derzeit neutraler Adapter + Verdrahtungs-Stubs (kein aktives Legacy-Panelsystem)
+- `src/app/*`: Boot, Runtime, Tick-Loop, Fehlerstatus
 
-## Laufende Wahrheiten
-- Operativer Reducerpfad bleibt `src/game/sim/reducer/index.js`.
-- `src/game/sim/reducer.js` bleibt nur Compatibility-Fassade.
-- Deterministisches Advisor-/Read-Model ist gemeinsame Truth fuer HUD, Textdiagnose und Statuspanel.
-- Main-Run-Renderpfad bleibt `combined`.
-- Legacy-/Diagnose-Overlays und Roh-Brushes sind Labor-only.
-- Repro-Hardening ist fuer W1 als kleiner dispatch-only Proof belegt; weitergehende Bereiche muessen in denselben Stil nachgezogen werden.
+## Laufende Wahrheiten (Head)
+- Operativer Reducerpfad: `src/game/sim/reducer/index.js`.
+- `src/game/sim/reducer.js` bleibt Compatibility-Fassade.
+- Runtime-Flag: `SIM_RUNTIME_DISABLED = true` (Sim-Runtime aktuell blockiert).
+- Tick-Loop ist deterministisch gehaertet: kein dt-cap, kein catchup-cap, catch-up via `while (acc >= stepMs)`.
+- Render-Mode wird beim Boot auf `cells` gesetzt.
+- UI-Hauptklasse in `src/game/ui/ui.js` ist no-op und haelt nur API-Form fuer Wiring stabil.
+- Runtime-Archiv (Begründung + Guardrails): `docs/traceability/sim-runtime-archive-2026-03-18.md`.
 
 ## Contract-Status
-- Thin-Facades fuer `project.manifest.js`, `sim.js`, `reducer.js` und `src/game/sim/gate.js` aktiv
-- `project.manifest.js` verdrahtet das konkrete Domain-Gate ueber Plugin-Hook (`domainPatchGate`)
-- Tick-Orchestrierung in `step.js`, Phasenlogik in `stepPhases.js`, Runtime-Helfer in `stepRuntime.js`
-- Reducer-Control-Actions in `reducer/controlActions.js`
-- Runtime-Helfer in `worldStateLog.js`, `reportUtils.js`, `bootStatus.js`
-- Phase-E-Felder aktiv: `world.zoneRole`, `world.zoneId`, `world.zoneMeta`
-- Phase-E-Pattern-State aktiv: `sim.patternCatalog`, `sim.patternBonuses`
-- Keine globale Live-Surface fuer Store, Dispatch, Perf oder Textdiagnose. `window.__lifeGameStore`, `window.__worldStateLog`, `window.__lifeGamePerfStats`, `window.render_game_to_text` und `window.advanceTime` sind bewusst entfernt.
+- Thin-Facades fuer `project.manifest.js`, `sim.js`, `reducer.js` und `src/game/sim/gate.js` aktiv.
+- `project.manifest.js` verdrahtet Domain-Gate ueber Plugin-Hook (`domainPatchGate`).
+- Tick-Orchestrierung liegt in `step.js`, Phasenlogik in `stepPhases.js`, Runtime-Helfer in `stepRuntime.js`.
+- Keine globale Live-Surface fuer Store/Perf/Textdiagnose im Browser.
 
-## Test- Und Gate-Basis
-- Offizieller Einstieg: `node tools/evidence-runner.mjs --suite claims|regression|full`
+## Test- und Gate-Basis
+- Einstieg: `node tools/evidence-runner.mjs --suite claims|regression|full`
 - Wrapper: `node tools/run-test-suite.mjs <suite>` und `node tools/run-all-tests.mjs --full`
-- Offizielle W1-Claims sind dispatch-only und deterministisch replay-pflichtig.
-- Aktive Regressionen:
-  - `node tests/test-contract-no-bypass.mjs`
+- Aktive Determinismus-/Replay-Regressionslinie:
   - `node tests/test-deterministic-genesis.mjs`
-  - `node tests/test-llm-contract.mjs`
-
-## Performance- Und Debug-Regeln
-- Performance bleibt offen, aber erst nach gruener Vollsuite optimieren.
-- `tools/playwright-debug-loop.mjs` ist deaktiviert, weil globale Browser-Debug-Hooks bewusst entfernt wurden.
-- Benchmark-/Worker-Checks gehoeren in Labor, nicht in den Main-Run.
+  - `node tests/test-step-chain-determinism.mjs`
+  - `node tests/test-readmodel-determinism.mjs`
+  - `node tests/test-kernel-replay-truth.mjs`
 
 ## Repo-Struktur
 - `src/app/`: Bootstrap und Laufzeit-Hooks
-- `src/core/`: Kernel und Runtime-Helfer
+- `src/core/`: Kernel-Kompatibilitaet
 - `src/game/`: Sim, Renderer, UI
 - `src/project/`: Manifest, Contracts, LLM-Glue
-- `tests/`: minimale Determinismus-, Bypass- und LLM-Gate-Beweise
-- `tools/`: Test-Suiten, Debug, Profiling, Stress
-- `docs/`: nur vier kanonische Top-Level-Dokumente plus `docs/llm/`
+- `tests/`: Determinismus-, Bypass- und LLM-Gate-Beweise
+- `tools/`: Test-Suites, Evidence, Debug-Helfer
+- `docs/`: kanonische Top-Level-Doku plus `docs/llm/`

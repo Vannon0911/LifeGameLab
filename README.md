@@ -1,251 +1,175 @@
-# LifeGameLab
+# LifeGameLab - Gesamtkonzept v0.6
 
-> Diese Repo-Seite beschreibt den aktuellen Head `0.7.3` und die reale Umbaugeschichte seit dem ersten Commit.
-> Alte `v2.5.0`-/`v2.6.0`-Erzaehlungen, Screens und Sandbox-Beschreibungen sind historische Zwischenstaende, nicht die aktuelle Produktwahrheit.
+LifeGameLab ist ein deterministisches Browser-RTS, das mit genau einer Zelle startet.
+Kein Tutorial, keine Gebaeudemenues, keine versteckten Hilfssysteme:
+Der erste Spielzug ist direkte Kontrolle einer einzelnen Zelle im Grid.
 
-## Was dieses Projekt gerade ist
+## 1. Kernidee
 
-LifeGameLab ist aktuell ein deterministisches Colony-Aufbauspiel im aktiven MVP-Umbau.
-Der Produktkern am aktuellen Head ist:
+Das Spiel baut auf einer harten Kernspannung auf:
 
-- vier Gruenderzellen als bewusster Genesis-Start
-- Funktionen aus Zelltopologien statt aus klassischen Gebaeuden
-- seedbasierte, reproduzierbare Runs
-- eine CPU-Kolonie als echter Gegner
-- Async-Wettbewerb ueber Daily Seeds, Leaderboards und Shadow Fights
-- ein Spiel, das ueber Konsequenzen entdeckt wird, nicht ueber lange Erklaertexte
+- Nutze ich neue Zellen weiter als Worker?
+- Oder binde ich sie dauerhaft in Muster und Infrastruktur?
 
-Die kanonische Produktbeschreibung liegt in [docs/PRODUCT.md](docs/PRODUCT.md).
+Aus dieser Entscheidung entstehen Oekonomie, Expansion, Zonen, Automatisierung und spaeter Kampf.
 
-## Ehrlicher Head-Status
+## 2. Welt und Fairness
 
-Der aktuelle Stand ist kein fertiges Release-Spiel.
-Er ist eine gehaertete technische Basis plus ein klarer aktiver Bauplan.
+Die Welt ist seedbasiert und reproduzierbar:
 
-Was am Head bereits belastbar ist:
+- gleicher Seed -> gleiche Welt
+- gleiche Inputs -> gleiche Sim-Ergebnisse
 
-- deterministischer Kernel
-- manifest-first Contracts
-- patch-only State-Mutationen
-- UI/Renderer bleiben read-only gegen Gameplay-State
-- harte Determinismus- und Contract-Gates
-- reduzierte W1-Proof-Linie fuer die Vor-MVP-Baseline
+Die Karte ist fair, aber nicht trivial gespiegelt.
+Beide Seiten bekommen vergleichbare Startchancen, nicht zwingend identische Geometrie.
 
-Was gerade aktiv gebaut wird:
+Die Ressourcenverteilung erzeugt den Spannungsbogen organisch:
 
-- der bindende MVP-Feature-Complete-Block `A1 -> A2 -> A3 -> B1 -> B2 -> B3 -> C1 -> C2 -> C3 -> C4`
-- neue Genesis-/CPU-/Topologie-/Summary-Logik auf Basis des aktuellen Produktkonzepts
+- Stabilisierung
+- Expansion
+- Konflikt
 
-Die operative Wahrheit dazu liegt in [docs/STATUS.md](docs/STATUS.md).
+## 3. Startzustand
 
-## Wahrheitsquellen
+Jeder Spieler startet mit einer einzigen Zelle.
+Diese Zelle ist der erste Worker und wird direkt bewegt.
 
-Wenn du das Repo verstehen willst, lies in dieser Reihenfolge:
+Erster Loop:
 
-1. [docs/PRODUCT.md](docs/PRODUCT.md)
-   Das Zielbild des Spiels.
-2. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-   Die aktuelle technische Snapshot-Wahrheit.
-3. [docs/STATUS.md](docs/STATUS.md)
-   Der aktive Bauplan, die Gates und die dokumentierte Change-Historie.
-4. [docs/WORKFLOW.md](docs/WORKFLOW.md)
-   Der kanonische Arbeits- und Governance-Einstieg.
+1. zur nahen Quelle bewegen
+2. abbauen
+3. zweite Zelle erzeugen
+4. Einkommen parallelisieren
 
-## Technische Grundregeln
+## 4. Fruehe Wachstumsphase
 
-Diese Regeln sind am aktuellen Head nicht optional:
+Mit zwei Zellen beginnt das eigentliche Wirtschaftsspiel:
 
-- keine direkten Gameplay-State-Schreibpfade ausserhalb von `dispatch()` plus Patches
-- Manifest-, Schema-, Mutation- und Gate-Kette bleiben Pflicht
-- keine nicht-deterministischen Quellen in Reducer oder SimStep
-- UI und Renderer duerfen Gameplay-State nicht heimlich veraendern
-- neue Felder und Actions sind erst echt, wenn Contract und Gates sie offiziell tragen
+- paralleler Abbau
+- schnellerer Ressourcenzuwachs
+- Vorbereitung der ersten Zone
 
-Die Details stehen in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) und unter [src/project/contract/](src/project/contract/).
+Frueher Kernloop:
 
-## Schnellstart
+- Ressourcen abbauen
+- neue Zellen erzeugen
+- Einkommen stabilisieren
+- erste Zone vorbereiten
 
-```bash
-npm run serve
-```
+## 5. Zonen
 
-Dann im Browser oeffnen:
+Zonen sind feste quadratische Felder im Grid:
 
-```text
-http://127.0.0.1:8080/
-```
+- 2x2
+- 4x4
+- 6x6
+- 8x8
 
-Wichtige Verifikationskommandos:
+Groessere Zonen sind teurer, eroeffnen aber mehr Topologie und mehr Kombinationsraum.
 
-```bash
-node tools/run-all-tests.mjs --full
-node tests/test-contract-no-bypass.mjs
-node tests/test-deterministic-genesis.mjs
-node tests/test-sim-gate-contract.mjs
-node tests/test-llm-contract.mjs
-npm run test:foundation:visual
-```
+Zonentyp wird beim Platzieren festgelegt:
 
-### Foundation Visual Runner
+- Abbauzone
+- Weiterverarbeitungszone
+- Herstellungszone
 
-Fester visueller Foundation-Goldpfad-Runner:
+## 6. Kernentscheidung des Spiels
 
-- Start: `npm run test:foundation:visual`
-- Runner-Datei: `tools/run-foundation-visual-playwright.mjs`
-- Gepruefte Schritte: `app_loaded -> new_world -> foundation_not_ready -> foundation_ready -> core_visible -> run_active`
+Ab dem ersten Ueberschuss gilt permanent:
 
-Artefakte pro Run:
+- Worker behalten (kurzfristiger Ertrag)
+- Worker binden (langfristige Investition)
 
-- Run-Ordner: `output/playwright/foundation-block/<run-id>/`
-- Inhalte: `01_..06_*.png` plus `run-log.json`
-- Retention: Es bleiben automatisch nur die letzten `3` visuellen Runs erhalten.
+Zu fruehes Binden schwaecht die Wirtschaft.
+Zu spaetes Binden verhindert Infrastruktur.
 
-### Tagesstand (2026-03-17)
+## 7. Muster -> Objekt
 
-Heute wurde der Foundation-/Runner-Block in getrennten Scopes abgeschlossen und danach auf RTS-Runtime live nachgetestet.
+Ab mindestens vier Zellen in einer Zone koennen Verbindungen gelegt werden.
+Das System erkennt daraus Muster und erzeugt bei Bestaetigung Objekte/Funktionen.
 
-- Referenz-Commits:
-  - `f08f792` `fix(testing): classify foundation visual runner in task matrix`
-  - `4c7f22e` `test(foundation): harden foundation flow and add visual runner with 3-run artifact retention`
-  - `2371839` `chore(versioning): update package metadata for foundation test tooling`
-  - `6f39eb7` `chore(versioning): align llm preflight protocol with task-sliced commit workflow`
-  - `d253729` `docs(versioning): document foundation visual runner and artifact retention`
+Prinzip:
 
-- Was heute live verifiziert wurde:
-  - Foundation -> Core -> RUN_ACTIVE schaltet korrekt um.
-  - RTS-Loop läuft sichtbar (Tick steigt), wenn der Run aktiv ist.
-  - Smoke-Sprint läuft nicht mehr sofort fest, endet aktuell aber nicht sauber im sichtbaren End-Overlay.
+- keine Gebaeudeliste klicken
+- Funktionen durch Muster entdecken
 
-- Verbleibender Engpass (Stand jetzt):
-  - Bei Smoke-Sprint stoppt der Lauf im Feldzustand (Tick friert, `Start` statt `Pause`), ohne dass das End-Overlay/Run-Summary zuverlässig angezeigt wird.
+## 8. Wirtschaftsmodell
 
-- Nachweis-Befehle:
-  - Visual Goldpfad mit Artefakten: `npm run test:foundation:visual`
-  - Volltests: `node tools/run-all-tests.mjs --full`
+Drei Stufen:
 
-## Repo-Struktur
+1. Abbau
+2. Weiterverarbeitung
+3. Herstellung
 
-- `src/app/`
-  Bootstrap und Runtime-Hooks
-- `src/core/`
-  deterministischer Kernel, Patches, RNG, Runtime
-- `src/game/`
-  Simulation, Renderer und UI
-- `src/project/`
-  Contracts, Manifest, LLM-/Governance-Glue
-- `tests/`
-  Determinismus-, Contract- und Gate-Beweise
-- `tools/`
-  Test-Suiten, Preflight, Evidence, Hilfswerkzeuge
-- `docs/`
-  kanonische Produkt-, Architektur-, Status- und Workflow-Doku
+Ziel des Early Games:
+Grundversorgung auf Selbsttragfaehigkeit bringen.
 
-## Was in der Repo-Historie wirklich passiert ist
+## 9. Phasen eines Matches
 
-Dieses Repo hat sich mehrfach neu geschnitten.
-Die Geschichte seit dem ersten Commit ist nicht "Feature fuer Feature", sondern "Umbau fuer Umbau".
+- Early Game: Ueberleben, erste Stabilisierung, erste Zone
+- Mid Game: Teilautomatisierung, freie Zellen fuer Spezialisierung
+- Endgame: Produktions- und Militaer-Synergien dominieren
 
-### 1. Ursprung: Sim-Prototyp und schnelles Basteln
+## 10. Konflikt und Niederlage
 
-Startpunkt war [`f9f077b`](../../commit/f9f077b) am 2026-03-14.
-Die fruehen Commits bauten zunaechst einen experimentellen Zell-/Sim-Prototypen mit UI-Arbeit, Testschleifen, Screens und fruehen README-Varianten.
+Konflikt entsteht durch geteilte, wertvolle Ressourcenraeume.
+Kein Script-Event muss Kampf kuenstlich starten.
 
-Repraesentative Spuren:
+Loss Condition:
 
-- [`f9f077b`](../../commit/f9f077b) initialer Core-/Sim-Start
-- [`c73927d`](../../commit/c73927d) und [`56ed006`](../../commit/56ed006) erste GitHub-/UI-Praesentation
-- [`43fc6d3`](../../commit/43fc6d3) alte `v2.5.0`-Erzaehlung
+- letzte Zelle tot -> Match verloren
+- kein Respawn
 
-### 2. Der erste harte Schnitt: Contract- und Gate-Disziplin
+## 11. Militaerische Entwicklung
 
-Noch am 2026-03-14 wurde das Projekt stark modularisiert und contract-first umgebaut.
-Der Fokus wanderte weg vom losen Experiment hin zu kontrollierter, deterministischer Architektur.
+Militaer entsteht aus Herstellungsentscheidungen und Kombinationen, nicht nur aus Masse.
+Wichtig ist nicht nur "mehr Armee", sondern "andere Armee".
 
-Repraesentative Spuren:
+## 12. Visuelle Lesbarkeit
 
-- [`8c1c225`](../../commit/8c1c225) Modularisierung von Contract-/LLM-/Reducer-Architektur
-- [`ad770d3`](../../commit/ad770d3) gate-strikte Contracts und Entfernung des Sim-Wrappers
-- [`825c712`](../../commit/825c712) Split von Runtime/UI/Sim-Phasen plus Determinismus-Haertung
-- [`a264025`](../../commit/a264025) LLM-Preflight- und Task-Entry-Dokumentation
+Zellzustaende muessen direkt sichtbar sein (z. B. Marker, Form, Effekte),
+damit Micro-Entscheidungen ohne Tooltip-Zwang moeglich sind.
 
-### 3. Phasen A-C: Genesis, Core, DNA als erster Main-Run-Bogen
+## 13. Matchbogen in einem Satz
 
-Danach wurde ein frueher Progressionspfad aufgebaut: Founder-/Genesis-Flow, Energiekern, DNA-Zone, dazu passende Tests und Doku.
-Das war die erste ernsthafte Form eines Main-Runs.
+Start mit einer Zelle -> Wirtschaft stabilisieren -> Zellen in Muster investieren ->
+Objekte und Produktionsketten aufbauen -> Grundversorgung automatisieren ->
+Kaempfer spezialisieren -> durch bessere emergente Kombinationen dominieren.
 
-Repraesentative Spuren:
+## 14. Technische Leitplanken
 
-- [`9b0b17a`](../../commit/9b0b17a) Genesis-Bootstrap und Founder-Gating
-- [`ddbf315`](../../commit/ddbf315) B3-Arbeit
-- [`f389f41`](../../commit/f389f41) Phase-B-Ende Richtung C
-- [`44f7d24`](../../commit/44f7d24) "C done" im damaligen Schnitt
+- Vanilla JavaScript
+- deterministischer Kern
+- 24 Ticks pro Sekunde
+- UI dispatcht nur, mutiert State nicht direkt
+- Replay-/Hash-faehige Zustandsentwicklung
 
-### 4. Phase-D/E/F-Ausbau, Merge-Wellen und alter v2.x-Rahmen
+## 15. Ehrlicher Ist-Stand (aktueller Head)
 
-Am 2026-03-14 und 2026-03-15 liefen viele Integrationen und Merge-Historien zusammen.
-Dabei wurden Infrastruktur-, Zonen-, Fog-, UI- und Testpfade mehrfach umgebaut.
-Die alten `v2.6.0`-README- und Rework-Erzaehlungen stammen aus genau dieser Phase.
+Was bereits belastbar ist:
 
-Repraesentative Spuren:
+- deterministische Kernel-/Dispatch-Pipeline
+- Tick-Loop ohne dt/catchup-Cap (tick-genauer Catch-up)
+- Founder-Budget auf 1 ausgelegt
+- UI auf neutralen Adapter reduziert
+- Determinismus-/Replay-Testlinie ist aktiv
 
-- [`3fcc826`](../../commit/3fcc826) Infra-Staging-Fix und Sync auf `v2.6.0`
-- [`c455e18`](../../commit/c455e18) Zone-Basis und Fog-Invarianten
-- [`0199a64`](../../commit/0199a64) Migration auf kanonische Zonenreads
-- [`bd68781`](../../commit/bd68781) damaliges "E done"
-- [`2534b00`](../../commit/2534b00) damaliges "F green"
-- [`58135b7`](../../commit/58135b7) alter Uebergang nach Phase G
+Was noch fehlt bzw. offen ist:
 
-### 5. Cleanup, Repo-Konsolidierung und Versionsschnitt auf `0.7.3`
+- renderAlpha-Interpolation sichtbar im Runtime-Flow
+- erste klar sichtbare interpolierte Zellbewegung im Browser
+- durchgaengiger Worker-Order-Flow (select -> move -> execute) als finaler Gameplay-Standard
 
-Danach wurde das Projekt radikal verkleinert und auf eine haertere Truth-Linie gezogen.
-Alte Debug-Surfaces, Legacy-Artefakte und breite Repo-Flaechen wurden entfernt oder entwertet.
-Die Versionsgeschichte sprang bewusst von den alten `2.x`-Narrativen auf `0.7.3`.
+## 16. Naechster Fokus
 
-Repraesentative Spuren:
+Der naechste Schritt ist nicht Feature-Breite, sondern harte Sichtbarkeit des Kerns:
 
-- [`498d429`](../../commit/498d429) Konsolidierung der Repo-Doku
-- [`dd71c77`](../../commit/dd71c77) grosses Cleanup
-- [`d22613b`](../../commit/d22613b) Versionsschnitt auf `0.7.3`
-- [`188ff18`](../../commit/188ff18) Entry-Naming und Backup-Audit
+1. renderAlpha sauber im Live-Rendering verankern
+2. 24 Ticks/Sekunde als stabile Basis halten
+3. erste interpolierte Zellbewegung sichtbar und testbar machen
 
-### 6. W1-Repro-Audit: dispatch-only Truth statt Debug-Spielplatz
+---
 
-Am 2026-03-16 wurde die technische Wahrheit nochmals haerter geschnitten.
-Das Repo verlor bewusst viele Legacy-/Debug-/Labor-Surfaces und konzentrierte sich auf eine kleine, beweisbare W1-Linie.
+Repository:
 
-Repraesentative Spuren:
-
-- [`34ae543`](../../commit/34ae543) Legacy-Suite ersetzt durch dispatch-only Evidence-Gates
-- [`32b2023`](../../commit/32b2023) Entfernung von Lab- und Buffer-Mutationspfaden
-- [`015cc3a`](../../commit/015cc3a) Entfernen globaler UI-/Debug-Surfaces
-- [`a0fa261`](../../commit/a0fa261) Repo-Cut auf Core-Tools und deterministische Tests
-- [`e05aa6f`](../../commit/e05aa6f) und [`fc5c7eb`](../../commit/fc5c7eb) Sim-Gate- und Testhaertung
-
-### 7. Aktueller Pivot: MVP-Konzept neu gesetzt, Status darauf umgebogen
-
-Die juengsten Commits markieren den aktuellen Kurs:
-weg von der alten Phase-G-/v2.x-Erzaehlung, hin zu einem klaren Mobile-MVP mit vier Gruenderzellen, Topologie-Funktionen, CPU-Gegner und Wiederspielimpuls.
-
-Repraesentative Spuren:
-
-- [`09bd9d1`](../../commit/09bd9d1) `STATUS` auf den bindenden MVP-Plan `A1-C4` umgestellt
-- [`1a6ff76`](../../commit/1a6ff76) `PRODUCT` auf das neue MVP-Konzept umgeschrieben
-
-## Was bewusst nicht mehr die Wahrheit ist
-
-Diese Punkte tauchen in aelteren Commits, Screens oder README-Staenden auf, sind aber nicht mehr die verlaessliche Head-Erzaehlung:
-
-- alte `v2.5.0`-/`v2.6.0`-Versionsnarrative
-- GitHub-Screens aus frueheren Sandbox-/Rework-Zwischenstaenden
-- globale Browser-Debug-Hooks als offizieller Produktbestandteil
-- die Annahme, dass Phase-G-RC-Haertung noch die aktive Hauptarbeit sei
-
-## Was als naechstes zaehlt
-
-Das Repo ist aktuell dann ehrlich gelesen, wenn du es so verstehst:
-
-- Die technische Basis ist bewusst hart und klein gehalten.
-- Die Produktwahrheit wurde juengst neu gesetzt.
-- Der aktive Wert liegt jetzt nicht in mehr Altbestand, sondern in sauberer Umsetzung des MVP-Blocks `A1-C4`.
-
-Wenn du an der Codebasis arbeitest, starte nicht mit Dateiscanning, sondern mit den vier kanonischen Dokumenten unter [`docs/`](docs/).
+- [Vannon0911/LifeGameLab](https://github.com/Vannon0911/LifeGameLab)

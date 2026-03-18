@@ -9,6 +9,7 @@ import { FOG_HIDDEN, FOG_MEMORY, FOG_VISIBLE, applyFogToColor, getTileFogState }
 function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 const LOD_ZOOM_STEPS = [512, 256, 128, 64]; // requested: 512 /2 /2 /2
+let _prevAliveSnapshot = null;
 
 function computeLodFromZoom(tilePx) {
   // Virtual zoom metric so LOD is device-independent and stable over grid growth.
@@ -26,6 +27,35 @@ function hslToRgb(h, s, l) {
   const a = s * Math.min(l, 1 - l);
   const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
   return [f(0) * 255, f(8) * 255, f(4) * 255];
+}
+
+function computeSingleMoveHint(world) {
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  const alive = world?.alive;
+  if (!alive || !ArrayBuffer.isView(alive)) return null;
+  const total = w * h;
+  if (total <= 0 || alive.length !== total) return null;
+  const currentAlive = [];
+  for (let i = 0; i < total; i++) {
+    if ((Number(alive[i] || 0) | 0) === 1) currentAlive.push(i);
+  }
+  const prev = _prevAliveSnapshot;
+  _prevAliveSnapshot = { w, h, alive: currentAlive };
+  if (!prev || prev.w !== w || prev.h !== h) return null;
+
+  const prevSet = new Set(prev.alive);
+  const currSet = new Set(currentAlive);
+  const removed = [];
+  const added = [];
+  for (const idx of prevSet) {
+    if (!currSet.has(idx)) removed.push(idx);
+  }
+  for (const idx of currSet) {
+    if (!prevSet.has(idx)) added.push(idx);
+  }
+  if (removed.length !== 1 || added.length !== 1) return null;
+  return { from: removed[0], to: added[0] };
 }
 
 function mutationIntensityFromTrait(trait, idx) {
@@ -564,7 +594,7 @@ function drawEvents(ctx, world, offX, offY, tilePx) {
   ctx.restore();
 }
 
-function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) {
+function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3, motionHint = null, alpha = 1) {
   const { w, h, alive, E, hue, trait, clusterField, superId, lineageId } = world;
   const Emax = Number(meta?.physics?.Emax) || 3.2;
   const cpuLineageId = Number(meta?.cpuLineageId || 2) | 0;
@@ -676,8 +706,16 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) 
       const fogState = getTileFogState(world, i);
       const lid = Number(lineageId?.[i] || 0) | 0;
       if (fogState === FOG_HIDDEN) continue;
-      const cx = offX + x * tilePx + tilePx * 0.5;
-      const cy = offY + y * tilePx + tilePx * 0.5;
+      let visualX = x;
+      let visualY = y;
+      if (motionHint && i === motionHint.to) {
+        const fromX = motionHint.from % w;
+        const fromY = (motionHint.from / w) | 0;
+        visualX = fromX + (x - fromX) * alpha;
+        visualY = fromY + (y - fromY) * alpha;
+      }
+      const cx = offX + visualX * tilePx + tilePx * 0.5;
+      const cy = offY + visualY * tilePx + tilePx * 0.5;
       const ev = clamp01((Number(E[i]) || 0) / Emax);
       const mut = mutationIntensityFromTrait(trait, i);
       const cv = clamp01(clusterField?.[i] ?? 0);
@@ -1021,7 +1059,98 @@ function drawCommittedZoneRoleRings(ctx, world, offX, offY, tilePx) {
   }
   ctx.restore();
 }
+
+function drawResourceMarkers(ctx, world, offX, offY, tilePx) {
+  const R = world?.R;
+  if (!R || !ArrayBuffer.isView(R) || tilePx < 3) return;
+  const { w, h } = world;
+  const every = tilePx < 6 ? 2 : 1;
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `${Math.max(9, Math.floor(tilePx * 0.65))}px "Segoe UI Emoji","Noto Color Emoji","Apple Color Emoji",sans-serif`;
+  for (let y = 0; y < h; y += every) {
+    for (let x = 0; x < w; x += every) {
+      const idx = y * w + x;
+      const fogState = getTileFogState(world, idx);
+      if (fogState === FOG_HIDDEN) continue;
+      const rv = clamp01(Number(R[idx] || 0));
+      if (rv < 0.05) continue;
+      const glyph = rv >= 0.7 ? "🌳" : rv >= 0.35 ? "🌿" : "🌱";
+      const cx = offX + x * tilePx + tilePx * 0.5;
+      const cy = offY + y * tilePx + tilePx * 0.5;
+      if (fogState === FOG_MEMORY) ctx.globalAlpha = 0.4;
+      else ctx.globalAlpha = 1.0;
+      ctx.fillText(glyph, cx, cy);
+      ctx.globalAlpha = 1.0;
+    }
+  }
+  ctx.restore();
+}
 
+function drawHarvestProgress(ctx, world, sim, offX, offY, tilePx) {
+  const activeOrder = sim?.activeOrder;
+  if (!activeOrder || !activeOrder.active || String(activeOrder.type || "") !== "HARVEST") return;
+  const maxProgress = Math.max(1, Number(activeOrder.maxProgress || 1));
+  const progress = Math.max(0, Math.min(maxProgress, Number(activeOrder.progress || 0)));
+  if (progress <= 0) return;
+  const ratio = progress / maxProgress;
+  const targetX = Number(activeOrder.targetX ?? -1) | 0;
+  const targetY = Number(activeOrder.targetY ?? -1) | 0;
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  if (targetX < 0 || targetY < 0 || targetX >= w || targetY >= h) return;
+  const idx = targetY * w + targetX;
+  if (getTileFogState(world, idx) === FOG_HIDDEN) return;
+
+  const cx = offX + targetX * tilePx + tilePx * 0.5;
+  const cy = offY + targetY * tilePx + tilePx * 0.5;
+  const radius = Math.max(2, tilePx * 0.34);
+  const startAngle = -Math.PI / 2;
+  const endAngle = startAngle + ratio * Math.PI * 2;
+  ctx.save();
+  ctx.strokeStyle = "rgba(100, 220, 100, 0.85)";
+  ctx.lineWidth = Math.max(1, tilePx * 0.1);
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, startAngle, endAngle);
+  ctx.stroke();
+  ctx.restore();
+}
+function drawPatternObjectMarker(ctx, world, sim, offX, offY, tilePx) {
+  if (tilePx < 7) return;
+  const counts = sim?.cellPatternCounts;
+  const triangle = Number(counts?.triangle || 0);
+  const loop = Number(counts?.loop || 0);
+  if (triangle <= 0 && loop <= 0) return;
+
+  const zoneRole = world?.zoneRole;
+  const w = Number(world?.w || 0) | 0;
+  if (!zoneRole || !ArrayBuffer.isView(zoneRole) || w <= 0) return;
+
+  let anchor = -1;
+  for (let i = 0; i < zoneRole.length; i++) {
+    if ((Number(zoneRole[i]) | 0) > 0) {
+      anchor = i;
+      break;
+    }
+  }
+  if (anchor < 0) return;
+  if (getTileFogState(world, anchor) === FOG_HIDDEN) return;
+
+  const x = anchor % w;
+  const y = (anchor / w) | 0;
+  const cx = offX + x * tilePx + tilePx * 0.5;
+  const cy = offY + y * tilePx + tilePx * 0.5;
+  const symbol = triangle > 0 && loop > 0 ? "🏭" : triangle > 0 ? "🔺" : "🔁";
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `${Math.max(9, Math.floor(tilePx * 0.72))}px "Segoe UI Emoji","Noto Color Emoji","Apple Color Emoji",sans-serif`;
+  ctx.globalAlpha = 0.92;
+  ctx.fillText(symbol, cx, cy);
+  ctx.restore();
+}
+
 export function render(canvas, state, perf = null) {
   const { world, meta, sim } = state;
   if (!world) return null;
@@ -1047,9 +1176,10 @@ export function render(canvas, state, perf = null) {
  * No direct window or document dependencies.
  */
 export function drawFrame(ctx, state, perf = {}) {
-  const { world, meta, sim } = state;
+  const { world, meta } = state;
   const { w, h } = world;
   const quality = clamp((perf?.quality ?? 3) | 0, 0, 3);
+  const alpha = clamp01(Number.isFinite(perf?.alpha) ? perf.alpha : 1);
   const detailMode = String(meta?.ui?.renderDetailMode || "auto");
   const userFocused = detailMode === "focused";
   const userMinimal = detailMode === "minimal";
@@ -1077,21 +1207,14 @@ export function drawFrame(ctx, state, perf = {}) {
   ctx.imageSmoothingEnabled = false;
   drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality);
 
-  // Overlays
-  if (!overlayActive && !tactical && (quality >= 3 || userFocused) && lod.level <= 1) drawFieldHotspots(ctx, world, offX, offY, tilePx);
-  if (!overlayActive && quality >= 1 && lod.level <= 2 && !isHugeGrid && !userMinimal) drawClusterOverlay(ctx, world, offX, offY, tilePx);
-  
-  // Always show Birth Charge Nodes for visual feedback of cell creation
-  if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawBirthChargeNodes(ctx, world, offX, offY, tilePx, sim?.tick || 0);
-
-  if (quality >= 1 && lod.level <= 2) drawActionOverlay(ctx, world, meta, offX, offY, tilePx);
-  if (!overlayActive && !isHugeGrid && quality >= 1 && lod.level <= 2 && !userMinimal) drawLightShadowOverlay(ctx, world, meta, offX, offY, tilePx);
-  if (!overlayActive && !balanced && (quality >= 2 || userFocused) && lod.level <= 2 && !userMinimal) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim);
-  if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, sim?.tick || 0);
-  drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality);
+  // Overlays intentionally reduced for UI-rework scope.
+  if (!overlayActive && !balanced && (quality >= 2 || userFocused) && lod.level <= 2 && !userMinimal) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, null);
+  if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, 0);
+  if (!overlayActive && quality >= 1) drawResourceMarkers(ctx, world, offX, offY, tilePx);
+  const moveHint = computeSingleMoveHint(world);
+  drawRoundCells(ctx, world, offX, offY, tilePx, meta, null, quality, moveHint, alpha);
   if (!overlayActive && !balanced && (quality >= 3 || userFocused) && lod.level <= 1 && !userMinimal) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
-  if (!overlayActive && !tactical && quality >= 1 && !isHugeGrid && !userMinimal) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
-  if (quality >= 1) drawCommittedZoneRoleRings(ctx, world, offX, offY, tilePx);
+  if (quality >= 1) drawPatternObjectMarker(ctx, world, null, offX, offY, tilePx);
   if (quality >= 1 && shouldDrawLegacyZoneOverlay(meta)) drawZoneOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level, detailMode);
   if (quality >= 1 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);
@@ -1108,4 +1231,5 @@ export function screenToWorld(screenX, screenY, renderInfo, meta) {
   if (wx < 0 || wy < 0 || wx >= meta.gridW || wy >= meta.gridH) return null;
   return { x: wx, y: wy };
 }
+
 

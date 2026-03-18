@@ -70,6 +70,10 @@ export const TRACKED_REGRESSION_REPO_TESTS = freezeList(Object.keys(REGRESSION_T
 export const TRACKED_CLAIMS = freezeList(CLAIM_SCENARIOS.map((scenario) => scenario.id));
 export const CLAIM_REGISTRY = CLAIM_SCENARIOS_BY_ID;
 export const REGRESSION_REGISTRY = REGRESSION_TEST_STATUS;
+export const VERIFICATION_STATUS = Object.freeze({
+  VERIFIED: "verified",
+  UNVERIFIED: "unverified",
+});
 
 export function resolveSuiteName(name) {
   const key = String(name || "claims").toLowerCase();

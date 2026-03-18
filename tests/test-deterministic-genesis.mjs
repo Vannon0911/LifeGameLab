@@ -2,35 +2,17 @@ import assert from "node:assert/strict";
 
 import { createDeterministicStore, getPlayerStartWindowSquare, snapshotStore } from "./support/liveTestKit.mjs";
 import { evaluateFoundationEligibility } from "../src/game/sim/foundationEligibility.js";
-import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
-
-function getDisconnectedFounderTiles(state) {
-  const preset = getWorldPreset(state.meta.worldPresetId);
-  const range = getStartWindowRange(preset.startWindows.player, state.world.w, state.world.h);
-  return [
-    { x: range.x0, y: range.y0 },
-    { x: range.x0 + 2, y: range.y0 },
-    { x: range.x0, y: range.y0 + 2 },
-    { x: range.x0 + 2, y: range.y0 + 2 },
-  ];
-}
-
 function assertFoundationBlockedUntilEligible(seed) {
   const store = createDeterministicStore({ seed });
   store.dispatch({ type: "GEN_WORLD", payload: {} });
   store.dispatch({ type: "SET_BRUSH", payload: { brushMode: "founder_place" } });
 
-  const disconnectedTiles = getDisconnectedFounderTiles(store.getState());
-  for (const tile of disconnectedTiles) {
-    store.dispatch({ type: "PLACE_CELL", payload: { x: tile.x, y: tile.y, remove: false } });
-  }
-
   const beforeConfirm = snapshotStore(store);
   const eligibility = evaluateFoundationEligibility(beforeConfirm.state);
-  assert.equal(eligibility.founderPlaced, 4, "setup sanity: founderPlaced must be 4 for false-positive test");
-  assert.equal(eligibility.founderMaskCount, 4, "setup sanity: founderMaskCount must be 4 for false-positive test");
-  assert.equal(eligibility.eligible, false, "foundation must stay blocked for disconnected founder tiles");
-  assert.equal(eligibility.reason, "not_connected", "disconnected founders must fail with not_connected reason");
+  assert.equal(eligibility.founderPlaced, 0, "setup sanity: founderPlaced must be 0 before founder placement");
+  assert.equal(eligibility.founderMaskCount, 0, "setup sanity: founderMaskCount must be 0 before founder placement");
+  assert.equal(eligibility.eligible, false, "foundation must stay blocked before founder placement");
+  assert.equal(eligibility.reason, "counter_mismatch", "missing founder must fail with counter_mismatch reason");
 
   store.dispatch({ type: "CONFIRM_FOUNDATION", payload: {} });
   const afterConfirm = snapshotStore(store);
@@ -53,7 +35,7 @@ function runScenario(seed) {
   assert.equal(afterGenWorld.state.sim.cpuAliveCount, 0, "GEN_WORLD must set sim.cpuAliveCount=0");
 
   store.dispatch({ type: "SET_BRUSH", payload: { brushMode: "founder_place" } });
-  const founderTiles = getPlayerStartWindowSquare(store.getState(), 2);
+  const founderTiles = getPlayerStartWindowSquare(store.getState(), 1);
   for (const tile of founderTiles) {
     store.dispatch({ type: "PLACE_CELL", payload: { x: tile.x, y: tile.y, remove: false } });
   }
@@ -77,11 +59,11 @@ function runScenario(seed) {
   const step4 = snapshotStore(store);
   assert.equal(afterCore.state.sim.runPhase, "run_active", "main run must be active after genesis confirmations");
   assert.equal(afterCore.state.sim.running, true, "main run must be running after core confirmation");
-  assert.equal(afterFounders.state.sim.founderPlaced, 4, "four founders must be committed");
+  assert.equal(afterFounders.state.sim.founderPlaced, 1, "exactly one founder must be committed");
   assert.equal(afterCore.state.sim.runPhase, "run_active", "core confirmation must transition state to run_active");
   assert.equal(afterCore.state.sim.running, true, "core confirmation must activate running=true");
   assert.equal(afterCore.state.sim.cpuBootstrapDone, 1, "core confirmation must set cpuBootstrapDone=1");
-  assert.equal(afterCore.state.sim.playerAliveCount, 4, "core confirmation must keep playerAliveCount=4");
+  assert.equal(afterCore.state.sim.playerAliveCount, 1, "core confirmation must keep playerAliveCount=1");
   assert(afterCore.state.sim.cpuAliveCount > 0, "core confirmation must spawn cpu bootstrap population");
   return {
     seed,
