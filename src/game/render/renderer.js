@@ -1176,7 +1176,7 @@ export function render(canvas, state, perf = null) {
  * No direct window or document dependencies.
  */
 export function drawFrame(ctx, state, perf = {}) {
-  const { world, meta, sim } = state;
+  const { world, meta } = state;
   const { w, h } = world;
   const quality = clamp((perf?.quality ?? 3) | 0, 0, 3);
   const alpha = clamp01(Number.isFinite(perf?.alpha) ? perf.alpha : 1);
@@ -1212,20 +1212,19 @@ export function drawFrame(ctx, state, perf = {}) {
   if (!overlayActive && quality >= 1 && lod.level <= 2 && !isHugeGrid && !userMinimal) drawClusterOverlay(ctx, world, offX, offY, tilePx);
   
   // Always show Birth Charge Nodes for visual feedback of cell creation
-  if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawBirthChargeNodes(ctx, world, offX, offY, tilePx, sim?.tick || 0);
+  if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawBirthChargeNodes(ctx, world, offX, offY, tilePx, 0);
 
   if (quality >= 1 && lod.level <= 2) drawActionOverlay(ctx, world, meta, offX, offY, tilePx);
   if (!overlayActive && !isHugeGrid && quality >= 1 && lod.level <= 2 && !userMinimal) drawLightShadowOverlay(ctx, world, meta, offX, offY, tilePx);
-  if (!overlayActive && !balanced && (quality >= 2 || userFocused) && lod.level <= 2 && !userMinimal) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim);
-  if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, sim?.tick || 0);
+  if (!overlayActive && !balanced && (quality >= 2 || userFocused) && lod.level <= 2 && !userMinimal) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, null);
+  if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, 0);
   if (!overlayActive && quality >= 1) drawResourceMarkers(ctx, world, offX, offY, tilePx);
-  if (!overlayActive && quality >= 1) drawHarvestProgress(ctx, world, sim, offX, offY, tilePx);
   const moveHint = computeSingleMoveHint(world);
-  drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality, moveHint, alpha);
+  drawRoundCells(ctx, world, offX, offY, tilePx, meta, null, quality, moveHint, alpha);
   if (!overlayActive && !balanced && (quality >= 3 || userFocused) && lod.level <= 1 && !userMinimal) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
   if (!overlayActive && !tactical && quality >= 1 && !isHugeGrid && !userMinimal) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawCommittedZoneRoleRings(ctx, world, offX, offY, tilePx);
-  if (quality >= 1) drawPatternObjectMarker(ctx, world, sim, offX, offY, tilePx);
+  if (quality >= 1) drawPatternObjectMarker(ctx, world, null, offX, offY, tilePx);
   if (quality >= 1 && shouldDrawLegacyZoneOverlay(meta)) drawZoneOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level, detailMode);
   if (quality >= 1 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);

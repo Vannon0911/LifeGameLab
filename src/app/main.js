@@ -15,7 +15,7 @@ import { bindBootStatusErrorHooks, setBootStatus } from "./runtime/bootStatus.js
 
 bindBootStatusErrorHooks();
 const WorldStateLog = createWorldStateLog(hashString);
-const SIM_RUNTIME_DISABLED = false;
+const SIM_RUNTIME_DISABLED = true;
 
 // ── Store ─────────────────────────────────────────────────
 assertLlmGateSync(manifest);
