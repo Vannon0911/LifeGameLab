@@ -2,12 +2,12 @@
 // Main — Application Bootstrap & Game Loop (V4 DETERMINISTIC)
 // ============================================================
 
-import { createStore }       from "../core/kernel/store.js";
+import { createStore }       from "../kernel/store/createStore.js";
 import { manifest, APP_VERSION } from "../project/project.manifest.js";
 import { reducer, simStepPatch, shouldAdvanceSimulation } from "../project/project.logic.js";
 import { render }            from "../project/renderer.js";
 import { UI }                from "../project/ui.js";
-import { hashString }        from "../core/kernel/rng.js";
+import { hashString }        from "../kernel/determinism/rng.js";
 import { createLlmCommandAdapter } from "../project/llm/commandAdapter.js";
 import { assertLlmGateSync } from "../project/llm/gateSync.js";
 import { createWorldStateLog } from "./runtime/worldStateLog.js";
@@ -454,7 +454,8 @@ function loop(ts) {
 
   if (shouldAdvanceSimulation(state)) {
     acc += dt;
-    if (acc > PerfBudget.maxCatchupMs) acc = PerfBudget.maxCatchupMs;
+    const catchupCap = Math.max(PerfBudget.maxCatchupMs, stepMs);
+    if (acc > catchupCap) acc = catchupCap;
     const simStart = globalThis.performance ? globalThis.performance.now() : 0;
     let stepsDone = 0;
     while (acc >= stepMs && stepsDone < PerfBudget.maxSimStepsPerFrame) {
@@ -499,3 +500,4 @@ function loop(ts) {
 requestAnimationFrame(loop);
 
 console.log(`LifeGameLab v${APP_VERSION} gestartet (Schema v${manifest.SCHEMA_VERSION}). store ist verfuegbar.`);
+
