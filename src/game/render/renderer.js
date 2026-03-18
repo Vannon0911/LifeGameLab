@@ -1072,14 +1072,17 @@ function drawResourceMarkers(ctx, world, offX, offY, tilePx) {
   for (let y = 0; y < h; y += every) {
     for (let x = 0; x < w; x += every) {
       const idx = y * w + x;
-      if (getTileFogState(world, idx) === FOG_HIDDEN) continue;
+      const fogState = getTileFogState(world, idx);
+      if (fogState === FOG_HIDDEN) continue;
       const rv = clamp01(Number(R[idx] || 0));
       if (rv < 0.05) continue;
       const glyph = rv >= 0.7 ? "🌳" : rv >= 0.35 ? "🌿" : "🌱";
       const cx = offX + x * tilePx + tilePx * 0.5;
       const cy = offY + y * tilePx + tilePx * 0.5;
-      ctx.globalAlpha = getTileFogState(world, idx) === FOG_MEMORY ? 0.45 : 0.95;
+      if (fogState === FOG_MEMORY) ctx.globalAlpha = 0.4;
+      else ctx.globalAlpha = 1.0;
       ctx.fillText(glyph, cx, cy);
+      ctx.globalAlpha = 1.0;
     }
   }
   ctx.restore();
