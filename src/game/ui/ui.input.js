@@ -296,7 +296,7 @@ export function installUiInput(UI) {
       );
       return;
     }
-    this._dispatch({ type:"PAINT_BRUSH", payload:{ x:wx, y:wy, radius, mode } });
+    this._dispatch({ type:"SET_TILE", payload:{ x:wx, y:wy, radius, mode } });
   },
 
   _bindCanvasPaint() {

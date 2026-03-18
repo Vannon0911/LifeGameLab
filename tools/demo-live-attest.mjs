@@ -244,7 +244,7 @@ try {
         const idx = y * w + x;
         const rv = Number(st?.world?.R?.[idx] || 0);
         if (rv >= target) break;
-        store.dispatch({ type: "PAINT_BRUSH", payload: { x, y, radius: 1, mode: "nutrient" } });
+        store.dispatch({ type: "SET_TILE", payload: { x, y, radius: 1, mode: "nutrient", value: 1 } });
       }
     };
 

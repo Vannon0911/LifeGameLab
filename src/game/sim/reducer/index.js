@@ -1233,7 +1233,7 @@ export function reducer(state, action, ctx = {}) {
       return patches;
     }
 
-    case "PAINT_BRUSH": {
+    case "SET_TILE": {
       const world = state.world;
       if (!world) return [];
       const w = Number(world.w || state.meta.gridW || 0) | 0;
@@ -1241,36 +1241,23 @@ export function reducer(state, action, ctx = {}) {
       const x = Number(action.payload?.x) | 0;
       const y = Number(action.payload?.y) | 0;
       if (x < 0 || y < 0 || x >= w || y >= h) return [];
-      const mode = String(action.payload?.mode || "light");
+      const mode = String(action.payload?.mode || "set");
       const radius = Math.max(1, Math.min(10, Number(action.payload?.radius) | 0));
-
-      let key = null;
-      let delta = 0;
-      let op = "add";
-      if (mode === "light") { key = "L"; delta = +0.12; }
-      else if (mode === "light_remove") { key = "L"; delta = -0.12; }
-      else if (mode === "nutrient") { key = "R"; delta = +0.12; }
-      else if (mode === "toxin") { key = "W"; delta = +0.12; }
-      else if (mode === "saturation_reset") { key = "Sat"; op = "reset"; }
-      else return [];
-
-      const base = world[key];
+      const base = world.R;
       if (!base || !ArrayBuffer.isView(base)) return [];
       const next = cloneTypedArray(base);
+      const clear = !!action.payload?.clear || mode === "clear" || mode === "erase" || mode === "remove";
+      const rawValue = Number(action.payload?.value);
+      const value = clear ? 0 : clamp(Number.isFinite(rawValue) ? rawValue : 1, 0, 1);
 
       paintCircle({
         w, h, x, y, radius,
-        cb: (idx, falloff) => {
-          if (op === "reset") {
-            next[idx] = 0;
-            return;
-          }
-          const v = Number(next[idx] || 0) + delta * falloff;
-          next[idx] = clamp(v, 0, 1);
+        cb: (idx) => {
+          next[idx] = value;
         }
       });
 
-      const patches = [{ op: "set", path: `/world/${key}`, value: next }];
+      const patches = [{ op: "set", path: "/world/R", value: next }];
       return patches;
     }
 

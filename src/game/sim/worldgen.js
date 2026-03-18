@@ -155,53 +155,8 @@ function deriveBaseFields(state, preset, seedBase) {
       baseSat[idx] = fertility;
       Sat[idx] = fertility;
       biomeId[idx] = assignBiome(light, moisture, fertility, nx, ny);
-      state.R[idx] = clamp01(Number(state.R[idx] || 0) + fertility * 0.18 + moisture * 0.08);
-      if (biomeId[idx] === BIOME_IDS.riverlands || biomeId[idx] === BIOME_IDS.wet_forest) {
-        state.P[idx] = clamp01(Number(state.P[idx] || 0) + 0.03 + moisture * 0.05);
-      }
     }
   }
-}
-
-function placePlants(state, phy, preset, seedBase) {
-  const count = Math.round(state.w * state.h * (0.032 + (preset.plantBoost || 0) * 0.04 + (phy.plantCloudDensity || 0.82) * 0.014));
-  let stream = 12000;
-  for (const batch of buildScanBatches(count)) {
-    for (let n = batch.start; n < batch.end; n++) {
-      const x = Math.floor(rng01(seedBase, stream++) * state.w);
-      const y = Math.floor(rng01(seedBase, stream++) * state.h);
-      const idx = y * state.w + x;
-      const biome = Number(state.biomeId[idx] || 0);
-      const water = Number(state.water[idx] || 0);
-      const radius = biome === BIOME_IDS.wet_forest ? 3 : biome === BIOME_IDS.riverlands ? 2 : 1;
-      const peak = clamp01(0.14 + water * 0.44 + (biome === BIOME_IDS.dry_plains ? 0.06 : 0.12));
-      for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          if (dx * dx + dy * dy > radius * radius) continue;
-          const xx = x + dx;
-          const yy = y + dy;
-          if (xx < 0 || yy < 0 || xx >= state.w || yy >= state.h) continue;
-          const ii = yy * state.w + xx;
-          const falloff = 1 - Math.sqrt(dx * dx + dy * dy) / Math.max(1, radius);
-          state.P[ii] = clamp01(Number(state.P[ii] || 0) + peak * falloff * 0.75);
-          state.R[ii] = clamp01(Number(state.R[ii] || 0) + peak * falloff * 0.28);
-          state.B[ii] = clamp01(Number(state.B[ii] || 0) + peak * falloff * 0.08);
-          if (state.plantKind[ii] === 0) {
-            state.plantKind[ii] = biome === BIOME_IDS.toxic_marsh ? 1 : -1;
-          }
-        }
-      }
-    }
-  }
-}
-
-function capInitialPlantCoverage(state, maxRatio = 0.14) {
-  let active = 0;
-  for (let i = 0; i < state.P.length; i++) if (Number(state.P[i] || 0) > 0.05) active++;
-  const ratio = active / Math.max(1, state.P.length);
-  if (ratio <= maxRatio) return;
-  const scale = Math.max(0.45, maxRatio / Math.max(0.001, ratio));
-  for (let i = 0; i < state.P.length; i++) state.P[i] = clamp01(Number(state.P[i] || 0) * scale);
 }
 
 export function seedDeterministicBootstrapCluster(world, seedStr, windowDef, lineageId = 2) {
@@ -304,8 +259,6 @@ export function generateWorld(w, h, seedStr, phy, presetId = "river_delta") {
   state.L = buildLightField(w, h, descriptor, preset);
   state.water = buildWaterField(w, h, descriptor, preset, seedBase);
   deriveBaseFields(state, preset, seedBase);
-  placePlants(state, phy, preset, seedBase);
-  capInitialPlantCoverage(state);
   state.superId.fill(-1);
   return state;
 }
