@@ -1064,34 +1064,22 @@ function drawResourceMarkers(ctx, world, offX, offY, tilePx) {
   const R = world?.R;
   if (!R || !ArrayBuffer.isView(R) || tilePx < 3) return;
   const { w, h } = world;
-  const threshold = 0.62;
   const every = tilePx < 6 ? 2 : 1;
   ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `${Math.max(9, Math.floor(tilePx * 0.65))}px "Segoe UI Emoji","Noto Color Emoji","Apple Color Emoji",sans-serif`;
   for (let y = 0; y < h; y += every) {
     for (let x = 0; x < w; x += every) {
       const idx = y * w + x;
-      if (getTileFogState(world, idx) !== FOG_VISIBLE) continue;
+      if (getTileFogState(world, idx) === FOG_HIDDEN) continue;
       const rv = clamp01(Number(R[idx] || 0));
-      if (rv < threshold) continue;
-      const px = offX + x * tilePx;
-      const py = offY + y * tilePx;
-      const cx = px + tilePx * 0.5;
-      const cy = py + tilePx * 0.5;
-      const radius = Math.max(0.9, tilePx * 0.18);
-      const alpha = 0.18 + (rv - threshold) * 0.72;
-
-      ctx.fillStyle = `rgba(126, 238, 154, ${Math.min(0.7, alpha)})`;
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius * 1.35, 0, Math.PI * 2);
-      ctx.fill();
-
-      if (tilePx >= 5) {
-        ctx.strokeStyle = `rgba(188, 255, 204, ${Math.min(0.82, alpha + 0.16)})`;
-        ctx.lineWidth = Math.max(0.6, tilePx * 0.08);
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius * 1.95, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+      if (rv < 0.05) continue;
+      const glyph = rv >= 0.7 ? "🌳" : rv >= 0.35 ? "🌿" : "🌱";
+      const cx = offX + x * tilePx + tilePx * 0.5;
+      const cy = offY + y * tilePx + tilePx * 0.5;
+      ctx.globalAlpha = getTileFogState(world, idx) === FOG_MEMORY ? 0.45 : 0.95;
+      ctx.fillText(glyph, cx, cy);
     }
   }
   ctx.restore();
