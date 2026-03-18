@@ -10,8 +10,10 @@
 - Keine Entropiequellen wie `Math.random()` oder `Date.now()` in Reducer/SimStep.
 
 ## Kanonische Module
-- `src/core/kernel/*`: deterministischer Kernel, Patches, Persistenz, RNG
+- `src/kernel/*`: deterministischer Kernel, Patches, Persistenz, RNG, Domain-Gate-Hook
+- `src/core/kernel/*`: Compatibility-Fassade auf `src/kernel/*`
 - `src/project/contract/*`: State-, Action-, Mutation-, Gate- und Dataflow-Vertrag
+- `src/game/plugin/*`: Game-Adapter (`logic.js`) und konkrete Domain-Gates (`gates.js`)
 - `src/game/sim/*`: Simulationslogik, Worldgen, Step-Pipeline, Reducer
 - `src/game/render/*`: kanonischer Renderer plus Worker
 - `src/game/ui/*`: UI-Logik, Read-Model, DOM- und Feedback-Helfer
@@ -26,7 +28,8 @@
 - Repro-Hardening ist fuer W1 als kleiner dispatch-only Proof belegt; weitergehende Bereiche muessen in denselben Stil nachgezogen werden.
 
 ## Contract-Status
-- Thin-Facades fuer `project.manifest.js`, `sim.js` und `reducer.js` aktiv
+- Thin-Facades fuer `project.manifest.js`, `sim.js`, `reducer.js` und `src/game/sim/gate.js` aktiv
+- `project.manifest.js` verdrahtet das konkrete Domain-Gate ueber Plugin-Hook (`domainPatchGate`)
 - Tick-Orchestrierung in `step.js`, Phasenlogik in `stepPhases.js`, Runtime-Helfer in `stepRuntime.js`
 - Reducer-Control-Actions in `reducer/controlActions.js`
 - Runtime-Helfer in `worldStateLog.js`, `reportUtils.js`, `bootStatus.js`

@@ -31,4 +31,4 @@
 - Wenn Pfade mehreren Tasks zugeordnet werden: in Subtasks splitten, je Subtask eigener Zyklus.
 - Kernel- und Manifest-Pflichtgate gilt immer:
   - `src/project/contract/manifest.js` ist SoT
-  - `src/core/kernel/store.js` und `src/core/kernel/patches.js` bleiben Pflichtreferenzen
+  - `src/kernel/store/createStore.js` und `src/kernel/store/applyPatches.js` bleiben Pflichtreferenzen

@@ -48,7 +48,7 @@ LLM-spezifische Regeln leben getrennt unter `docs/llm/`.
 - `docs/ARCHITECTURE.md` ist die einzige technische Snapshot-Doku.
 - `docs/PRODUCT.md` ist die einzige Produkt- und Scope-Basis.
 - `src/project/contract/manifest.js` bleibt Source of Truth.
-- `src/core/kernel/store.js` und `src/core/kernel/patches.js` bleiben Pflichtgates fuer jede Task-Ausfuehrung.
+- `src/kernel/store/createStore.js` und `src/kernel/store/applyPatches.js` bleiben Pflichtgates fuer jede Task-Ausfuehrung.
 - Rueckverfolgbare Belege bleiben als kleine Textnachweise unter `docs/traceability/`; Massenausgaben und Bilder gehoeren nicht in den kanonischen Repo-Kern.
 
 ## Abbruchregel

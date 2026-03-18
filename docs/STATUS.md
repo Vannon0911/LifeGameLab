@@ -35,6 +35,7 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - `node tests/test-deterministic-genesis.mjs`
 - `node tests/test-step-chain-determinism.mjs`
 - `node tests/test-readmodel-determinism.mjs`
+- `node tests/test-kernel-replay-truth.mjs`
 - `node tests/test-sim-gate-contract.mjs`
 - `node tests/test-llm-contract.mjs`
 - Letzte Gegenprobe auf aktuellem Branch: 2026-03-16, Proof `docs/traceability/w1-proof-summary.md`
@@ -148,6 +149,16 @@ Sie ist zugleich die globale Fallback-Ansicht fuer Governance- und Versioning-Fr
 - Verifikation: `npm run test:quick` gruen, inklusive `test-advisor-model`, `test-overlay-diagnostics`, `test-string-contract`, `test-version-traceability`.
 
 ## Append-Only Change Log
+
+### 2026-03-18 session `kernel-slices-and-entry-sync`
+- Kernel/Game-Split auf aktuellen Stand gebracht: `src/kernel/*` ist operative SoT; `src/core/kernel/*` bleibt nur Compatibility-Fassade.
+- Domain-Gating zentralisiert: Kernel-Dispatch ruft generisches `assertDomainPatchesAllowed(...)`; konkrete Sim-Gate-Logik liegt in `src/game/plugin/gates.js`.
+- Truth-Harness erweitert: neuer Regressionstest `tests/test-kernel-replay-truth.mjs` erzwingt `seed + actions => signature chain` inkl. cross-seed Divergenz.
+- Entry-Protokolle und Lesereihenfolge auf neue Pflichtgates synchronisiert:
+  - `src/kernel/store/createStore.js`
+  - `src/kernel/store/applyPatches.js`
+  - plus `src/project/project.manifest.js` als contracts-klassifizierter Pfad.
+- Nachweis auf aktuellem Stand: `node tools/run-all-tests.mjs --full` gruen.
 
 ### 2026-03-16 session `status-sync-mvp-feature-complete-plan`
 - Die aktive Arbeitsliste wurde von der alten Phase-G-RC-Haertung auf den bindenden MVP-Feature-Complete-Plan `A1 -> A2 -> A3 -> B1 -> B2 -> B3 -> C1 -> C2 -> C3 -> C4` umgestellt.

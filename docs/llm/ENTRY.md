@@ -27,7 +27,7 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 
 ## Kernel- Und Manifest-Pflichtgate (SoT)
 - `src/project/contract/manifest.js` ist Source of Truth fuer Felder, Actions und Contract-Kette.
-- `src/core/kernel/store.js` und `src/core/kernel/patches.js` sind Pflichtgate fuer State-Mutationen.
+- `src/kernel/store/createStore.js` und `src/kernel/store/applyPatches.js` sind Pflichtgate fuer State-Mutationen.
 - Jede Task-Ausfuehrung muss diese drei Dateien mindestens referenzieren, auch wenn der Haupttask UI/Testing ist.
 
 ## Harte Invarianten

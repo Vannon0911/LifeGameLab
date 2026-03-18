@@ -6,8 +6,8 @@ Reihenfolge: zuerst `docs/llm/ENTRY.md`, dann genau ein Task-Set aus dieser Date
 
 ## Globale Mindest-Gates (immer)
 1. `src/project/contract/manifest.js` (SoT)
-2. `src/core/kernel/store.js`
-3. `src/core/kernel/patches.js`
+2. `src/kernel/store/createStore.js`
+3. `src/kernel/store/applyPatches.js`
 
 ## UI Task
 1. `src/game/ui/ui.js`
