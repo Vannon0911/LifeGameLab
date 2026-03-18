@@ -706,8 +706,16 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3, 
       const fogState = getTileFogState(world, i);
       const lid = Number(lineageId?.[i] || 0) | 0;
       if (fogState === FOG_HIDDEN) continue;
-      const cx = offX + x * tilePx + tilePx * 0.5;
-      const cy = offY + y * tilePx + tilePx * 0.5;
+      let visualX = x;
+      let visualY = y;
+      if (motionHint && i === motionHint.to) {
+        const fromX = motionHint.from % w;
+        const fromY = (motionHint.from / w) | 0;
+        visualX = fromX + (x - fromX) * alpha;
+        visualY = fromY + (y - fromY) * alpha;
+      }
+      const cx = offX + visualX * tilePx + tilePx * 0.5;
+      const cy = offY + visualY * tilePx + tilePx * 0.5;
       const ev = clamp01((Number(E[i]) || 0) / Emax);
       const mut = mutationIntensityFromTrait(trait, i);
       const cv = clamp01(clusterField?.[i] ?? 0);
@@ -1041,16 +1049,8 @@ function drawCommittedZoneRoleRings(ctx, world, offX, offY, tilePx) {
       const role = Number(zoneRole[idx] || 0) | 0;
       const stroke = colorByRole[role];
       if (!stroke) continue;
-      let visualX = x;
-      let visualY = y;
-      if (motionHint && i === motionHint.to) {
-        const fromX = motionHint.from % w;
-        const fromY = (motionHint.from / w) | 0;
-        visualX = fromX + (x - fromX) * alpha;
-        visualY = fromY + (y - fromY) * alpha;
-      }
-      const cx = offX + visualX * tilePx + tilePx * 0.5;
-      const cy = offY + visualY * tilePx + tilePx * 0.5;
+      const cx = offX + x * tilePx + tilePx * 0.5;
+      const cy = offY + y * tilePx + tilePx * 0.5;
       ctx.strokeStyle = stroke;
       ctx.beginPath();
       ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
@@ -1097,6 +1097,41 @@ function drawResourceMarkers(ctx, world, offX, offY, tilePx) {
   ctx.restore();
 }
 
+function drawPatternObjectMarker(ctx, world, sim, offX, offY, tilePx) {
+  if (tilePx < 7) return;
+  const counts = sim?.cellPatternCounts;
+  const triangle = Number(counts?.triangle || 0);
+  const loop = Number(counts?.loop || 0);
+  if (triangle <= 0 && loop <= 0) return;
+
+  const zoneRole = world?.zoneRole;
+  const w = Number(world?.w || 0) | 0;
+  if (!zoneRole || !ArrayBuffer.isView(zoneRole) || w <= 0) return;
+
+  let anchor = -1;
+  for (let i = 0; i < zoneRole.length; i++) {
+    if ((Number(zoneRole[i]) | 0) > 0) {
+      anchor = i;
+      break;
+    }
+  }
+  if (anchor < 0) return;
+  if (getTileFogState(world, anchor) === FOG_HIDDEN) return;
+
+  const x = anchor % w;
+  const y = (anchor / w) | 0;
+  const cx = offX + x * tilePx + tilePx * 0.5;
+  const cy = offY + y * tilePx + tilePx * 0.5;
+  const symbol = triangle > 0 && loop > 0 ? "🏭" : triangle > 0 ? "🔺" : "🔁";
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `${Math.max(9, Math.floor(tilePx * 0.72))}px "Segoe UI Emoji","Noto Color Emoji","Apple Color Emoji",sans-serif`;
+  ctx.globalAlpha = 0.92;
+  ctx.fillText(symbol, cx, cy);
+  ctx.restore();
+}
+
 export function render(canvas, state, perf = null) {
   const { world, meta, sim } = state;
   if (!world) return null;
@@ -1170,6 +1205,7 @@ export function drawFrame(ctx, state, perf = {}) {
   if (!overlayActive && !balanced && (quality >= 3 || userFocused) && lod.level <= 1 && !userMinimal) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
   if (!overlayActive && !tactical && quality >= 1 && !isHugeGrid && !userMinimal) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawCommittedZoneRoleRings(ctx, world, offX, offY, tilePx);
+  if (quality >= 1) drawPatternObjectMarker(ctx, world, sim, offX, offY, tilePx);
   if (quality >= 1 && shouldDrawLegacyZoneOverlay(meta)) drawZoneOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level, detailMode);
   if (quality >= 1 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);
