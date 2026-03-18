@@ -1,4 +1,4 @@
-import { PHYSICS_DEFAULT } from "../../core/kernel/physics.js";
+import { PHYSICS_DEFAULT } from "../../kernel/store/physics.js";
 import { APP_VERSION } from "../../project/project.manifest.js";
 import { buildAdvisorModel } from "../../project/llm/advisorModel.js";
 import { applyFogIntelToAdvisorModel } from "../render/fogOfWar.js";
@@ -1615,4 +1615,5 @@ export class UI {
     // --- Dev panel ─────────────────────────────────────────
   }
 }
+
 
