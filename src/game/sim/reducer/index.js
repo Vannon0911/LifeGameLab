@@ -2,7 +2,7 @@
 // Reducer — V4 COMPATIBLE (Patch-based)
 // ============================================================
 
-import { generateWorld, seedDeterministicBootstrapCluster } from "../worldgen.js";
+import { generateWorld } from "../worldgen.js";
 import { simStep } from "../step.js";
 import { PHYSICS_DEFAULT } from "../../../kernel/store/physics.js";
 import { hashString, rng01 } from "../../../kernel/determinism/rng.js";
@@ -50,6 +50,7 @@ import { applyWinConditions, applyGoalCode } from "./winConditions.js";
 import { buildSetOverlayPatches, buildSetWinModePatches } from "./controlActions.js";
 import {
   applyPresetPhysicsOverrides,
+  getStartWindowRange,
   getWorldPreset,
   normalizeWorldPresetId,
 } from "../worldPresets.js";
@@ -818,6 +819,8 @@ export function reducer(state, action, ctx = {}) {
       const born = cloneTypedArray(state.world.born);
       const died = cloneTypedArray(state.world.died);
       const W = state.world.W ? cloneTypedArray(state.world.W) : null;
+      const w = Number(state.world.w || state.meta.gridW || 0) | 0;
+      const h = Number(state.world.h || state.meta.gridH || 0) | 0;
       const bootstrapWorld = {
         ...state.world,
         alive,
@@ -832,14 +835,31 @@ export function reducer(state, action, ctx = {}) {
         died,
         W,
       };
-      const cpuSpawn = Number(state.sim.cpuBootstrapDone || 0) === 0
-        ? seedDeterministicBootstrapCluster(
-          bootstrapWorld,
-          state.meta.seed,
-          preset?.startWindows?.cpu,
-          Number(state.meta.cpuLineageId || 2) | 0,
-        )
-        : [];
+      const cpuSpawn = [];
+      if (Number(state.sim.cpuBootstrapDone || 0) === 0) {
+        const cpuWindow = preset?.startWindows?.cpu;
+        const cpuLineageId = Number(state.meta.cpuLineageId || 2) | 0;
+        if (cpuWindow) {
+          const cpuRange = getStartWindowRange(cpuWindow, w, h);
+          const cx = Number(cpuRange?.x0 ?? -1) | 0;
+          const cy = Number(cpuRange?.y0 ?? -1) | 0;
+          if (cx >= 0 && cy >= 0 && cx < w && cy < h) {
+            const cIdx = cy * w + cx;
+            if ((Number(alive[cIdx] || 0) | 0) !== 1) {
+              alive[cIdx] = 1;
+              lineageId[cIdx] = cpuLineageId;
+              E[cIdx] = Math.max(0.6, Number(E[cIdx] || 0));
+              reserve[cIdx] = Math.max(0.2, Number(reserve[cIdx] || 0));
+              link[cIdx] = 0;
+              hue[cIdx] = 8;
+              age[cIdx] = 0;
+              if (born) born[cIdx] = 1;
+              if (died) died[cIdx] = 0;
+              cpuSpawn.push(cIdx);
+            }
+          }
+        }
+      }
       const canonicalState = buildCanonicalRuntimeState(
         { ...state.world, coreZoneMask, alive, lineageId, link },
         state.meta.worldPresetId,

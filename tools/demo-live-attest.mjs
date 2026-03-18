@@ -7,6 +7,8 @@ import { chromium } from "playwright";
 const root = process.cwd();
 const outDir = path.join(root, "output", "playwright", "demo-attest");
 fs.mkdirSync(outDir, { recursive: true });
+const KEEP_OPEN_ON_FAIL = String(process.env.PLAYWRIGHT_KEEP_OPEN || "0") === "1";
+const KEEP_OPEN_MS = Math.max(10000, Number(process.env.PLAYWRIGHT_KEEP_OPEN_MS || 600000));
 
 const port = 8080;
 const baseUrl = `http://127.0.0.1:${port}`;
@@ -448,6 +450,12 @@ try {
   console.log(`DEMO_LIVE_ATTEST_OK output=${outDir}`);
 } catch (err) {
   console.error(`DEMO_LIVE_ATTEST_FAIL ${String(err?.stack || err)}`);
+  if (KEEP_OPEN_ON_FAIL && browser) {
+    console.error(`DEMO_LIVE_ATTEST_DEBUG browser kept open for ${KEEP_OPEN_MS}ms`);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, KEEP_OPEN_MS));
+    } catch {}
+  }
   process.exitCode = 1;
 } finally {
   if (browser) {

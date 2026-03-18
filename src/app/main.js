@@ -287,6 +287,7 @@ let latestPerfStats = null;
 let lastSyncTick = -1;
 let lastSyncTs   = 0;
 let simIntervalId = null;
+let lastSimStepTs = globalThis.performance ? globalThis.performance.now() : 0;
 
 const PerfBudget = {
   isMobile: !!(globalThis.matchMedia && globalThis.matchMedia("(pointer: coarse)").matches),
@@ -405,7 +406,8 @@ function startSimInterval() {
     const state = store.getState();
     if (SIM_RUNTIME_DISABLED) return;
     if (!shouldAdvanceSimulation(state)) return;
-    runOneSimStep();
+    const stepped = runOneSimStep();
+    if (stepped) lastSimStepTs = globalThis.performance ? globalThis.performance.now() : lastSimStepTs;
     runDevBalanceChecks();
     WorldStateLog.track(store.getState());
   }, TICK_RATE_MS);
@@ -470,7 +472,11 @@ function loop(ts) {
   PerfBudget.fpsEma = 1000 / Math.max(1e-6, PerfBudget.frameMsEma);
 
   const state = store.getState();
-  const renderAlpha = 1;
+  const simActive = !SIM_RUNTIME_DISABLED && shouldAdvanceSimulation(state);
+  const elapsedSinceStep = Math.max(0, ts - lastSimStepTs);
+  const renderAlpha = simActive
+    ? Math.max(0, Math.min(1, elapsedSinceStep / TICK_RATE_MS))
+    : 1;
   tunePerformance(state);
   if ((frameId % PerfBudget.renderEvery) === 0) {
     runRender({
