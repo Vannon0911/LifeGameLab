@@ -587,8 +587,8 @@ export function makeInitialState() {
   return {
     meta: {
       seed:        "life-light",
-      gridW:       16,
-      gridH:       16,
+      gridW:       64,
+      gridH:       64,
       speed:       2,
       brushMode:   BRUSH_MODE.OBSERVE,
       brushRadius: 3,

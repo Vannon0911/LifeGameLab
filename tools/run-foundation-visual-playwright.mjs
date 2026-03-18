@@ -181,7 +181,7 @@ async function main() {
     const canvas = page.locator("canvas").first();
     const box = await canvas.boundingBox();
     if (!box) throw new Error("Canvas not found for founder placement.");
-    const grid = 16;
+    const grid = 64;
     const cellW = box.width / grid;
     const cellH = box.height / grid;
     const founders = [
