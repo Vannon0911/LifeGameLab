@@ -106,7 +106,7 @@ export const mutationMatrix = {
   RESET_GLOBAL_LEARNING: ["/meta/globalLearning", "/world/globalLearning", "/world/lineageMemory"],
   PAINT_BRUSH: ["/world/L", "/world/R", "/world/W", "/world/Sat"],
   PLACE_CELL: ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/world/founderMask", "/sim/playerDNA", "/sim/founderPlaced"],
-  ISSUE_ORDER: ["/sim/unitOrder", "/sim/selectedUnit", "/sim/lastCommand"],
+  ISSUE_ORDER: ["/sim/unitOrder", "/sim/activeOrder", "/sim/selectedUnit", "/sim/lastCommand"],
   PLACE_SPLIT_CLUSTER: ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/sim/playerDNA"],
   HARVEST_CELL: ["/sim/playerDNA", "/sim/totalHarvested", "/world/alive", "/world/E"],
   HARVEST_PULSE: ["/world/P", "/world/R", "/world/Sat", "/world/lineageMemory", "/sim/playerDNA", "/sim/harvestYieldTotal", "/sim/meanWaterField", "/sim/stabilityScore", "/sim/ecologyScore", "/sim/stageProgressScore", "/sim/activeBiomeCount", "/sim/playerStage"],

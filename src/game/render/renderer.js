@@ -1085,6 +1085,34 @@ function drawResourceMarkers(ctx, world, offX, offY, tilePx) {
   ctx.restore();
 }
 
+function drawHarvestProgress(ctx, world, sim, offX, offY, tilePx) {
+  const activeOrder = sim?.activeOrder;
+  if (!activeOrder || !activeOrder.active || String(activeOrder.type || "") !== "HARVEST") return;
+  const maxProgress = Math.max(1, Number(activeOrder.maxProgress || 1));
+  const progress = Math.max(0, Math.min(maxProgress, Number(activeOrder.progress || 0)));
+  if (progress <= 0) return;
+  const ratio = progress / maxProgress;
+  const targetX = Number(activeOrder.targetX ?? -1) | 0;
+  const targetY = Number(activeOrder.targetY ?? -1) | 0;
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  if (targetX < 0 || targetY < 0 || targetX >= w || targetY >= h) return;
+  const idx = targetY * w + targetX;
+  if (getTileFogState(world, idx) === FOG_HIDDEN) return;
+
+  const cx = offX + targetX * tilePx + tilePx * 0.5;
+  const cy = offY + targetY * tilePx + tilePx * 0.5;
+  const radius = Math.max(2, tilePx * 0.34);
+  const startAngle = -Math.PI / 2;
+  const endAngle = startAngle + ratio * Math.PI * 2;
+  ctx.save();
+  ctx.strokeStyle = "rgba(100, 220, 100, 0.85)";
+  ctx.lineWidth = Math.max(1, tilePx * 0.1);
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, startAngle, endAngle);
+  ctx.stroke();
+  ctx.restore();
+}
 function drawPatternObjectMarker(ctx, world, sim, offX, offY, tilePx) {
   if (tilePx < 7) return;
   const counts = sim?.cellPatternCounts;
@@ -1188,6 +1216,7 @@ export function drawFrame(ctx, state, perf = {}) {
   if (!overlayActive && !balanced && (quality >= 2 || userFocused) && lod.level <= 2 && !userMinimal) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim);
   if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, sim?.tick || 0);
   if (!overlayActive && quality >= 1) drawResourceMarkers(ctx, world, offX, offY, tilePx);
+  if (!overlayActive && quality >= 1) drawHarvestProgress(ctx, world, sim, offX, offY, tilePx);
   const moveHint = computeSingleMoveHint(world);
   drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality, moveHint, alpha);
   if (!overlayActive && !balanced && (quality >= 3 || userFocused) && lod.level <= 1 && !userMinimal) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
@@ -1210,4 +1239,5 @@ export function screenToWorld(screenX, screenY, renderInfo, meta) {
   if (wx < 0 || wy < 0 || wx >= meta.gridW || wy >= meta.gridH) return null;
   return { x: wx, y: wy };
 }
+
 

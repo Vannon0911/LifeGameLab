@@ -420,6 +420,19 @@ function moveEntityTile(world, fromIdx, toIdx) {
   }
 }
 
+function createEmptyActiveOrder() {
+  return {
+    active: false,
+    type: "",
+    fromX: -1,
+    fromY: -1,
+    targetX: -1,
+    targetY: -1,
+    progress: 0,
+    maxProgress: 10,
+  };
+}
+
 function canConfirmCoreZone(state) {
   if (state.sim.runPhase !== RUN_PHASE.GENESIS_ZONE) return false;
   const founderIndices = collectFounderIndices(state);
@@ -1263,9 +1276,20 @@ export function reducer(state, action, ctx = {}) {
       if (!isOwnAlive) return [];
       if (Number(world.R[targetIdx] || 0) <= 0.05) return [];
       const order = { active: true, fromX, fromY, targetX, targetY };
+      const activeOrder = {
+        active: true,
+        type: "HARVEST",
+        fromX,
+        fromY,
+        targetX,
+        targetY,
+        progress: 0,
+        maxProgress: 10,
+      };
       return [
         { op: "set", path: "/sim/selectedUnit", value: fromIdx },
         { op: "set", path: "/sim/unitOrder", value: order },
+        { op: "set", path: "/sim/activeOrder", value: activeOrder },
         { op: "set", path: "/sim/lastCommand", value: `ISSUE_ORDER:${fromX},${fromY}->${targetX},${targetY}` },
       ];
     }
@@ -1364,10 +1388,21 @@ export function simStepPatch(state, action, ctx) {
   simOut.unitOrder = state.sim.unitOrder && typeof state.sim.unitOrder === "object"
     ? { ...state.sim.unitOrder }
     : { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+  simOut.activeOrder = state.sim.activeOrder && typeof state.sim.activeOrder === "object"
+    ? { ...state.sim.activeOrder }
+    : {
+      ...createEmptyActiveOrder(),
+      active: !!simOut.unitOrder?.active,
+      type: simOut.unitOrder?.active ? "HARVEST" : "",
+      fromX: Number(simOut.unitOrder?.fromX ?? -1),
+      fromY: Number(simOut.unitOrder?.fromY ?? -1),
+      targetX: Number(simOut.unitOrder?.targetX ?? -1),
+      targetY: Number(simOut.unitOrder?.targetY ?? -1),
+    };
   simOut.lastCommand = String(state.sim.lastCommand || "");
   simOut.lastAutoAction = "";
 
-  const activeOrder = simOut.unitOrder;
+  const activeOrder = simOut.activeOrder;
   if (activeOrder?.active) {
     const w = Number(worldMutable?.w || state.meta.gridW || 0) | 0;
     const h = Number(worldMutable?.h || state.meta.gridH || 0) | 0;
@@ -1389,25 +1424,47 @@ export function simStepPatch(state, action, ctx) {
 
     if (!validUnit || targetX < 0 || targetY < 0 || targetX >= w || targetY >= h) {
       simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+      simOut.activeOrder = createEmptyActiveOrder();
       simOut.selectedUnit = -1;
       simOut.lastAutoAction = "ORDER_ABORTED";
     } else if (unitIdx === targetIdx) {
-      const rv = Math.max(0, Number(worldMutable.R?.[targetIdx] || 0));
-      const harvested = Math.min(0.16, rv);
-      if (worldMutable.R && ArrayBuffer.isView(worldMutable.R)) {
-        worldMutable.R[targetIdx] = Math.max(0, rv - harvested);
+      const maxProgress = Math.max(1, Number(activeOrder.maxProgress || 10) | 0);
+      const nextProgress = Math.min(maxProgress, (Number(activeOrder.progress || 0) | 0) + 1);
+      if (nextProgress < maxProgress) {
+        simOut.activeOrder = {
+          ...activeOrder,
+          active: true,
+          type: "HARVEST",
+          fromX: unitIdx % w,
+          fromY: (unitIdx / w) | 0,
+          targetX,
+          targetY,
+          progress: nextProgress,
+          maxProgress,
+        };
+        simOut.unitOrder = { active: true, fromX: unitIdx % w, fromY: (unitIdx / w) | 0, targetX, targetY };
+        simOut.selectedUnit = unitIdx;
+        simOut.lastAutoAction = `HARVEST_PROGRESS:${nextProgress}/${maxProgress}`;
+      } else {
+        const rv = Math.max(0, Number(worldMutable.R?.[targetIdx] || 0));
+        const harvested = Math.min(0.16, rv);
+        if (worldMutable.R && ArrayBuffer.isView(worldMutable.R)) {
+          worldMutable.R[targetIdx] = Math.max(0, rv - harvested);
+        }
+        if (harvested > 0) {
+          simOut.playerDNA = Number(simOut.playerDNA || 0) + harvested * 3.5;
+          simOut.totalHarvested = Number(simOut.totalHarvested || 0) + harvested;
+        }
+        simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+        simOut.activeOrder = createEmptyActiveOrder();
+        simOut.selectedUnit = unitIdx;
+        simOut.lastAutoAction = harvested > 0 ? `HARVEST_AUTO:${targetX},${targetY}` : "ARRIVE_NO_RESOURCE";
       }
-      if (harvested > 0) {
-        simOut.playerDNA = Number(simOut.playerDNA || 0) + harvested * 3.5;
-        simOut.totalHarvested = Number(simOut.totalHarvested || 0) + harvested;
-      }
-      simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
-      simOut.selectedUnit = unitIdx;
-      simOut.lastAutoAction = harvested > 0 ? `HARVEST_AUTO:${targetX},${targetY}` : "ARRIVE_NO_RESOURCE";
     } else {
       const nextIdx = findNextStepBfs4(worldMutable, unitIdx, targetIdx, w, h);
       if (nextIdx < 0 || (Number(worldMutable.alive?.[nextIdx] || 0) | 0) === 1) {
         simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+        simOut.activeOrder = createEmptyActiveOrder();
         simOut.selectedUnit = unitIdx;
         simOut.lastAutoAction = "ORDER_PATH_BLOCKED";
       } else {
@@ -1421,6 +1478,17 @@ export function simStepPatch(state, action, ctx) {
           fromY: ny,
           targetX,
           targetY,
+        };
+        simOut.activeOrder = {
+          ...activeOrder,
+          active: true,
+          type: "HARVEST",
+          fromX: nx,
+          fromY: ny,
+          targetX,
+          targetY,
+          progress: Number(activeOrder.progress || 0) | 0,
+          maxProgress: Math.max(1, Number(activeOrder.maxProgress || 10) | 0),
         };
         simOut.lastAutoAction = `MOVE_STEP:${nx},${ny}`;
       }
