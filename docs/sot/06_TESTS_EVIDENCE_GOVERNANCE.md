@@ -31,11 +31,11 @@
 - tools/export-truth-anchors.mjs + tools/verify-cross-platform-truth.mjs (Cross-Platform-Anchor-Compare)
 
 ## Cross-Platform Repro-Gate
-- Workflow: `.github/workflows/evidence-cross-platform.yml`
-- Matrix: `ubuntu-latest`, `windows-latest`, `macos-latest`
+- Utilities: `tools/export-truth-anchors.mjs` + `tools/verify-cross-platform-truth.mjs`
+- Ziel-Matrix: `ubuntu-latest`, `windows-latest`, `macos-latest`
 - Jede Plattform erzeugt `truth-anchors.json` aus der aktuellen Truth-Manifest-Kette.
-- Vergleichsjob blockiert bei Anchor-Drift zwischen OS.
-- Nach erfolgreichem Compare laeuft Linux Full-Session (`npm run test:session`) inkl. Attestation-Check.
+- Vergleichsjob muss bei Anchor-Drift zwischen OS blockieren.
+- Nach erfolgreichem Compare soll Linux Full-Session (`npm run test:session`) inkl. Attestation-Check laufen.
 
 ## Funktionale Matrix
 | File | Line | Symbol | Kind |
