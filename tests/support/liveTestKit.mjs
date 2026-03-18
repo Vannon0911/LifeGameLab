@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
-import { createStore } from "../../src/core/kernel/store.js";
-import { createNullDriver } from "../../src/core/kernel/persistence.js";
+import { createStore } from "../../src/kernel/store/createStore.js";
+import { createNullDriver } from "../../src/kernel/store/persistence.js";
 import { buildLlmReadModel } from "../../src/project/llm/readModel.js";
 import * as manifest from "../../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../../src/project/project.logic.js";
@@ -70,3 +70,4 @@ export function snapshotStore(store) {
     revisionCount: doc.revisionCount,
   });
 }
+
