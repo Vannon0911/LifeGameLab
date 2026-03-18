@@ -9,6 +9,7 @@ import { FOG_HIDDEN, FOG_MEMORY, FOG_VISIBLE, applyFogToColor, getTileFogState }
 function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 const LOD_ZOOM_STEPS = [512, 256, 128, 64]; // requested: 512 /2 /2 /2
+let _prevAliveSnapshot = null;
 
 function computeLodFromZoom(tilePx) {
   // Virtual zoom metric so LOD is device-independent and stable over grid growth.
@@ -26,6 +27,35 @@ function hslToRgb(h, s, l) {
   const a = s * Math.min(l, 1 - l);
   const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
   return [f(0) * 255, f(8) * 255, f(4) * 255];
+}
+
+function computeSingleMoveHint(world) {
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  const alive = world?.alive;
+  if (!alive || !ArrayBuffer.isView(alive)) return null;
+  const total = w * h;
+  if (total <= 0 || alive.length !== total) return null;
+  const currentAlive = [];
+  for (let i = 0; i < total; i++) {
+    if ((Number(alive[i] || 0) | 0) === 1) currentAlive.push(i);
+  }
+  const prev = _prevAliveSnapshot;
+  _prevAliveSnapshot = { w, h, alive: currentAlive };
+  if (!prev || prev.w !== w || prev.h !== h) return null;
+
+  const prevSet = new Set(prev.alive);
+  const currSet = new Set(currentAlive);
+  const removed = [];
+  const added = [];
+  for (const idx of prevSet) {
+    if (!currSet.has(idx)) removed.push(idx);
+  }
+  for (const idx of currSet) {
+    if (!prevSet.has(idx)) added.push(idx);
+  }
+  if (removed.length !== 1 || added.length !== 1) return null;
+  return { from: removed[0], to: added[0] };
 }
 
 function mutationIntensityFromTrait(trait, idx) {
@@ -564,7 +594,7 @@ function drawEvents(ctx, world, offX, offY, tilePx) {
   ctx.restore();
 }
 
-function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3) {
+function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3, motionHint = null, alpha = 1) {
   const { w, h, alive, E, hue, trait, clusterField, superId, lineageId } = world;
   const Emax = Number(meta?.physics?.Emax) || 3.2;
   const cpuLineageId = Number(meta?.cpuLineageId || 2) | 0;
@@ -1011,8 +1041,16 @@ function drawCommittedZoneRoleRings(ctx, world, offX, offY, tilePx) {
       const role = Number(zoneRole[idx] || 0) | 0;
       const stroke = colorByRole[role];
       if (!stroke) continue;
-      const cx = offX + x * tilePx + tilePx * 0.5;
-      const cy = offY + y * tilePx + tilePx * 0.5;
+      let visualX = x;
+      let visualY = y;
+      if (motionHint && i === motionHint.to) {
+        const fromX = motionHint.from % w;
+        const fromY = (motionHint.from / w) | 0;
+        visualX = fromX + (x - fromX) * alpha;
+        visualY = fromY + (y - fromY) * alpha;
+      }
+      const cx = offX + visualX * tilePx + tilePx * 0.5;
+      const cy = offY + visualY * tilePx + tilePx * 0.5;
       ctx.strokeStyle = stroke;
       ctx.beginPath();
       ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
@@ -1050,6 +1088,7 @@ export function drawFrame(ctx, state, perf = {}) {
   const { world, meta, sim } = state;
   const { w, h } = world;
   const quality = clamp((perf?.quality ?? 3) | 0, 0, 3);
+  const alpha = clamp01(Number.isFinite(perf?.alpha) ? perf.alpha : 1);
   const detailMode = String(meta?.ui?.renderDetailMode || "auto");
   const userFocused = detailMode === "focused";
   const userMinimal = detailMode === "minimal";
@@ -1088,7 +1127,8 @@ export function drawFrame(ctx, state, perf = {}) {
   if (!overlayActive && !isHugeGrid && quality >= 1 && lod.level <= 2 && !userMinimal) drawLightShadowOverlay(ctx, world, meta, offX, offY, tilePx);
   if (!overlayActive && !balanced && (quality >= 2 || userFocused) && lod.level <= 2 && !userMinimal) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, sim);
   if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, sim?.tick || 0);
-  drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality);
+  const moveHint = computeSingleMoveHint(world);
+  drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality, moveHint, alpha);
   if (!overlayActive && !balanced && (quality >= 3 || userFocused) && lod.level <= 1 && !userMinimal) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
   if (!overlayActive && !tactical && quality >= 1 && !isHugeGrid && !userMinimal) drawPlantsOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawCommittedZoneRoleRings(ctx, world, offX, offY, tilePx);

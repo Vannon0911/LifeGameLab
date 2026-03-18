@@ -471,11 +471,13 @@ function loop(ts) {
     acc = 0;
   }
 
+  const renderAlpha = stepMs > 0 ? Math.max(0, Math.min(1, acc / stepMs)) : 0;
   tunePerformance(state);
   if ((frameId % PerfBudget.renderEvery) === 0) {
     runRender({
       quality: PerfBudget.quality,
       dprCap: PerfBudget.dprCap,
+      alpha: renderAlpha,
       fps: PerfBudget.fpsEma,
       frameMs: PerfBudget.frameMsEma,
       renderMs: PerfBudget.renderMsEma,
