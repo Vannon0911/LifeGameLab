@@ -170,6 +170,17 @@ Maschinenlesbare Truth liegt in `output/current-truth.json` (letzter gueltiger T
   - plus `src/project/project.manifest.js` als contracts-klassifizierter Pfad.
 - Nachweis auf aktuellem Stand: `node tools/run-all-tests.mjs --full` gruen.
 
+### 2026-03-18 session `headed-gameplay-live-probe`
+- Headed Live-Probe im echten Browser durchgefuehrt (Playwright `headless: false`, lokale App unter `http://127.0.0.1:8080`).
+- Abgedeckte UI-/Gameplay-Kette im Probe-Lauf: `app_loaded -> new_world -> foundation_not_ready -> founder_place_4_4 -> foundation_ready -> confirm_foundation -> core_visible -> confirm_core -> run_active -> pause_toggle`.
+- Ergebnis: `10/10` Checks gruen, `0` fail.
+- Verifiziert im Live-Run:
+  - `Neue Welt` setzt Founder auf `0/4`
+  - `Gruendung bestaetigen` ist vor Eligibility disabled und nach gueltiger 2x2-Foundation enabled
+  - `Energiekern bestaetigen` schaltet den Run in aktiv (`Pause` sichtbar)
+  - Start/Pause-Toggle wechselt zurueck auf `Start`
+- Scope-Hinweis: Diese Probe deckt den Foundation/Core/Run-Aktivierungsfluss ab; sie ersetzt keinen separaten End-to-End-Nachweis fuer lange Smoke-Sprints und End-Overlay.
+
 ### 2026-03-16 session `status-sync-mvp-feature-complete-plan`
 - Die aktive Arbeitsliste wurde von der alten Phase-G-RC-Haertung auf den bindenden MVP-Feature-Complete-Plan `A1 -> A2 -> A3 -> B1 -> B2 -> B3 -> C1 -> C2 -> C3 -> C4` umgestellt.
 - `docs/STATUS.md` fuehrt jetzt die atomaren MVP-Tasks, den zugehoerigen Test-Plan und die zwei offenen Review-Notizen fuer `B3` und `C4` explizit an.

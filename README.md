@@ -100,9 +100,9 @@ Artefakte pro Run:
 - Inhalte: `01_..06_*.png` plus `run-log.json`
 - Retention: Es bleiben automatisch nur die letzten `3` visuellen Runs erhalten.
 
-### Tagesstand (2026-03-17)
+### Tagesstand (2026-03-18)
 
-Heute wurde der Foundation-/Runner-Block in getrennten Scopes abgeschlossen und danach auf RTS-Runtime live nachgetestet.
+Heute wurde der Foundation-/Runner-Block erneut headed live im Browser gegengeprueft.
 
 - Referenz-Commits:
   - `f08f792` `fix(testing): classify foundation visual runner in task matrix`
@@ -113,11 +113,11 @@ Heute wurde der Foundation-/Runner-Block in getrennten Scopes abgeschlossen und 
 
 - Was heute live verifiziert wurde:
   - Foundation -> Core -> RUN_ACTIVE schaltet korrekt um.
-  - RTS-Loop läuft sichtbar (Tick steigt), wenn der Run aktiv ist.
-  - Smoke-Sprint läuft nicht mehr sofort fest, endet aktuell aber nicht sauber im sichtbaren End-Overlay.
+  - Start/Pause-Toggle wechselt reproduzierbar `Pause -> Start`.
+  - Headed Probe ergab `10/10` gruene Checks (`0` fail) fuer den Foundation/Core/Run-Aktivierungsfluss.
 
-- Verbleibender Engpass (Stand jetzt):
-  - Bei Smoke-Sprint stoppt der Lauf im Feldzustand (Tick friert, `Start` statt `Pause`), ohne dass das End-Overlay/Run-Summary zuverlässig angezeigt wird.
+- Scope-Hinweis:
+  - Die heutige headed Probe ist ein fokussierter Gameplay-Flow-Check und kein vollstaendiger Langlauf-/End-Overlay-Beweis.
 
 - Nachweis-Befehle:
   - Visual Goldpfad mit Artefakten: `npm run test:foundation:visual`
