@@ -130,6 +130,10 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     status: "active",
     purpose: "P1 / Artefakt-/Read-Model-Drift: prove read-model hashes stay replay-stable at after-founders, after-core, step-1, and step-4",
   }),
+  "tests/test-kernel-replay-truth.mjs": Object.freeze({
+    status: "active",
+    purpose: "prove seed + action replay yields stable signature chain and cross-seed divergence",
+  }),
   "tests/test-sim-gate-contract.mjs": Object.freeze({
     status: "active",
     purpose: "prove simGate rejects numeric coercion for boolean sim fields and keeps canonical zone array contracts without duplicate source definitions",
