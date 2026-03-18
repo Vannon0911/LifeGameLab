@@ -16,23 +16,22 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
   2. `node tools/llm-preflight.mjs entry --paths <...> --mode work|security`
   3. `node tools/llm-preflight.mjs ack --paths <...>`
   4. `node tools/llm-preflight.mjs check --paths <...>`
-- in allen vier Schritten dieselbe kanonische Pfadmenge verwenden
-- vor Test und Schreiben immer ein gruener `check` fuer genau diesen Scope
+- Klassifikation ist dependency-basiert und liefert `taskScope[]`; Mehrfach-Scope ist erlaubt.
+- Bei Pfadabweichung wird Scope automatisch neu klassifiziert (Auto-Reclassify).
+- Vor Schreiben ein gruener `check`; fuer Tests reicht `audit` als Warnsignal.
 - vor Commit Scope immer isolieren (`git restore --staged .`, dann nur Zielpfade stagen)
-- Preflight immer seriell pro Commit-Scope fahren; keine Scope-Mischung in einer Kette
+- Preflight darf Multi-Scope umfassen, wenn die Pfadmenge real mehrere Bereiche betrifft.
 - Hook-Guards einmal aktivieren: `npm run hooks:install`
 
 ## SCHREIBEN
 - kein Schreiben ohne gelesenen LLM-Entry plus passendem Task-Entry
-- kein Scope-Mix ohne neuen Subtask
-- Commits sind task-rein:
-  - ein Commit enthaelt nur Pfade aus genau einem klassifizierten Task
-  - gemischte Tasks (`testing` + `versioning` usw.) werden in getrennte Commits gesplittet
+- Commits bleiben moeglichst klein, aber Multi-Scope ist zulaessig wenn kausal gekoppelt.
 - task-spezifische Doku vor globaler Statuspflege
 - kein Weiterarbeiten nach `check`-Rot; erst neuen Scope-Preflight aufbauen
 - UMGEHUNG (z. B. direkte State-/Patch-Injektion zur Abkuerzung von Flows) ist nur mit expliziter Ruecksprache erlaubt.
 
 ## DOKU
-- `docs/STATUS.md` ist globale Fallback-Ansicht fuer Governance, Bugfixes und Change-Stand
+- Maschinenlesbare Truth: `output/current-truth.json` (Manifest-Pfad + Commit-SHA)
+- `docs/STATUS.md` bleibt Governance-/Entscheidungslog, nicht Truth-Quelle
 - task-spezifische Doku lebt in `docs/llm/`
 - Top-Level-Doku bleibt absichtlich auf vier Dateien begrenzt

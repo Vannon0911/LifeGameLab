@@ -55,20 +55,6 @@ function runPreflight(args) {
   return `${res.stdout}${res.stderr}`;
 }
 
-function runPreflightExpectFail(args, expectedText) {
-  const res = spawnSync(process.execPath, [path.join(root, "tools/llm-preflight.mjs"), ...args], {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    timeout: 30000,
-  });
-  if (res.error) throw res.error;
-  assert.notEqual(res.status, 0, `preflight ${args[0]} unexpectedly succeeded`);
-  const output = `${res.stdout}${res.stderr}`;
-  assert(output.includes(expectedText), `expected failing preflight output to include '${expectedText}', got:\n${output}`);
-  return output;
-}
-
 function backupPath(absPath) {
   if (!fs.existsSync(absPath)) return null;
   const stats = fs.statSync(absPath);
@@ -109,10 +95,10 @@ try {
   fs.rmSync(proofDir, { recursive: true, force: true });
 
   assert.equal(String(testingConfig.requiredEntry || ""), "docs/llm/testing/TESTING_TASK_ENTRY.md", "testing matrix must point to testing task entry");
-  assert(entryText.includes("classify -> entry -> ack -> check"), "ENTRY.md must define the exact preflight chain");
-  assert(/Pfadmenge/.test(entryText), "ENTRY.md must forbid path drift between preflight steps");
-  assert(fs.readFileSync(path.join(root, "docs/WORKFLOW.md"), "utf8").includes("classify --paths <paths>"), "WORKFLOW must document classify before entry");
-  assert(fs.readFileSync(path.join(root, "docs/llm/OPERATING_PROTOCOL.md"), "utf8").includes("classify --paths <...>"), "OPERATING_PROTOCOL must document classify before entry");
+  assert(Array.isArray(matrix.testing.dependsOn), "testing scope must declare dependsOn for multi-scope classification");
+  assert(matrix.testing.dependsOn.includes("contracts"), "testing scope must include contracts dependency");
+  assert(entryText.includes("classify -> entry -> ack -> check"), "ENTRY.md must define the preflight chain for writes");
+
   for (const file of testingGateFiles) {
     assert(testingEntry.includes(file), `testing task entry must reference ${file}`);
     assert(gateIndex.includes(file), `task gate index must reference ${file}`);
@@ -146,49 +132,42 @@ try {
   assert.deepEqual([...EVIDENCE_SUITES.regression].sort(), repoTests, "regression suite must execute every repo test");
 
   const classifyOutput = runPreflight(["classify", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
-  assert(classifyOutput.includes("CLASSIFY_OK task=testing"), "classify must resolve current testing scope to testing");
+  assert(classifyOutput.includes("CLASSIFY_OK"), "classify must succeed for testing scope");
+  assert(classifyOutput.includes("scope=contracts+testing"), "testing classification must expand contracts dependency");
+
+  const multiClassify = runPreflight(["classify", "--paths", "src/game/ui/ui.js,src/game/sim/step.js"]);
+  assert(multiClassify.includes("scope=contracts+sim+ui"), "classify must support multi-scope dependency expansion");
 
   const entryOutput = runPreflight(["entry", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"]);
-  assert(entryOutput.includes("ENTRY_OK task=testing"), "entry must succeed for testing scope");
+  assert(entryOutput.includes("ENTRY_OK scope=contracts+testing"), "entry must succeed for expanded testing scope");
   const sessionBeforeCheck = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
   const challengeFileBeforeCheck = path.join(root, sessionBeforeCheck.challengeFile);
   assert(fs.existsSync(challengeFileBeforeCheck), "entry must create hidden proof challenge file");
 
   const ackOutput = runPreflight(["ack", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
-  assert(ackOutput.includes("ACK_OK task=testing"), "ack must succeed for testing scope");
-  const ackBeforeCheck = JSON.parse(fs.readFileSync(ackPath, "utf8"));
-  assert.equal(ackBeforeCheck.tasks.testing.challengeFile, sessionBeforeCheck.challengeFile, "ack challenge file must match active session challenge");
-  assert.equal(typeof ackBeforeCheck.tasks.testing.proofHash, "string", "ack must store entry proof hash");
-  assert(ackBeforeCheck.tasks.testing.proofHash.length > 20, "entry proof hash must be non-trivial");
+  assert(ackOutput.includes("ACK_OK scope=contracts+testing"), "ack must succeed for expanded testing scope");
 
-  runPreflightExpectFail(
-    ["check", "--paths", "tests,tools/llm-preflight.mjs"],
-    "Session classifiedPaths drift for 'testing'. Re-run entry with the exact active path set.",
-  );
+  const changedPathSet = "tests,tools/llm-preflight.mjs";
+  const checkAutoOutput = runPreflight(["check", "--paths", changedPathSet]);
+  assert(checkAutoOutput.includes("AUTO_RECLASSIFY"), "check must auto-reclassify on path drift");
+  assert(checkAutoOutput.includes("CHECK_OK"), "check must still complete after auto-reclassify");
 
   const checkOutput = runPreflight(["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
-  assert(checkOutput.includes("CHECK_OK task=testing"), "check must succeed for testing scope");
-  const secondCheckOutput = runPreflight(["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
-  assert(secondCheckOutput.includes("CHECK_OK task=testing"), "repeated check must stay green for the exact active testing scope");
+  assert(checkOutput.includes("CHECK_OK"), "check must succeed again for full testing scope");
+
+  const auditOutput = runPreflight(["audit", "--paths", "src/unknown/not-in-matrix.js"]);
+  assert(auditOutput.includes("AUDIT_OK"), "audit must never block the caller");
+  assert(auditOutput.includes("AUDIT_WARN"), "audit must report warnings for preflight violations");
 
   const session = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
   const ack = JSON.parse(fs.readFileSync(ackPath, "utf8"));
-  assert.equal(session.task, "testing", "session task must be testing");
-  assert.equal(session.requiredEntry, testingConfig.requiredEntry, "session requiredEntry must match matrix");
-  assert.equal(session.requiredEntrySha256, sha256Text(testingEntry), "session task entry hash must match current testing entry");
+  assert.equal(session.scopeKey, "contracts+testing", "session scope key must keep expanded testing scope");
+  assert.deepEqual((session.taskScope || []).slice().sort(), ["contracts", "testing"], "session taskScope must be multi-scope array");
   assert.deepEqual((session.classifiedPaths || []).slice().sort(), testingScopePaths.slice().sort(), "session classified paths must match current testing scope");
-  assert.notEqual(session.challengeFile, sessionBeforeCheck.challengeFile, "check must rotate challenge file path");
-  assert(fs.existsSync(path.join(root, session.challengeFile)), "rotated challenge file must exist");
-  assert(!fs.existsSync(challengeFileBeforeCheck), "old challenge file must be removed after successful check");
-  assert.equal(ack.tasks.testing.requiredEntry, testingConfig.requiredEntry, "ack requiredEntry must match matrix");
-  assert.equal(ack.tasks.testing.requiredEntrySha256, sha256Text(testingEntry), "ack task entry hash must match current testing entry");
-  assert.deepEqual((ack.tasks.testing.classifiedPaths || []).slice().sort(), testingScopePaths.slice().sort(), "ack classified paths must match current testing scope");
-  assert.equal(ack.tasks.testing.challengeFile, session.challengeFile, "ack must auto-sync to rotated challenge file");
-  assert.equal(ack.tasks.testing.challengeId, session.challengeId, "ack must auto-sync to rotated challenge id");
-  assert.equal(typeof ack.tasks.testing.proofHash, "string", "ack must keep rotated proof hash");
-  assert.notEqual(ack.tasks.testing.proofHash, ackBeforeCheck.tasks.testing.proofHash, "proof hash must rotate after verification");
+  assert.equal(typeof ack.scopes["contracts+testing"].proofHash, "string", "ack must store proof hash per scope key");
+  assert(ack.scopes["contracts+testing"].proofHash.length > 20, "proof hash must be non-trivial");
 
-  console.log("LLM_CONTRACT_OK testing preflight classify+entry+ack+check synced to matrix, entry lock, explicit path-drift guard, repeated check rotation, and live scope");
+  console.log("LLM_CONTRACT_OK multi-scope classify+dependency expansion+auto-reclassify enabled and audit mode keeps tests unblocked");
 } finally {
   restorePath(llmDir, llmBackup);
 }

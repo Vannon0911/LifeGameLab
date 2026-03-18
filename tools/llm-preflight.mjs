@@ -66,12 +66,6 @@ function parsePaths(args) {
   return values;
 }
 
-function parseTaskFlag(args) {
-  const taskFlag = args.indexOf("--task");
-  if (taskFlag < 0) return "";
-  return String(args[taskFlag + 1] || "").trim();
-}
-
 function parseModeFlag(args) {
   const modeFlag = args.indexOf("--mode");
   const raw = modeFlag >= 0 ? String(args[modeFlag + 1] || "").trim().toLowerCase() : "work";
@@ -82,6 +76,14 @@ function parseModeFlag(args) {
   return mode;
 }
 
+function parseScopeFlag(args) {
+  const ix = args.indexOf("--task-scope") >= 0 ? args.indexOf("--task-scope") : args.indexOf("--task");
+  if (ix < 0) return [];
+  const raw = String(args[ix + 1] || "").trim();
+  if (!raw) return [];
+  return [...new Set(raw.split(",").map((s) => String(s || "").trim()).filter(Boolean))].sort();
+}
+
 function matchesPrefix(relPath, rawPrefix) {
   const prefix = String(rawPrefix || "").trim().replace(/\\/g, "/");
   if (!prefix) return false;
@@ -89,31 +91,82 @@ function matchesPrefix(relPath, rawPrefix) {
     const escaped = prefix.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
     return new RegExp(`^${escaped}$`).test(relPath);
   }
-  if (prefix.endsWith("/")) {
-    return relPath.startsWith(prefix);
-  }
+  if (prefix.endsWith("/")) return relPath.startsWith(prefix);
   return relPath === prefix || relPath.startsWith(`${prefix}/`);
 }
 
-function classifyTaskByPaths(paths, matrix) {
-  const matches = new Set();
-  for (const relPath of paths) {
-    for (const [task, cfg] of Object.entries(matrix)) {
-      const prefixes = Array.isArray(cfg?.triggerPrefixes) ? cfg.triggerPrefixes : [];
-      if (prefixes.some((prefix) => matchesPrefix(relPath, prefix))) {
-        matches.add(task);
+function expandScopeDependencies(seedScopes, matrix) {
+  const out = new Set(seedScopes);
+  const queue = [...seedScopes];
+  while (queue.length) {
+    const scope = queue.shift();
+    const deps = Array.isArray(matrix?.[scope]?.dependsOn) ? matrix[scope].dependsOn : [];
+    for (const dep of deps) {
+      const key = String(dep || "").trim();
+      if (!key) continue;
+      if (!Object.prototype.hasOwnProperty.call(matrix, key)) {
+        fail(`Unknown dependent scope '${key}' referenced by '${scope}'.`);
+      }
+      if (!out.has(key)) {
+        out.add(key);
+        queue.push(key);
       }
     }
   }
-  if (!matches.size) {
+  return [...out].sort();
+}
+
+function classifyScopeByPaths(paths, matrix) {
+  const direct = new Set();
+  for (const relPath of paths) {
+    for (const [scope, cfg] of Object.entries(matrix)) {
+      const prefixes = Array.isArray(cfg?.triggerPrefixes) ? cfg.triggerPrefixes : [];
+      if (prefixes.some((prefix) => matchesPrefix(relPath, prefix))) {
+        direct.add(scope);
+      }
+    }
+  }
+  if (!direct.size) {
     fail(`No task classification match for paths: ${paths.join(", ")}`);
   }
-  if (matches.size > 1) {
-    fail(
-      `Ambiguous task classification (${Array.from(matches).sort().join(", ")}). Split into subtasks with disjoint paths.`,
-    );
+  return expandScopeDependencies([...direct], matrix);
+}
+
+function normalizeScopeList(scopeList, matrix) {
+  const valid = new Set(Object.keys(matrix));
+  const out = [];
+  for (const scope of scopeList) {
+    const key = String(scope || "").trim();
+    if (!key) continue;
+    if (!valid.has(key)) {
+      fail(
+        `Unknown scope '${key}'. Allowed: ${Object.keys(matrix)
+          .sort()
+          .join(", ")}`,
+      );
+    }
+    out.push(key);
   }
-  return Array.from(matches)[0];
+  return [...new Set(out)].sort();
+}
+
+function resolveTaskContext(args, matrix, options = {}) {
+  const requirePaths = Boolean(options.requirePaths);
+  const paths = parsePaths(args);
+  if (requirePaths && !paths.length) {
+    fail("Task classification requires '--paths <comma-separated-paths>'.");
+  }
+  const cliScope = normalizeScopeList(parseScopeFlag(args), matrix);
+  const classifiedScope = paths.length ? classifyScopeByPaths(paths, matrix) : [];
+  const taskScope = expandScopeDependencies([...new Set([...cliScope, ...classifiedScope])], matrix);
+  if (!taskScope.length) {
+    fail("Task classification required. Use '--paths <...>' or '--task-scope <...>'.");
+  }
+  return {
+    taskScope,
+    scopeKey: taskScope.join("+"),
+    paths,
+  };
 }
 
 function validateEntryLock(lock) {
@@ -131,23 +184,51 @@ function validateEntryLock(lock) {
     fail("requiredReadOrderCount missing/invalid in lock.");
   }
   if (actualCount !== expectedCount) {
-    fail(
-      `Read-order drift: lock=${expectedCount} current=${actualCount}. Update lock after intentional edits.`,
-    );
+    fail(`Read-order drift: lock=${expectedCount} current=${actualCount}. Update lock after intentional edits.`);
   }
   return { entryPath: lock.entryPath, sha256: currentHash };
 }
 
-function ensureTaskEntry(matrix, task) {
-  const requiredEntry = String(matrix[task]?.requiredEntry || "");
-  const abs = path.join(root, requiredEntry);
-  if (!requiredEntry || !fs.existsSync(abs)) {
-    fail(`Task entry missing for '${task}': ${requiredEntry || "<empty>"}`);
+function validateEntryLockAudit(lock) {
+  const warnings = [];
+  try {
+    const entryPath = path.join(root, lock.entryPath || "");
+    if (!lock?.entryPath || !fs.existsSync(entryPath)) {
+      warnings.push("Entry lock references a missing entry document.");
+      return { warnings, entryRef: null };
+    }
+    const currentHash = sha256File(entryPath);
+    if (String(lock.sha256 || "") !== currentHash) {
+      warnings.push("Entry hash drift.");
+    }
+    const expectedCount = Number(lock.requiredReadOrderCount || 0);
+    const actualCount = readOrderCount(entryPath);
+    if (!Number.isFinite(expectedCount) || expectedCount <= 0) {
+      warnings.push("requiredReadOrderCount missing/invalid.");
+    } else if (actualCount !== expectedCount) {
+      warnings.push(`Read-order drift lock=${expectedCount} current=${actualCount}.`);
+    }
+    return { warnings, entryRef: { entryPath: lock.entryPath, sha256: currentHash } };
+  } catch (err) {
+    warnings.push(`Entry lock audit failed: ${err.message}`);
+    return { warnings, entryRef: null };
   }
-  return {
-    requiredEntry,
-    requiredEntrySha256: sha256File(abs),
-  };
+}
+
+function ensureTaskEntries(matrix, taskScope) {
+  const requiredEntries = {};
+  for (const scope of taskScope) {
+    const requiredEntry = String(matrix[scope]?.requiredEntry || "");
+    const abs = path.join(root, requiredEntry);
+    if (!requiredEntry || !fs.existsSync(abs)) {
+      fail(`Task entry missing for '${scope}': ${requiredEntry || "<empty>"}`);
+    }
+    requiredEntries[scope] = {
+      requiredEntry,
+      requiredEntrySha256: sha256File(abs),
+    };
+  }
+  return requiredEntries;
 }
 
 function ensureProofDir() {
@@ -158,24 +239,34 @@ function relativize(absPath) {
   return path.relative(root, absPath).split(path.sep).join("/");
 }
 
-function buildProofMaterial(entryRef, taskCtx, taskEntryRef, mode, nonce) {
-  const entryText = fs.readFileSync(path.join(root, entryRef.entryPath), "utf8");
-  const taskEntryText = fs.readFileSync(path.join(root, taskEntryRef.requiredEntry), "utf8");
-  return [
-    `entryPath=${entryRef.entryPath}`,
-    `entrySha256=${entryRef.sha256}`,
-    `task=${taskCtx.task}`,
-    `mode=${mode}`,
-    `requiredEntry=${taskEntryRef.requiredEntry}`,
-    `requiredEntrySha256=${taskEntryRef.requiredEntrySha256}`,
-    `classifiedPaths=${taskCtx.paths.slice().sort().join("|")}`,
-    `nonce=${nonce}`,
-    entryText,
-    taskEntryText,
-  ].join("\n---\n");
+function taskEntryHashes(requiredEntries) {
+  return Object.fromEntries(
+    Object.entries(requiredEntries).map(([scope, ref]) => [scope, ref.requiredEntrySha256]),
+  );
 }
 
-function writeProofChallenge(entryRef, taskCtx, taskEntryRef, mode, previousFile = "") {
+function buildProofMaterial(entryRef, taskCtx, requiredEntries, mode, nonce) {
+  const entryText = fs.readFileSync(path.join(root, entryRef.entryPath), "utf8");
+  const chunks = [
+    `entryPath=${entryRef.entryPath}`,
+    `entrySha256=${entryRef.sha256}`,
+    `taskScope=${taskCtx.taskScope.join("|")}`,
+    `mode=${mode}`,
+    `classifiedPaths=${taskCtx.paths.slice().sort().join("|")}`,
+    `requiredEntryHashes=${JSON.stringify(taskEntryHashes(requiredEntries))}`,
+    `nonce=${nonce}`,
+    entryText,
+  ];
+  for (const scope of taskCtx.taskScope) {
+    const ref = requiredEntries[scope];
+    const text = fs.readFileSync(path.join(root, ref.requiredEntry), "utf8");
+    chunks.push(`${scope}:${ref.requiredEntry}:${ref.requiredEntrySha256}`);
+    chunks.push(text);
+  }
+  return chunks.join("\n---\n");
+}
+
+function writeProofChallenge(entryRef, taskCtx, requiredEntries, mode, previousFile = "") {
   ensureProofDir();
   const nonce = crypto.randomBytes(32).toString("hex");
   const challengeId = crypto.randomBytes(12).toString("hex");
@@ -184,12 +275,12 @@ function writeProofChallenge(entryRef, taskCtx, taskEntryRef, mode, previousFile
   const payload = {
     challengeId,
     nonce,
-    task: taskCtx.task,
+    taskScope: taskCtx.taskScope,
+    scopeKey: taskCtx.scopeKey,
     mode,
     entryPath: entryRef.entryPath,
     entrySha256: entryRef.sha256,
-    requiredEntry: taskEntryRef.requiredEntry,
-    requiredEntrySha256: taskEntryRef.requiredEntrySha256,
+    requiredEntries,
     classifiedPaths: taskCtx.paths,
     previousFile,
     createdAt: new Date().toISOString(),
@@ -198,68 +289,11 @@ function writeProofChallenge(entryRef, taskCtx, taskEntryRef, mode, previousFile
   return {
     challengeId,
     challengeFile: rel,
-    proofHash: sha256Text(buildProofMaterial(entryRef, taskCtx, taskEntryRef, mode, nonce)),
+    proofHash: sha256Text(buildProofMaterial(entryRef, taskCtx, requiredEntries, mode, nonce)),
   };
 }
 
-function readChallengeOrFail(session, entryRef, taskCtx, taskEntryRef) {
-  const rel = String(session.challengeFile || "").trim();
-  if (!rel) fail("Session missing challenge file. Re-run entry.");
-  const abs = path.join(root, rel);
-  if (!fs.existsSync(abs)) fail("Challenge file missing. Re-run entry.");
-  const challenge = readJson(abs);
-  if (challenge.task !== taskCtx.task) fail("Challenge task drift. Re-run entry.");
-  if (challenge.mode !== session.mode) fail("Challenge mode drift. Re-run entry.");
-  if (challenge.entryPath !== entryRef.entryPath || challenge.entrySha256 !== entryRef.sha256) {
-    fail("Challenge entry drift. Re-run entry.");
-  }
-  if (challenge.requiredEntry !== taskEntryRef.requiredEntry || challenge.requiredEntrySha256 !== taskEntryRef.requiredEntrySha256) {
-    fail("Challenge task entry drift. Re-run entry.");
-  }
-  return {
-    rel,
-    abs,
-    payload: challenge,
-    expectedProofHash: sha256Text(buildProofMaterial(entryRef, taskCtx, taskEntryRef, session.mode, challenge.nonce)),
-  };
-}
-
-function resolveTaskContext(args, matrix, options = {}) {
-  const requirePaths = Boolean(options.requirePaths);
-  const paths = parsePaths(args);
-  const cliTask = parseTaskFlag(args);
-
-  if (cliTask && !Object.prototype.hasOwnProperty.call(matrix, cliTask)) {
-    fail(
-      `Unknown task '${cliTask}'. Allowed: ${Object.keys(matrix)
-        .sort()
-        .join(", ")}`,
-    );
-  }
-
-  if (requirePaths && !paths.length) {
-    fail("Task classification requires '--paths <comma-separated-paths>'.");
-  }
-
-  const classifiedTask = paths.length ? classifyTaskByPaths(paths, matrix) : "";
-  const task = cliTask || classifiedTask;
-
-  if (!task) {
-    fail("Task classification required. Use '--paths <...>' or '--task <...>'.");
-  }
-  if (cliTask && classifiedTask && cliTask !== classifiedTask) {
-    fail(
-      `Task mismatch: --task=${cliTask} but matrix classifies paths as '${classifiedTask}'.`,
-    );
-  }
-
-  return {
-    task,
-    paths,
-  };
-}
-
-function samePathSet(left, right) {
+function sameSet(left, right) {
   const a = Array.isArray(left) ? [...left].sort() : [];
   const b = Array.isArray(right) ? [...right].sort() : [];
   if (a.length !== b.length) return false;
@@ -269,152 +303,26 @@ function samePathSet(left, right) {
   return true;
 }
 
-function doAck(taskCtx, entryRef, taskEntryRef) {
-  const session = readSessionOrFail(entryRef, taskCtx, taskEntryRef);
-  const challenge = readChallengeOrFail(session, entryRef, taskCtx, taskEntryRef);
-  const dir = path.dirname(ackPath);
-  fs.mkdirSync(dir, { recursive: true });
-
-  let ack = {};
-  if (fs.existsSync(ackPath)) {
-    ack = readJson(ackPath);
+function sameEntryHashes(left, right) {
+  const a = left && typeof left === "object" ? Object.keys(left).sort() : [];
+  const b = right && typeof right === "object" ? Object.keys(right).sort() : [];
+  if (!sameSet(a, b)) return false;
+  for (const key of a) {
+    const leftHash = String(left[key]?.requiredEntrySha256 || "");
+    const rightHash = String(right[key]?.requiredEntrySha256 || "");
+    if (leftHash !== rightHash) return false;
   }
-
-  const now = new Date().toISOString();
-  const tasks = ack.tasks && typeof ack.tasks === "object" ? ack.tasks : {};
-  tasks[taskCtx.task] = {
-    requiredEntry: taskEntryRef.requiredEntry,
-    requiredEntrySha256: taskEntryRef.requiredEntrySha256,
-    proofHash: challenge.expectedProofHash,
-    challengeId: challenge.payload.challengeId,
-    challengeFile: challenge.rel,
-    ackedAt: now,
-    mode: session.mode,
-    classifiedPaths: taskCtx.paths,
-  };
-
-  const next = {
-    entryPath: entryRef.entryPath,
-    sha256: entryRef.sha256,
-    ackedAt: now,
-    tasks,
-  };
-
-  fs.writeFileSync(ackPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
-  console.log(
-    `[llm-preflight] ACK_OK task=${taskCtx.task} entry=${entryRef.entryPath} taskEntry=${taskEntryRef.requiredEntry} proof=${challenge.payload.challengeId}`,
-  );
+  return true;
 }
 
-function doCheck(taskCtx, entryRef, taskEntryRef) {
-  const session = readSessionOrFail(entryRef, taskCtx, taskEntryRef);
-  const challenge = readChallengeOrFail(session, entryRef, taskCtx, taskEntryRef);
-  if (!fs.existsSync(ackPath)) {
-    fail(`Missing ack file. Run: node tools/llm-preflight.mjs ack --paths ${taskCtx.paths.join(",")}`);
-  }
-  const ack = readJson(ackPath);
-  if (ack.entryPath !== entryRef.entryPath || ack.sha256 !== entryRef.sha256) {
-    fail("Ack invalid due to entry hash/path mismatch. Re-run ack.");
-  }
-
-  const taskAck = ack.tasks?.[taskCtx.task];
-  if (!taskAck) {
-    fail(`Missing task ack '${taskCtx.task}'. Run: node tools/llm-preflight.mjs ack --paths ${taskCtx.paths.join(",")}`);
-  }
-  if (taskAck.requiredEntry !== taskEntryRef.requiredEntry) {
-    fail(`Task entry drift for '${taskCtx.task}'. Re-run ack.`);
-  }
-  if (taskAck.requiredEntrySha256 !== taskEntryRef.requiredEntrySha256) {
-    fail(`Task entry hash drift for '${taskCtx.task}'. Re-run ack.`);
-  }
-  if (String(taskAck.mode || "") !== String(session.mode || "")) {
-    fail(`Ack/session mode mismatch for '${taskCtx.task}'. Re-run ack.`);
-  }
-  if (!samePathSet(taskAck.classifiedPaths, taskCtx.paths)) {
-    fail(`Ack classifiedPaths drift for '${taskCtx.task}'. Re-run ack with the exact active path set.`);
-  }
-  if (String(taskAck.challengeId || "") !== String(challenge.payload.challengeId || "")) {
-    fail(`Ack challenge drift for '${taskCtx.task}'. Re-run ack.`);
-  }
-  if (String(taskAck.challengeFile || "") !== String(challenge.rel || "")) {
-    fail(`Ack challenge file drift for '${taskCtx.task}'. Re-run ack.`);
-  }
-  if (String(taskAck.proofHash || "") !== String(challenge.expectedProofHash || "")) {
-    fail(`Entry proof mismatch for '${taskCtx.task}'. Re-run entry+ack.`);
-  }
-
-  const rotated = writeProofChallenge(entryRef, taskCtx, taskEntryRef, session.mode, challenge.rel);
-  if (fs.existsSync(challenge.abs)) {
-    fs.rmSync(challenge.abs, { force: true });
-  }
-
-  const now = new Date().toISOString();
-  session.challengeId = rotated.challengeId;
-  session.challengeFile = rotated.challengeFile;
-  session.lastVerifiedAt = now;
-  fs.writeFileSync(sessionPath, `${JSON.stringify(session, null, 2)}\n`, "utf8");
-
-  ack.tasks[taskCtx.task] = {
-    ...taskAck,
-    proofHash: rotated.proofHash,
-    challengeId: rotated.challengeId,
-    challengeFile: rotated.challengeFile,
-    ackedAt: now,
-    classifiedPaths: taskCtx.paths,
-  };
-  ack.ackedAt = now;
-  fs.writeFileSync(ackPath, `${JSON.stringify(ack, null, 2)}\n`, "utf8");
-
-  console.log(
-    `[llm-preflight] CHECK_OK task=${taskCtx.task} mode=${session.mode} taskEntry=${taskEntryRef.requiredEntry} proof=${rotated.challengeId}`,
-  );
-}
-
-function doEntry(taskCtx, entryRef, taskEntryRef, mode) {
-  const dir = path.dirname(sessionPath);
-  fs.mkdirSync(dir, { recursive: true });
-  const challenge = writeProofChallenge(entryRef, taskCtx, taskEntryRef, mode);
-  const now = new Date().toISOString();
-  const payload = {
-    entryPath: entryRef.entryPath,
-    sha256: entryRef.sha256,
-    task: taskCtx.task,
-    mode,
-    requiredEntry: taskEntryRef.requiredEntry,
-    requiredEntrySha256: taskEntryRef.requiredEntrySha256,
-    classifiedPaths: taskCtx.paths,
-    challengeId: challenge.challengeId,
-    challengeFile: challenge.challengeFile,
-    startedAt: now,
-  };
-  fs.writeFileSync(sessionPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-  console.log(
-    `[llm-preflight] ENTRY_OK task=${taskCtx.task} mode=${mode} taskEntry=${taskEntryRef.requiredEntry} proof=${challenge.challengeId}`,
-  );
-}
-
-function readSessionOrFail(entryRef, taskCtx, taskEntryRef) {
+function readSessionOrFail(entryRef, taskCtx, requiredEntries, options = {}) {
+  const autoReclassify = Boolean(options.autoReclassify);
   if (!fs.existsSync(sessionPath)) {
     fail(`Missing session entry. Run: node tools/llm-preflight.mjs entry --paths ${taskCtx.paths.join(",")} --mode work`);
   }
   const session = readJson(sessionPath);
   if (session.entryPath !== entryRef.entryPath || session.sha256 !== entryRef.sha256) {
     fail("Session entry invalid due to entry hash/path mismatch. Re-run entry.");
-  }
-  if (session.task !== taskCtx.task) {
-    fail(`Session task mismatch: active='${session.task}' expected='${taskCtx.task}'. Re-run entry.`);
-  }
-  if (session.requiredEntry !== taskEntryRef.requiredEntry) {
-    fail(`Session requiredEntry drift for '${taskCtx.task}'. Re-run entry.`);
-  }
-  if (session.requiredEntrySha256 !== taskEntryRef.requiredEntrySha256) {
-    fail(`Session requiredEntry hash drift for '${taskCtx.task}'. Re-run entry.`);
-  }
-  if (!samePathSet(session.classifiedPaths, taskCtx.paths)) {
-    fail(`Session classifiedPaths drift for '${taskCtx.task}'. Re-run entry with the exact active path set.`);
-  }
-  if (!session.challengeId || !session.challengeFile) {
-    fail("Session proof challenge missing. Re-run entry.");
   }
   const startedAtMs = Date.parse(String(session.startedAt || ""));
   if (!Number.isFinite(startedAtMs)) {
@@ -423,7 +331,270 @@ function readSessionOrFail(entryRef, taskCtx, taskEntryRef) {
   if (Date.now() - startedAtMs > SESSION_MAX_AGE_MS) {
     fail("Session entry expired (>12h). Re-run entry.");
   }
+
+  const scopeDrift = !sameSet(session.taskScope, taskCtx.taskScope);
+  const pathDrift = !sameSet(session.classifiedPaths, taskCtx.paths);
+  const entryDrift = !sameEntryHashes(session.requiredEntries, requiredEntries);
+
+  if (scopeDrift || pathDrift || entryDrift) {
+    if (!autoReclassify) {
+      fail("Session scope/path drift detected. Re-run entry.");
+    }
+    const mode = String(session.mode || "work");
+    const challenge = writeProofChallenge(entryRef, taskCtx, requiredEntries, mode, String(session.challengeFile || ""));
+    const updated = {
+      entryPath: entryRef.entryPath,
+      sha256: entryRef.sha256,
+      taskScope: taskCtx.taskScope,
+      scopeKey: taskCtx.scopeKey,
+      mode,
+      requiredEntries,
+      classifiedPaths: taskCtx.paths,
+      challengeId: challenge.challengeId,
+      challengeFile: challenge.challengeFile,
+      startedAt: new Date().toISOString(),
+      autoReclassifiedAt: new Date().toISOString(),
+    };
+    fs.writeFileSync(sessionPath, `${JSON.stringify(updated, null, 2)}\n`, "utf8");
+    console.warn(`[llm-preflight] AUTO_RECLASSIFY scope=${taskCtx.scopeKey} paths=${taskCtx.paths.join(",")}`);
+    return updated;
+  }
+
+  if (!session.challengeId || !session.challengeFile) {
+    fail("Session proof challenge missing. Re-run entry.");
+  }
   return session;
+}
+
+function readChallengeOrFail(session, entryRef, taskCtx, requiredEntries) {
+  const rel = String(session.challengeFile || "").trim();
+  if (!rel) fail("Session missing challenge file. Re-run entry.");
+  const abs = path.join(root, rel);
+  if (!fs.existsSync(abs)) fail("Challenge file missing. Re-run entry.");
+  const challenge = readJson(abs);
+  if (!sameSet(challenge.taskScope, taskCtx.taskScope)) fail("Challenge scope drift. Re-run entry.");
+  if (challenge.mode !== session.mode) fail("Challenge mode drift. Re-run entry.");
+  if (challenge.entryPath !== entryRef.entryPath || challenge.entrySha256 !== entryRef.sha256) {
+    fail("Challenge entry drift. Re-run entry.");
+  }
+  if (!sameEntryHashes(challenge.requiredEntries, requiredEntries)) {
+    fail("Challenge entry-hash drift. Re-run entry.");
+  }
+  if (!sameSet(challenge.classifiedPaths, taskCtx.paths)) {
+    fail("Challenge path drift. Re-run entry.");
+  }
+  return {
+    rel,
+    abs,
+    payload: challenge,
+    expectedProofHash: sha256Text(buildProofMaterial(entryRef, taskCtx, requiredEntries, session.mode, challenge.nonce)),
+  };
+}
+
+function readAckOrInit(entryRef) {
+  let ack = {
+    entryPath: entryRef.entryPath,
+    sha256: entryRef.sha256,
+    ackedAt: null,
+    scopes: {},
+  };
+  if (fs.existsSync(ackPath)) {
+    const loaded = readJson(ackPath);
+    ack = {
+      ...ack,
+      ...loaded,
+      scopes: loaded.scopes && typeof loaded.scopes === "object" ? loaded.scopes : {},
+    };
+  }
+  if (!ack.tasks || typeof ack.tasks !== "object") ack.tasks = {};
+  return ack;
+}
+
+function upsertAckScope(ack, taskCtx, requiredEntries, session, challenge, nowIsoText) {
+  const payload = {
+    taskScope: taskCtx.taskScope,
+    scopeKey: taskCtx.scopeKey,
+    requiredEntries,
+    proofHash: challenge.expectedProofHash,
+    challengeId: challenge.payload.challengeId,
+    challengeFile: challenge.rel,
+    ackedAt: nowIsoText,
+    mode: session.mode,
+    classifiedPaths: taskCtx.paths,
+  };
+  ack.scopes[taskCtx.scopeKey] = payload;
+  ack.tasks[taskCtx.scopeKey] = payload;
+}
+
+function doEntry(taskCtx, entryRef, requiredEntries, mode) {
+  const dir = path.dirname(sessionPath);
+  fs.mkdirSync(dir, { recursive: true });
+  const challenge = writeProofChallenge(entryRef, taskCtx, requiredEntries, mode);
+  const now = new Date().toISOString();
+  const payload = {
+    entryPath: entryRef.entryPath,
+    sha256: entryRef.sha256,
+    taskScope: taskCtx.taskScope,
+    scopeKey: taskCtx.scopeKey,
+    mode,
+    requiredEntries,
+    classifiedPaths: taskCtx.paths,
+    challengeId: challenge.challengeId,
+    challengeFile: challenge.challengeFile,
+    startedAt: now,
+  };
+  fs.writeFileSync(sessionPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  console.log(
+    `[llm-preflight] ENTRY_OK scope=${taskCtx.scopeKey} mode=${mode} entries=${taskCtx.taskScope.length} proof=${challenge.challengeId}`,
+  );
+}
+
+function doAck(taskCtx, entryRef, requiredEntries) {
+  const session = readSessionOrFail(entryRef, taskCtx, requiredEntries, { autoReclassify: true });
+  const challenge = readChallengeOrFail(session, entryRef, taskCtx, requiredEntries);
+  const dir = path.dirname(ackPath);
+  fs.mkdirSync(dir, { recursive: true });
+  const now = new Date().toISOString();
+  const ack = readAckOrInit(entryRef);
+  ack.entryPath = entryRef.entryPath;
+  ack.sha256 = entryRef.sha256;
+  ack.ackedAt = now;
+  upsertAckScope(ack, taskCtx, requiredEntries, session, challenge, now);
+  fs.writeFileSync(ackPath, `${JSON.stringify(ack, null, 2)}\n`, "utf8");
+  console.log(
+    `[llm-preflight] ACK_OK scope=${taskCtx.scopeKey} entry=${entryRef.entryPath} proof=${challenge.payload.challengeId}`,
+  );
+}
+
+function doCheck(taskCtx, entryRef, requiredEntries) {
+  const session = readSessionOrFail(entryRef, taskCtx, requiredEntries, { autoReclassify: true });
+  const challenge = readChallengeOrFail(session, entryRef, taskCtx, requiredEntries);
+  const now = new Date().toISOString();
+  const ack = readAckOrInit(entryRef);
+
+  let scopeAck = ack.scopes?.[taskCtx.scopeKey];
+  const ackInvalid =
+    !scopeAck ||
+    !sameSet(scopeAck.taskScope, taskCtx.taskScope) ||
+    !sameSet(scopeAck.classifiedPaths, taskCtx.paths) ||
+    !sameEntryHashes(scopeAck.requiredEntries, requiredEntries) ||
+    String(scopeAck.mode || "") !== String(session.mode || "") ||
+    String(scopeAck.proofHash || "") !== String(challenge.expectedProofHash || "");
+
+  if (ackInvalid) {
+    console.warn(`[llm-preflight] AUTO_ACK_REFRESH scope=${taskCtx.scopeKey}`);
+    upsertAckScope(ack, taskCtx, requiredEntries, session, challenge, now);
+    scopeAck = ack.scopes[taskCtx.scopeKey];
+  }
+
+  const rotated = writeProofChallenge(entryRef, taskCtx, requiredEntries, session.mode, challenge.rel);
+  if (fs.existsSync(challenge.abs)) {
+    fs.rmSync(challenge.abs, { force: true });
+  }
+
+  const nextSession = {
+    ...session,
+    taskScope: taskCtx.taskScope,
+    scopeKey: taskCtx.scopeKey,
+    requiredEntries,
+    classifiedPaths: taskCtx.paths,
+    challengeId: rotated.challengeId,
+    challengeFile: rotated.challengeFile,
+    lastVerifiedAt: now,
+  };
+  fs.writeFileSync(sessionPath, `${JSON.stringify(nextSession, null, 2)}\n`, "utf8");
+
+  ack.entryPath = entryRef.entryPath;
+  ack.sha256 = entryRef.sha256;
+  ack.ackedAt = now;
+  ack.scopes[taskCtx.scopeKey] = {
+    ...scopeAck,
+    taskScope: taskCtx.taskScope,
+    scopeKey: taskCtx.scopeKey,
+    requiredEntries,
+    proofHash: rotated.proofHash,
+    challengeId: rotated.challengeId,
+    challengeFile: rotated.challengeFile,
+    ackedAt: now,
+    mode: session.mode,
+    classifiedPaths: taskCtx.paths,
+  };
+  ack.tasks[taskCtx.scopeKey] = ack.scopes[taskCtx.scopeKey];
+  fs.writeFileSync(ackPath, `${JSON.stringify(ack, null, 2)}\n`, "utf8");
+
+  console.log(
+    `[llm-preflight] CHECK_OK scope=${taskCtx.scopeKey} mode=${session.mode} proof=${rotated.challengeId}`,
+  );
+}
+
+function doAudit(args, matrix, lock) {
+  const warnings = [];
+  const lockAudit = validateEntryLockAudit(lock);
+  warnings.push(...lockAudit.warnings);
+
+  const ix = args.indexOf("--paths");
+  let paths = [];
+  if (ix < 0) {
+    warnings.push("Missing --paths for audit.");
+  } else {
+    const raw = String(args[ix + 1] || "").trim();
+    if (!raw) {
+      warnings.push("Empty --paths for audit.");
+    } else {
+      for (const candidate of raw.split(",")) {
+        const v = String(candidate || "").trim();
+        if (!v) continue;
+        const abs = path.isAbsolute(v) ? v : path.join(root, v);
+        const rel = path.relative(root, abs);
+        if (!rel || rel.startsWith("..")) {
+          warnings.push(`Path outside repository ignored: ${v}`);
+          continue;
+        }
+        paths.push(rel.split(path.sep).join("/"));
+      }
+    }
+  }
+
+  let taskScope = [];
+  if (paths.length) {
+    const direct = new Set();
+    for (const relPath of paths) {
+      for (const [scope, cfg] of Object.entries(matrix)) {
+        const prefixes = Array.isArray(cfg?.triggerPrefixes) ? cfg.triggerPrefixes : [];
+        if (prefixes.some((prefix) => matchesPrefix(relPath, prefix))) {
+          direct.add(scope);
+        }
+      }
+    }
+    if (!direct.size) {
+      warnings.push(`No task classification match for paths: ${paths.join(", ")}`);
+    } else {
+      taskScope = expandScopeDependencies([...direct], matrix);
+    }
+  }
+
+  const requiredEntries = {};
+  for (const scope of taskScope) {
+    const requiredEntry = String(matrix[scope]?.requiredEntry || "");
+    const abs = path.join(root, requiredEntry);
+    if (!requiredEntry || !fs.existsSync(abs)) {
+      warnings.push(`Task entry missing for '${scope}': ${requiredEntry || "<empty>"}`);
+      continue;
+    }
+    requiredEntries[scope] = {
+      requiredEntry,
+      requiredEntrySha256: sha256File(abs),
+    };
+  }
+
+  const scope = taskScope.length ? taskScope.join("+") : "unknown";
+  const pathCount = paths.length;
+  const entryCount = Object.keys(requiredEntries).length;
+  console.log(`[llm-preflight] AUDIT_OK scope=${scope} paths=${pathCount} entries=${entryCount} warnings=${warnings.length}`);
+  for (const warning of warnings) {
+    console.warn(`[llm-preflight] AUDIT_WARN ${warning}`);
+  }
+  process.exit(0);
 }
 
 const command = String(process.argv[2] || "check").toLowerCase();
@@ -431,34 +602,38 @@ const args = process.argv.slice(3);
 const lock = readJson(lockPath);
 const matrix = readJson(matrixPath);
 
+if (command === "audit") {
+  doAudit(args, matrix, lock);
+}
+
 const entryRef = validateEntryLock(lock);
 
 if (command === "classify") {
   const ctx = resolveTaskContext(args, matrix, { requirePaths: true });
-  console.log(`[llm-preflight] CLASSIFY_OK task=${ctx.task} paths=${ctx.paths.join(",")}`);
-  process.exit(0);
-}
-
-if (command === "ack") {
-  const ctx = resolveTaskContext(args, matrix, { requirePaths: true });
-  const taskEntryRef = ensureTaskEntry(matrix, ctx.task);
-  doAck(ctx, entryRef, taskEntryRef);
+  console.log(`[llm-preflight] CLASSIFY_OK scope=${ctx.scopeKey} taskScope=${ctx.taskScope.join("|")} paths=${ctx.paths.join(",")}`);
   process.exit(0);
 }
 
 if (command === "entry") {
   const ctx = resolveTaskContext(args, matrix, { requirePaths: true });
-  const taskEntryRef = ensureTaskEntry(matrix, ctx.task);
+  const requiredEntries = ensureTaskEntries(matrix, ctx.taskScope);
   const mode = parseModeFlag(args);
-  doEntry(ctx, entryRef, taskEntryRef, mode);
+  doEntry(ctx, entryRef, requiredEntries, mode);
+  process.exit(0);
+}
+
+if (command === "ack") {
+  const ctx = resolveTaskContext(args, matrix, { requirePaths: true });
+  const requiredEntries = ensureTaskEntries(matrix, ctx.taskScope);
+  doAck(ctx, entryRef, requiredEntries);
   process.exit(0);
 }
 
 if (command === "check") {
   const ctx = resolveTaskContext(args, matrix, { requirePaths: true });
-  const taskEntryRef = ensureTaskEntry(matrix, ctx.task);
-  doCheck(ctx, entryRef, taskEntryRef);
+  const requiredEntries = ensureTaskEntries(matrix, ctx.taskScope);
+  doCheck(ctx, entryRef, requiredEntries);
   process.exit(0);
 }
 
-fail(`Unknown command '${command}'. Use: classify | entry | ack | check`);
+fail(`Unknown command '${command}'. Use: classify | entry | ack | check | audit`);

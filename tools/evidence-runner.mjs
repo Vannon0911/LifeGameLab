@@ -18,14 +18,13 @@ import {
   REGRESSION_REGISTRY,
   TEST_BUDGETS_MS,
   TRACKED_REGRESSION_REPO_TESTS,
-  TESTING_PREFLIGHT_PATHS_ARG,
   isKnownSuite,
   resolveSuiteName,
 } from "./test-suites.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const preflightScript = path.join(root, "tools", "llm-preflight.mjs");
+const currentTruthPath = path.join(root, "output", "current-truth.json");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -136,24 +135,28 @@ function assertScenarioRegistry() {
   }
 }
 
-function runPreflight() {
-  const steps = [
-    ["entry", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"],
-    ["ack", "--paths", TESTING_PREFLIGHT_PATHS_ARG],
-    ["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG],
-  ];
-  for (const args of steps) {
-    const res = spawnSync(process.execPath, [preflightScript, ...args], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 30_000,
-    });
-    if (res.stdout) process.stdout.write(res.stdout);
-    if (res.stderr) process.stderr.write(res.stderr);
-    if (res.error) throw res.error;
-    if (res.status !== 0) process.exit(res.status ?? 1);
-  }
+function resolveHeadSha() {
+  const res = spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 20_000,
+  });
+  if (res.error || res.status !== 0) return "unknown";
+  return String(res.stdout || "").trim() || "unknown";
+}
+
+function writeCurrentTruth({ manifestPath, runId, suite, finishedAt }) {
+  ensureDir(path.dirname(currentTruthPath));
+  const payload = {
+    updatedAt: finishedAt,
+    source: "tools/evidence-runner.mjs",
+    commitSha: resolveHeadSha(),
+    runId,
+    suite,
+    manifestPath: path.relative(root, manifestPath).split(path.sep).join("/"),
+  };
+  fs.writeFileSync(currentTruthPath, `${stableStringify(payload)}\n`, "utf8");
 }
 
 class EvidenceJournal {
@@ -639,7 +642,6 @@ function collectCounterexamplesBlocked(results) {
 async function main() {
   const args = parseArgs(process.argv);
   const runCtx = createRunContext(args);
-  if (String(process.env.LLM_PREFLIGHT_ALREADY_VERIFIED || "") !== "1") runPreflight();
   assertScenarioRegistry();
   assertLegacyInventory();
 
@@ -716,6 +718,14 @@ async function main() {
   };
   const manifestPath = path.join(runCtx.runDir, "manifest.json");
   fs.writeFileSync(manifestPath, `${stableStringify(toSerializable(manifestPayload))}\n`, "utf8");
+  if (overallOutcome === "evidence_match") {
+    writeCurrentTruth({
+      manifestPath,
+      runId: runCtx.runId,
+      suite,
+      finishedAt,
+    });
+  }
 
   runCtx.journal.append({
     scenarioId: "_run",

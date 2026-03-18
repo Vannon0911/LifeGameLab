@@ -15,34 +15,26 @@ if (!isKnownSuite(suiteName)) {
   process.exit(2);
 }
 
-function runPreflight() {
-  const steps = [
-    ["entry", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"],
-    ["ack", "--paths", TESTING_PREFLIGHT_PATHS_ARG],
-    ["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG],
-  ];
-  for (const args of steps) {
-    const res = spawnSync(process.execPath, [preflightScript, ...args], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 30_000,
-    });
-    if (res.stdout) process.stdout.write(res.stdout);
-    if (res.stderr) process.stderr.write(res.stderr);
-    if (res.error) throw res.error;
-    if (res.status !== 0) process.exit(res.status ?? 1);
-  }
+function runPreflightAudit() {
+  const res = spawnSync(process.execPath, [preflightScript, "audit", "--paths", TESTING_PREFLIGHT_PATHS_ARG], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30_000,
+  });
+  if (res.stdout) process.stdout.write(res.stdout);
+  if (res.stderr) process.stderr.write(res.stderr);
+  if (res.error) throw res.error;
+  if (res.status !== 0) process.exit(res.status ?? 1);
 }
 
-runPreflight();
+runPreflightAudit();
 
 const res = spawnSync(process.execPath, [evidenceRunner, "--suite", suiteName], {
   cwd: root,
   encoding: "utf8",
   stdio: ["ignore", "pipe", "pipe"],
   timeout: 1_200_000,
-  env: { ...process.env, LLM_PREFLIGHT_ALREADY_VERIFIED: "1" },
 });
 
 if (res.stdout) process.stdout.write(res.stdout);

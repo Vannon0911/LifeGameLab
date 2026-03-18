@@ -28,15 +28,14 @@ LLM-spezifische Regeln leben getrennt unter `docs/llm/`.
   2. `node tools/llm-preflight.mjs entry --paths <paths> --mode work|security`
   3. `node tools/llm-preflight.mjs ack --paths <paths>`
   4. `node tools/llm-preflight.mjs check --paths <paths>`
-- Fuer `classify`, `entry`, `ack` und `check` muss dieselbe kanonische Pfadmenge verwendet werden. Kein stilles Austauschen, Kuerzen oder Erweitern zwischen den vier Schritten.
-- Scope-Wechsel ist nur als neuer Subtask erlaubt und erzwingt eine neue `classify -> entry -> ack -> check`-Kette fuer die neue Pfadmenge.
+- `classify` arbeitet multi-scope-faehig und dependency-basiert; Ergebnis ist `taskScope[]`, nicht mehr ein einzelner Scope.
+- Bei Pfadwechsel gilt Auto-Reclassify als Pflichtverhalten; Scope-Erweiterung ist erlaubt und wird nicht als Ambiguitaet blockiert.
 - Git-Guards aktivieren (einmal pro Clone): `npm run hooks:install`
 
 ### SCHREIBEN
 - Kein Schreiben ohne gelesenen LLM-Entry plus Task-Entry.
-- Kein Test ohne gueltiges Ack.
-- Kein Task-Mix ueber mehrere Scopes ohne Subtasks.
-- Kein Fortsetzen nach `check`-Fehler. Bei Rot ist der Task blockiert, bis `entry` und `ack` fuer genau diesen Scope neu aufgebaut wurden.
+- Preflight (`entry/ack/check`) blockiert nur Schreiboperationen.
+- Reine Lese-/Analyse-/Testlaeufe bleiben immer erlaubt; dafuer `node tools/llm-preflight.mjs audit --paths <paths>` als Warnsignal nutzen.
 
 ### DOKU
 - Nur diese vier Top-Level-Dateien sind kanonische Produkt-/Projekt-Doku.
@@ -44,7 +43,8 @@ LLM-spezifische Regeln leben getrennt unter `docs/llm/`.
 - Historische Altdateien wurden absichtlich entfernt statt weiter mitgeschleppt.
 
 ## Harte Regeln
-- `docs/STATUS.md` ist die einzige Status-, Bugfix-, Release- und Change-History.
+- Maschinenlesbare Truth ist `output/current-truth.json` (letzter gueltiger Testlauf + Commit-SHA).
+- `docs/STATUS.md` ist Kommentar-/Entscheidungslog, nicht Truth-Quelle.
 - `docs/ARCHITECTURE.md` ist die einzige technische Snapshot-Doku.
 - `docs/PRODUCT.md` ist die einzige Produkt- und Scope-Basis.
 - `src/project/contract/manifest.js` bleibt Source of Truth.

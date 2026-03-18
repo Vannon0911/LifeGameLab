@@ -60,10 +60,12 @@ function listPathsForCommit(commit) {
   return raw.split(/\r?\n/g).map((v) => v.trim()).filter(Boolean);
 }
 
-function classifyTaskForPath(relPath) {
+function runCheck(paths) {
+  if (!paths.length) process.exit(0);
+  const csvPaths = toCsv(paths);
   const res = spawnSync(
     process.execPath,
-    [preflightScript, "classify", "--paths", String(relPath || "")],
+    [preflightScript, "check", "--paths", csvPaths],
     {
       cwd: root,
       encoding: "utf8",
@@ -74,61 +76,14 @@ function classifyTaskForPath(relPath) {
   if (res.stdout) process.stdout.write(res.stdout);
   if (res.stderr) process.stderr.write(res.stderr);
   if (res.error) {
-    console.error(`[git-llm-guard] classify failed for '${relPath}': ${res.error.message}`);
+    console.error(`[git-llm-guard] preflight execution failed: ${res.error.message}`);
     process.exit(1);
   }
   if (res.status !== 0) {
     console.error(
-      `[git-llm-guard] blocked: path '${relPath}' is not uniquely classifiable. Split scope and rerun entry+ack.`,
+      "[git-llm-guard] blocked: run entry+ack for changed paths before commit/push.",
     );
     process.exit(res.status ?? 1);
-  }
-  const out = String(res.stdout || "");
-  const m = out.match(/CLASSIFY_OK\s+task=([a-z0-9_-]+)/i);
-  if (!m?.[1]) {
-    console.error(`[git-llm-guard] classify output missing task for '${relPath}'.`);
-    process.exit(1);
-  }
-  return m[1];
-}
-
-function groupPathsByTask(paths) {
-  const grouped = new Map();
-  for (const relPath of paths) {
-    const task = classifyTaskForPath(relPath);
-    if (!grouped.has(task)) grouped.set(task, []);
-    grouped.get(task).push(relPath);
-  }
-  return grouped;
-}
-
-function runCheck(paths) {
-  if (!paths.length) process.exit(0);
-  const groups = groupPathsByTask(paths);
-  for (const [task, taskPaths] of groups.entries()) {
-    const csvPaths = toCsv(taskPaths);
-    const res = spawnSync(
-      process.execPath,
-      [preflightScript, "check", "--paths", csvPaths],
-      {
-        cwd: root,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-        timeout: 30_000,
-      },
-    );
-    if (res.stdout) process.stdout.write(res.stdout);
-    if (res.stderr) process.stderr.write(res.stderr);
-    if (res.error) {
-      console.error(`[git-llm-guard] preflight execution failed for task '${task}': ${res.error.message}`);
-      process.exit(1);
-    }
-    if (res.status !== 0) {
-      console.error(
-        `[git-llm-guard] blocked: run entry+ack for changed paths in task '${task}' before commit/push.`,
-      );
-      process.exit(res.status ?? 1);
-    }
   }
 }
 
