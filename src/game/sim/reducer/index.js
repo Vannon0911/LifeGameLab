@@ -68,6 +68,10 @@ function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
 }
 
+const TICKS_PER_SECOND = 24;
+const HARVEST_SECONDS = 5;
+const HARVEST_TICKS = TICKS_PER_SECOND * HARVEST_SECONDS;
+
 function areFounderTilesConnected8(indices, w, h) {
   if (indices.length === 0) return false;
   const set = new Set(indices);
@@ -429,7 +433,7 @@ function createEmptyActiveOrder() {
     targetX: -1,
     targetY: -1,
     progress: 0,
-    maxProgress: 10,
+    maxProgress: HARVEST_TICKS,
   };
 }
 
@@ -1284,7 +1288,7 @@ export function reducer(state, action, ctx = {}) {
         targetX,
         targetY,
         progress: 0,
-        maxProgress: 10,
+        maxProgress: HARVEST_TICKS,
       };
       return [
         { op: "set", path: "/sim/selectedUnit", value: fromIdx },
@@ -1428,7 +1432,7 @@ export function simStepPatch(state, action, ctx) {
       simOut.selectedUnit = -1;
       simOut.lastAutoAction = "ORDER_ABORTED";
     } else if (unitIdx === targetIdx) {
-      const maxProgress = Math.max(1, Number(activeOrder.maxProgress || 10) | 0);
+      const maxProgress = Math.max(1, Number(activeOrder.maxProgress || HARVEST_TICKS) | 0);
       const nextProgress = Math.min(maxProgress, (Number(activeOrder.progress || 0) | 0) + 1);
       if (nextProgress < maxProgress) {
         simOut.activeOrder = {
@@ -1446,19 +1450,12 @@ export function simStepPatch(state, action, ctx) {
         simOut.selectedUnit = unitIdx;
         simOut.lastAutoAction = `HARVEST_PROGRESS:${nextProgress}/${maxProgress}`;
       } else {
-        const rv = Math.max(0, Number(worldMutable.R?.[targetIdx] || 0));
-        const harvested = Math.min(0.16, rv);
-        if (worldMutable.R && ArrayBuffer.isView(worldMutable.R)) {
-          worldMutable.R[targetIdx] = Math.max(0, rv - harvested);
-        }
-        if (harvested > 0) {
-          simOut.playerDNA = Number(simOut.playerDNA || 0) + harvested * 3.5;
-          simOut.totalHarvested = Number(simOut.totalHarvested || 0) + harvested;
-        }
+        simOut.playerDNA = Number(simOut.playerDNA || 0) + 1;
+        simOut.totalHarvested = Number(simOut.totalHarvested || 0) + 1;
         simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
         simOut.activeOrder = createEmptyActiveOrder();
         simOut.selectedUnit = unitIdx;
-        simOut.lastAutoAction = harvested > 0 ? `HARVEST_AUTO:${targetX},${targetY}` : "ARRIVE_NO_RESOURCE";
+        simOut.lastAutoAction = `HARVEST_AUTO:${targetX},${targetY}`;
       }
     } else {
       const nextIdx = findNextStepBfs4(worldMutable, unitIdx, targetIdx, w, h);
@@ -1488,7 +1485,7 @@ export function simStepPatch(state, action, ctx) {
           targetX,
           targetY,
           progress: Number(activeOrder.progress || 0) | 0,
-          maxProgress: Math.max(1, Number(activeOrder.maxProgress || 10) | 0),
+          maxProgress: Math.max(1, Number(activeOrder.maxProgress || HARVEST_TICKS) | 0),
         };
         simOut.lastAutoAction = `MOVE_STEP:${nx},${ny}`;
       }

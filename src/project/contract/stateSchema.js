@@ -97,7 +97,7 @@ export const stateSchema = {
             targetX: -1,
             targetY: -1,
             progress: 0,
-            maxProgress: 10,
+            maxProgress: 120,
           },
           shape: {
             active: { type: "boolean", default: false },
@@ -107,7 +107,7 @@ export const stateSchema = {
             targetX: { type: "number", default: -1 },
             targetY: { type: "number", default: -1 },
             progress: { type: "number", default: 0 },
-            maxProgress: { type: "number", default: 10 },
+            maxProgress: { type: "number", default: 120 },
           },
         },
         lastCommand: { type: "string", default: "" },
