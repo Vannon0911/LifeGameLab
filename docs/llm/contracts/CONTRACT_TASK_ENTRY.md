@@ -19,9 +19,9 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Danach nur CONTRACTS-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
-- `node tools/llm-preflight.mjs entry --paths src/project/contract/,src/core/kernel/ --mode work`
-- `node tools/llm-preflight.mjs ack --paths src/project/contract/,src/core/kernel/`
-- `node tools/llm-preflight.mjs check --paths src/project/contract/,src/core/kernel/`
+- `node tools/llm-preflight.mjs entry --paths src/project/contract/,src/kernel/,src/project/project.manifest.js --mode work`
+- `node tools/llm-preflight.mjs ack --paths src/project/contract/,src/kernel/,src/project/project.manifest.js`
+- `node tools/llm-preflight.mjs check --paths src/project/contract/,src/kernel/,src/project/project.manifest.js`
 
 ## SCHREIBEN (pflicht)
 - Kein Schreiben ohne `docs/llm/ENTRY.md` + passenden Task-Entry.
@@ -38,5 +38,5 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 Keine neue Action/Feldlogik vor vollstaendigem Contract.
 
 ## Klassifizierungs-Hinweis
-- `src/project/contract/*`, `src/core/kernel/*` und `src/game/contracts/*` gehoeren zum Contract-Task.
+- `src/project/contract/*`, `src/kernel/*`, `src/project/project.manifest.js` und `src/game/contracts/*` gehoeren zum Contract-Task.
 - Insbesondere `src/game/contracts/ids.js` ist Contract-Core und darf nicht aus der Matrix fallen.
