@@ -1,6 +1,6 @@
 # SoT Index
 
-Head: `4921773`
+Head: `691817e`
 
 ## Module
 - [01 Kernel & Gates](./01_KERNEL_GATES.md)
@@ -17,8 +17,7 @@ Head: `4921773`
 - Kritische SoT-Gates bleiben: validateAction -> determinism guard -> mutation matrix -> domain gate -> safe patch -> sanitize.
 
 ## Validierung
-- Datum: 2026-03-18
-- `npm run test:quick`: PASS
-- `npm run test:truth`: PASS
-- `npm run test:full`: PASS
-- Evidence Manifest (full): `output/evidence/2026-03-18T22-44-35-093Z-full-5abce712/manifest.json`
+- Datum: 2026-03-19
+- `npm run test:session`: PASS
+- Session-Sequenz: `test:quick` -> `test:truth` -> `test:full` -> full-manifest-check
+- Evidence Manifest (full): `output/evidence/2026-03-18T23-06-40-278Z-full-68d4e1e1/manifest.json`

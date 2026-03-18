@@ -1,10 +1,30 @@
 # 06 Tests Evidence Governance
 
+## Verification Policy
+- Nur `verified`-Tests sind gueltig.
+- Jeder `unverified`-Eintrag blockiert den Evidence-Run hart (quick, truth, regression, full).
+- Status-SoT liegt ausschliesslich in `tests/evidence/spec-map.mjs`.
+- Keine Umbenennung von Testdateien; Labeling erfolgt textuell ueber Status-Ausgabe im Runner.
+- `verified` ohne `counterProbe`-Metadaten wird als Konfigurationsfehler blockiert.
+
+## Verifikationsprotokoll (Gegenprobe-Pflicht)
+- Jeder Test/Claim braucht eine Gegenprobe (negative oder perturbation probe).
+- Gegenprobe muss mindestens eines zeigen:
+  - Stabilitaet bei identischem Input/Replay
+  - Divergenz bei kontrollierter Aenderung (Seed/Action-Variante)
+  - explizite Blockade verbotener Bypass/Injection/Force-Pfade
+- Erst danach darf `unverified -> verified` in `spec-map` gesetzt werden.
+
+## Aktueller Verifikationsstand
+- Claims: `claim.w1.no_bypass_surface`, `claim.w1.genesis_mainline_deterministic` -> `verified`
+- Regression: alle Eintraege in `REGRESSION_TEST_STATUS` -> `verified`
+
 ## Test/Guard SoT
 - tests/* determinism + replay + contract checks
 - tools/evidence-runner.mjs
 - tools/llm-preflight.mjs
 - tools/git-llm-guard.mjs
+- tools/run-verification-session.mjs (`npm run test:session` = quick -> truth -> full + full-manifest-check)
 
 ## Funktionale Matrix
 | File | Line | Symbol | Kind |
