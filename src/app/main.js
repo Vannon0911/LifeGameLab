@@ -15,6 +15,7 @@ import { bindBootStatusErrorHooks, setBootStatus } from "./runtime/bootStatus.js
 
 bindBootStatusErrorHooks();
 const WorldStateLog = createWorldStateLog(hashString);
+const SIM_RUNTIME_DISABLED = false;
 
 // ── Store ─────────────────────────────────────────────────
 assertLlmGateSync(manifest);
@@ -31,7 +32,11 @@ const RuntimeHooks = { onStructuralChange: null };
 const _dispatchRaw = store.dispatch.bind(store);
 store.dispatch = (action) => {
   const t = action && typeof action === "object" ? action.type : "";
-  const result = _dispatchRaw(action);
+  if (SIM_RUNTIME_DISABLED && t === "SIM_STEP") return store.getState();
+  const nextAction = (SIM_RUNTIME_DISABLED && t === "TOGGLE_RUNNING")
+    ? { ...action, payload: { ...(action?.payload || {}), running: false } }
+    : action;
+  const result = _dispatchRaw(nextAction);
   if (t && t !== "SIM_STEP") RuntimeHooks.onStructuralChange?.(t, action);
   return result;
 };
@@ -39,6 +44,8 @@ store.dispatch = (action) => {
 
 // ── Bootstrap: generate and start world ──────────────────
 store.dispatch({ type: "GEN_WORLD" });
+store.dispatch({ type: "SET_RENDER_MODE", payload: "cells" });
+store.dispatch({ type: "SET_SPEED", payload: 24 });
 
 function hasRunnableWorld(state) {
   const world = state?.world;
@@ -60,7 +67,7 @@ function recoverWorld(reason) {
 if (!hasRunnableWorld(store.getState())) {
   recoverWorld("bootstrap_invalid_world");
 }
-setBootStatus(`v${APP_VERSION} · Boot OK`);
+setBootStatus("");
 
 // ── UI ───────────────────────────────────────────────────
 let canvas = document.getElementById("cv");
@@ -443,7 +450,7 @@ function tunePerformance(state) {
 }
 
 function loop(ts) {
-  const dt = Math.max(0, Math.min(100, ts - lastTs));
+  const dt = Math.max(0, ts - lastTs);
   lastTs = ts;
   frameId++;
   PerfBudget.frameMsEma += (dt - PerfBudget.frameMsEma) * 0.08;
@@ -452,20 +459,13 @@ function loop(ts) {
   const state   = store.getState();
   const stepMs  = 1000 / Math.max(1, state.meta.speed);
 
-  if (shouldAdvanceSimulation(state)) {
+  if (!SIM_RUNTIME_DISABLED && shouldAdvanceSimulation(state)) {
     acc += dt;
-    const catchupCap = Math.max(PerfBudget.maxCatchupMs, stepMs);
-    if (acc > catchupCap) acc = catchupCap;
-    const simStart = globalThis.performance ? globalThis.performance.now() : 0;
-    let stepsDone = 0;
-    while (acc >= stepMs && stepsDone < PerfBudget.maxSimStepsPerFrame) {
+    while (acc >= stepMs) {
       runOneSimStep();
       runDevBalanceChecks();
       WorldStateLog.track(store.getState());
       acc -= stepMs;
-      stepsDone++;
-      const spent = (globalThis.performance ? globalThis.performance.now() : simStart) - simStart;
-      if (spent >= PerfBudget.maxSimFrameBudgetMs) break;
     }
   } else {
     acc = 0;
@@ -487,10 +487,6 @@ function loop(ts) {
   
   if (ts - PerfBudget.lastHudTs > 900) {
     PerfBudget.lastHudTs = ts;
-    setBootStatus(
-      `Perf ${PerfBudget.fpsEma.toFixed(0)} FPS | q${PerfBudget.quality} | r/${PerfBudget.renderEvery} | dpr≤${PerfBudget.dprCap.toFixed(2)}`,
-      PerfBudget.fpsEma < 30 ? "rgba(255,170,150,0.95)" : "rgba(180,220,180,0.95)"
-    );
     publishPerfStats();
   }
 
