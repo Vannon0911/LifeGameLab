@@ -15,7 +15,8 @@ import { bindBootStatusErrorHooks, setBootStatus } from "./runtime/bootStatus.js
 
 bindBootStatusErrorHooks();
 const WorldStateLog = createWorldStateLog(hashString);
-const SIM_RUNTIME_DISABLED = true;
+const SIM_RUNTIME_DISABLED = false;
+const TICK_RATE_MS = 1000 / 24;
 
 // ── Store ─────────────────────────────────────────────────
 assertLlmGateSync(manifest);
@@ -276,7 +277,6 @@ const RenderManager = {
 const ui     = new UI(store, canvas);
 
 // ── Game Loop ────────────────────────────────────────────
-let acc    = 0;
 // Note: performance.now() is allowed in the Loop (outside Reducer) for pacing
 let lastTs = globalThis.performance ? globalThis.performance.now() : 0;
 let renderInfo = null;
@@ -286,6 +286,7 @@ let latestPerfStats = null;
 
 let lastSyncTick = -1;
 let lastSyncTs   = 0;
+let simIntervalId = null;
 
 const PerfBudget = {
   isMobile: !!(globalThis.matchMedia && globalThis.matchMedia("(pointer: coarse)").matches),
@@ -398,6 +399,18 @@ function runUiSync() {
 
 publishPerfStats();
 
+function startSimInterval() {
+  if (simIntervalId !== null) return;
+  simIntervalId = setInterval(() => {
+    const state = store.getState();
+    if (SIM_RUNTIME_DISABLED) return;
+    if (!shouldAdvanceSimulation(state)) return;
+    runOneSimStep();
+    runDevBalanceChecks();
+    WorldStateLog.track(store.getState());
+  }, TICK_RATE_MS);
+}
+
 function tunePerformance(state) {
   const cells = (state?.world?.w || state.meta.gridW || 0) * (state?.world?.h || state.meta.gridH || 0);
   const isHeavyGrid = cells >= 120 * 120;
@@ -456,22 +469,8 @@ function loop(ts) {
   PerfBudget.frameMsEma += (dt - PerfBudget.frameMsEma) * 0.08;
   PerfBudget.fpsEma = 1000 / Math.max(1e-6, PerfBudget.frameMsEma);
 
-  const state   = store.getState();
-  const stepMs  = 1000 / Math.max(1, state.meta.speed);
-
-  if (!SIM_RUNTIME_DISABLED && shouldAdvanceSimulation(state)) {
-    acc += dt;
-    while (acc >= stepMs) {
-      runOneSimStep();
-      runDevBalanceChecks();
-      WorldStateLog.track(store.getState());
-      acc -= stepMs;
-    }
-  } else {
-    acc = 0;
-  }
-
-  const renderAlpha = stepMs > 0 ? Math.max(0, Math.min(1, acc / stepMs)) : 0;
+  const state = store.getState();
+  const renderAlpha = 1;
   tunePerformance(state);
   if ((frameId % PerfBudget.renderEvery) === 0) {
     runRender({
@@ -495,6 +494,7 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 
+startSimInterval();
 requestAnimationFrame(loop);
 
 console.log(`LifeGameLab v${APP_VERSION} gestartet (Schema v${manifest.SCHEMA_VERSION}). store ist verfuegbar.`);
