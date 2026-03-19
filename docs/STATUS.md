@@ -37,3 +37,13 @@ Both files are derived planning evidence only and must not override SoT docs or 
 1. Continue Slice B by wiring MapSpec dispatch sources into the UI and builder tooling.
 2. Keep legacy founder and zone flows alive until their replacements have reducer wiring and passing tests.
 3. Preserve the longrun headroom policy and runner wording when additional regression slots are added.
+
+## Atomare Test-TODO (fix, MVP unveraendert)
+1. `todo.slice_b.dispatch_sources`
+Done wenn `SET_MAPSPEC` aktive Dispatch-Sources in UI/Builder hat, `dataflow` nicht mehr leer ist und ein gezielter UI-/Builder-Test gruen ist.
+2. `todo.slice_b.builder_pipeline`
+Done wenn der interne Builder nur noch `MapSpec -> validate -> compile -> GEN_WORLD` benutzt und keine direkte Weltmutation mehr benoetigt.
+3. `todo.slice_c.phase0_replacement`
+Done wenn `CONFIRM_FOUNDATION`, `CONFIRM_CORE_ZONE`, `PLACE_CELL` und `SET_BRUSH` durch den Phase-0-Ersatz technisch abgeloest sind und ihre Removal-Gates geschlossen werden koennen.
+4. `todo.truth.regression_wrap`
+Done wenn nach jedem Slice der wrapped Regression-Run wieder `evidence_match` liefert und `output/current-truth.json` auf denselben Slice zeigt.
