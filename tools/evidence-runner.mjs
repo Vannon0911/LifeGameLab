@@ -16,6 +16,7 @@ import {
   EVIDENCE_POLICY,
   EVIDENCE_SUITES,
   CLAIM_REGISTRY,
+  QUICK_REGRESSION_REGISTRY,
   REGRESSION_REGISTRY,
   TEST_BUDGETS_MS,
   TRACKED_REGRESSION_REPO_TESTS,
@@ -588,6 +589,12 @@ function runRegressionFile(runCtx, relPath) {
 function selectRunPlan(args) {
   const suite = resolveSuiteName(args.suite);
   if (!args.scenario) {
+    if (suite === "quick") {
+      return Object.freeze([
+        Object.freeze({ kind: "claims", mode: "claims", ids: EVIDENCE_SUITES.claims }),
+        Object.freeze({ kind: "regression", mode: "regression", files: QUICK_REGRESSION_REGISTRY }),
+      ]);
+    }
     if (suite === "full") {
       return Object.freeze([
         Object.freeze({ kind: "claims", mode: "claims", ids: EVIDENCE_SUITES.claims }),

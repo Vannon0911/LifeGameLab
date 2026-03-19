@@ -1,5 +1,6 @@
 import { GOAL_CODE, deriveRiskCode, RISK_CODE } from "../../contracts/ids.js";
 import { BIOME_IDS } from "../worldPresets.js";
+import { defaultLineageMemory } from "../shared.js";
 
 function clamp01(value) {
   return value < 0 ? 0 : value > 1 ? 1 : value;
@@ -7,7 +8,7 @@ function clamp01(value) {
 
 function getPlayerBiomeUsageBucket(world, playerLineageId) {
   if (!world.lineageMemory || typeof world.lineageMemory !== "object") world.lineageMemory = {};
-  const current = { ...(world.lineageMemory[playerLineageId] || {}) };
+  const current = { ...defaultLineageMemory(), ...(world.lineageMemory[playerLineageId] || {}) };
   const next = { ...(current.biomeUsageTicks || {}) };
   current.biomeUsageTicks = next;
   world.lineageMemory[playerLineageId] = current;

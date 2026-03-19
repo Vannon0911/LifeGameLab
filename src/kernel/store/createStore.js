@@ -126,12 +126,56 @@ function assertManifestContracts(manifest) {
 }
 
 function cloneDeep(value) {
+  return cloneValue(value, "value", new WeakMap(), new WeakSet());
+}
+
+function cloneValue(value, path, clones, inProgress) {
+  if (value === null) return null;
+  const t = typeof value;
+  if (t === "string" || t === "boolean") return value;
+  if (t === "number") {
+    if (!Number.isFinite(value)) throw new Error(`non-cloneable value at path: ${path}`);
+    return value;
+  }
+  if (t === "undefined" || t === "function" || t === "symbol" || t === "bigint") {
+    throw new Error(`non-cloneable value at path: ${path}`);
+  }
   if (ArrayBuffer.isView(value)) return new value.constructor(value);
-  if (Array.isArray(value)) return value.map(cloneDeep);
-  if (!value || typeof value !== "object") return value;
+  if (Array.isArray(value)) {
+    if (inProgress.has(value)) throw new Error(`circular reference at path: ${path}`);
+    if (clones.has(value)) return clones.get(value);
+    const out = new Array(value.length);
+    clones.set(value, out);
+    inProgress.add(value);
+    try {
+      for (let i = 0; i < value.length; i += 1) {
+        out[i] = cloneValue(value[i], `${path}[${i}]`, clones, inProgress);
+      }
+      return out;
+    } finally {
+      inProgress.delete(value);
+    }
+  }
+  if (!isPlainObject(value)) throw new Error(`non-cloneable value at path: ${path}`);
+  if (inProgress.has(value)) throw new Error(`circular reference at path: ${path}`);
+  if (clones.has(value)) return clones.get(value);
   const out = {};
-  for (const key of Object.keys(value)) out[key] = cloneDeep(value[key]);
-  return out;
+  clones.set(value, out);
+  inProgress.add(value);
+  try {
+    for (const key of Object.keys(value)) {
+      out[key] = cloneValue(value[key], `${path}.${key}`, clones, inProgress);
+    }
+    return out;
+  } finally {
+    inProgress.delete(value);
+  }
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || ArrayBuffer.isView(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
 }
 
 function clonePatches(patches) {

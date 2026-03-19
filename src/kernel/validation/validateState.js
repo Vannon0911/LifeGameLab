@@ -1,5 +1,5 @@
 export function sanitizeBySchema(value, schema) {
-  return _sanitize(value, schema, null);
+  return _sanitize(value, schema, null, "value");
 }
 
 export function assertValidBySchema(value, schema, path = "value") {
@@ -56,7 +56,7 @@ function coerceTypedArray(v, ctorName, targetLen) {
   return out;
 }
 
-function _sanitize(v, s, ctx) {
+function _sanitize(v, s, ctx, path) {
   if (!s) return v;
   switch (s.type) {
     case "string": {
@@ -84,7 +84,7 @@ function _sanitize(v, s, ctx) {
       if (arr.length > MAX_SAFE_LENGTH) throw new Error(`Array length exceeds safety limit (${MAX_SAFE_LENGTH})`);
       const maxLen = typeof s.maxLen === "number" ? s.maxLen : Infinity;
       const effectiveLen = Math.min(maxLen, MAX_SAFE_LENGTH);
-      return Array.from(arr.slice(0, effectiveLen), (x) => _sanitize(x, s.items, ctx));
+      return Array.from(arr.slice(0, effectiveLen), (x, index) => _sanitize(x, s.items, ctx, `${path}[${index}]`));
     }
     case "ta": {
       const nextCtx = ctx || {};
@@ -94,13 +94,13 @@ function _sanitize(v, s, ctx) {
     case "object": {
       const shape = s.shape;
       const src = (v && typeof v === "object" && !Array.isArray(v)) ? v : (s.default ?? {});
-      if (s.allowUnknown === true) return src;
+      if (s.allowUnknown === true) return cloneUnknownValue(src, path);
       if (!shape) return {};
 
       const nextCtx = { ...(ctx || {}) };
       const out = {};
       for (const key of Object.keys(shape)) {
-        out[key] = _sanitize(src[key], shape[key], nextCtx);
+        out[key] = _sanitize(src[key], shape[key], nextCtx, `${path}.${key}`);
         if (key === "w") nextCtx.W = Number(out[key]) | 0;
         if (key === "h") nextCtx.H = Number(out[key]) | 0;
         if (key === "w" || key === "h") nextCtx.N = Math.max(0, (Number(nextCtx.W) | 0) * (Number(nextCtx.H) | 0));
@@ -110,6 +110,45 @@ function _sanitize(v, s, ctx) {
     default:
       return s.default ?? null;
   }
+}
+
+function cloneUnknownValue(value, path, ancestors = new WeakSet()) {
+  if (value === null) return null;
+  const t = typeof value;
+  if (t === "string" || t === "boolean") return value;
+  if (t === "number") {
+    if (!Number.isFinite(value)) throw new Error(`non-serializable value at path: ${path}`);
+    return value;
+  }
+  if (t === "undefined" || t === "function" || t === "symbol" || t === "bigint") {
+    throw new Error(`non-serializable value at path: ${path}`);
+  }
+  if (ArrayBuffer.isView(value)) return new value.constructor(value);
+  if (Array.isArray(value)) {
+    const out = new Array(value.length);
+    for (let i = 0; i < value.length; i += 1) {
+      out[i] = cloneUnknownValue(value[i], `${path}[${i}]`, ancestors);
+    }
+    return out;
+  }
+  if (!isPlainObject(value)) throw new Error(`non-plain object at path: ${path}`);
+  if (ancestors.has(value)) throw new Error(`circular reference at path: ${path}`);
+  ancestors.add(value);
+  try {
+    const out = {};
+    for (const key of Object.keys(value)) {
+      out[key] = cloneUnknownValue(value[key], `${path}.${key}`, ancestors);
+    }
+    return out;
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || ArrayBuffer.isView(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
 }
 
 function _assertValid(v, s, path) {

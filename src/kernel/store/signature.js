@@ -10,24 +10,43 @@ export function hash32(str) {
 
 export function stableStringify(value) {
   // Deterministic JSON stringify: stable object key order, no whitespace.
-  return _stringify(value);
+  return _stringify(value, "value", new WeakSet());
 }
 
-function _stringify(v) {
+function _stringify(v, path, ancestors) {
   if (v === null) return "null";
   const t = typeof v;
-  if (t === "number") return Number.isFinite(v) ? String(v) : "null";
+  if (t === "number") {
+    if (!Number.isFinite(v)) throw new Error(`non-serializable value at path: ${path}`);
+    return String(v);
+  }
   if (t === "boolean") return v ? "true" : "false";
   if (t === "string") return JSON.stringify(v);
-  if (t === "object") {
-    if (Array.isArray(v)) return "[" + v.map(_stringify).join(",") + "]";
-    const keys = Object.keys(v).sort();
-    const parts = [];
-    for (const k of keys) {
-      parts.push(JSON.stringify(k) + ":" + _stringify(v[k]));
-    }
-    return "{" + parts.join(",") + "}";
+  if (t === "undefined" || t === "function" || t === "symbol" || t === "bigint") {
+    throw new Error(`non-serializable value at path: ${path}`);
   }
-  // undefined / function / symbol
-  return "null";
+  if (t === "object") {
+    if (Array.isArray(v)) return "[" + v.map((entry, index) => _stringify(entry, `${path}[${index}]`, ancestors)).join(",") + "]";
+    if (ArrayBuffer.isView(v)) return "[" + Array.from(v, (entry, index) => _stringify(entry, `${path}[${index}]`, ancestors)).join(",") + "]";
+    if (!isPlainObject(v)) throw new Error(`non-serializable value at path: ${path}`);
+    if (ancestors.has(v)) throw new Error(`circular reference at path: ${path}`);
+    ancestors.add(v);
+    const keys = Object.keys(v).sort();
+    try {
+      const parts = [];
+      for (const k of keys) {
+        parts.push(JSON.stringify(k) + ":" + _stringify(v[k], `${path}.${k}`, ancestors));
+      }
+      return "{" + parts.join(",") + "}";
+    } finally {
+      ancestors.delete(v);
+    }
+  }
+  throw new Error(`non-serializable value at path: ${path}`);
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || ArrayBuffer.isView(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
 }

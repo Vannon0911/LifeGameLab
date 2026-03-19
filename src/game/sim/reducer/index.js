@@ -1183,9 +1183,12 @@ export function reducer(state, action, ctx = {}) {
       return [{ op: "set", path: "/meta/seed", value: action.payload }];
 
     case "SET_SIZE":
+      if (!Number.isFinite(action.payload?.w) || !Number.isFinite(action.payload?.h)) return [];
+      if (action.payload.w < 1 || action.payload.h < 1) return [];
+      if (action.payload.w > 512 || action.payload.h > 512) return [];
       return [
-        { op: "set", path: "/meta/gridW", value: action.payload.w },
-        { op: "set", path: "/meta/gridH", value: action.payload.h }
+        { op: "set", path: "/meta/gridW", value: Math.trunc(action.payload.w) },
+        { op: "set", path: "/meta/gridH", value: Math.trunc(action.payload.h) }
       ];
 
     case "SET_WORLD_PRESET": {

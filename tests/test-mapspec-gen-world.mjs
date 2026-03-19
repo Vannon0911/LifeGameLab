@@ -37,21 +37,19 @@ function runMapSpecScenario(seed, mapSpec) {
 }
 
 const wetMeadowMapSpec = {
-  version: "gdd_v1_1",
-  mode: "manual",
+  name: "wet-meadow-main",
   presetId: "wet_meadow",
   gridW: 32,
   gridH: 32,
-  tilePlan: { source: "slice_b_test" },
+  tileSize: 4,
 };
 
 const dryBasinMapSpec = {
-  version: "gdd_v1_1",
-  mode: "manual",
+  name: "dry-basin-main",
   presetId: "dry_basin",
   gridW: 32,
   gridH: 32,
-  tilePlan: { source: "slice_b_test_alt" },
+  tileSize: 4,
 };
 
 const sameSeedLeft = runMapSpecScenario("mapspec-seed-main", wetMeadowMapSpec);
@@ -69,7 +67,6 @@ invalidStore.dispatch({
   type: "SET_MAPSPEC",
   payload: {
     mapSpec: {
-      version: "legacy",
       presetId: "unknown_biome",
       gridW: -5,
       gridH: 9999,
@@ -82,6 +79,7 @@ assert(invalidSnapshot.state.map.validation.issueCount > 0, "invalid MapSpec inp
 assert.equal(invalidSnapshot.state.map.spec.presetId, "river_delta", "invalid preset ids must normalize to the canonical fallback");
 assert.equal(invalidSnapshot.state.map.spec.gridW, 8, "invalid widths must clamp to the minimum deterministic size");
 assert.equal(invalidSnapshot.state.map.spec.gridH, 256, "oversized heights must clamp to the maximum deterministic size");
+assert.equal(invalidSnapshot.state.map.spec.name, "", "missing names must sanitize to empty string");
 
 const legacyPresetStore = createDeterministicStore({ seed: "mapspec-legacy" });
 legacyPresetStore.dispatch({ type: "SET_WORLD_PRESET", payload: { presetId: "dry_basin" } });

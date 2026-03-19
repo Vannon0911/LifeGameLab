@@ -195,6 +195,36 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     purpose: "prove Slice B MapSpec compilation drives SET_MAPSPEC and GEN_WORLD deterministically while legacy preset sync stays intact",
     counterProbe: "different MapSpec inputs diverge while same-seed same-MapSpec replay stays identical",
   }),
+  "tests/test-mapspec-function-rejection.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 90_000,
+    purpose: "prove SET_MAPSPEC rejects function-valued contract fields without state drift",
+    counterProbe: "function payload perturbation is blocked before it can enter map.spec",
+  }),
+  "tests/test-mapspec-cycle-rejection.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 90_000,
+    purpose: "prove SET_MAPSPEC rejects cyclic payloads without stack overflow or state drift",
+    counterProbe: "cyclic payload perturbation is rejected by strict schema validation",
+  }),
+  "tests/test-signature-nonserializable.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 90_000,
+    purpose: "prove signature material generation fails closed on non-serializable and circular values",
+    counterProbe: "function and cycle perturbations throw instead of collapsing to the same signature",
+  }),
+  "tests/test-setsize-negative.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 90_000,
+    purpose: "prove invalid SET_SIZE inputs are rejected without state mutation",
+    counterProbe: "negative and zero dimension perturbations stay no-op under the wired gate path",
+  }),
+  "tests/test-persistence-cycle-boot.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 90_000,
+    purpose: "prove cyclic persisted payloads fail closed to a safe default state on boot",
+    counterProbe: "poisoned persistence perturbation cannot crash store boot or preserve invalid map state",
+  }),
   "tests/test-longrun-determinism.mjs": Object.freeze({
     status: "verified",
     budgetMs: 300_000,

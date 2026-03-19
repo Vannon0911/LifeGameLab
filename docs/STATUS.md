@@ -2,6 +2,7 @@
 
 ## Snapshot (2026-03-19)
 - Slice B MapSpec wiring is now active.
+- Kernel input hardening now blocks non-serializable `SET_MAPSPEC` payloads, rejects cyclic map inputs fail-closed, and keeps invalid `SET_SIZE` dimensions out of committed state.
 - Product SoT was moved to the v1.1 RTS basis in `docs/PRODUCT.md`.
 - Architecture SoT now states the dual rule: contracts and product docs stay truth, traceability stays derived.
 - Action lifecycle metadata exists for every contract action.
@@ -15,6 +16,9 @@
 
 ## Verified Current Truth
 - `src/project/contract/manifest.js` exports `actionLifecycle` alongside schema, matrix, gate and dataflow.
+- `src/project/contract/actionSchema.js` now hardens `SET_MAPSPEC` to an explicit JSON-safe field set instead of `allowUnknown`.
+- `src/kernel/store/signature.js`, `src/kernel/store/createStore.js`, and `src/kernel/validation/validateState.js` now fail closed on non-serializable or circular values instead of collapsing them to `null`.
+- `src/project/project.manifest.js` now exposes `domainPatchGate` as a named export so module-namespace callers hit the same gate path as the app runtime.
 - `src/project/contract/dataflow.js` exposes lifecycle metadata and planned writes per action.
 - `src/project/contract/actionSchema.js` now contains Slice A RTS scaffold actions.
 - `src/project/contract/mutationMatrix.js` now allows `GEN_WORLD` to synchronize `map` state and grid dimensions.
@@ -37,6 +41,7 @@ Both files are derived planning evidence only and must not override SoT docs or 
 1. Continue Slice B by wiring MapSpec dispatch sources into the UI and builder tooling.
 2. Keep legacy founder and zone flows alive until their replacements have reducer wiring and passing tests.
 3. Preserve the longrun headroom policy and runner wording when additional regression slots are added.
+4. Keep the new hardening quick-suite current when future slices add new contract entry points or persistence surfaces.
 
 ## Atomare Test-TODO (fix, MVP unveraendert)
 1. `todo.slice_b.dispatch_sources`

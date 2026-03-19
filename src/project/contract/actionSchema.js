@@ -14,7 +14,21 @@ export const actionSchema = {
   SET_SEED: { type: "string" },
   SET_SIZE: { type: "object", shape: { w: { type: "number" }, h: { type: "number" } } },
   SET_WORLD_PRESET: { type: "object", shape: { presetId: { type: "string" } } },
-  SET_MAPSPEC: { type: "object", shape: { mapSpec: { type: "object", shape: {}, allowUnknown: true } } },
+  SET_MAPSPEC: {
+    type: "object",
+    shape: {
+      mapSpec: {
+        type: "object",
+        shape: {
+          name: { type: "string", default: "", maxLen: 128 },
+          gridW: { type: "number", min: 1, max: 512, int: true },
+          gridH: { type: "number", min: 1, max: 512, int: true },
+          tileSize: { type: "number", min: 1, max: 512, int: true },
+          presetId: { type: "string", default: "", maxLen: 128 },
+        },
+      },
+    },
+  },
   SET_RENDER_MODE: { type: "string" },
   SET_PHYSICS: { type: "object", shape: {}, allowUnknown: true },
   SET_BRUSH: { type: "object", shape: {}, allowUnknown: true },

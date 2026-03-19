@@ -189,7 +189,7 @@ export function applyGlobalLearningToWorld(world, learning) {
   const strength = clamp(world.globalLearning.strength || 0.42, 0, 1);
   for (const lid of lineages) {
     if (!lid) continue;
-    const m = world.lineageMemory[lid] || defaultLineageMemory();
+    const m = { ...defaultLineageMemory(), ...(world.lineageMemory[lid] || {}) };
     const jitter = (rng01(lid, 71) - 0.5) * 0.08;
     m.light = clamp(lerp(m.light, b.light + jitter * 0.5, strength * 0.65), 0, 1);
     m.nutrient = clamp(lerp(m.nutrient, b.nutrient - jitter * 0.3, strength * 0.65), 0, 1);

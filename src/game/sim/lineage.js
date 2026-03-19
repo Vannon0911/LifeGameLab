@@ -10,7 +10,10 @@ export function updateLineageMemory(world, i, outcome = 1, tick = 0) {
   if (lid === 0) return;
   if (!world.lineageMemory) world.lineageMemory = {};
   let m = world.lineageMemory[lid];
-  if (!m) { m = defaultLineageMemory(); world.lineageMemory[lid] = m; }
+  m = (m && typeof m === "object")
+    ? { ...defaultLineageMemory(), ...m }
+    : defaultLineageMemory();
+  world.lineageMemory[lid] = m;
   if (outcome > 0 && m.lastTickUpdated === tick) return;
 
   m.lastTickUpdated = tick;

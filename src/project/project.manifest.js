@@ -12,7 +12,7 @@ import {
 } from "./contract/manifest.js";
 import { assertDomainPatchesAllowed } from "../game/plugin/gates.js";
 
-export { SCHEMA_VERSION, APP_VERSION, stateSchema, actionSchema, mutationMatrix, simGate, dataflow, actionLifecycle };
+export { SCHEMA_VERSION, APP_VERSION, stateSchema, actionSchema, mutationMatrix, simGate, dataflow, actionLifecycle, assertDomainPatchesAllowed as domainPatchGate };
 
 export const manifest = {
   ...contractManifest,
