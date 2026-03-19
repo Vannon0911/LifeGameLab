@@ -1189,11 +1189,16 @@ export function reducer(state, action, ctx = {}) {
       // Core standard: SIM_STEP mutations happen in simStepPatch (separate phase + gate).
       return [];
 
-    case "SET_SPEED":
-      return [{ op: "set", path: "/meta/speed", value: Math.max(1, Math.min(60, action.payload)) }];
+    case "SET_SPEED": {
+      const speed = typeof action.payload === "number" ? action.payload : Number(action.payload?.speed);
+      const value = Number.isFinite(speed) ? Math.max(1, Math.min(60, speed)) : 24;
+      return [{ op: "set", path: "/meta/speed", value }];
+    }
 
-    case "SET_SEED":
-      return [{ op: "set", path: "/meta/seed", value: action.payload }];
+    case "SET_SEED": {
+      const seed = typeof action.payload === "string" ? action.payload : String(action.payload?.seed || "life-light");
+      return [{ op: "set", path: "/meta/seed", value: seed }];
+    }
 
     case "SET_SIZE":
       if (!Number.isFinite(action.payload?.w) || !Number.isFinite(action.payload?.h)) return [];
