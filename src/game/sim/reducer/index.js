@@ -754,6 +754,7 @@ function runWorldSimV4(world, meta, sim, rng) {
   const TA_MUT_KEYS = [
     "alive", "E", "L", "R", "W", "Sat", "P", "B", "plantKind",
     "reserve", "link", "clusterField", "superId", "hue", "lineageId", "trait", "age", "born", "died",
+    "visibility", "explored",
     // lazily-created buffers inside sim.js:
     "actionMap",
   ];
