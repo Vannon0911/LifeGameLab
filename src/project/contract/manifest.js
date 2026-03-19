@@ -6,7 +6,7 @@ import { dataflow } from "./dataflow.js";
 import { actionLifecycle } from "./actionLifecycle.js";
 
 export const SCHEMA_VERSION = 2;
-export const APP_VERSION = "0.8.0";
+export const APP_VERSION = "0.8.1";
 
 export const manifest = {
   SCHEMA_VERSION,

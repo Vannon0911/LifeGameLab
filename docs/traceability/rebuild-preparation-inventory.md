@@ -30,6 +30,8 @@ This file is traceability evidence, not Source of Truth.
 ## Test Inventory
 - Existing truth line: determinism, replay, bypass and LLM gate tests under `tests/`
 - New migration guard: `tests/test-slice-a-contract-scaffold.mjs`
+- Slice-B dispatch/builder guards: `tests/test-mapspec-dispatch-sources.mjs`, `tests/test-mapspec-builder-pipeline.mjs`
+- UI click guard for mounted modules: `tests/test-ui-click-placement-e2e.mjs`
 - Removal guard rule: no legacy path deletion without a passing replacement test
 
 ## Replacement Gates
