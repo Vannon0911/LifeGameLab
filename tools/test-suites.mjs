@@ -18,6 +18,7 @@ const QUICK_REGRESSION_TEST_FILES = Object.freeze([
   "tests/test-signature-nonserializable.mjs",
   "tests/test-setsize-negative.mjs",
   "tests/test-persistence-cycle-boot.mjs",
+  "tests/test-redteam-kernel-hardening.mjs",
 ]);
 
 export const EVIDENCE_SURFACES = Object.freeze({

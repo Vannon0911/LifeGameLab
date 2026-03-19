@@ -225,6 +225,12 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     purpose: "prove cyclic persisted payloads fail closed to a safe default state on boot",
     counterProbe: "poisoned persistence perturbation cannot crash store boot or preserve invalid map state",
   }),
+  "tests/test-redteam-kernel-hardening.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 120_000,
+    purpose: "prove a chained red-team attack set cannot poison MapSpec, signature, SET_SIZE, or persistence and still leaves a valid recovery path",
+    counterProbe: "function payload, cycle payload, invalid SET_SIZE, and poisoned persistence perturbations are blocked without preventing later valid world boot",
+  }),
   "tests/test-longrun-determinism.mjs": Object.freeze({
     status: "verified",
     budgetMs: 300_000,
