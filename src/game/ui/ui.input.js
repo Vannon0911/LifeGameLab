@@ -215,7 +215,6 @@ export function installUiInput(UI) {
         return;
       }
 
-      const selected = this._moveSelection;
       const ordered = this._dispatch({
         type: "ISSUE_ORDER",
         payload: { fromX: selected.x, fromY: selected.y, targetX: wx, targetY: wy },

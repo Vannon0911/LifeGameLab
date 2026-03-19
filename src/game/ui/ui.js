@@ -1,15 +1,38 @@
-// Minimal neutral UI adapter: canvas binding only, no sim interaction.
+import { installUiInput } from "./ui.input.js";
+import { installUiLayout } from "./ui.layout.js";
+
+// Minimal runtime adapter with mounted layout/input installers.
 
 export class UI {
   constructor(store, canvas) {
     this._store = store;
     this._canvas = canvas;
     this._rInfo = null;
+    this._activePointers = new Set();
+    this._touchGesture = false;
+    this._paintActive = false;
+    this._moveSelection = null;
+    this._activeContext = "lage";
+    this._activeZoneType = 1;
+    this._dispatch = (action) => {
+      try {
+        this._store.dispatch(action);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    this._setActionFeedback = () => {};
+    this._isLabOnlyBrushMode = () => false;
+    this._isLaborPanelActive = () => false;
+    this._ensureLabBrushIsolation = () => {};
     this._onPointerDown = (event) => {
       // Temporary UI dispatch source for Slice B: Alt+Click applies current MapSpec and rebuilds world.
       if (!event?.altKey) return;
       this._applyCurrentMapSpec();
     };
+    this._build?.();
+    this._bindCanvasPaint?.();
     this._canvas?.addEventListener?.("mousedown", this._onPointerDown);
   }
 
@@ -23,6 +46,7 @@ export class UI {
       this._canvas.removeEventListener("mousedown", this._onPointerDown);
     }
     this._canvas = canvas;
+    this._bindCanvasPaint?.();
     if (this._onPointerDown) {
       this._canvas.addEventListener("mousedown", this._onPointerDown);
     }
@@ -50,3 +74,6 @@ export class UI {
     this._store.dispatch({ type: "GEN_WORLD", payload: {} });
   }
 }
+
+installUiLayout(UI);
+installUiInput(UI);
