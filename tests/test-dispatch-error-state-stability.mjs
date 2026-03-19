@@ -91,3 +91,24 @@ assert.equal(
 );
 
 console.log("INPUT_MUTATION_GUARD_OK reducer=blocked simStep=blocked");
+
+let savedDocSeen = null;
+const mutatingDriverStore = createStore(
+  manifest,
+  { reducer, simStep: simStepPatch },
+  {
+    storageDriver: {
+      load: () => null,
+      save: (doc) => {
+        savedDocSeen = doc;
+        doc.state.meta.seed = "MUTATED_BY_DRIVER";
+      },
+    },
+  },
+);
+mutatingDriverStore.dispatch({ type: "SET_SEED", payload: "p0-driver-copy" });
+const stateAfterDriverSave = mutatingDriverStore.getState();
+assert.equal(stateAfterDriverSave.meta.seed, "p0-driver-copy", "driver-side mutation must not taint committed store state");
+assert.equal(savedDocSeen.state.meta.seed, "MUTATED_BY_DRIVER", "counterprobe must verify mutation happened on persisted copy");
+
+console.log("DRIVER_COPY_ISOLATION_OK mutation-contained=true");

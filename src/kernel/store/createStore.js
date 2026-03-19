@@ -108,7 +108,8 @@ export function createStore(manifest, project, options = {}) {
     };
 
     deepFreeze(nextDoc.state);
-    driver.save(nextDoc);
+    const persistedDoc = cloneDeep(nextDoc);
+    driver.save(persistedDoc);
     doc = nextDoc;
     emit();
     return doc;
