@@ -2,12 +2,18 @@
 
 ## Zweck
 Minimale Pflicht-Leselisten pro Task, damit LLMs ohne Repo-Vollscan gate-konform arbeiten koennen.
-Reihenfolge: zuerst `docs/llm/ENTRY.md`, dann genau ein Task-Set aus dieser Datei.
+Reihenfolge: diese Datei kommt erst nach `docs/WORKFLOW.md`, `docs/llm/ENTRY.md`, `docs/llm/OPERATING_PROTOCOL.md`, `docs/ARCHITECTURE.md`, `docs/STATUS.md` und `docs/llm/TASK_ENTRY_MATRIX.json`.
+Danach werden alle Task-Sets fuer alle klassifizierten Scopes gelesen, nicht nur eins.
 
 ## Globale Mindest-Gates (immer)
 1. `src/project/contract/manifest.js` (SoT)
 2. `src/kernel/store/createStore.js`
 3. `src/kernel/store/applyPatches.js`
+
+## Zusaetzliche Pflichtregel (immer)
+1. Vor jedem Commit betroffene Dokuquellen, Stringmatrix und Inventar auf aktuellen Stand nachziehen.
+2. Am Ende jedes Arbeitsschritts Aktualitaet von Code, Gates, Doku und Traceability explizit pruefen.
+3. Jeder abgeschlossene Slice erhoeht die Version um `0.0.1`; Teilstufen `a/b/c/d` bleiben nur Dokument-Anhaenge.
 
 ## UI Task
 1. `src/game/ui/ui.js`

@@ -42,6 +42,13 @@ function readOrderCount(absPath) {
     .filter((line) => /^\d+\.\s+`.+`/.test(line.trim())).length;
 }
 
+function normalizeComparablePath(inputPath) {
+  return String(inputPath || "")
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/\/+$/g, "");
+}
+
 function normalizeRelPath(inputPath) {
   const raw = String(inputPath || "").trim();
   if (!raw) return "";
@@ -50,7 +57,7 @@ function normalizeRelPath(inputPath) {
   if (!rel || rel.startsWith("..")) {
     fail(`Path outside repository is not allowed: ${raw}`);
   }
-  return rel.split(path.sep).join("/");
+  return normalizeComparablePath(rel);
 }
 
 function parsePaths(args) {
@@ -85,14 +92,14 @@ function parseScopeFlag(args) {
 }
 
 function matchesPrefix(relPath, rawPrefix) {
-  const prefix = String(rawPrefix || "").trim().replace(/\\/g, "/");
+  const normalizedPath = normalizeComparablePath(relPath);
+  const prefix = normalizeComparablePath(rawPrefix);
   if (!prefix) return false;
   if (prefix.includes("*")) {
     const escaped = prefix.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
-    return new RegExp(`^${escaped}$`).test(relPath);
+    return new RegExp(`^${escaped}$`).test(normalizedPath);
   }
-  if (prefix.endsWith("/")) return relPath.startsWith(prefix);
-  return relPath === prefix || relPath.startsWith(`${prefix}/`);
+  return normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`);
 }
 
 function expandScopeDependencies(seedScopes, matrix) {

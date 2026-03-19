@@ -135,6 +135,15 @@ try {
   assert(classifyOutput.includes("CLASSIFY_OK"), "classify must succeed for testing scope");
   assert(classifyOutput.includes("scope=contracts+testing"), "testing classification must expand contracts dependency");
 
+  const testingDirClassify = runPreflight(["classify", "--paths", "tests/"]);
+  assert(testingDirClassify.includes("scope=contracts+testing"), "directory root tests/ must classify as testing scope");
+
+  const testingDocsDirClassify = runPreflight(["classify", "--paths", "docs/llm/testing/"]);
+  assert(testingDocsDirClassify.includes("scope=contracts+testing"), "directory root docs/llm/testing/ must classify as testing scope");
+
+  const hooksDirClassify = runPreflight(["classify", "--paths", ".githooks/"]);
+  assert(hooksDirClassify.includes("scope=contracts+testing"), "directory root .githooks/ must classify as testing scope");
+
   const multiClassify = runPreflight(["classify", "--paths", "src/game/ui/ui.js,src/game/sim/step.js"]);
   assert(multiClassify.includes("scope=contracts+sim+ui"), "classify must support multi-scope dependency expansion");
 

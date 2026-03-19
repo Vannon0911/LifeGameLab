@@ -12,6 +12,8 @@
 - Slice B MapSpec test was added for deterministic compile + world boot.
 - Longrun evidence budget now has explicit headroom at `300_000 ms`.
 - Evidence runner now logs verification registry state as `registryStatus=` instead of the ambiguous `status=`.
+- LLM-Gates verlangen ab jetzt vor jedem Commit aktualisierte Doku inklusive betroffener Stringmatrix-/Inventar-Dateien sowie eine explizite Endpruefung auf Gesamtaktualitaet.
+- Slice-Versionierung ist ab jetzt strikt: jeder abgeschlossene Slice erhoeht die Version um `0.0.1`; Teilstufen `a/b/c/d` bleiben reine Dokument-Anhaenge.
 - Legacy runtime still remains active and intentionally untouched as live fallback.
 
 ## Verified Current Truth

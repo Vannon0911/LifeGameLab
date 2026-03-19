@@ -6,7 +6,16 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 ## LESEN
 - zuerst `docs/WORKFLOW.md`
 - dann `docs/llm/ENTRY.md`
-- dann genau einen Task-Entry
+- dann `docs/llm/OPERATING_PROTOCOL.md`
+- dann `docs/ARCHITECTURE.md`
+- dann `docs/STATUS.md`
+- dann `docs/llm/TASK_ENTRY_MATRIX.json`
+- dann `docs/llm/entry/TASK_GATE_INDEX.md`
+- dann alle passenden Task-Entries fuer alle klassifizierten Scopes
+- dann die globalen Mindest-Gates:
+  - `src/project/contract/manifest.js`
+  - `src/kernel/store/createStore.js`
+  - `src/kernel/store/applyPatches.js`
 
 ## PRUEFEN
 - Task ueber `docs/llm/TASK_ENTRY_MATRIX.json` klassifizieren
@@ -22,6 +31,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - vor Commit Scope immer isolieren (`git restore --staged .`, dann nur Zielpfade stagen)
 - Preflight darf Multi-Scope umfassen, wenn die Pfadmenge real mehrere Bereiche betrifft.
 - Hook-Guards einmal aktivieren: `npm run hooks:install`
+- Vor jedem Commit betroffene Dokuquellen, Stringmatrix und Inventar nachziehen; am Ende jedes Arbeitsschritts Aktualitaet explizit gegen Code und Gates gegenpruefen.
 
 ## SCHREIBEN
 - kein Schreiben ohne gelesenen LLM-Entry plus passendem Task-Entry
@@ -29,9 +39,11 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - task-spezifische Doku vor globaler Statuspflege
 - kein Weiterarbeiten nach `check`-Rot; erst neuen Scope-Preflight aufbauen
 - UMGEHUNG (z. B. direkte State-/Patch-Injektion zur Abkuerzung von Flows) ist nur mit expliziter Ruecksprache erlaubt.
+- Slice-Versionierung ist Pflicht: jeder abgeschlossene Slice erhoeht die Version um `0.0.1`; Teilschritte werden nur als Anhang `a/b/c/d` dokumentiert und zaehlen nicht als eigener Versionssprung.
 
 ## DOKU
 - Maschinenlesbare Truth: `output/current-truth.json` (Manifest-Pfad + Commit-SHA)
 - `docs/STATUS.md` bleibt Governance-/Entscheidungslog, nicht Truth-Quelle
 - task-spezifische Doku lebt in `docs/llm/`
 - Top-Level-Doku bleibt absichtlich auf vier Dateien begrenzt
+- `docs/traceability/rebuild-string-matrix.md` und `docs/traceability/rebuild-preparation-inventory.md` muessen mitgezogen werden, sobald ein Task ihre Aussagen, Referenzen oder Ableitungen veraendert.
