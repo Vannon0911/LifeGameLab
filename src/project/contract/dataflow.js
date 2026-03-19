@@ -18,7 +18,7 @@ const DISPATCH_SOURCES = Object.freeze({
   SET_SEED: ["src/game/ui/ui.js"],
   SET_SIZE: ["src/app/main.js", "src/game/ui/ui.js"],
   SET_WORLD_PRESET: ["src/game/ui/ui.js"],
-  SET_MAPSPEC: [],
+  SET_MAPSPEC: ["src/game/ui/ui.js"],
   SET_RENDER_MODE: ["src/game/ui/ui.js"],
   SET_PHYSICS: ["src/game/ui/ui.js"],
   SET_BRUSH: ["src/game/ui/ui.js"],

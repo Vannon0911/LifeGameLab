@@ -207,6 +207,12 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     purpose: "prove SET_MAPSPEC rejects cyclic payloads without stack overflow or state drift",
     counterProbe: "cyclic payload perturbation is rejected by strict schema validation",
   }),
+  "tests/test-mapspec-dispatch-sources.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 90_000,
+    purpose: "prove SET_MAPSPEC has a live UI dispatch source and dataflow remains truthful",
+    counterProbe: "dispatch source drift between dataflow and UI code is detected as regression",
+  }),
   "tests/test-signature-nonserializable.mjs": Object.freeze({
     status: "verified",
     budgetMs: 90_000,
