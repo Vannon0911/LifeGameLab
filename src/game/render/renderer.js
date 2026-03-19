@@ -1151,6 +1151,39 @@ function drawPatternObjectMarker(ctx, world, sim, offX, offY, tilePx) {
   ctx.restore();
 }
 
+function drawTileObjectPlaceholders(ctx, world, offX, offY, tilePx) {
+  if (tilePx < 8) return;
+  const { w, h, zoneRole, founderMask, R } = world;
+  if (w <= 0 || h <= 0) return;
+  const step = tilePx < 12 ? 2 : 1;
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `${Math.max(9, Math.floor(tilePx * 0.68))}px "Segoe UI Emoji","Noto Color Emoji","Apple Color Emoji",sans-serif`;
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const i = y * w + x;
+      const role = Number(zoneRole?.[i] || 0) | 0;
+      const founder = (Number(founderMask?.[i] || 0) | 0) === 1;
+      const resource = clamp01(R?.[i] || 0);
+      let glyph = "";
+      if (role === ZONE_ROLE.CORE) glyph = "🏠";
+      else if (role === ZONE_ROLE.DNA) glyph = "🧬";
+      else if (role === ZONE_ROLE.INFRA) glyph = "🔌";
+      else if (founder) glyph = "🧱";
+      else if (resource > 0.86) glyph = "⛏️";
+      if (!glyph) continue;
+      const fog = getTileFogState(world, i);
+      if (fog === FOG_HIDDEN) continue;
+      ctx.globalAlpha = fog === FOG_MEMORY ? 0.32 : 0.74;
+      const cx = offX + x * tilePx + tilePx * 0.5;
+      const cy = offY + y * tilePx + tilePx * 0.5;
+      ctx.fillText(glyph, cx, cy);
+    }
+  }
+  ctx.restore();
+}
+
 export function render(canvas, state, perf = null) {
   const { world, meta, sim } = state;
   if (!world) return null;
@@ -1215,6 +1248,7 @@ export function drawFrame(ctx, state, perf = {}) {
   drawRoundCells(ctx, world, offX, offY, tilePx, meta, null, quality, moveHint, alpha);
   if (!overlayActive && !balanced && (quality >= 3 || userFocused) && lod.level <= 1 && !userMinimal) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawPatternObjectMarker(ctx, world, null, offX, offY, tilePx);
+  if (!overlayActive && quality >= 1) drawTileObjectPlaceholders(ctx, world, offX, offY, tilePx);
   if (quality >= 1 && shouldDrawLegacyZoneOverlay(meta)) drawZoneOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level, detailMode);
   if (quality >= 1 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);
