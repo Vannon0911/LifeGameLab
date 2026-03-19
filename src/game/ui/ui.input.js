@@ -114,6 +114,19 @@ export function installUiInput(UI) {
       if (e.target && ["INPUT","SELECT","TEXTAREA"].includes(e.target.tagName)) return;
       if (e.code === "Space") { e.preventDefault(); this._btnPlay.click(); }
       else if (e.key === "n" || e.key === "N") { e.preventDefault(); this._btnNew.click(); }
+      else if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        const state = this._store.getState();
+        const nextPhase = state.sim.runPhase === RUN_PHASE.MAP_BUILDER ? RUN_PHASE.GENESIS_SETUP : RUN_PHASE.MAP_BUILDER;
+        this._dispatch({ type: "SET_UI", payload: { runPhase: nextPhase } });
+        this._setActionFeedback({ ok: true, message: `Phase: ${nextPhase}`, hint: "M toggle MapBuilder" });
+      }
+      else if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        const state = this._store.getState();
+        console.log("MAP_SPEC_EXPORT:", JSON.stringify(state.map?.spec || {}, null, 2));
+        this._setActionFeedback({ ok: true, message: "MapSpec in Konsole exportiert.", hint: "F12 fuer Log" });
+      }
       else if (e.key === "Escape") this._closeContext?.();
     });
   },
@@ -201,7 +214,7 @@ export function installUiInput(UI) {
         this._moveSelection = { x: wx, y: wy, idx };
         this._setActionFeedback({
           ok: true,
-          message: "Zelle markiert.",
+          message: "Worker markiert.",
           hint: "Waehle jetzt ein Ressource-Tile als Ziel.",
         });
         return;
@@ -222,7 +235,7 @@ export function installUiInput(UI) {
         this._moveSelection = { x: wx, y: wy, idx };
         this._setActionFeedback({
           ok: true,
-          message: "Zelle umgestellt.",
+          message: "Worker umgestellt.",
           hint: "Waehle jetzt ein Ressource-Tile als Ziel.",
         });
         return;
@@ -256,23 +269,23 @@ export function installUiInput(UI) {
         this._setActionFeedback({
           ok: false,
           message: "Order blockiert.",
-          hint: "Pruefe Startzelle und Ressourcen-Ziel.",
+          hint: "Pruefe Start-Worker und Ressourcen-Ziel.",
         });
       } else {
         this._setActionFeedback({
           ok: true,
           message: "Order gesetzt.",
-          hint: "Die Zelle bewegt sich tickbasiert zum Ressourcen-Ziel.",
+          hint: "Der Worker bewegt sich tickbasiert zum Ressourcen-Ziel.",
         });
       }
       this._moveSelection = null;
       return;
     }
-    if (mode === BRUSH_MODE.CELL_HARVEST) {
+    if (mode === BRUSH_MODE.WORKER_HARVEST) {
       if (!start) return;
       this._dispatch(
-        { type:"HARVEST_CELL", payload:{ x:wx, y:wy } },
-        { ok: "DNA-Ernte ausgeführt.", blocked: "Ernte blockiert.", hint: "Nächster Schritt: eigene Zelle wählen und Mindestpopulation halten." }
+        { type:"HARVEST_WORKER", payload:{ x:wx, y:wy } },
+        { ok: "DNA-Ernte ausgeführt.", blocked: "Ernte blockiert.", hint: "Nächster Schritt: eigenen Worker wählen und Mindestpopulation halten." }
       );
       return;
     }
@@ -313,7 +326,7 @@ export function installUiInput(UI) {
       const idx = wy * state.meta.gridW + wx;
       const isSelected = (Number(state.world?.dnaZoneMask?.[idx] || 0) | 0) === 1;
       this._dispatch(
-        { type: "TOGGLE_DNA_ZONE_CELL", payload: { x: wx, y: wy, remove: isSelected } },
+        { type: "TOGGLE_DNA_ZONE_WORKER", payload: { x: wx, y: wy, remove: isSelected } },
         {
           ok: isSelected ? "DNA-Kachel entfernt." : "DNA-Kachel gesetzt.",
           blocked: "DNA-Kachel blockiert.",
@@ -322,15 +335,30 @@ export function installUiInput(UI) {
       );
       return;
     }
-    if (mode === BRUSH_MODE.CELL_ADD || mode === BRUSH_MODE.CELL_REMOVE) {
+    if (runPhase === RUN_PHASE.MAP_BUILDER) {
       if (!start) return;
-      const removed = mode === BRUSH_MODE.CELL_REMOVE;
+      const brushToMapMode = {
+        [BRUSH_MODE.LIGHT]: "light",
+        [BRUSH_MODE.NUTRIENT]: "nutrient",
+        [BRUSH_MODE.ZONE_PAINT]: "core",
+        [BRUSH_MODE.FOUNDER_PLACE]: "founder",
+      };
+      const mapMode = brushToMapMode[mode] || mode;
+      this._dispatch(
+        { type: "SET_MAP_TILE", payload: { x: wx, y: wy, mode: mapMode, value: shiftRemove ? 0 : 0.8, remove: shiftRemove } },
+        { ok: "Map-Tile aktualisiert.", blocked: "Fehler beim Setzen.", hint: "Shift+Klick entfernt Overrides." }
+      );
+      return;
+    }
+    if (mode === BRUSH_MODE.WORKER_ADD || mode === BRUSH_MODE.WORKER_REMOVE) {
+      if (!start) return;
+      const removed = mode === BRUSH_MODE.WORKER_REMOVE;
       const placed = this._placeCoreCompat({ x: wx, y: wy, remove: removed });
       this._setActionFeedback({
         ok: !!placed,
         message: placed
-          ? (removed ? "Zelle entfernt." : "Zelle platziert.")
-          : "Zellaktion blockiert.",
+          ? (removed ? "Worker entfernt." : "Worker platziert.")
+          : "Worker-Aktion blockiert.",
         hint: placed ? "" : "Nächster Schritt: Besitz/Gate und DNA-Kosten prüfen.",
       });
       return;
