@@ -215,10 +215,10 @@ export function installUiInput(UI) {
         return;
       }
 
-      const ordered = this._dispatch({
-        type: "ISSUE_ORDER",
-        payload: { fromX: selected.x, fromY: selected.y, targetX: wx, targetY: wy },
-      });
+      const ordered = this._issueMoveCompat(
+        { x: selected.x, y: selected.y },
+        { x: wx, y: wy },
+      );
       if (!ordered) {
         this._setActionFeedback({
           ok: false,
@@ -263,14 +263,16 @@ export function installUiInput(UI) {
         (Number(state.world?.lineageId?.[idx] || 0) | 0) === playerLineageId &&
         (Number(state.world?.founderMask?.[idx] || 0) | 0) === 1 &&
         String(state.sim?.runPhase || "") === "genesis_setup";
-      this._dispatch(
-        { type:"PLACE_CELL", payload:{ x:wx, y:wy, remove:isOwnFounder } },
-        {
-          ok: isOwnFounder ? "Founder entfernt." : "Founder platziert.",
-          blocked: "Founder-Aktion blockiert.",
-          hint: `Nur im Startfenster, maximal ${Math.max(1, Number(state.sim?.founderBudget || 1) | 0)} Founder, vor Bestaetigung entfernbar.`,
-        }
-      );
+      const placed = this._placeCoreCompat({ x: wx, y: wy, remove: isOwnFounder });
+      this._setActionFeedback({
+        ok: !!placed,
+        message: placed
+          ? (isOwnFounder ? "Founder entfernt." : "Founder platziert.")
+          : "Founder-Aktion blockiert.",
+        hint: placed
+          ? ""
+          : `Nur im Startfenster, maximal ${Math.max(1, Number(state.sim?.founderBudget || 1) | 0)} Founder, vor Bestaetigung entfernbar.`,
+      });
       return;
     }
     if (String(state.sim?.runPhase || "") === RUN_PHASE.DNA_ZONE_SETUP) {
@@ -289,10 +291,15 @@ export function installUiInput(UI) {
     }
     if (mode === BRUSH_MODE.CELL_ADD || mode === BRUSH_MODE.CELL_REMOVE) {
       if (!start) return;
-      this._dispatch(
-        { type:"PLACE_CELL", payload:{ x:wx, y:wy, remove:mode===BRUSH_MODE.CELL_REMOVE } },
-        { ok: mode===BRUSH_MODE.CELL_REMOVE ? "Zelle entfernt." : "Zelle platziert.", blocked: "Zellaktion blockiert.", hint: "Nächster Schritt: Besitz/Gate und DNA-Kosten prüfen." }
-      );
+      const removed = mode === BRUSH_MODE.CELL_REMOVE;
+      const placed = this._placeCoreCompat({ x: wx, y: wy, remove: removed });
+      this._setActionFeedback({
+        ok: !!placed,
+        message: placed
+          ? (removed ? "Zelle entfernt." : "Zelle platziert.")
+          : "Zellaktion blockiert.",
+        hint: placed ? "" : "Nächster Schritt: Besitz/Gate und DNA-Kosten prüfen.",
+      });
       return;
     }
     this._dispatch({ type:"SET_TILE", payload:{ x:wx, y:wy, radius, mode } });
