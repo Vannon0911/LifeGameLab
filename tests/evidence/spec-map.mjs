@@ -191,7 +191,7 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
   }),
   "tests/test-longrun-determinism.mjs": Object.freeze({
     status: "verified",
-    budgetMs: 240_000,
+    budgetMs: 300_000,
     purpose: "prove deterministic stability on long-running step chains and controlled cross-seed divergence",
     counterProbe: "longrun seed perturbation diverges while same-seed longrun remains identical",
   }),

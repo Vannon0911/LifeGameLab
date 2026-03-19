@@ -674,7 +674,7 @@ async function runPlan(runCtx, plan) {
         const scenario = CLAIM_REGISTRY[id];
         assert(scenario, `Missing claim '${id}'`);
         const status = String(scenario.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
-        runCtx.logger.out(`[evidence] claim=${scenario.id} status=${status.toUpperCase()} mode=${batch.mode} surface=${scenario.surface}`);
+        runCtx.logger.out(`[evidence] claim=${scenario.id} registryStatus=${status.toUpperCase()} mode=${batch.mode} surface=${scenario.surface}`);
         const startedAt = Date.now();
         const result = await runDispatchScenario(runCtx, scenario, batch.mode);
         const elapsedMs = Date.now() - startedAt;
@@ -689,7 +689,7 @@ async function runPlan(runCtx, plan) {
     if (batch.kind === "regression") {
       for (const file of batch.files) {
         const status = String(REGRESSION_REGISTRY[file]?.status || VERIFICATION_STATUS.UNVERIFIED).toLowerCase();
-        runCtx.logger.out(`[evidence] regression=${file} status=${status.toUpperCase()}`);
+        runCtx.logger.out(`[evidence] regression=${file} registryStatus=${status.toUpperCase()}`);
         regressionResults.push(runRegressionFile(runCtx, file));
       }
     }

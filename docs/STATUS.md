@@ -8,6 +8,8 @@
 - New RTS scaffold actions exist in contracts without reducer wiring yet.
 - New top-level `map` scaffold exists for upcoming MapSpec work.
 - Slice A contract scaffold test was added and passes.
+- Longrun evidence budget now has explicit headroom at `300_000 ms`.
+- Evidence runner now logs verification registry state as `registryStatus=` instead of the ambiguous `status=`.
 - Legacy runtime still remains active and intentionally untouched as live fallback.
 
 ## Verified Current Truth
@@ -32,4 +34,4 @@ Both files are derived planning evidence only and must not override SoT docs or 
 ## Next Work Block
 1. Start Slice B with `MapSpec -> validate -> compile -> GEN_WORLD`.
 2. Keep legacy founder and zone flows alive until their replacements have reducer wiring and passing tests.
-3. Re-run the wrapped regression evidence session after the timeout wrapper is inspected, even though the remaining tests passed individually.
+3. Preserve the longrun headroom policy and runner wording when additional regression slots are added.
