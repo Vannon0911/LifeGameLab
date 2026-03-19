@@ -61,11 +61,16 @@ export function createStore(manifest, project, options = {}) {
     const actionAllowed = mutationMatrix[clean.type];
     if (!Array.isArray(actionAllowed)) throw new Error(`Missing mutationMatrix contract: ${clean.type}`);
 
+    const reducerInput = cloneDeep(doc.state);
+    const reducerInputSignature = hash32(stableStringify(reducerInput));
     const reducerRng = createRngStreamsScoped(doc.state.meta.seed, `reducer:${clean.type}:${doc.revisionCount}`);
     const patches = runWithDeterminismGuard(
-      () => project.reducer(doc.state, clean, { rng: reducerRng, revisionCount: doc.revisionCount | 0 }),
+      () => project.reducer(reducerInput, clean, { rng: reducerRng, revisionCount: doc.revisionCount | 0 }),
       { enabled: guardDeterminism, actionType: clean.type, phase: "reducer" }
     );
+    if (hash32(stableStringify(reducerInput)) !== reducerInputSignature) {
+      throw new Error("Reducer mutated input state");
+    }
 
     if (!Array.isArray(patches)) throw new Error("Reducer must return patches array");
     assertPatchesAllowed(patches, actionAllowed);
@@ -75,11 +80,16 @@ export function createStore(manifest, project, options = {}) {
     nextState = sanitizeBySchema(nextState, stateSchema);
 
     if (clean.type === "SIM_STEP" && typeof project.simStep === "function") {
+      const simInput = cloneDeep(nextState);
+      const simInputSignature = hash32(stableStringify(simInput));
       const simRng = createRngStreamsScoped(doc.state.meta.seed, `simStep:${clean.type}:${doc.revisionCount}`);
       const simPatches = runWithDeterminismGuard(
-        () => project.simStep(nextState, clean, { rng: simRng }),
+        () => project.simStep(simInput, clean, { rng: simRng }),
         { enabled: guardDeterminism, actionType: clean.type, phase: "simStep" }
       );
+      if (hash32(stableStringify(simInput)) !== simInputSignature) {
+        throw new Error("simStep mutated input state");
+      }
       if (!Array.isArray(simPatches)) throw new Error("simStep must return patches array");
       assertPatchesAllowed(simPatches, mutationMatrix.SIM_STEP);
       assertDomainPatchesAllowed(manifest, nextState, "SIM_STEP", simPatches);

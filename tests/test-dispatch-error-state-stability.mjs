@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 
 import { createDeterministicStore, snapshotStore } from "./support/liveTestKit.mjs";
+import { createStore } from "../src/kernel/store/createStore.js";
+import { createNullDriver } from "../src/kernel/store/persistence.js";
+import * as manifest from "../src/project/project.manifest.js";
+import { reducer, simStepPatch } from "../src/project/project.logic.js";
 
 const failingDispatchCases = [
   { label: "gen-world-extra-payload", action: { type: "GEN_WORLD", payload: { gameMode: "lab_autorun" } }, expectedMessage: "is not allowed" },
@@ -33,3 +37,57 @@ for (const testCase of failingDispatchCases) {
 }
 
 console.log(`DISPATCH_ERROR_STATE_STABILITY_OK anchors=${anchors.join(",")}`);
+
+const mutatingReducerStore = createStore(
+  manifest,
+  {
+    reducer: (state, action, ctx) => {
+      state.meta.seed = "MUTATED_BY_REDUCER";
+      return reducer(state, action, ctx);
+    },
+    simStep: simStepPatch,
+  },
+  { storageDriver: createNullDriver() },
+);
+
+const mutatingReducerBefore = snapshotStore(mutatingReducerStore);
+assert.throws(
+  () => mutatingReducerStore.dispatch({ type: "SET_SEED", payload: "p0-mutation-guard" }),
+  /Reducer mutated input state/,
+  "mutating reducer must be blocked",
+);
+const mutatingReducerAfter = snapshotStore(mutatingReducerStore);
+assert.equal(mutatingReducerAfter.signature, mutatingReducerBefore.signature, "mutating reducer must not change state signature");
+assert.equal(
+  mutatingReducerAfter.signatureMaterialHash,
+  mutatingReducerBefore.signatureMaterialHash,
+  "mutating reducer must not change signature material",
+);
+
+const mutatingSimStore = createStore(
+  manifest,
+  {
+    reducer,
+    simStep: (state) => {
+      state.meta.seed = "MUTATED_BY_SIM";
+      return [];
+    },
+  },
+  { storageDriver: createNullDriver() },
+);
+mutatingSimStore.dispatch({ type: "GEN_WORLD", payload: {} });
+const mutatingSimBefore = snapshotStore(mutatingSimStore);
+assert.throws(
+  () => mutatingSimStore.dispatch({ type: "SIM_STEP", payload: {} }),
+  /simStep mutated input state/,
+  "mutating simStep must be blocked",
+);
+const mutatingSimAfter = snapshotStore(mutatingSimStore);
+assert.equal(mutatingSimAfter.signature, mutatingSimBefore.signature, "mutating simStep must not change state signature");
+assert.equal(
+  mutatingSimAfter.signatureMaterialHash,
+  mutatingSimBefore.signatureMaterialHash,
+  "mutating simStep must not change signature material",
+);
+
+console.log("INPUT_MUTATION_GUARD_OK reducer=blocked simStep=blocked");
