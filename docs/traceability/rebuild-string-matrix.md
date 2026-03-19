@@ -51,6 +51,7 @@ This file is a migration map, not canonical truth.
 | Current string | Type | Target status | Replacement | Removal condition |
 | --- | --- | --- | --- | --- |
 | `founder` | doc term | split | `phase0_worker` or `phase0_foundation` | new flow live |
+| `cell` | doc term | rename | `worker` | worker runtime wording fully synced |
 | `dnaZone` | doc term | drop | `building footprint` | replacement wired |
 | `coreZone` | doc term | drop | `core` | replacement wired |
 | `infraBuild` | doc term | drop | `belt`, `line`, `routing` | replacement wired |

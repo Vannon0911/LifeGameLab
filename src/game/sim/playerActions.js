@@ -176,7 +176,6 @@ export function handlePlaceCell(state, action) {
   const idx = y * w + x;
   const remove = !!action.payload?.remove;
   const runPhase = normalizeRunPhase(state.sim.runPhase, RUN_PHASE.GENESIS_SETUP);
-  const isGenesis = true;
   const isGenesisSetup = runPhase === RUN_PHASE.GENESIS_SETUP;
   if (runPhase === RUN_PHASE.RESULT) return [];
 
@@ -201,7 +200,7 @@ export function handlePlaceCell(state, action) {
     : new Uint8Array(w * h);
   const founderMask = cloneTypedArray(founderMaskSrc);
 
-  if (isGenesis && isGenesisSetup) {
+  if (isGenesisSetup) {
     if (String(state.meta.brushMode || BRUSH_MODE.OBSERVE) !== BRUSH_MODE.FOUNDER_PLACE) return [];
     const founderBudget = Math.max(0, Number(state.sim.founderBudget || 0) | 0);
     const founderPlaced = Math.max(0, Number(state.sim.founderPlaced || 0) | 0);
@@ -305,7 +304,9 @@ export function handlePlaceCell(state, action) {
     }
   } else {
     if (alive[idx] === 1) return [];
-    if (costEnabled && playerDNA < cost) return [];
+    const workerPlacementDuringRun = runPhase === RUN_PHASE.RUN_ACTIVE;
+    const requiresPlacementCost = costEnabled && !workerPlacementDuringRun;
+    if (requiresPlacementCost && playerDNA < cost) return [];
     if (!populatePlayerCell({
       idx,
       tick: state.sim.tick,
@@ -339,7 +340,7 @@ export function handlePlaceCell(state, action) {
     { op: "set", path: "/world/died", value: died },
   ];
   if (W) patches.push({ op: "set", path: "/world/W", value: W });
-  if (!remove && costEnabled) {
+  if (!remove && costEnabled && runPhase !== RUN_PHASE.RUN_ACTIVE) {
     patches.push({ op: "set", path: "/sim/playerDNA", value: playerDNA - cost });
   }
   return patches;

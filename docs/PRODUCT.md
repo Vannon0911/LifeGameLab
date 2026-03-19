@@ -144,7 +144,7 @@ Out of scope after MVP:
 
 ## Current Migration Note
 Current head is on the Slice B MapSpec baseline:
-- old cell-RTS runtime still exists
+- old worker-RTS runtime still exists
 - `SET_MAPSPEC` now stores canonical compile input before `GEN_WORLD`
 - `GEN_WORLD` now compiles from `map.spec` when MapSpec is active
 - legacy presets remain only as internal compile helpers until replacement wiring and tests exist

@@ -12,6 +12,8 @@
 - Builder pipeline now keeps world mutation behind `GEN_WORLD`; `SET_MAPSPEC` and `SET_WORLD_PRESET` only compile/sync map/meta state.
 - Slice C visual baseline is now live: UI layout/input modules are mounted, canvas click placement is regression-tested, and tile object placeholders render in-world.
 - Slice C minimal runtime UI is now active: panel stack removed, direct canvas placement flow is live, and movement is paced at 1 tile per second with purely visual interpolation.
+- Slice C worker hardening landed: `PLACE_CELL` no longer stays genesis-locked in run-active flow, observe-mode placement can spawn workers without DNA cost deadlock, and blocked move orders now wait/retry instead of hard-aborting.
+- Terminology migration advanced: product/architecture/entry docs now use `worker` as canonical runtime wording; legacy `cell` naming remains compatibility-only for action IDs.
 - Slice A contract scaffold test was added and passes.
 - Slice B MapSpec test was added for deterministic compile + world boot.
 - Longrun evidence budget now has explicit headroom at `300_000 ms`.

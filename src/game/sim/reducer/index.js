@@ -1441,6 +1441,9 @@ export function simStepPatch(state, action, ctx) {
   if (!state.sim.running) return [];
 
   const currentTick = state.sim.tick;
+  const preStepAlive = state.world?.alive && ArrayBuffer.isView(state.world.alive)
+    ? state.world.alive
+    : null;
   const { world: worldMutable, metrics } = runWorldSimV4(state.world, state.meta, state.sim, rngStreams);
 
   const nextLearning = mergeWorldLearningIntoBank(worldMutable, state.meta.globalLearning, metrics);
@@ -1549,12 +1552,31 @@ export function simStepPatch(state, action, ctx) {
         simOut.selectedUnit = unitIdx;
         simOut.lastAutoAction = `MOVE_WAIT:${travelProgress}/${travelTicks}`;
       } else {
-        const nextIdx = findNextStepBfs4(worldMutable, unitIdx, targetIdx, w, h);
-        if (nextIdx < 0 || (Number(worldMutable.alive?.[nextIdx] || 0) | 0) === 1) {
-          simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
-          simOut.activeOrder = createEmptyActiveOrder();
+        const navigationWorld = preStepAlive ? { ...worldMutable, alive: preStepAlive } : worldMutable;
+        const nextIdx = findNextStepBfs4(navigationWorld, unitIdx, targetIdx, w, h);
+        const occupiedAtTickStart = nextIdx >= 0 && (Number(preStepAlive?.[nextIdx] || 0) | 0) === 1;
+        const hardBlocked = nextIdx < 0 || (occupiedAtTickStart && nextIdx !== targetIdx);
+        if (hardBlocked) {
+          simOut.unitOrder = {
+            active: true,
+            fromX: unitIdx % w,
+            fromY: (unitIdx / w) | 0,
+            targetX,
+            targetY,
+          };
+          simOut.activeOrder = {
+            ...activeOrder,
+            active: true,
+            type: "HARVEST",
+            fromX: unitIdx % w,
+            fromY: (unitIdx / w) | 0,
+            targetX,
+            targetY,
+            progress: 0,
+            maxProgress: Math.max(1, Number(activeOrder.maxProgress || HARVEST_TICKS) | 0),
+          };
           simOut.selectedUnit = unitIdx;
-          simOut.lastAutoAction = "ORDER_PATH_BLOCKED";
+          simOut.lastAutoAction = "ORDER_WAIT_BLOCKED";
         } else {
           moveEntityTile(worldMutable, unitIdx, nextIdx);
           const nx = nextIdx % w;

@@ -45,6 +45,7 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - kein `Math.random()` oder `Date.now()` in Reducer oder SimStep
 - neue Felder und Actions zuerst im Manifest und Contract
 - UMGEHUNG IST STRENG VERBOTEN OHNE VORHERIGE RUECKSPRACHE. Das gilt insbesondere fuer direkte State-/Patch-Injektion in Tests oder Runtime-Flows.
+- Terminologie: Produkt- und UI-Texte nutzen `worker` als kanonische Einheit; Legacy-`cell` Strings bleiben nur fuer kompatible Action-IDs bis zur vollstaendigen Ablösung.
 
 ## Globale Pflichtquellen
 - `docs/PRODUCT.md`: Produkt- und Scope-Basis

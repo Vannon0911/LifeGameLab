@@ -1,6 +1,6 @@
 # ARCHITECTURE
 
-**APP_VERSION:** 0.8.3
+**APP_VERSION:** 0.8.4
 
 ## SoT Rule
 - `src/project/contract/manifest.js` stays the executable contract Source of Truth.
@@ -24,7 +24,7 @@
 - `src/app/*`: boot, runtime loop and crash surfaces.
 
 ## Slice B MapSpec Baseline
-- Legacy cell-RTS runtime is still present and remains bootable.
+- Legacy worker-RTS runtime is still present and remains bootable.
 - MapSpec compile wiring is now active without deleting live legacy flows.
 - Action lifecycle metadata now marks every action as `stable`, `rename`, `deprecated` or `new_slice_a`.
 - `SET_MAPSPEC` is now an active reducer path; the remaining RTS placeholders stay no-op until their slices land.
