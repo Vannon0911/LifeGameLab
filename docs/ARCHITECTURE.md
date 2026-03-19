@@ -1,6 +1,6 @@
 # ARCHITECTURE
 
-**APP_VERSION:** 0.8.1
+**APP_VERSION:** 0.8.2
 
 ## SoT Rule
 - `src/project/contract/manifest.js` stays the executable contract Source of Truth.

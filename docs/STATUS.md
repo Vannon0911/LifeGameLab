@@ -10,6 +10,7 @@
 - `GEN_WORLD` now compiles from `map.spec` when MapSpec is active and syncs legacy preset runs into the same map snapshot.
 - `SET_MAPSPEC` now has active UI dispatch sources and a dedicated dispatch-source regression guard.
 - Builder pipeline now keeps world mutation behind `GEN_WORLD`; `SET_MAPSPEC` and `SET_WORLD_PRESET` only compile/sync map/meta state.
+- Slice C visual baseline is now live: UI layout/input modules are mounted, canvas click placement is regression-tested, and tile object placeholders render in-world.
 - Slice A contract scaffold test was added and passes.
 - Slice B MapSpec test was added for deterministic compile + world boot.
 - Longrun evidence budget now has explicit headroom at `300_000 ms`.
@@ -42,7 +43,7 @@ Both files are derived planning evidence only and must not override SoT docs or 
 - New action names may exist before reducer wiring, but they must stay no-op safe until implemented.
 
 ## Next Work Block
-1. Continue Slice C by replacing legacy founder and zone flows with reducer-wired RTS replacements.
+1. Continue Slice C by removing legacy fallbacks (`ISSUE_ORDER`/`PLACE_CELL`) once reducer-wired RTS actions can carry full gameplay flow alone.
 2. Keep visual playability stable while UI module wiring is expanded beyond the current mounted baseline.
 3. Preserve the longrun headroom policy and runner wording when additional regression slots are added.
 4. Keep the hardening quick-suite current when future slices add new contract entry points or persistence surfaces.
