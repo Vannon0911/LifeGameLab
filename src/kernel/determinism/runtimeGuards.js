@@ -6,7 +6,9 @@ export function runWithDeterminismGuard(fn, meta) {
   const OrigIntl = globalThis.Intl;
   const OrigPerf = globalThis.performance;
   const OrigCrypto = globalThis.crypto;
+  const OrigProcess = globalThis.process;
   const cryptoRestorers = [];
+  const processRestorers = [];
   const blocked = (name) => () => { throw new Error(`Non-deterministic source blocked: ${name} (${meta.phase}:${meta.actionType})`); };
 
   Math.random = blocked("Math.random");
@@ -70,6 +72,44 @@ export function runWithDeterminismGuard(fn, meta) {
     patchCryptoMethod("getRandomValues", "crypto.getRandomValues()");
   }
 
+  if (OrigProcess && typeof OrigProcess === "object") {
+    const patchProcessMethod = (name, marker, replacementFactory = null) => {
+      if (typeof OrigProcess[name] !== "function") return;
+      const prev = OrigProcess[name];
+      const replacement = typeof replacementFactory === "function" ? replacementFactory(blocked) : blocked(marker);
+      try {
+        OrigProcess[name] = replacement;
+      } catch {
+        try {
+          Object.defineProperty(OrigProcess, name, {
+            configurable: true,
+            writable: true,
+            value: replacement,
+          });
+        } catch {
+          throw new Error(`Cannot enforce determinism guard for ${marker}`);
+        }
+      }
+      processRestorers.push(() => {
+        try {
+          OrigProcess[name] = prev;
+        } catch {
+          Object.defineProperty(OrigProcess, name, {
+            configurable: true,
+            writable: true,
+            value: prev,
+          });
+        }
+      });
+    };
+    patchProcessMethod("hrtime", "process.hrtime()", (makeBlocked) => {
+      const fn = makeBlocked("process.hrtime()");
+      fn.bigint = makeBlocked("process.hrtime.bigint()");
+      return fn;
+    });
+    patchProcessMethod("uptime", "process.uptime()");
+  }
+
   try {
     return fn();
   } finally {
@@ -79,6 +119,9 @@ export function runWithDeterminismGuard(fn, meta) {
     globalThis.performance = OrigPerf;
     for (let i = cryptoRestorers.length - 1; i >= 0; i -= 1) {
       cryptoRestorers[i]();
+    }
+    for (let i = processRestorers.length - 1; i >= 0; i -= 1) {
+      processRestorers[i]();
     }
   }
 }

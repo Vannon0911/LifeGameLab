@@ -5,6 +5,10 @@ import { fileURLToPath } from "node:url";
 
 import { createDeterministicStore } from "./support/liveTestKit.mjs";
 import { snapshotStore } from "./support/liveTestKit.mjs";
+import { createStore } from "../src/kernel/store/createStore.js";
+import { createNullDriver } from "../src/kernel/store/persistence.js";
+import * as manifest from "../src/project/project.manifest.js";
+import { reducer, simStepPatch } from "../src/project/project.logic.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -124,3 +128,25 @@ for (const testCase of ignoredPayloadCases) {
 }
 
 console.log(`NO_BYPASS_OK benchmark action removed + forbidden payload keys rejected + ignored negative cases stable anchors=${ignoredCaseAnchors.join(",")}`);
+
+const hrtimeBypassStore = createStore(
+  manifest,
+  {
+    reducer: (state, action, ctx) => {
+      if (action.type === "GEN_WORLD") {
+        process.hrtime.bigint();
+        return [];
+      }
+      return reducer(state, action, ctx);
+    },
+    simStep: simStepPatch,
+  },
+  { storageDriver: createNullDriver() },
+);
+assert.throws(
+  () => hrtimeBypassStore.dispatch({ type: "GEN_WORLD", payload: {} }),
+  /process\.hrtime\.bigint\(\)/,
+  "determinism guard must block process.hrtime.bigint()",
+);
+
+console.log("DETERMINISM_GUARD_HRTIME_OK blocked=true");
