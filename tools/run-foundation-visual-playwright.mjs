@@ -3,7 +3,6 @@ import path from "node:path";
 import net from "node:net";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -129,135 +128,46 @@ async function main() {
     await page.waitForTimeout(250);
 
     let idx = 1;
-    let shot = screenshotPath(idx++, "app_loaded");
+    let shot = screenshotPath(idx++, "header_app_loaded");
     await page.screenshot({ path: shot, fullPage: true });
+    const header = page.locator(".nx-minimal-header");
+    const headerShot = screenshotPath(idx++, "header_crop");
+    await header.screenshot({ path: headerShot });
     const appLoadedSeen = {
       title: await page.title(),
+      headerVisible: await header.isVisible(),
+      brandVisible: await page.getByText("LifeGameLab", { exact: true }).isVisible(),
+      hintVisible: await page.getByText("Klick: Worker setzen | Worker->Ressource: Bewegung", { exact: true }).isVisible(),
       startVisible: await page.getByRole("button", { name: /Simulation starten oder pausieren/i }).isVisible(),
       newWorldVisible: await page.getByRole("button", { name: "Neue Welt generieren" }).isVisible(),
     };
     logStep({
-      step: "app_loaded",
-      action: "App lokal im Browser geoeffnet.",
-      expect: "Titel sowie Start/Neue-Welt Controls sichtbar.",
-      seen: appLoadedSeen,
-      state: appLoadedSeen.startVisible && appLoadedSeen.newWorldVisible ? "ok" : "bug",
+      step: "header_app_loaded",
+      action: "App geladen und Header-Screenshot erzeugt.",
+      expect: "Minimal-Header inkl. Hint + Start/Neue-Welt Controls sichtbar.",
+      seen: { ...appLoadedSeen, headerScreenshot: path.relative(root, headerShot).split(path.sep).join("/") },
+      state: appLoadedSeen.headerVisible && appLoadedSeen.brandVisible && appLoadedSeen.hintVisible && appLoadedSeen.startVisible && appLoadedSeen.newWorldVisible ? "ok" : "bug",
       screenshot: shot,
     });
 
     await page.getByRole("button", { name: "Neue Welt generieren" }).click();
     await page.waitForTimeout(350);
-    shot = screenshotPath(idx++, "new_world");
+    shot = screenshotPath(idx++, "header_after_new_world");
     await page.screenshot({ path: shot, fullPage: true });
-    const newWorldBody = await getBodyText(page);
-    const newWorldSeen = {
-      founderCount: (newWorldBody.match(/Founder\s*\n\s*(\d\/\d)/i) || [null, null])[1],
-    };
-    logStep({
-      step: "new_world",
-      action: "Neue Welt erzeugt.",
-      expect: "Genesis-Setup frisch initialisiert (Founder 0/1).",
-      seen: newWorldSeen,
-      state: newWorldSeen.founderCount === "0/1" ? "ok" : "unklar",
-      screenshot: shot,
+    const headerShotAfter = screenshotPath(idx++, "header_after_new_world_crop");
+    await header.screenshot({ path: headerShotAfter });
+    const canvasSeen = await page.evaluate(() => {
+      const c = document.querySelector("canvas");
+      if (!c) return { hasCanvas: false, width: 0, height: 0 };
+      const r = c.getBoundingClientRect();
+      return { hasCanvas: true, width: r.width, height: r.height };
     });
-
-    shot = screenshotPath(idx++, "foundation_not_ready");
-    await page.screenshot({ path: shot, fullPage: true });
-    const notReadyBody = await getBodyText(page);
-    const foundationNotReadySeen = {
-      foundationLine: notReadyBody.split("\n").find((line) => /Foundation\s+noch\s+nicht\s+bereit/i.test(line)) || null,
-      confirmDisabled: await page.getByRole("button", { name: "Gruendung bestaetigen" }).isDisabled(),
-    };
     logStep({
-      step: "foundation_not_ready",
-      action: "Foundation-Status vor gueltiger Eligibility geprueft.",
-      expect: "Nicht bereit und Confirm disabled.",
-      seen: foundationNotReadySeen,
-      state: foundationNotReadySeen.confirmDisabled && !!foundationNotReadySeen.foundationLine ? "ok" : "bug",
-      screenshot: shot,
-    });
-
-    await page.getByRole("button", { name: "Founder-Brush" }).click();
-    const canvas = page.locator("canvas").first();
-    const box = await canvas.boundingBox();
-    if (!box) throw new Error("Canvas not found for founder placement.");
-    const grid = 64;
-    const preset = getWorldPreset("river_delta");
-    const playerWindow = preset?.startWindows?.player;
-    const range = getStartWindowRange(playerWindow, grid, grid);
-    const dpr = await page.evaluate(() => Number(window.devicePixelRatio || 1));
-    const canvasMetrics = await canvas.evaluate((el) => ({
-      pixelWidth: Number(el.width || 0),
-      pixelHeight: Number(el.height || 0),
-    }));
-    const tilePx = Math.max(1, Math.floor(Math.min(canvasMetrics.pixelWidth / grid, canvasMetrics.pixelHeight / grid)));
-    const imageW = grid * tilePx;
-    const imageH = grid * tilePx;
-    const offX = Math.floor((canvasMetrics.pixelWidth - imageW) / 2);
-    const offY = Math.floor((canvasMetrics.pixelHeight - imageH) / 2);
-    const founders = [{ gx: range.x0, gy: range.y0 }];
-    for (const tile of founders) {
-      const sx = box.x + (offX + (tile.gx + 0.5) * tilePx) / dpr;
-      const sy = box.y + (offY + (tile.gy + 0.5) * tilePx) / dpr;
-      await page.mouse.move(sx, sy);
-      await page.mouse.down();
-      await page.mouse.up();
-      await page.waitForTimeout(110);
-    }
-    await page.waitForTimeout(250);
-    shot = screenshotPath(idx++, "foundation_ready");
-    await page.screenshot({ path: shot, fullPage: true });
-    const readyBody = await getBodyText(page);
-    const foundationReadySeen = {
-      founderCount: (readyBody.match(/Founder\s*\n\s*(\d\/\d)/i) || [null, null])[1],
-      foundationReadyLine: readyBody.split("\n").find((line) => /Foundation\s+bereit/i.test(line)) || null,
-      confirmDisabled: await page.getByRole("button", { name: "Gruendung bestaetigen" }).isDisabled(),
-    };
-    logStep({
-      step: "foundation_ready",
-      action: "Gueltige Founder-Konstellation gesetzt (1x1 im Startfenster).",
-      expect: "Foundation bereit und Confirm aktiviert.",
-      seen: foundationReadySeen,
-      state: foundationReadySeen.founderCount === "1/1" && foundationReadySeen.confirmDisabled === false ? "ok" : "bug",
-      screenshot: shot,
-    });
-
-    await page.getByRole("button", { name: "Gruendung bestaetigen" }).click();
-    await page.waitForTimeout(450);
-    shot = screenshotPath(idx++, "core_visible");
-    await page.screenshot({ path: shot, fullPage: true });
-    const coreBody = await getBodyText(page);
-    const coreVisibleSeen = {
-      coreButtonVisible: await page.getByRole("button", { name: "Energiekern bestaetigen" }).isVisible(),
-      runPath: (coreBody.match(/Run-Pfad\s*\n\s*([^\n]+)/i) || [null, null])[1],
-    };
-    logStep({
-      step: "core_visible",
-      action: "Foundation bestaetigt.",
-      expect: "Core-Schritt sichtbar.",
-      seen: coreVisibleSeen,
-      state: coreVisibleSeen.coreButtonVisible ? "ok" : "bug",
-      screenshot: shot,
-    });
-
-    await page.getByRole("button", { name: "Energiekern bestaetigen" }).click();
-    await page.waitForTimeout(900);
-    shot = screenshotPath(idx++, "run_active");
-    await page.screenshot({ path: shot, fullPage: true });
-    const runBody = await getBodyText(page);
-    const startLabel = (await page.getByRole("button", { name: /Simulation starten oder pausieren/i }).innerText()).trim();
-    const runActiveSeen = {
-      startLabel,
-      pauseVisible: /pause/i.test(startLabel),
-      runPath: (runBody.match(/Run-Pfad\s*\n\s*([^\n]+)/i) || [null, null])[1],
-    };
-    logStep({
-      step: "run_active",
-      action: "Core bestaetigt.",
-      expect: "Run formal aktiv (Pause statt Start).",
-      seen: runActiveSeen,
-      state: runActiveSeen.pauseVisible ? "ok" : "bug",
+      step: "header_after_new_world",
+      action: "Neue Welt erzeugt und Header erneut gescreenshottet.",
+      expect: "Header bleibt stabil sichtbar, Canvas ist im Viewport.",
+      seen: { ...canvasSeen, headerScreenshot: path.relative(root, headerShotAfter).split(path.sep).join("/") },
+      state: canvasSeen.hasCanvas && canvasSeen.width > 64 && canvasSeen.height > 64 ? "ok" : "bug",
       screenshot: shot,
     });
 

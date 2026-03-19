@@ -290,6 +290,8 @@ let lastSyncTick = -1;
 let lastSyncTs   = 0;
 let simIntervalId = null;
 let lastSimStepTs = globalThis.performance ? globalThis.performance.now() : 0;
+let lastMoveStepTick = -1;
+let lastMoveStepTs = lastSimStepTs;
 
 const PerfBudget = {
   isMobile: !!(globalThis.matchMedia && globalThis.matchMedia("(pointer: coarse)").matches),
@@ -475,9 +477,15 @@ function loop(ts) {
 
   const state = store.getState();
   const simActive = !SIM_RUNTIME_DISABLED && shouldAdvanceSimulation(state);
-  const elapsedSinceStep = Math.max(0, ts - lastSimStepTs);
+  const simTick = Number(state?.sim?.tick || 0);
+  const lastAutoAction = String(state?.sim?.lastAutoAction || "");
+  if (lastAutoAction.startsWith("MOVE_STEP:") && simTick !== lastMoveStepTick) {
+    lastMoveStepTick = simTick;
+    lastMoveStepTs = ts;
+  }
+  const elapsedSinceMove = Math.max(0, ts - lastMoveStepTs);
   const renderAlpha = simActive
-    ? Math.max(0, Math.min(1, elapsedSinceStep / TICK_RATE_MS))
+    ? Math.max(0, Math.min(1, elapsedSinceMove / 1000))
     : 1;
   tunePerformance(state);
   if ((frameId % PerfBudget.renderEvery) === 0) {

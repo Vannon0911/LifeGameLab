@@ -1525,21 +1525,13 @@ export function simStepPatch(state, action, ctx) {
         simOut.lastAutoAction = `HARVEST_AUTO:${targetX},${targetY}`;
       }
     } else {
-      const nextIdx = findNextStepBfs4(worldMutable, unitIdx, targetIdx, w, h);
-      if (nextIdx < 0 || (Number(worldMutable.alive?.[nextIdx] || 0) | 0) === 1) {
-        simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
-        simOut.activeOrder = createEmptyActiveOrder();
-        simOut.selectedUnit = unitIdx;
-        simOut.lastAutoAction = "ORDER_PATH_BLOCKED";
-      } else {
-        moveEntityTile(worldMutable, unitIdx, nextIdx);
-        const nx = nextIdx % w;
-        const ny = (nextIdx / w) | 0;
-        simOut.selectedUnit = nextIdx;
+      const travelTicks = Math.max(1, TICKS_PER_SECOND | 0);
+      const travelProgress = (Number(activeOrder.progress || 0) | 0) + 1;
+      if (travelProgress < travelTicks) {
         simOut.unitOrder = {
           active: true,
-          fromX: nx,
-          fromY: ny,
+          fromX: unitIdx % w,
+          fromY: (unitIdx / w) | 0,
           targetX,
           targetY,
         };
@@ -1547,14 +1539,47 @@ export function simStepPatch(state, action, ctx) {
           ...activeOrder,
           active: true,
           type: "HARVEST",
-          fromX: nx,
-          fromY: ny,
+          fromX: unitIdx % w,
+          fromY: (unitIdx / w) | 0,
           targetX,
           targetY,
-          progress: Number(activeOrder.progress || 0) | 0,
+          progress: travelProgress,
           maxProgress: Math.max(1, Number(activeOrder.maxProgress || HARVEST_TICKS) | 0),
         };
-        simOut.lastAutoAction = `MOVE_STEP:${nx},${ny}`;
+        simOut.selectedUnit = unitIdx;
+        simOut.lastAutoAction = `MOVE_WAIT:${travelProgress}/${travelTicks}`;
+      } else {
+        const nextIdx = findNextStepBfs4(worldMutable, unitIdx, targetIdx, w, h);
+        if (nextIdx < 0 || (Number(worldMutable.alive?.[nextIdx] || 0) | 0) === 1) {
+          simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
+          simOut.activeOrder = createEmptyActiveOrder();
+          simOut.selectedUnit = unitIdx;
+          simOut.lastAutoAction = "ORDER_PATH_BLOCKED";
+        } else {
+          moveEntityTile(worldMutable, unitIdx, nextIdx);
+          const nx = nextIdx % w;
+          const ny = (nextIdx / w) | 0;
+          simOut.selectedUnit = nextIdx;
+          simOut.unitOrder = {
+            active: true,
+            fromX: nx,
+            fromY: ny,
+            targetX,
+            targetY,
+          };
+          simOut.activeOrder = {
+            ...activeOrder,
+            active: true,
+            type: "HARVEST",
+            fromX: nx,
+            fromY: ny,
+            targetX,
+            targetY,
+            progress: 0,
+            maxProgress: Math.max(1, Number(activeOrder.maxProgress || HARVEST_TICKS) | 0),
+          };
+          simOut.lastAutoAction = `MOVE_STEP:${nx},${ny}`;
+        }
       }
     }
   }

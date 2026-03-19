@@ -1,6 +1,6 @@
 # ARCHITECTURE
 
-**APP_VERSION:** 0.8.2
+**APP_VERSION:** 0.8.3
 
 ## SoT Rule
 - `src/project/contract/manifest.js` stays the executable contract Source of Truth.
@@ -29,6 +29,11 @@
 - Action lifecycle metadata now marks every action as `stable`, `rename`, `deprecated` or `new_slice_a`.
 - `SET_MAPSPEC` is now an active reducer path; the remaining RTS placeholders stay no-op until their slices land.
 - Replacement planning is machine-readable in contracts and human-readable in `docs/traceability/`.
+
+## Slice C Minimal UI Runtime
+- UI shell now runs as minimal interaction surface without panel stacks.
+- Canvas interactions now expose direct founder/worker placement and worker movement flow.
+- Movement interpolation remains renderer-only visual smoothing while simulation stays deterministic and tick-bound.
 
 ## Runtime Truth At Head
 - Operative reducer path remains `src/game/sim/reducer/index.js`.

@@ -45,8 +45,8 @@ export function installUiInput(UI) {
       this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:!running } });
     };
 
-    this._btnPlay.addEventListener("click", togglePlay);
-    this._btnStep.addEventListener("click", () => {
+    this._btnPlay?.addEventListener("click", togglePlay);
+    this._btnStep?.addEventListener("click", () => {
       const state = this._store.getState();
       const runPhase = String(state?.sim?.runPhase || "");
       if (runPhase === RUN_PHASE.GENESIS_SETUP) {
@@ -78,25 +78,24 @@ export function installUiInput(UI) {
         this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:false } });
       this._dispatch({ type:"SIM_STEP", payload:{} });
     });
-    this._btnNew.addEventListener("click", () => {
+    this._btnNew?.addEventListener("click", () => {
       this._moveSelection = null;
       this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:false } });
       this._dispatch({ type:"GEN_WORLD" });
     });
 
-    // Dock tab buttons
-    for (const [key, btn] of Object.entries(this._dockTabBtns)) {
-      btn.addEventListener("click", () => this._togglePanel(key));
+    if (this._dockPlayBtn) this._dockPlayBtn.addEventListener("click", togglePlay);
+    if (this._sheetClose) this._sheetClose.addEventListener("click", () => this._closeSheet?.());
+    if (this._sheetBackdrop) this._sheetBackdrop.addEventListener("click", () => this._closeSheet?.());
+    if (this._dockTabBtns && typeof this._dockTabBtns === "object") {
+      for (const [key, btn] of Object.entries(this._dockTabBtns)) {
+        btn.addEventListener("click", () => this._togglePanel?.(key));
+      }
     }
-    this._dockPlayBtn.addEventListener("click", togglePlay);
-
-    // Sheet close
-    this._sheetClose.addEventListener("click", () => this._closeSheet());
-    this._sheetBackdrop.addEventListener("click", () => this._closeSheet());
-
-    // Desktop context buttons
-    for (const [key, btn] of Object.entries(this._ctxButtons)) {
-      btn.addEventListener("click", () => this._togglePanel(key));
+    if (this._ctxButtons && typeof this._ctxButtons === "object") {
+      for (const [key, btn] of Object.entries(this._ctxButtons)) {
+        btn.addEventListener("click", () => this._togglePanel?.(key));
+      }
     }
   },
 
@@ -115,16 +114,11 @@ export function installUiInput(UI) {
       if (e.target && ["INPUT","SELECT","TEXTAREA"].includes(e.target.tagName)) return;
       if (e.code === "Space") { e.preventDefault(); this._btnPlay.click(); }
       else if (e.key === "n" || e.key === "N") { e.preventDefault(); this._btnNew.click(); }
-      else if (e.key === "Escape") this._closeContext();
-      else if (e.key === "l" || e.key === "L") { e.preventDefault(); this._togglePanel("lage"); }
-      else if (e.key === "e" || e.key === "E") { e.preventDefault(); this._togglePanel("evolution"); }
-      else if (e.key === "i" || e.key === "I") { e.preventDefault(); this._togglePanel("eingriffe"); }
-      else if (e.key === "w" || e.key === "W") { e.preventDefault(); this._togglePanel("welt"); }
-      else if (e.key === "b" || e.key === "B") { e.preventDefault(); this._togglePanel("labor"); }
+      else if (e.key === "Escape") this._closeContext?.();
     });
   },
 
-  _paintAtClient(clientX, clientY, start) {
+  _paintAtClient(clientX, clientY, start, pointerEvent = null) {
     if (!this._rInfo) return;
     const state = this._store.getState();
     const { dpr, tilePx, offX, offY } = this._rInfo;
@@ -133,8 +127,34 @@ export function installUiInput(UI) {
     const wx = Math.floor((sx*dpr - offX) / tilePx);
     const wy = Math.floor((sy*dpr - offY) / tilePx);
     if (wx<0||wy<0||wx>=state.meta.gridW||wy>=state.meta.gridH) return;
+    const runPhase = String(state.sim?.runPhase || "");
+    const shiftRemove = !!pointerEvent?.shiftKey;
     const mode = state.meta.brushMode;
     const radius = state.meta.brushRadius || 3;
+    const idx = wy * state.meta.gridW + wx;
+    const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+    const isOwnAliveTile =
+      (Number(state.world?.alive?.[idx] || 0) | 0) === 1 &&
+      (Number(state.world?.lineageId?.[idx] || 0) | 0) === playerLineageId;
+    const isOwnFounder =
+      isOwnAliveTile &&
+      (Number(state.world?.founderMask?.[idx] || 0) | 0) === 1 &&
+      runPhase === RUN_PHASE.GENESIS_SETUP;
+    const resourceValue = Number(state.world?.R?.[idx] || 0);
+    const isResourceTile = resourceValue > 0.05;
+
+    if (start && runPhase === RUN_PHASE.GENESIS_SETUP) {
+      const placed = this._placeCoreCompat({ x: wx, y: wy, remove: shiftRemove || isOwnFounder });
+      this._setActionFeedback({
+        ok: !!placed,
+        message: placed
+          ? ((shiftRemove || isOwnFounder) ? "Founder entfernt." : "Founder platziert.")
+          : "Founder-Aktion blockiert.",
+        hint: placed ? "" : "Genesis: Startkachel anklicken, dann bestaetigen.",
+      });
+      return;
+    }
+
     if (this._isLabOnlyBrushMode(mode) && !this._isLaborPanelActive(state)) {
       this._ensureLabBrushIsolation(this._activeContext || "lage", state);
       if (start) {
@@ -162,20 +182,22 @@ export function installUiInput(UI) {
     }
     if (mode === BRUSH_MODE.OBSERVE) {
       if (!start) return;
-      if (String(state.sim?.runPhase || "") !== RUN_PHASE.RUN_ACTIVE) {
+      if (runPhase !== RUN_PHASE.RUN_ACTIVE) {
         this._moveSelection = null;
         return;
       }
-      const idx = wy * state.meta.gridW + wx;
-      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-      const isOwnAliveTile =
-        (Number(state.world?.alive?.[idx] || 0) | 0) === 1 &&
-        (Number(state.world?.lineageId?.[idx] || 0) | 0) === playerLineageId;
-      const resourceValue = Number(state.world?.R?.[idx] || 0);
-      const isResourceTile = resourceValue > 0.05;
-
       if (!this._moveSelection) {
-        if (!isOwnAliveTile) return;
+        if (!isOwnAliveTile) {
+          const placed = this._placeCoreCompat({ x: wx, y: wy, remove: shiftRemove });
+          this._setActionFeedback({
+            ok: !!placed,
+            message: placed
+              ? (shiftRemove ? "Worker entfernt." : "Worker platziert.")
+              : "Worker-Aktion blockiert.",
+            hint: placed ? "" : "Setzen auf freie Kacheln, Shift+Klick entfernt.",
+          });
+          return;
+        }
         this._moveSelection = { x: wx, y: wy, idx };
         this._setActionFeedback({
           ok: true,
@@ -207,6 +229,17 @@ export function installUiInput(UI) {
       }
 
       if (!isResourceTile) {
+        if (!isOwnAliveTile) {
+          const placed = this._placeCoreCompat({ x: wx, y: wy, remove: shiftRemove });
+          this._setActionFeedback({
+            ok: !!placed,
+            message: placed
+              ? (shiftRemove ? "Worker entfernt." : "Worker platziert.")
+              : "Worker-Aktion blockiert.",
+            hint: placed ? "" : "Setzen auf freie Kacheln, Shift+Klick entfernt.",
+          });
+          return;
+        }
         this._setActionFeedback({
           ok: false,
           message: "Kein Ressourcen-Ziel.",
@@ -314,11 +347,11 @@ export function installUiInput(UI) {
       this._paintActive = !this._touchGesture;
       this._canvas.setPointerCapture(e.pointerId);
       if (this._touchGesture) return;
-      this._paintAtClient(e.clientX, e.clientY, true);
+      this._paintAtClient(e.clientX, e.clientY, true, e);
     });
     this._canvas.addEventListener("pointermove", (e) => {
       if (this._touchGesture||!this._paintActive) return;
-      this._paintAtClient(e.clientX, e.clientY, false);
+      this._paintAtClient(e.clientX, e.clientY, false, e);
     });
     const end = (e) => {
       this._activePointers.delete(e.pointerId);

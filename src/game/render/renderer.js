@@ -10,6 +10,7 @@ function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 const LOD_ZOOM_STEPS = [512, 256, 128, 64]; // requested: 512 /2 /2 /2
 let _prevAliveSnapshot = null;
+let _activeMoveHint = null;
 
 function computeLodFromZoom(tilePx) {
   // Virtual zoom metric so LOD is device-independent and stable over grid growth.
@@ -29,7 +30,7 @@ function hslToRgb(h, s, l) {
   return [f(0) * 255, f(8) * 255, f(4) * 255];
 }
 
-function computeSingleMoveHint(world) {
+function computeSingleMoveHint(world, alpha = 1) {
   const w = Number(world?.w || 0) | 0;
   const h = Number(world?.h || 0) | 0;
   const alive = world?.alive;
@@ -42,7 +43,10 @@ function computeSingleMoveHint(world) {
   }
   const prev = _prevAliveSnapshot;
   _prevAliveSnapshot = { w, h, alive: currentAlive };
-  if (!prev || prev.w !== w || prev.h !== h) return null;
+  if (!prev || prev.w !== w || prev.h !== h) {
+    _activeMoveHint = null;
+    return null;
+  }
 
   const prevSet = new Set(prev.alive);
   const currSet = new Set(currentAlive);
@@ -54,8 +58,12 @@ function computeSingleMoveHint(world) {
   for (const idx of currSet) {
     if (!prevSet.has(idx)) added.push(idx);
   }
-  if (removed.length !== 1 || added.length !== 1) return null;
-  return { from: removed[0], to: added[0] };
+  if (removed.length === 1 && added.length === 1) {
+    _activeMoveHint = { from: removed[0], to: added[0] };
+  }
+  if (_activeMoveHint && alpha < 1) return _activeMoveHint;
+  if (alpha >= 1) _activeMoveHint = null;
+  return null;
 }
 
 function mutationIntensityFromTrait(trait, idx) {
@@ -1240,18 +1248,13 @@ export function drawFrame(ctx, state, perf = {}) {
   ctx.imageSmoothingEnabled = false;
   drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality);
 
-  // Overlays intentionally reduced for UI-rework scope.
-  if (!overlayActive && !balanced && (quality >= 2 || userFocused) && lod.level <= 2 && !userMinimal) drawNetworkLinks(ctx, world, offX, offY, tilePx, meta, null);
-  if (!overlayActive && !tactical && quality >= 1 && lod.level <= 2) drawSuperBlocks(ctx, world, offX, offY, tilePx, 0);
+  // Minimal tactical presentation: grid + units + structures + resources + fog.
   if (!overlayActive && quality >= 1) drawResourceMarkers(ctx, world, offX, offY, tilePx);
-  const moveHint = computeSingleMoveHint(world);
+  const moveHint = computeSingleMoveHint(world, alpha);
   drawRoundCells(ctx, world, offX, offY, tilePx, meta, null, quality, moveHint, alpha);
-  if (!overlayActive && !balanced && (quality >= 3 || userFocused) && lod.level <= 1 && !userMinimal) drawFieldGlyphs(ctx, world, offX, offY, tilePx);
-  if (quality >= 1) drawPatternObjectMarker(ctx, world, null, offX, offY, tilePx);
   if (!overlayActive && quality >= 1) drawTileObjectPlaceholders(ctx, world, offX, offY, tilePx);
-  if (quality >= 1 && shouldDrawLegacyZoneOverlay(meta)) drawZoneOverlay(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level, detailMode);
-  if (quality >= 1 && lod.level <= 2) drawEvents(ctx, world, offX, offY, tilePx);
+  drawHarvestProgress(ctx, world, state.sim, offX, offY, tilePx);
 
   return { tilePx, offX, offY, dpr: perf.dpr, quality, lod };
 }

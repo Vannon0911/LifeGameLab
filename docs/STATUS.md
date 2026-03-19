@@ -11,6 +11,7 @@
 - `SET_MAPSPEC` now has active UI dispatch sources and a dedicated dispatch-source regression guard.
 - Builder pipeline now keeps world mutation behind `GEN_WORLD`; `SET_MAPSPEC` and `SET_WORLD_PRESET` only compile/sync map/meta state.
 - Slice C visual baseline is now live: UI layout/input modules are mounted, canvas click placement is regression-tested, and tile object placeholders render in-world.
+- Slice C minimal runtime UI is now active: panel stack removed, direct canvas placement flow is live, and movement is paced at 1 tile per second with purely visual interpolation.
 - Slice A contract scaffold test was added and passes.
 - Slice B MapSpec test was added for deterministic compile + world boot.
 - Longrun evidence budget now has explicit headroom at `300_000 ms`.
