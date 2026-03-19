@@ -65,6 +65,7 @@
     "triggerPrefixes": [
       ".gitignore",
       "README.md",
+      "RUNBOOK.md",
       "package.json",
       "src/project/contract/manifest.js",
       "docs/WORKFLOW.md",

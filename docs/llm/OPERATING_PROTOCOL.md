@@ -38,6 +38,8 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Commits bleiben moeglichst klein, aber Multi-Scope ist zulaessig wenn kausal gekoppelt.
 - task-spezifische Doku vor globaler Statuspflege
 - kein Weiterarbeiten nach `check`-Rot; erst neuen Scope-Preflight aufbauen
+- kein `--no-verify`, kein Hook-Bypass, kein Guard-Bypass (`SKIP`, `HUSKY=0` oder aehnlich) bei Commit/Push
+- bei unklassifizierten Pfaden zuerst `docs/llm/TASK_ENTRY_MATRIX.json` erweitern und dann regulaer `classify -> entry -> ack -> check`
 - UMGEHUNG (z. B. direkte State-/Patch-Injektion zur Abkuerzung von Flows) ist nur mit expliziter Ruecksprache erlaubt.
 - Slice-Versionierung ist Pflicht: jeder abgeschlossene Slice erhoeht die Version um `0.0.1`; Teilschritte werden nur als Anhang `a/b/c/d` dokumentiert und zaehlen nicht als eigener Versionssprung.
 
