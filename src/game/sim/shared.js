@@ -74,5 +74,6 @@ export function defaultLineageMemory() {
     lastTickUpdated: -1,
     lastSeenTick: -1,
     mutationScore: 0,
+    biomeUsageTicks: {},
   };
 }
