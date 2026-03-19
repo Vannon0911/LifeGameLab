@@ -521,6 +521,10 @@ function runRegressionFile(runCtx, relPath) {
   const mapping = REGRESSION_REGISTRY[relPath];
   const abs = path.join(root, relPath);
   assert(fs.existsSync(abs), `Regression target missing: ${relPath}`);
+  const budgetMs = Number(mapping?.budgetMs || 0);
+  const timeoutMs = budgetMs > 0
+    ? Math.max(120_000, budgetMs + 15_000)
+    : 120_000;
   const startedAt = Date.now();
   runCtx.journal.append({
     scenarioId: relPath,
@@ -532,7 +536,7 @@ function runRegressionFile(runCtx, relPath) {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 120_000,
+    timeout: timeoutMs,
   });
   runCtx.logger.appendStdout(res.stdout || "");
   runCtx.logger.appendStderr(res.stderr || "");
@@ -553,7 +557,6 @@ function runRegressionFile(runCtx, relPath) {
   if (res.error) throw res.error;
   const outcome = res.status === 0 ? "match" : "mismatch";
   const elapsedMs = Date.now() - startedAt;
-  const budgetMs = Number(mapping?.budgetMs || 0);
   if (budgetMs > 0) {
     assert(elapsedMs <= budgetMs, `Regression test budget exceeded: ${relPath} elapsed=${elapsedMs}ms budget=${budgetMs}ms`);
   }
