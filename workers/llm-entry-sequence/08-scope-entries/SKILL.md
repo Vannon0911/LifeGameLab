@@ -1,15 +1,16 @@
 # Skill Definition
 
-skill_id: skill-scope-entry-read
-linked_agent: agent-scope-entry-aggregator
+skill_id: skill-domain-coordination
+linked_agent: agent-domain-coordinator
+role: Domain-Coordinator
 
 ## Procedure
-1. Read step_source from AGENT.md.
-2. Extract normative statements (must/forbidden/always).
-3. Convert statements into executable checks.
-4. Save findings in REPORT.md with exact file anchors.
+1. Read AGENT.md and confirm scope/guard.
+2. Execute role mission with minimal required context.
+3. Produce the mandated output artifact.
+4. List open risks and concrete next action.
 
-## Evidence Format
-- Use repo paths.
-- Include rule text and proof line/section references.
-- Mark uncertain items as UNVERIFIED.
+## Evidence Rules
+- Cite touched files and tests used for verification.
+- Mark uncertain conclusions as UNVERIFIED.
+- Separate facts, assumptions, and recommendations.

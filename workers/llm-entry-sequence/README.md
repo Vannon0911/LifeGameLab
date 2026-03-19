@@ -1,25 +1,32 @@
-# LLM Entry Worker Map
+# LLM Entry Worker Map (Role-Based)
 
-Source order extracted from docs/llm/ENTRY.md section Pflicht-Lesereihenfolge (ohne Vollscan).
+This worker layout is role-driven to accelerate development, not only gate reading.
 
-## Max Worker Layout
-- 9 sequence workers (01..09)
-- 5 sub-workers under 08-scope-entries
-- total worker directories: 14
+## Core Roles
+1. 01-workflow: Task-Orchestrator
+2. 02-entry: Arbiter-Coder (primary coding worker)
+3. 03-operating-protocol: Protocol-Enforcer
+4. 04-architecture: Architecture-Guardian
+5. 05-status: Documentation-Auditor
+6. 06-task-entry-matrix: Scope-Router
+7. 07-task-gate-index: Quality-Reviewer
+8. 08-scope-entries: Domain-Coordinator
+9. 09-global-minimum-gates: Gate-Compliance-Checker (mandatory after each task)
 
-## Sequence
-1. 01-workflow
-2. 02-entry
-3. 03-operating-protocol
-4. 04-architecture
-5. 05-status
-6. 06-task-entry-matrix
-7. 07-task-gate-index
-8. 08-scope-entries (01-ui, 02-sim, 03-contracts, 04-testing, 05-versioning)
-9. 09-global-minimum-gates
+## Domain Coding Workers
+- 08-scope-entries/01-ui: UI-Coder
+- 08-scope-entries/02-sim: SIM-Coder
+- 08-scope-entries/03-contracts: Contract-Coder
+- 08-scope-entries/04-testing: Test-Engineer
+- 08-scope-entries/05-versioning: Versioning-Release
+
+## Workflow Contract
+1. Orchestrator slices tasks.
+2. Arbiter-Coder and domain coders implement.
+3. Documentation-Auditor verifies docs after each task.
+4. Gate-Compliance-Checker runs mandatory gate check after each task.
+5. Quality-Reviewer + Architecture-Guardian sign off risks.
 
 ## Ownership Rule
-Each worker owns only its own directory and writes:
-- AGENT.md
-- SKILL.md
-- REPORT.md (execution output, currently not generated)
+- Each worker owns only its own folder artifacts.
+- Product-code edits are executed by Arbiter-Coder and domain coders only.

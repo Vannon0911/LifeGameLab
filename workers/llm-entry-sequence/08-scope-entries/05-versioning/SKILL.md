@@ -1,9 +1,16 @@
 # Skill Definition
 
-skill_id: skill-versioning-entry
-linked_agent: agent-scope-versioning
+skill_id: skill-versioning-release
+linked_agent: agent-versioning-release
+role: Versioning-Release
 
 ## Procedure
-1. Parse mandatory gates from step_source.
-2. Build a checklist with pass/fail criteria.
-3. Add path-specific constraints and dependencies.
+1. Read AGENT.md and confirm scope/guard.
+2. Execute role mission with minimal required context.
+3. Produce the mandated output artifact.
+4. List open risks and concrete next action.
+
+## Evidence Rules
+- Cite touched files and tests used for verification.
+- Mark uncertain conclusions as UNVERIFIED.
+- Separate facts, assumptions, and recommendations.
