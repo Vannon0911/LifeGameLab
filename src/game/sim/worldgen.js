@@ -207,6 +207,30 @@ export function seedDeterministicBootstrapCluster(world, seedStr, windowDef, lin
   return bestIndices;
 }
 
+export function applyMapSpecOverrides(world, spec) {
+  if (!world || !spec || !spec.tilePlan || typeof spec.tilePlan !== "object") return;
+  const { w, h, L, R, W, Sat, zoneRole, founderMask } = world;
+  const tilePlan = spec.tilePlan;
+  for (const key of Object.keys(tilePlan)) {
+    const idx = Number(key) | 0;
+    if (idx < 0 || idx >= w * h) continue;
+    const entry = tilePlan[key];
+    if (!entry || typeof entry !== "object") continue;
+    const { mode, value } = entry;
+    const v = Number(value ?? 0);
+    switch (mode) {
+      case "light": if (L) L[idx] = v; break;
+      case "nutrient": if (R) R[idx] = v; break;
+      case "water": if (W) W[idx] = v; break;
+      case "saturation": if (Sat) Sat[idx] = v; break;
+      case "core": if (zoneRole) zoneRole[idx] = 1; break; // ZONE_ROLE.CORE
+      case "dna": if (zoneRole) zoneRole[idx] = 2; break; // ZONE_ROLE.DNA
+      case "infra": if (zoneRole) zoneRole[idx] = 3; break; // ZONE_ROLE.INFRA
+      case "founder": if (founderMask) founderMask[idx] = 1; break;
+    }
+  }
+}
+
 export function generateWorld(w, h, seedStr, phy, presetId = "river_delta") {
   const normalizedPresetId = normalizeWorldPresetId(presetId);
   const preset = getWorldPreset(normalizedPresetId);

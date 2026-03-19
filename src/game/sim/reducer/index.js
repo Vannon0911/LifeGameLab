@@ -2,7 +2,7 @@
 // Reducer — V4 COMPATIBLE (Patch-based)
 // ============================================================
 
-import { generateWorld } from "../worldgen.js";
+import { generateWorld, applyMapSpecOverrides } from "../worldgen.js";
 import { simStep } from "../step.js";
 import { PHYSICS_DEFAULT } from "../../../kernel/store/physics.js";
 import { hashString, rng01 } from "../../../kernel/determinism/rng.js";
@@ -642,6 +642,7 @@ function buildWorldGenerationPatches(state, presetId) {
     tunedPhysics,
     normalizedPresetId
   );
+  applyMapSpecOverrides(world, compiledMap.spec);
   applyGlobalLearningToWorld(world, meta.globalLearning);
   world.devMutationVault = cloneJson(meta.devMutationVault || defaultDevMutationVault());
   world.zoneMap = new Int8Array(compiledMap.gridW * compiledMap.gridH);
@@ -674,6 +675,13 @@ function buildWorldGenerationPatches(state, presetId) {
   });
   Object.assign(nextSim, stageState);
 
+  for (const k of Object.keys(nextSim)) {
+    if (typeof nextSim[k] === "number" && !Number.isFinite(nextSim[k])) {
+      console.error(`BOOTSTRAP_METRIC_FAIL: non-finite ${k}`, nextSim[k]);
+      nextSim[k] = 0;
+    }
+  }
+
   const patches = [
     { op: "set", path: "/meta/gridW", value: compiledMap.gridW },
     { op: "set", path: "/meta/gridH", value: compiledMap.gridH },
@@ -696,6 +704,7 @@ function buildWorldGenerationPatches(state, presetId) {
   pushKeysPatches(patches, nextSim, SIM_KEYS, "/sim");
   patches.push({ op: "set", path: "/meta/playerLineageId", value: 1 });
   patches.push({ op: "set", path: "/meta/cpuLineageId", value: 2 });
+  if (stageState.patches) patches.push(...stageState.patches);
   return patches;
 }
 
@@ -1692,12 +1701,12 @@ export function simStepPatch(state, action, ctx) {
     simOut.zoneUnlockProgress = nextZoneUnlockCostEnergy > 0
       ? clamp(Number(simOut.playerEnergyStored || 0) / nextZoneUnlockCostEnergy, 0, 1)
       : 0;
-  simOut.coreEnergyStableTicks = Number(simOut.playerEnergyNet || 0) > 0 && alivePlayerCoreCells > 0
-    ? (Number(state.sim.coreEnergyStableTicks || 0) + 1)
-    : 0;
-  simOut.networkRatio = (alivePlayerCoreCells + alivePlayerInfraCells) > 0
-    ? alivePlayerInfraCells / Math.max(1, alivePlayerCoreCells + alivePlayerInfraCells)
-    : Number(simOut.networkRatio || 0);
+    simOut.coreEnergyStableTicks = Number(simOut.playerEnergyNet || 0) > 0 && alivePlayerCoreCells > 0
+      ? (Number(state.sim.coreEnergyStableTicks || 0) + 1)
+      : 0;
+    simOut.networkRatio = (alivePlayerCoreCells + alivePlayerInfraCells) > 0
+      ? alivePlayerCoreCells / Math.max(1, alivePlayerCoreCells + alivePlayerInfraCells)
+      : Number(simOut.networkRatio || 0);
   }
   if (state.sim.dnaZoneCommitted) {
     const preset = getWorldPreset(state.meta.worldPresetId);
@@ -1705,8 +1714,17 @@ export function simStepPatch(state, action, ctx) {
     const alivePlayerDnaCells = countAlivePlayerRoleCells(worldMutable, playerLineageId, ZONE_ROLE.DNA);
     simOut.playerDNA = Number(state.sim.playerDNA || 0) + alivePlayerDnaCells * 0.1 * dnaYieldScale;
   }
-  Object.assign(simOut, deriveStageState(worldMutable, simOut, state.meta));
+  const stageDerivation = deriveStageState(worldMutable, simOut, state.meta);
+  Object.assign(simOut, stageDerivation);
+  if (stageDerivation.patches) patches.push(...stageDerivation.patches);
   applyGoalCode(simOut, currentTick, state.meta);
+
+  for (const k of Object.keys(simOut)) {
+    if (typeof simOut[k] === "number" && !Number.isFinite(simOut[k])) {
+      console.error(`SIM_STEP_METRIC_FAIL: non-finite ${k}`, simOut[k]);
+      simOut[k] = 0;
+    }
+  }
 
   // Drift hardening: only patch known sim keys.
   pushKeysPatches(patches, simOut, SIM_KEYS, "/sim", state.sim);
