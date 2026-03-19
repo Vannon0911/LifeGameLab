@@ -39,6 +39,44 @@ export const ZONE_ROLE = Object.freeze({
   INFRA: 3,
 });
 
+export const CONTRACT_PROFILE = Object.freeze({
+  LEGACY_CELL_RTS: "legacy_cell_rts",
+  LIFEGAMELAB_RTS_V1_1: "lifegamelab_rts_v1_1",
+});
+
+export const ENTITY_KIND = Object.freeze({
+  NONE: "none",
+  WORKER: "worker",
+  FIGHTER: "fighter",
+  CORE: "core",
+  BUILDING: "building",
+});
+
+export const RESOURCE_KIND = Object.freeze({
+  RAW_PLANT: "raw_plant",
+  ENERGY: "energy",
+  SAPLING: "sapling",
+  TREE_TRUNK: "tree_trunk",
+  WOOD: "wood",
+  STONE: "stone",
+});
+
+export const BUILDING_KIND = Object.freeze({
+  CORE: "core",
+  PLANT_HARVESTER: "plant_harvester",
+  REPRODUCER: "reproducer",
+  TREE_HARVESTER: "tree_harvester",
+  SAWMILL: "sawmill",
+  STONE_HARVESTER: "stone_harvester",
+  WORKER_DEPOT: "worker_depot",
+  HARVEST_STORAGE: "harvest_storage",
+  DEFENSE_TOWER: "defense_tower",
+  PRODUCTION_FACTORY: "production_factory",
+  NEXUS_EXTENSION: "nexus_extension",
+  SPLITTER: "splitter",
+  MUTATOR: "mutator",
+});
+
 export const RUN_PHASE = Object.freeze({
   GENESIS_SETUP: "genesis_setup",
   GENESIS_ZONE: "genesis_zone",

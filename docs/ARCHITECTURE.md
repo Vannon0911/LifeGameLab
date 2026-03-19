@@ -1,53 +1,74 @@
 # ARCHITECTURE
 
-**APP_VERSION:** 0.7.3
+**APP_VERSION:** 0.8.0
 
-## Architektur-Kern
-- Manifest-first bleibt aktiv.
-- State-Updates bleiben patch-only.
-- Kernel bleibt einzige Schreibinstanz fuer Gameplay-State.
-- UI und Renderer bleiben read-only gegenueber Gameplay-State.
-- Keine Entropiequellen wie `Math.random()` oder `Date.now()` in Reducer/SimStep.
+## SoT Rule
+- `src/project/contract/manifest.js` stays the executable contract Source of Truth.
+- `docs/PRODUCT.md` stays the product Source of Truth.
+- `docs/traceability/*` stays derived evidence only.
 
-## Kanonische Module
-- `src/kernel/*`: deterministischer Kernel, Patches, Persistenz, RNG, Domain-Gate-Hook
-- `src/core/kernel/*`: Compatibility-Fassade auf `src/kernel/*`
-- `src/project/contract/*`: State-, Action-, Mutation-, Gate- und Dataflow-Vertrag
-- `src/game/plugin/*`: Game-Adapter (`logic.js`) und konkrete Domain-Gates (`gates.js`)
-- `src/game/sim/*`: Simulationslogik, Worldgen, Step-Pipeline, Reducer
-- `src/game/render/*`: kanonischer Renderer plus Worker
-- `src/game/ui/*`: derzeit neutraler Adapter + Verdrahtungs-Stubs (kein aktives Legacy-Panelsystem)
-- `src/app/*`: Boot, Runtime, Tick-Loop, Fehlerstatus
+## Architecture Core
+- Manifest-first stays active.
+- State updates stay patch-only.
+- Kernel stays the only write authority for gameplay state.
+- UI and renderer stay read-only against gameplay state.
+- No nondeterministic entropy such as `Math.random()` or `Date.now()` is allowed in reducer or sim step.
 
-## Laufende Wahrheiten (Head)
-- Operativer Reducerpfad: `src/game/sim/reducer/index.js`.
-- `src/game/sim/reducer.js` bleibt Compatibility-Fassade.
-- Runtime-Flag: `SIM_RUNTIME_DISABLED = true` (Sim-Runtime aktuell blockiert).
-- Tick-Loop ist deterministisch gehaertet: kein dt-cap, kein catchup-cap, catch-up via `while (acc >= stepMs)`.
-- Render-Mode wird beim Boot auf `cells` gesetzt.
-- UI-Hauptklasse in `src/game/ui/ui.js` ist no-op und haelt nur API-Form fuer Wiring stabil.
-- Runtime-Archiv (Begründung + Guardrails): `docs/traceability/sim-runtime-archive-2026-03-18.md`.
+## Canonical Modules
+- `src/kernel/*`: deterministic kernel, patching, persistence, RNG and validation.
+- `src/project/contract/*`: state, action, mutation, gate, lifecycle and dataflow contracts.
+- `src/game/contracts/*`: product-facing enums and shared identifiers.
+- `src/game/sim/*`: active legacy runtime plus reusable deterministic algorithms.
+- `src/game/render/*`: canonical renderer and worker renderer.
+- `src/game/ui/*`: current adapter shell and legacy-facing wiring.
+- `src/app/*`: boot, runtime loop and crash surfaces.
 
-## Contract-Status
-- Thin-Facades fuer `project.manifest.js`, `sim.js`, `reducer.js` und `src/game/sim/gate.js` aktiv.
-- `project.manifest.js` verdrahtet Domain-Gate ueber Plugin-Hook (`domainPatchGate`).
-- Tick-Orchestrierung liegt in `step.js`, Phasenlogik in `stepPhases.js`, Runtime-Helfer in `stepRuntime.js`.
-- Keine globale Live-Surface fuer Store/Perf/Textdiagnose im Browser.
+## Slice A Migration Baseline
+- Legacy cell-RTS runtime is still present and remains bootable.
+- New RTS contract scaffolding is introduced without deleting live legacy flows.
+- Action lifecycle metadata now marks every action as `stable`, `rename`, `deprecated` or `new_slice_a`.
+- New RTS contract placeholders are allowed to exist as no-op actions before reducer wiring lands.
+- Replacement planning is machine-readable in contracts and human-readable in `docs/traceability/`.
 
-## Test- und Gate-Basis
-- Einstieg: `node tools/evidence-runner.mjs --suite claims|regression|full`
-- Wrapper: `node tools/run-test-suite.mjs <suite>` und `node tools/run-all-tests.mjs --full`
-- Aktive Determinismus-/Replay-Regressionslinie:
-  - `node tests/test-deterministic-genesis.mjs`
-  - `node tests/test-step-chain-determinism.mjs`
-  - `node tests/test-readmodel-determinism.mjs`
-  - `node tests/test-kernel-replay-truth.mjs`
+## Runtime Truth At Head
+- Operative reducer path remains `src/game/sim/reducer/index.js`.
+- `src/game/sim/reducer.js` remains the compatibility facade.
+- Boot still dispatches legacy `GEN_WORLD`.
+- Renderer orchestration in `src/app/main.js` and `src/game/render/renderer.js` remains canonical and reusable.
+- New top-level `map` state exists as migration scaffold for MapSpec work.
+- New RTS scaffolding lives first in contracts, not in direct state mutation shortcuts.
 
-## Repo-Struktur
-- `src/app/`: Bootstrap und Laufzeit-Hooks
-- `src/core/`: Kernel-Kompatibilitaet
-- `src/game/`: Sim, Renderer, UI
-- `src/project/`: Manifest, Contracts, LLM-Glue
-- `tests/`: Determinismus-, Bypass- und LLM-Gate-Beweise
-- `tools/`: Test-Suites, Evidence, Debug-Helfer
-- `docs/`: kanonische Top-Level-Doku plus `docs/llm/`
+## Contract Truth At Head
+- `actionSchema` contains both live legacy actions and Slice A RTS scaffolding actions.
+- `mutationMatrix` remains authoritative for allowed writes.
+- `simGate` remains authoritative for `/world/*` and `/sim/*` patch validation.
+- `dataflow` exposes dispatch sources plus lifecycle and planned writes.
+- `actionLifecycle` is the canonical replacement ledger for action migration.
+
+## Reuse Policy
+- Reuse generic deterministic algorithms.
+- Rewrite product vocabulary and gameplay surfaces.
+- Delete only after replacement wiring, reducer migration and test migration are complete.
+
+High-value reuse candidates:
+- `src/game/sim/cellPatterns.js`
+- `src/game/sim/patterns.js`
+- `src/game/sim/worldAi.js`
+- `src/game/sim/reducer/winConditions.js`
+- `src/game/render/renderer.js`
+- `src/app/main.js`
+
+## Test And Gate Basis
+- Entry and preflight remain mandatory before writes.
+- Determinism and replay tests remain the hard truth line.
+- New migration tests must prove scaffold actions are safe before reducer wiring lands.
+- Legacy paths may be removed only after a test proves the replacement path has assumed the responsibility.
+
+## Repo Structure
+- `src/app/`: bootstrap and runtime orchestration.
+- `src/core/`: compatibility kernel facade.
+- `src/game/`: runtime gameplay, renderer and UI.
+- `src/project/`: manifest, contracts and adapters.
+- `tests/`: determinism, contract and migration guards.
+- `tools/`: test runners and evidence tooling.
+- `docs/`: SoT docs and derived traceability.

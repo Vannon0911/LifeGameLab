@@ -3,9 +3,10 @@ import { actionSchema } from "./actionSchema.js";
 import { mutationMatrix } from "./mutationMatrix.js";
 import { simGate } from "./simGate.js";
 import { dataflow } from "./dataflow.js";
+import { actionLifecycle } from "./actionLifecycle.js";
 
 export const SCHEMA_VERSION = 2;
-export const APP_VERSION = "0.7.3";
+export const APP_VERSION = "0.8.0";
 
 export const manifest = {
   SCHEMA_VERSION,
@@ -15,6 +16,7 @@ export const manifest = {
   mutationMatrix,
   simGate,
   dataflow,
+  actionLifecycle,
 };
 
 export {
@@ -23,4 +25,5 @@ export {
   mutationMatrix,
   simGate,
   dataflow,
+  actionLifecycle,
 };

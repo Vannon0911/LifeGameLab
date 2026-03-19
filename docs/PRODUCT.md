@@ -1,108 +1,152 @@
 # PRODUCT
 
-Version: 1.0
+Version: 1.1
 
-## Produktkern
-LifeGameLab ist ein deterministisches Browser-RTS, das mit genau einer Zelle beginnt.
-Kein Tutorial, keine Gebaeudemenues und keine versteckten Startskripte.
-Der erste Zug ist immer direkt: Zelle bewegen, Ressource abbauen, Wirtschaft aufbauen.
+## SoT Rule
+This file is the product Source of Truth.
+`docs/traceability/*` is derived planning evidence and must never override this document.
 
-Die zentrale Entscheidung bleibt ueber das ganze Match gleich:
-- Zelle als Worker weiter nutzen
-- oder Zelle dauerhaft in Muster und Infrastruktur investieren
+## Product Core
+LifeGameLab is a deterministic browser RTS where the full system already exists at second zero.
+There is no tutorial, no popup teaching, and no hidden helper flow.
+The game teaches only through consequence.
 
-Aus dieser Entscheidung entstehen Wirtschaft, Zonen, Muster-zu-Objekt-Erkennung,
-Automatisierung, Kampf und emergente Militaerkombinationen.
+The player starts with one worker, not with a menu.
+The first strategic decision is where to found the first core by manually delivering five raw plants.
 
-## Welt
-Die Welt ist seedbasiert und reproduzierbar.
-- gleicher Seed -> gleiche Welt
-- gleiche Inputs -> gleiche Ergebnisse
+## Deterministic Foundation
+- 24 ticks always equal one second.
+- Same seed plus same MapSpec must produce the same world.
+- RNG stays deterministic and replay-safe.
+- Daily seeds, shadow runs and score verification are part of the product, not post-launch garnish.
 
-Die Karte ist fair, aber nicht trivial gespiegelt.
-Beide Seiten erhalten vergleichbare Startchancen.
+## Match Structure
+- Blitz uses a 32x32 grid.
+- Standard uses a 64x64 grid.
+- Krieg uses a 128x128 grid.
+- Custom exists through the Map Builder pipeline and stays deterministic.
 
-Der Spannungsbogen kommt aus der Weltstruktur:
-- Stabilisierung
-- Expansion
-- Konflikt
+Grid size is gameplay identity, not a cosmetic knob.
 
-## Start
-Jeder Spieler startet mit genau einer Zelle.
-Die Zelle wird wie ein RTS-Worker gesteuert:
-- zur Ressource bewegen
-- abbauen
-- zweite Zelle erzeugen
+## Economy
+The economy is built on workers, not abstract build tokens.
+Workers are simultaneously production, construction and military opportunity cost.
 
-Kein vorgeschaltetes Tutorial.
-Die erste Interaktion erklaert das Spiel selbst.
+Canonical early numbers:
+- Worker spawn costs 2 energy.
+- Worker spawn takes 240 ticks.
+- Worker break-even sits at 480 ticks.
+- Plant energy fields output 1 energy every 120 ticks.
 
-## Wachstum
-Mit zwei Zellen beginnt der erste Effizienzsprung.
-Frueher Kernloop:
-- Ressourcen abbauen
-- neue Zellen erzeugen
-- Einkommen stabilisieren
-- erste Zone vorbereiten
+Three resource pillars define the match:
+1. Plants become energy.
+2. Plants can be reproduced into trees, then processed into wood.
+3. Stone is a physical map resource and becomes fully useful at T3.
 
-## Zonen
-Zonen sind feste quadratische Flaechen im Grid:
-- 2x2
-- 4x4
-- 6x6
-- 8x8
+## Phase 0 And Core
+Phase 0 is locked:
+- the first core costs five raw plants
+- energy does not exist before the first running core
+- the word energy is absent from Phase 0 UX
 
-Zonentyp wird beim Setzen festgelegt:
-- Abbauzone
-- Weiterverarbeitungszone
-- Herstellungszone
+The core is the canonical center of the economy:
+- 4x4 footprint
+- 0 to 100 pool per core
+- single resource type at a time
+- global queue of 10 units
+- visible backpressure instead of silent void loss
 
-Je groesser die Zone, desto hoeher Kosten und Kombinationsraum.
+The first core is permanent.
+The second core costs energy and is unavailable before core one is running.
 
-## Muster und Objekte
-Ab mindestens vier Zellen in einer Zone koennen Verbindungen gesetzt werden.
-Das System erkennt Muster und erzeugt daraus Objekte/Funktionen.
+## Automation And T2
+Automation is explicit production infrastructure:
+- harvesters
+- repro buildings
+- sawmills
+- conveyors
+- lines
 
-Prinzip:
-- keine Gebaeude aus Liste anklicken
-- Funktionen durch raeumliche Muster entdecken
+Conveyor rule:
+- each segment consumes one worker permanently
+- no upkeep beyond worker opportunity cost
 
-## Wirtschaft
-Drei Stufen:
-1. Abbau
-2. Weiterverarbeitung
-3. Herstellung
+T2 is defined by the core bottleneck:
+- plants and wood compete for the same core
+- the player must solve this via prioritization, splitter or double core
 
-Ziel des Early Games:
-Grundversorgung so stabilisieren, dass sie sich selbst traegt.
+## T1, T2 And T3
+T1 and T2 are built on the field and discovered by consequences.
+T3 is the only extra window in the game.
 
-## Spielphasen
-- Early Game: Ueberleben, erste Stabilisierung
-- Mid Game: Automatisierung, Spezialisierung
-- Endgame: Militaerische Kombinationen und strategischer Druck
+T3 rules:
+- one placeable mutator building
+- scalable input canvas
+- max 15 active nodes
+- only closed patterns are valid
+- rotated, mirrored or reversed equivalents collapse into the same topology class
 
-## Konflikt und Niederlage
-Konflikt entsteht aus gemeinsam attraktiven Ressourcenraeumen.
-Kein kuenstliches Event muss Kampf erzwingen.
+Topology classes drive combat mutations:
+- triangle
+- square
+- loop
+- star
+- spiral
+- cross
+- pentagram
+- hexagram
 
-Loss Condition:
-- letzte Zelle eines Spielers stirbt -> Match verloren
-- kein Respawn
+## Conflict And CPU
+Conflict is forced by world structure, not scripted events.
+Three triggers define war:
+- resource collision
+- line contact
+- CPU pressure
 
-## Technische Leitplanken
-- Vanilla JavaScript
-- deterministischer Kern
-- 24 Ticks pro Sekunde
-- renderAlpha-Interpolation im Renderpfad
-- UI dispatcht nur, UI mutiert nie direkt
+CPU is the only opponent in MVP.
+Its strategy scaffold is deterministic and stays on three modes:
+- EXPAND
+- HOLD
+- PRESSURE
 
-## MVP-Beweisziele
-1. Eine Zelle als Start fuehlt sich sofort spielbar an.
-2. Worker-vs-Investment erzeugt echte Strategie.
-3. Muster-zu-Objekt ist im Grid sichtbar und relevant.
-4. Die Welt erzeugt den Bogen Stabilisierung -> Expansion -> Konflikt ohne Script-Tricks.
+CPU attacks lines, not the core.
 
-## Harte Prioritaet bei Konflikten
-1. Contract- und Kernel-Invarianten
-2. Aktiver technischer Status in `docs/STATUS.md`
-3. Diese Produktbasis
+## Win Conditions
+Selectable win conditions for MVP:
+- supremacy
+- stockpile
+- efficiency
+
+Loss condition:
+- dead core leads to no new workers and the run bleeds out
+
+## MVP Scope
+In scope:
+- internal Map Builder P0
+- 32, 64 and 128 grid sizes
+- Phase 0
+- core economy
+- worker system
+- plant, wood and stone pillars
+- T1 and T2
+- T3 mutator
+- deterministic CPU scaffold
+- line system
+- context window interaction
+- win conditions
+- shadow runs and daily seed
+
+Out of scope after MVP:
+- player-facing community map editor
+- double-core tuning polish
+- full CPU behavior design
+- cross-platform CI polish
+
+## Current Migration Note
+Current head is on Slice A migration scaffolding:
+- old cell-RTS runtime still exists
+- new RTS contract strings and traceability matrices are introduced first
+- legacy flows remain only until replacement wiring and tests exist
+
+Deletion rule:
+- delete only dead after replacement

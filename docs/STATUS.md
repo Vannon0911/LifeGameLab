@@ -1,48 +1,35 @@
-# STATUS — Current Head
+# STATUS - Current Head
 
-## Snapshot (2026-03-18)
-- Founder-Setup ist auf genau `1/1` gestellt (`sim.founderBudget = 1`).
-- `renderAlpha`-Interpolation ist im Renderpfad aktiv.
-- Ressourcenmarker aus `world.R` werden im Grid gerendert.
-- Command-Chain `Select -> Move -> Arrive -> Harvest` ist aktiv (`ISSUE_ORDER`, 1 Tile pro Tick, Auto-Harvest).
-- Pattern-Objekt-Symbol wird bei `triangle/loop` sichtbar auf Zone gerendert.
-- Tick-Determinismus-Gates laufen gruen.
-- Sim-Runtime ist als Block explizit deaktiviert (App/UI/Render), Kernel bleibt unangetastet.
+## Snapshot (2026-03-19)
+- Slice A migration scaffolding is now active.
+- Product SoT was moved to the v1.1 RTS basis in `docs/PRODUCT.md`.
+- Architecture SoT now states the dual rule: contracts and product docs stay truth, traceability stays derived.
+- Action lifecycle metadata exists for every contract action.
+- New RTS scaffold actions exist in contracts without reducer wiring yet.
+- New top-level `map` scaffold exists for upcoming MapSpec work.
+- Slice A contract scaffold test was added and passes.
+- Legacy runtime still remains active and intentionally untouched as live fallback.
 
-## Verifizierter Ist-Stand
-- Sim-Runtime-Flag im aktuellen Head: `SIM_RUNTIME_DISABLED = true` in `src/app/main.js`.
-- Tick-Loop: `dt = Math.max(0, ts - lastTs)` und `while (acc >= stepMs)`.
-- Foundation-Eligibility verlangt exakt `founderBudget === 1` und `founderPlaced === 1`.
-- UI ist neutraler Adapter ohne sim-getriebene Dispatch-Interaktion.
-- Sim-Archivbeleg: `docs/traceability/sim-runtime-archive-2026-03-18.md`.
+## Verified Current Truth
+- `src/project/contract/manifest.js` exports `actionLifecycle` alongside schema, matrix, gate and dataflow.
+- `src/project/contract/dataflow.js` exposes lifecycle metadata and planned writes per action.
+- `src/project/contract/actionSchema.js` now contains Slice A RTS scaffold actions.
+- `src/project/contract/mutationMatrix.js` reserves the contract surfaces for those scaffold actions.
+- `src/project/contract/stateSchema.js` now contains migration scaffold state for `map`, `selectedEntity`, `mutatorDraft` and Phase 0 counters.
+- `src/project/contract/simGate.js` allows future-safe world registries such as `cores`, `buildings`, `workers`, `fighters`, `belts` and `powerLines`.
 
-## Gates / Nachweise (aktuell gruen)
-- `node tools/run-all-tests.mjs --full`
-- `node tests/test-deterministic-genesis.mjs`
-- `node tests/test-step-chain-determinism.mjs`
-- `node tests/test-readmodel-determinism.mjs`
-- `node tests/test-kernel-replay-truth.mjs`
+## Traceability Added
+- `docs/traceability/rebuild-preparation-inventory.md`
+- `docs/traceability/rebuild-string-matrix.md`
 
-## Block-Nachweise (Null -> Vier)
-- Block Null: `docs/PRODUCT.md` auf 1-Zellen-Konzept synchronisiert. Commit `7668c57`.
-- Block Eins: `renderAlpha` + Zell-Interpolation. Nachweis: `output/playwright/block1-render-alpha/render_alpha_interpolation_headed.png`. Commit `6487ab3`.
-- Block Zwei: Ressourcenmarker aus `world.R`. Nachweis: `output/playwright/block2-resource-layer/resource_markers_and_cell_headed.png`. Commit `75ecaf4`.
-- Block Drei: `ISSUE_ORDER`-Kette mit Tick-Move/Auto-Harvest. Nachweis: `output/playwright/block3-order-flow/order_flow_headed.png` + `output/playwright/block3-order-flow/order_flow_log.json` (inkl. Hash-Anker, `HARVEST_AUTO`). Commits `0812116`, `a01392a`.
-- Block Vier: Pattern-Objekt-Symbol bei `triangle/loop`. Nachweis: `output/playwright/block4-pattern-object/pattern_object_marker_headed.png` + `output/playwright/block4-pattern-object/pattern_object_marker_log.json`. Commit `b7fc4e3`.
+Both files are derived planning evidence only and must not override SoT docs or contracts.
 
-## Naechste Session Startpaket
-1. Einstieg: `docs/llm/ENTRY.md` -> `docs/WORKFLOW.md` -> diese `docs/STATUS.md`.
-2. Scope fuer die naechste Arbeit: `ui+sim+versioning` (nur falls Pfade wirklich betroffen sind).
-3. Preflight vor Schreiben:
-   - `node tools/llm-preflight.mjs classify --paths <task-pfade>`
-   - `node tools/llm-preflight.mjs entry --paths <task-pfade> --mode work`
-   - `node tools/llm-preflight.mjs ack --paths <task-pfade>`
-   - `node tools/llm-preflight.mjs check --paths <task-pfade>`
-4. Startpunkt im Code:
-   - `src/app/main.js` (Sim-Flag, Tick-Loop, Renderpfad)
-   - `src/game/ui/ui.js` (neutraler Adapter)
-   - `src/game/ui/ui.panels.js` / `src/game/ui/ui.feedback.js` (neutrale Verdrahtungs-Stubs)
-5. Offener Arbeitsrest fuer den naechsten Block:
-   - Pattern/Zone-Objektregeln aus `cellPatternCounts` auf echte Zonen-Topologien feiner ziehen.
-   - Sichtbaren Marker von Einzel-Symbol auf produktnahe Objekt-Reaktion erweitern.
-   - Command-Chain-UX (Selection-Feedback/Order-Feedback) rein visuell nachziehen.
+## Guardrails
+- Delete only after replacement.
+- No legacy action may be removed while dispatch sources, reducer cases or tests still depend on it.
+- New action names may exist before reducer wiring, but they must stay no-op safe until implemented.
+
+## Next Work Block
+1. Start Slice B with `MapSpec -> validate -> compile -> GEN_WORLD`.
+2. Keep legacy founder and zone flows alive until their replacements have reducer wiring and passing tests.
+3. Re-run the wrapped regression evidence session after the timeout wrapper is inspected, even though the remaining tests passed individually.

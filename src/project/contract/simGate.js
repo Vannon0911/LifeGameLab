@@ -1,5 +1,7 @@
 const SIM_BOOLEAN_KEYS = Object.freeze([
   "running",
+  "phase0CorePlaced",
+  "deprecatedActionMode",
   "zone2Unlocked",
   "dnaZoneCommitted",
   "infrastructureUnlocked",
@@ -23,6 +25,8 @@ const SIM_OBJECT_KEYS = Object.freeze([
   "runSummary",
   "unitOrder",
   "activeOrder",
+  "selectedEntity",
+  "mutatorDraft",
 ]);
 
 export const simGate = {
@@ -59,6 +63,14 @@ export const simGate = {
       died: { type: "ta", ctor: "Uint8Array", len: "N" },
       biomeId: { type: "ta", ctor: "Int8Array", len: "N" },
       actionMap: { type: "ta", ctor: "Uint8Array", len: "N" },
+      cores: { type: "object" },
+      buildings: { type: "object" },
+      workers: { type: "object" },
+      fighters: { type: "object" },
+      belts: { type: "object" },
+      powerLines: { type: "object" },
+      resourceNodes: { type: "object" },
+      mapSpecSnapshot: { type: "object" },
       balanceGovernor: { type: "object" },
       lastFounderTick: { type: "number" },
       globalLearning: { type: "object" },
@@ -81,7 +93,7 @@ export const simGate = {
   },
   sim: {
     keys: [
-      "tick", "running", "runPhase", "founderBudget", "founderPlaced", "selectedUnit", "unitOrder", "activeOrder", "lastCommand", "lastAutoAction", "unlockedZoneTier", "nextZoneUnlockKind", "nextZoneUnlockCostEnergy", "zoneUnlockProgress", "coreEnergyStableTicks", "zone2Unlocked", "zone2PlacementBudget", "dnaZoneCommitted", "nextInfraUnlockCostDNA", "infrastructureUnlocked", "infraBuildMode", "infraBuildCostEnergy", "infraBuildCostDNA", "cpuBootstrapDone", "patternCatalog", "patternBonuses", "aliveCount", "aliveRatio", "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
+      "tick", "running", "runPhase", "phase0PlantsDelivered", "phase0CorePlaced", "queuedWorkerCount", "deprecatedActionMode", "founderBudget", "founderPlaced", "selectedUnit", "selectedEntity", "unitOrder", "activeOrder", "mutatorDraft", "lastCommand", "lastAutoAction", "unlockedZoneTier", "nextZoneUnlockKind", "nextZoneUnlockCostEnergy", "zoneUnlockProgress", "coreEnergyStableTicks", "zone2Unlocked", "zone2PlacementBudget", "dnaZoneCommitted", "nextInfraUnlockCostDNA", "infrastructureUnlocked", "infraBuildMode", "infraBuildCostEnergy", "infraBuildCostDNA", "cpuBootstrapDone", "patternCatalog", "patternBonuses", "aliveCount", "aliveRatio", "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
       "meanNutrientField", "meanToxinField", "meanSaturationField", "meanPlantField", "meanBiochargeField", "meanWaterField",
       "plantTileRatio", "dominantHueRatio", "lineageDiversity", "evolutionStageMean", "evolutionStageMax",
       "networkRatio", "clusterRatio", "birthsLastStep", "deathsLastStep", "mutationsLastStep",

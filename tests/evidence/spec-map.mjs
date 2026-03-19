@@ -183,6 +183,12 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     purpose: "prove entry/testing registry, wording contract, path-drift guard, and repeated check rotation stay wired",
     counterProbe: "registry/path perturbation is detected and reported as drift",
   }),
+  "tests/test-slice-a-contract-scaffold.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 120_000,
+    purpose: "prove Slice A contract scaffolding is complete, classified, and no-op safe before reducer wiring lands",
+    counterProbe: "scaffold action dispatch must keep signature and read model stable before implementation",
+  }),
   "tests/test-longrun-determinism.mjs": Object.freeze({
     status: "verified",
     budgetMs: 240_000,

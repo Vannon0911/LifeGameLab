@@ -17,6 +17,8 @@ export const stateSchema = {
         gridW: { type: "number", default: 16 },
         gridH: { type: "number", default: 16 },
         speed: { type: "number", default: 24 },
+        contractProfile: { type: "string", default: "lifegamelab_rts_v1_1" },
+        migrationSlice: { type: "string", default: "slice_a_scaffold" },
         brushMode: { type: "string", default: BRUSH_MODE.OBSERVE },
         brushRadius: { type: "number", default: 3 },
         renderMode: { type: "string", default: "combined" },
@@ -66,6 +68,23 @@ export const stateSchema = {
         simStepCount: { type: "number", default: 0 },
       },
     },
+    map: {
+      type: "object",
+      shape: {
+        activeSource: { type: "string", default: "legacy_preset" },
+        compiledHash: { type: "string", default: "" },
+        spec: { type: "object", default: { version: "gdd_v1_1", mode: "manual" }, shape: {}, allowUnknown: true },
+        validation: {
+          type: "object",
+          default: { status: "uncompiled", issueCount: 0, summary: "slice_a_scaffold" },
+          shape: {
+            status: { type: "string", default: "uncompiled" },
+            issueCount: { type: "number", default: 0 },
+            summary: { type: "string", default: "slice_a_scaffold" },
+          },
+        },
+      },
+    },
     world: { type: "object", shape: {}, allowUnknown: true },
     sim: {
       type: "object",
@@ -73,9 +92,21 @@ export const stateSchema = {
         tick: { type: "number", default: 0 },
         running: { type: "boolean", default: false },
         runPhase: { type: "string", default: RUN_PHASE.GENESIS_SETUP },
+        phase0PlantsDelivered: { type: "number", default: 0 },
+        phase0CorePlaced: { type: "boolean", default: false },
+        queuedWorkerCount: { type: "number", default: 0 },
+        deprecatedActionMode: { type: "boolean", default: true },
         founderBudget: { type: "number", default: 1 },
         founderPlaced: { type: "number", default: 0 },
         selectedUnit: { type: "number", default: -1 },
+        selectedEntity: {
+          type: "object",
+          default: { entityKind: "", entityId: "" },
+          shape: {
+            entityKind: { type: "string", default: "" },
+            entityId: { type: "string", default: "" },
+          },
+        },
         unitOrder: {
           type: "object",
           default: { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 },
@@ -108,6 +139,16 @@ export const stateSchema = {
             targetY: { type: "number", default: -1 },
             progress: { type: "number", default: 0 },
             maxProgress: { type: "number", default: 120 },
+          },
+        },
+        mutatorDraft: {
+          type: "object",
+          default: { mutatorId: "", topologyClass: "", nodeCount: 0, closed: false },
+          shape: {
+            mutatorId: { type: "string", default: "" },
+            topologyClass: { type: "string", default: "" },
+            nodeCount: { type: "number", default: 0 },
+            closed: { type: "boolean", default: false },
           },
         },
         lastCommand: { type: "string", default: "" },
