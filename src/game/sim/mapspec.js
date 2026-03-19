@@ -55,6 +55,7 @@ export function validateMapSpec(input, options = {}) {
     presetId: normalizeWorldPresetId(rawPresetId ?? fallback.presetId),
     gridW: clampGridDimension(rawGridW, fallback.gridW),
     gridH: clampGridDimension(rawGridH, fallback.gridH),
+    tilePlan: raw.tilePlan && typeof raw.tilePlan === "object" ? raw.tilePlan : {},
   };
 
   pushIssue(issues, !input || typeof input !== "object" || Array.isArray(input), "spec_not_object");

@@ -165,7 +165,7 @@ function applyMemoryDelta(target, delta, intensity = 1) {
   }
 }
 
-export function handlePlaceCell(state, action) {
+export function handlePlaceWorker(state, action) {
   const world = state.world;
   if (!world) return [];
   const w = Number(world.w || state.meta.gridW || 0) | 0;
@@ -438,7 +438,7 @@ export function handlePlaceSplitCluster(state, action) {
   return patches;
 }
 
-export function handleHarvestCell(state, action) {
+export function handleHarvestWorker(state, action) {
   if (!state.world) return [];
   const world = state.world;
   const w = Number(world.w || state.meta.gridW || 0) | 0;

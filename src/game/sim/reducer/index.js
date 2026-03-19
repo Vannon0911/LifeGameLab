@@ -1236,8 +1236,39 @@ export function reducer(state, action, ctx = {}) {
       return buildMapSpecCompilePatches(compiledMap);
     }
 
-    case "SET_RENDER_MODE":
-      return [{ op: "set", path: "/meta/renderMode", value: String(action.payload || "combined") }];
+    case "SET_MAP_TILE": {
+      if (state.sim.runPhase !== RUN_PHASE.MAP_BUILDER) return [];
+      const world = state.world;
+      const w = Number(world?.w || state.meta.gridW || 0) | 0;
+      const h = Number(world?.h || state.meta.gridH || 0) | 0;
+      const x = Number(action.payload?.x) | 0;
+      const y = Number(action.payload?.y) | 0;
+      const mode = String(action.payload?.mode || "");
+      const rawValue = Number(action.payload?.value ?? 0.8);
+      const value = Number.isFinite(rawValue) ? rawValue : 0.8;
+      const remove = !!action.payload?.remove;
+      if (x < 0 || y < 0 || x >= w || y >= h) return [];
+      
+      const idx = y * w + x;
+      const spec = state.map?.spec || {};
+      const nextTilePlan = { ...(spec.tilePlan || {}) };
+      
+      if (remove) {
+        delete nextTilePlan[idx];
+      } else {
+        nextTilePlan[idx] = { mode, value };
+      }
+      
+      const nextSpec = { ...spec, tilePlan: nextTilePlan, mode: "manual" };
+      const compiled = compileMapSpec(nextSpec, { fallback: { gridW: w, gridH: h, presetId: state.meta.worldPresetId } });
+      
+      return buildMapSpecCompilePatches(compiled);
+    }
+
+    case "SET_RENDER_MODE": {
+      const mode = typeof action.payload === "string" ? action.payload : (action.payload?.mode || "combined");
+      return [{ op: "set", path: "/meta/renderMode", value: String(mode) }];
+    }
 
     case "SET_PHYSICS": {
       const prev = (state.meta && state.meta.physics && typeof state.meta.physics === "object") ? state.meta.physics : {};
@@ -1326,8 +1357,8 @@ export function reducer(state, action, ctx = {}) {
       return patches;
     }
 
-    case "PLACE_CELL": {
-      return handlePlaceCell(state, action);
+    case "PLACE_WORKER": {
+      return handlePlaceWorker(state, action);
     }
 
     case "ISSUE_ORDER": {
@@ -1375,9 +1406,9 @@ export function reducer(state, action, ctx = {}) {
       return handlePlaceSplitCluster(state, action);
     }
 
-    case "HARVEST_CELL": {
+    case "HARVEST_WORKER": {
       if (isPreRunGenesisPhase(state)) return [];
-      return handleHarvestCell(state, action);
+      return handleHarvestWorker(state, action);
     }
 
     case "HARVEST_PULSE": {
