@@ -71,12 +71,13 @@ export function createStore(manifest, project, options = {}) {
     if (hash32(stableStringify(reducerInput)) !== reducerInputSignature) {
       throw new Error("Reducer mutated input state");
     }
+    const safePatches = clonePatches(patches);
 
     if (!Array.isArray(patches)) throw new Error("Reducer must return patches array");
-    assertPatchesAllowed(patches, actionAllowed);
-    assertDomainPatchesAllowed(manifest, doc.state, clean.type, patches);
+    assertPatchesAllowed(safePatches, actionAllowed);
+    assertDomainPatchesAllowed(manifest, doc.state, clean.type, safePatches);
 
-    let nextState = applyPatches(doc.state, patches);
+    let nextState = applyPatches(doc.state, safePatches);
     nextState = sanitizeBySchema(nextState, stateSchema);
 
     if (clean.type === "SIM_STEP" && typeof project.simStep === "function") {
@@ -91,10 +92,11 @@ export function createStore(manifest, project, options = {}) {
         throw new Error("simStep mutated input state");
       }
       if (!Array.isArray(simPatches)) throw new Error("simStep must return patches array");
-      assertPatchesAllowed(simPatches, mutationMatrix.SIM_STEP);
-      assertDomainPatchesAllowed(manifest, nextState, "SIM_STEP", simPatches);
-      if (simPatches.length) {
-        nextState = applyPatches(nextState, simPatches);
+      const safeSimPatches = clonePatches(simPatches);
+      assertPatchesAllowed(safeSimPatches, mutationMatrix.SIM_STEP);
+      assertDomainPatchesAllowed(manifest, nextState, "SIM_STEP", safeSimPatches);
+      if (safeSimPatches.length) {
+        nextState = applyPatches(nextState, safeSimPatches);
         nextState = sanitizeBySchema(nextState, stateSchema);
       }
     }
@@ -130,4 +132,15 @@ function cloneDeep(value) {
   const out = {};
   for (const key of Object.keys(value)) out[key] = cloneDeep(value[key]);
   return out;
+}
+
+function clonePatches(patches) {
+  if (!Array.isArray(patches)) return patches;
+  return patches.map((patch) => {
+    const out = { ...patch };
+    if (Object.prototype.hasOwnProperty.call(out, "value")) {
+      out.value = cloneDeep(out.value);
+    }
+    return out;
+  });
 }

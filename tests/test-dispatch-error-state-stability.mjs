@@ -112,3 +112,47 @@ assert.equal(stateAfterDriverSave.meta.seed, "p0-driver-copy", "driver-side muta
 assert.equal(savedDocSeen.state.meta.seed, "MUTATED_BY_DRIVER", "counterprobe must verify mutation happened on persisted copy");
 
 console.log("DRIVER_COPY_ISOLATION_OK mutation-contained=true");
+
+const refLeakManifest = {
+  SCHEMA_VERSION: 1,
+  stateSchema: {
+    type: "object",
+    shape: {
+      meta: {
+        type: "object",
+        shape: {
+          seed: { type: "string", default: "seed" },
+          tag: { type: "object", allowUnknown: true, default: {} },
+        },
+      },
+    },
+  },
+  actionSchema: {
+    SET_TAG: {
+      type: "object",
+      shape: {},
+    },
+  },
+  mutationMatrix: {
+    SET_TAG: ["/meta/tag"],
+  },
+};
+const leakedRef = { nested: { value: 1 } };
+const refLeakStore = createStore(
+  refLeakManifest,
+  {
+    reducer: () => [
+      { op: "set", path: "/meta/tag", value: leakedRef },
+    ],
+  },
+  { storageDriver: createNullDriver() },
+);
+refLeakStore.dispatch({ type: "SET_TAG", payload: {} });
+leakedRef.nested.value = 999;
+assert.equal(
+  refLeakStore.getState().meta.tag.nested.value,
+  1,
+  "patch value references must be copied before commit",
+);
+
+console.log("PATCH_VALUE_REF_ISOLATION_OK leak-blocked=true");
