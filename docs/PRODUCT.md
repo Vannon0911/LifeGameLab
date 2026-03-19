@@ -143,10 +143,11 @@ Out of scope after MVP:
 - cross-platform CI polish
 
 ## Current Migration Note
-Current head is on Slice A migration scaffolding:
+Current head is on the Slice B MapSpec baseline:
 - old cell-RTS runtime still exists
-- new RTS contract strings and traceability matrices are introduced first
-- legacy flows remain only until replacement wiring and tests exist
+- `SET_MAPSPEC` now stores canonical compile input before `GEN_WORLD`
+- `GEN_WORLD` now compiles from `map.spec` when MapSpec is active
+- legacy presets remain only as internal compile helpers until replacement wiring and tests exist
 
 Deletion rule:
 - delete only dead after replacement

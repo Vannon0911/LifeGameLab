@@ -189,6 +189,12 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     purpose: "prove Slice A contract scaffolding is complete, classified, and no-op safe before reducer wiring lands",
     counterProbe: "scaffold action dispatch must keep signature and read model stable before implementation",
   }),
+  "tests/test-mapspec-gen-world.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 120_000,
+    purpose: "prove Slice B MapSpec compilation drives SET_MAPSPEC and GEN_WORLD deterministically while legacy preset sync stays intact",
+    counterProbe: "different MapSpec inputs diverge while same-seed same-MapSpec replay stays identical",
+  }),
   "tests/test-longrun-determinism.mjs": Object.freeze({
     status: "verified",
     budgetMs: 300_000,

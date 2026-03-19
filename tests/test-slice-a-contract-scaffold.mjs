@@ -32,7 +32,6 @@ for (const actionType of renamedActions) {
 }
 
 const scaffoldActions = [
-  "SET_MAPSPEC",
   "SELECT_ENTITY",
   "ISSUE_MOVE",
   "PLACE_CORE",
@@ -47,6 +46,9 @@ const scaffoldActions = [
   "COMMIT_MUTATION",
 ];
 
+assert.equal(actionLifecycle.SET_MAPSPEC?.status, ACTION_LIFECYCLE_STATUS.STABLE, "SET_MAPSPEC must graduate from scaffold to active Slice B action");
+assert(Array.isArray(dataflow.actions.SET_MAPSPEC?.plannedWrites), "SET_MAPSPEC must keep declared planned writes after reducer wiring");
+
 for (const actionType of scaffoldActions) {
   assert.equal(actionLifecycle[actionType]?.status, ACTION_LIFECYCLE_STATUS.NEW_SLICE_A, `${actionType} must be marked as Slice A scaffold`);
   assert.deepEqual(dataflow.actions[actionType]?.dispatchSources || [], [], `${actionType} must stay unwired until reducer work lands`);
@@ -54,7 +56,7 @@ for (const actionType of scaffoldActions) {
 }
 
 assert.equal(stateSchema.shape.meta.shape.contractProfile.default, "lifegamelab_rts_v1_1", "meta.contractProfile must advertise the new SoT");
-assert.equal(stateSchema.shape.meta.shape.migrationSlice.default, "slice_a_scaffold", "meta.migrationSlice must track the scaffold slice");
+assert.equal(stateSchema.shape.meta.shape.migrationSlice.default, "slice_b_mapspec", "meta.migrationSlice must track the active migration slice");
 assert.equal(stateSchema.shape.map.shape.activeSource.default, "legacy_preset", "map scaffold must track the current source");
 assert.equal(stateSchema.shape.sim.shape.phase0PlantsDelivered.default, 0, "Phase 0 plant counter scaffold must exist");
 assert.equal(stateSchema.shape.sim.shape.phase0CorePlaced.default, false, "Phase 0 core flag scaffold must exist");
@@ -69,7 +71,6 @@ for (const simKey of ["phase0PlantsDelivered", "phase0CorePlaced", "queuedWorker
 }
 
 const noopCases = [
-  { type: "SET_MAPSPEC", payload: { mapSpec: { version: "gdd_v1_1", gridW: 32, gridH: 32, mode: "manual" } } },
   { type: "SELECT_ENTITY", payload: { entityKind: ENTITY_KIND.WORKER, entityId: "worker-1" } },
   { type: "ISSUE_MOVE", payload: { entityId: "worker-1", targetX: 3, targetY: 4 } },
   { type: "PLACE_CORE", payload: { x: 5, y: 6 } },

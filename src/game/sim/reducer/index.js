@@ -54,6 +54,7 @@ import {
   getWorldPreset,
   normalizeWorldPresetId,
 } from "../worldPresets.js";
+import { compileMapSpec, compileStateMapSpec } from "../mapspec.js";
 import { evaluateFoundationEligibility } from "../foundationEligibility.js";
 import { deriveStageState } from "./progression.js";
 import {
@@ -630,24 +631,37 @@ function deriveBootstrapSimMetrics(world, meta, baseSim) {
 
 function buildWorldGenerationPatches(state, presetId) {
   const meta = state.meta;
-  const normalizedPresetId = normalizeWorldPresetId(presetId ?? meta.worldPresetId);
+  const compiledMap = compileStateMapSpec(state, { presetId });
+  const normalizedPresetId = normalizeWorldPresetId(compiledMap.presetId);
   const seededPhysics = seededStartPhysics(meta.seed, PHYSICS_DEFAULT);
   const tunedPhysics = applyPresetPhysicsOverrides(seededPhysics, normalizedPresetId);
   const world = generateWorld(
-    meta.gridW,
-    meta.gridH,
+    compiledMap.gridW,
+    compiledMap.gridH,
     meta.seed,
     tunedPhysics,
     normalizedPresetId
   );
   applyGlobalLearningToWorld(world, meta.globalLearning);
   world.devMutationVault = cloneJson(meta.devMutationVault || defaultDevMutationVault());
-  world.zoneMap = new Int8Array(meta.gridW * meta.gridH);
-  world.zoneRole = new Int8Array(meta.gridW * meta.gridH);
-  world.zoneId = new Uint16Array(meta.gridW * meta.gridH);
+  world.zoneMap = new Int8Array(compiledMap.gridW * compiledMap.gridH);
+  world.zoneRole = new Int8Array(compiledMap.gridW * compiledMap.gridH);
+  world.zoneId = new Uint16Array(compiledMap.gridW * compiledMap.gridH);
   world.zoneMeta = {};
+  world.cores = {};
+  world.buildings = {};
+  world.workers = {};
+  world.fighters = {};
+  world.belts = {};
+  world.powerLines = {};
+  world.resourceNodes = {};
+  world.mapSpecSnapshot = compiledMap.snapshot;
 
-  const nextSim = deriveBootstrapSimMetrics(world, { ...meta, physics: tunedPhysics }, makeInitialState().sim);
+  const nextSim = deriveBootstrapSimMetrics(
+    world,
+    { ...meta, gridW: compiledMap.gridW, gridH: compiledMap.gridH, physics: tunedPhysics },
+    makeInitialState().sim,
+  );
   nextSim.running = false;
   nextSim.runPhase = RUN_PHASE.GENESIS_SETUP;
   nextSim.founderBudget = 1;
@@ -661,10 +675,24 @@ function buildWorldGenerationPatches(state, presetId) {
   Object.assign(nextSim, stageState);
 
   const patches = [
+    { op: "set", path: "/meta/gridW", value: compiledMap.gridW },
+    { op: "set", path: "/meta/gridH", value: compiledMap.gridH },
     { op: "set", path: "/meta/worldPresetId", value: normalizedPresetId },
     { op: "set", path: "/meta/physics", value: tunedPhysics },
+    { op: "set", path: "/map/activeSource", value: compiledMap.activeSource },
+    { op: "set", path: "/map/spec", value: compiledMap.spec },
+    { op: "set", path: "/map/compiledHash", value: compiledMap.compiledHash },
+    { op: "set", path: "/map/validation", value: compiledMap.validation },
   ];
   pushKeysPatches(patches, world, WORLD_KEYS, "/world");
+  patches.push({ op: "set", path: "/world/cores", value: world.cores });
+  patches.push({ op: "set", path: "/world/buildings", value: world.buildings });
+  patches.push({ op: "set", path: "/world/workers", value: world.workers });
+  patches.push({ op: "set", path: "/world/fighters", value: world.fighters });
+  patches.push({ op: "set", path: "/world/belts", value: world.belts });
+  patches.push({ op: "set", path: "/world/powerLines", value: world.powerLines });
+  patches.push({ op: "set", path: "/world/resourceNodes", value: world.resourceNodes });
+  patches.push({ op: "set", path: "/world/mapSpecSnapshot", value: world.mapSpecSnapshot });
   pushKeysPatches(patches, nextSim, SIM_KEYS, "/sim");
   patches.push({ op: "set", path: "/meta/playerLineageId", value: 1 });
   patches.push({ op: "set", path: "/meta/cpuLineageId", value: 2 });
@@ -788,7 +816,7 @@ export function reducer(state, action, ctx = {}) {
   switch (action.type) {
 
     case "GEN_WORLD": {
-      const patches = buildWorldGenerationPatches(state, state.meta.worldPresetId);
+      const patches = buildWorldGenerationPatches(state);
       return patches;
     }
 
@@ -1170,6 +1198,25 @@ export function reducer(state, action, ctx = {}) {
       };
       const patches = buildWorldGenerationPatches(nextState, nextState.meta.worldPresetId);
       return patches;
+    }
+
+    case "SET_MAPSPEC": {
+      const compiledMap = compileMapSpec(action.payload?.mapSpec, {
+        fallback: {
+          gridW: state.meta.gridW,
+          gridH: state.meta.gridH,
+          presetId: state.meta.worldPresetId,
+        },
+      });
+      return [
+        { op: "set", path: "/map/activeSource", value: compiledMap.activeSource },
+        { op: "set", path: "/map/spec", value: compiledMap.spec },
+        { op: "set", path: "/map/compiledHash", value: compiledMap.compiledHash },
+        { op: "set", path: "/map/validation", value: compiledMap.validation },
+        { op: "set", path: "/world/mapSpecSnapshot", value: compiledMap.snapshot },
+        { op: "set", path: "/meta/gridW", value: compiledMap.gridW },
+        { op: "set", path: "/meta/gridH", value: compiledMap.gridH },
+      ];
     }
 
     case "SET_RENDER_MODE":

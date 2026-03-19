@@ -60,7 +60,7 @@ export const actionLifecycle = Object.freeze({
   GEN_WORLD: stable(
     "foundation",
     "Canonical deterministic world boot entrypoint remains active.",
-    ["/world/", "/sim/"]
+    ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId", "/meta/physics", "/world/", "/sim/"]
   ),
   CONFIRM_FOUNDATION: deprecated(
     "PLACE_CORE",
@@ -260,9 +260,9 @@ export const actionLifecycle = Object.freeze({
     "Placement-cost toggle is not part of the RTS contract surface.",
     ["/meta/placementCostEnabled"]
   ),
-  SET_MAPSPEC: scaffold(
-    "slice_a",
-    "Scaffolded replacement for preset-driven boot; reducer wiring lands in Slice B.",
+  SET_MAPSPEC: stable(
+    "slice_b",
+    "Canonical MapSpec input now drives deterministic world compilation.",
     ["/map/", "/world/mapSpecSnapshot", "/meta/gridW", "/meta/gridH"]
   ),
   SELECT_ENTITY: scaffold(

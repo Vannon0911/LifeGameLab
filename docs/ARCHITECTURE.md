@@ -23,23 +23,23 @@
 - `src/game/ui/*`: current adapter shell and legacy-facing wiring.
 - `src/app/*`: boot, runtime loop and crash surfaces.
 
-## Slice A Migration Baseline
+## Slice B MapSpec Baseline
 - Legacy cell-RTS runtime is still present and remains bootable.
-- New RTS contract scaffolding is introduced without deleting live legacy flows.
+- MapSpec compile wiring is now active without deleting live legacy flows.
 - Action lifecycle metadata now marks every action as `stable`, `rename`, `deprecated` or `new_slice_a`.
-- New RTS contract placeholders are allowed to exist as no-op actions before reducer wiring lands.
+- `SET_MAPSPEC` is now an active reducer path; the remaining RTS placeholders stay no-op until their slices land.
 - Replacement planning is machine-readable in contracts and human-readable in `docs/traceability/`.
 
 ## Runtime Truth At Head
 - Operative reducer path remains `src/game/sim/reducer/index.js`.
 - `src/game/sim/reducer.js` remains the compatibility facade.
-- Boot still dispatches legacy `GEN_WORLD`.
+- Boot still dispatches `GEN_WORLD`, but world boot now compiles through `map.spec`.
 - Renderer orchestration in `src/app/main.js` and `src/game/render/renderer.js` remains canonical and reusable.
-- New top-level `map` state exists as migration scaffold for MapSpec work.
-- New RTS scaffolding lives first in contracts, not in direct state mutation shortcuts.
+- Top-level `map` state is now a live deterministic compile input, not just scaffold.
+- Legacy preset actions now sync through the same MapSpec compile path.
 
 ## Contract Truth At Head
-- `actionSchema` contains both live legacy actions and Slice A RTS scaffolding actions.
+- `actionSchema` contains both live legacy actions and active Slice B MapSpec actions.
 - `mutationMatrix` remains authoritative for allowed writes.
 - `simGate` remains authoritative for `/world/*` and `/sim/*` patch validation.
 - `dataflow` exposes dispatch sources plus lifecycle and planned writes.

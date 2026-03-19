@@ -18,7 +18,7 @@ export const stateSchema = {
         gridH: { type: "number", default: 16 },
         speed: { type: "number", default: 24 },
         contractProfile: { type: "string", default: "lifegamelab_rts_v1_1" },
-        migrationSlice: { type: "string", default: "slice_a_scaffold" },
+        migrationSlice: { type: "string", default: "slice_b_mapspec" },
         brushMode: { type: "string", default: BRUSH_MODE.OBSERVE },
         brushRadius: { type: "number", default: 3 },
         renderMode: { type: "string", default: "combined" },
@@ -80,7 +80,7 @@ export const stateSchema = {
           shape: {
             status: { type: "string", default: "uncompiled" },
             issueCount: { type: "number", default: 0 },
-            summary: { type: "string", default: "slice_a_scaffold" },
+            summary: { type: "string", default: "awaiting_mapspec_compile" },
           },
         },
       },

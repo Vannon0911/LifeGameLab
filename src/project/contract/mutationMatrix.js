@@ -1,5 +1,5 @@
 export const mutationMatrix = {
-  GEN_WORLD: ["/meta/worldPresetId", "/meta/physics", "/meta/playerLineageId", "/meta/cpuLineageId", "/world/", "/world/actionMap", "/sim/"],
+  GEN_WORLD: ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId", "/meta/physics", "/meta/playerLineageId", "/meta/cpuLineageId", "/world/", "/world/actionMap", "/sim/"],
   CONFIRM_FOUNDATION: ["/sim/runPhase", "/sim/running"],
   CONFIRM_CORE_ZONE: [
     "/world/alive",
@@ -97,7 +97,7 @@ export const mutationMatrix = {
   SET_SPEED: ["/meta/speed"],
   SET_SEED: ["/meta/seed"],
   SET_SIZE: ["/meta/gridW", "/meta/gridH"],
-  SET_WORLD_PRESET: ["/meta/worldPresetId", "/meta/physics", "/meta/playerLineageId", "/meta/cpuLineageId", "/world/", "/sim/"],
+  SET_WORLD_PRESET: ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId", "/meta/physics", "/meta/playerLineageId", "/meta/cpuLineageId", "/world/", "/sim/"],
   SET_MAPSPEC: ["/map/", "/world/mapSpecSnapshot", "/meta/gridW", "/meta/gridH"],
   SET_RENDER_MODE: ["/meta/renderMode"],
   SET_PHYSICS: ["/meta/physics"],
