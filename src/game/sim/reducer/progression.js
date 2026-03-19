@@ -7,12 +7,17 @@ function clamp01(value) {
 }
 
 function getPlayerBiomeUsageBucket(world, playerLineageId) {
-  if (!world.lineageMemory || typeof world.lineageMemory !== "object") world.lineageMemory = {};
-  const current = { ...defaultLineageMemory(), ...(world.lineageMemory[playerLineageId] || {}) };
-  const next = { ...(current.biomeUsageTicks || {}) };
-  current.biomeUsageTicks = next;
-  world.lineageMemory[playerLineageId] = current;
-  return next;
+  if (!world.lineageMemory || typeof world.lineageMemory !== "object") return {};
+  const mem = world.lineageMemory[playerLineageId];
+  if (!mem || typeof mem !== "object") return {};
+  const ticks = mem.biomeUsageTicks;
+  if (!ticks || typeof ticks !== "object") return {};
+  const out = {};
+  for (const k of Object.keys(ticks)) {
+    const v = Number(ticks[k]);
+    if (Number.isFinite(v)) out[k] = v;
+  }
+  return out;
 }
 
 export function updateBiomeUsage(world, meta, simLike) {
@@ -20,7 +25,7 @@ export function updateBiomeUsage(world, meta, simLike) {
   const lineageId = world?.lineageId;
   const biomeId = world?.biomeId;
   const playerLineageId = Number(meta?.playerLineageId || 0) | 0;
-  if (!alive || !lineageId || !biomeId || !playerLineageId) return { activeBiomes: 0, shares: {} };
+  if (!alive || !lineageId || !biomeId || !playerLineageId) return { activeBiomes: 0, shares: {}, patches: [] };
 
   const counts = {
     [BIOME_IDS.barren_flats]: 0,
@@ -41,14 +46,30 @@ export function updateBiomeUsage(world, meta, simLike) {
   const usage = getPlayerBiomeUsageBucket(world, playerLineageId);
   const shares = {};
   let activeBiomes = 0;
+  let usageChanged = false;
   for (const key of Object.keys(counts)) {
     const id = Number(key) | 0;
     const share = playerAliveCount > 0 ? counts[id] / playerAliveCount : 0;
     shares[id] = share;
-    if (share >= 0.10) usage[id] = Number(usage[id] || 0) + 1;
+    if (share >= 0.10) {
+      const prev = Number(usage[id] || 0);
+      usage[id] = prev + 1;
+      usageChanged = true;
+    }
     if (Number(usage[id] || 0) >= 50) activeBiomes++;
   }
-  return { activeBiomes, shares };
+
+  const patches = [];
+  if (usageChanged) {
+    const currentMem = world.lineageMemory?.[playerLineageId] || defaultLineageMemory();
+    patches.push({
+      op: "set",
+      path: `/world/lineageMemory/${playerLineageId}`,
+      value: { ...currentMem, biomeUsageTicks: usage }
+    });
+  }
+
+  return { activeBiomes, shares, patches };
 }
 
 export function deriveStageState(world, simLike, meta) {
@@ -65,28 +86,28 @@ export function deriveStageState(world, simLike, meta) {
   const meanWaterField = clamp01(Number(simLike?.meanWaterField || 0));
   const plantTileRatio = clamp01(Number(simLike?.plantTileRatio || 0));
 
-  const { activeBiomes } = updateBiomeUsage(world, meta, simLike);
+  const { activeBiomes, patches } = updateBiomeUsage(world, meta, simLike);
 
-  const dnaScore = clamp01(playerDNA / 70);
-  const yieldScore = clamp01(totalYield / 56);
+  const dnaScore = clamp01(Number.isFinite(playerDNA) ? playerDNA / 70 : 0);
+  const yieldScore = clamp01(Number.isFinite(totalYield) ? totalYield / 56 : 0);
   const stabilityScore = clamp01(
-    playerAliveCount / 18 * 0.34 +
-    clusterRatio / 0.20 * 0.28 +
-    clamp01((playerEnergyNet + 2) / 8) * 0.18 +
-    lineageDiversity / 8 * 0.20
+    (Number.isFinite(playerAliveCount) ? playerAliveCount / 18 : 0) * 0.34 +
+    (Number.isFinite(clusterRatio) ? clusterRatio / 0.20 : 0) * 0.28 +
+    clamp01(Number.isFinite(playerEnergyNet) ? (playerEnergyNet + 2) / 8 : 0) * 0.18 +
+    (Number.isFinite(lineageDiversity) ? lineageDiversity / 8 : 0) * 0.20
   );
   const ecologyScore = clamp01(
-    meanWaterField / 0.25 * 0.35 +
-    plantTileRatio / 0.24 * 0.25 +
-    activeBiomes / 2 * 0.20 +
+    (Number.isFinite(meanWaterField) ? meanWaterField / 0.25 : 0) * 0.35 +
+    (Number.isFinite(plantTileRatio) ? plantTileRatio / 0.24 : 0) * 0.25 +
+    (Number.isFinite(activeBiomes) ? activeBiomes / 2 : 0) * 0.20 +
     clamp01(1 - Number(simLike?.meanToxinField || 0)) * 0.20
   );
 
   const stageProgressScore =
-    dnaScore * 0.30 +
-    yieldScore * 0.25 +
-    stabilityScore * 0.25 +
-    ecologyScore * 0.20;
+    (Number.isFinite(dnaScore) ? dnaScore : 0) * 0.30 +
+    (Number.isFinite(yieldScore) ? yieldScore : 0) * 0.25 +
+    (Number.isFinite(stabilityScore) ? stabilityScore : 0) * 0.25 +
+    (Number.isFinite(ecologyScore) ? ecologyScore : 0) * 0.20;
 
   const yieldCategories =
     (harvestYieldTotal > 0 ? 1 : 0) +
