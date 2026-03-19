@@ -261,6 +261,12 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     purpose: "prove browser UI mainline flow enforces foundation gating and reaches run_active via visible controls",
     counterProbe: "UI foundation_not_ready step blocks confirm before valid founder placement",
   }),
+  "tests/test-ui-click-placement-e2e.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 360_000,
+    purpose: "prove live canvas click input places a founder tile through the mounted UI modules",
+    counterProbe: "runtime click without a valid paint/input bridge does not mutate founder state",
+  }),
 });
 
 export const REGRESSION_TEST_FILES = Object.freeze(Object.keys(REGRESSION_TEST_STATUS));

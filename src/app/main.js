@@ -25,6 +25,7 @@ const store = createStore(manifest, {
   simStep: simStepPatch,
   actionAdapter: createLlmCommandAdapter(),
 });
+globalThis.__LIFEGAMELAB_STORE__ = store;
 // Initialize Log with Seed from Store
 WorldStateLog.init(store.getState().meta.seed);
 const RuntimeHooks = { onStructuralChange: null };
@@ -275,6 +276,7 @@ const RenderManager = {
 };
 
 const ui     = new UI(store, canvas);
+globalThis.__LIFEGAMELAB_UI__ = ui;
 
 // ── Game Loop ────────────────────────────────────────────
 // Note: performance.now() is allowed in the Loop (outside Reducer) for pacing
