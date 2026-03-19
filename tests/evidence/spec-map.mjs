@@ -213,6 +213,12 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     purpose: "prove SET_MAPSPEC has a live UI dispatch source and dataflow remains truthful",
     counterProbe: "dispatch source drift between dataflow and UI code is detected as regression",
   }),
+  "tests/test-mapspec-builder-pipeline.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 120_000,
+    purpose: "prove builder flow mutates only map/meta on SET_MAPSPEC or SET_WORLD_PRESET and rebuilds world only via GEN_WORLD",
+    counterProbe: "world rebuild perturbations are blocked until GEN_WORLD is dispatched",
+  }),
   "tests/test-signature-nonserializable.mjs": Object.freeze({
     status: "verified",
     budgetMs: 90_000,

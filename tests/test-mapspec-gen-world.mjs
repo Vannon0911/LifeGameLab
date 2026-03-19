@@ -21,7 +21,11 @@ function runMapSpecScenario(seed, mapSpec) {
   assert.deepEqual(afterSetMapSpec.state.map.spec, compiled.spec, "SET_MAPSPEC must store the normalized spec");
   assert.deepEqual(afterSetMapSpec.state.map.validation, compiled.validation, "SET_MAPSPEC must store validation metadata");
   assert.equal(afterSetMapSpec.state.map.compiledHash, compiled.compiledHash, "SET_MAPSPEC must store the compiled hash");
-  assert.equal(afterSetMapSpec.state.world.mapSpecSnapshot.compiledHash, compiled.snapshot.compiledHash, "SET_MAPSPEC must publish the compiled snapshot");
+  assert.equal(
+    afterSetMapSpec.state.world?.mapSpecSnapshot?.compiledHash ?? "",
+    before.state.world?.mapSpecSnapshot?.compiledHash ?? "",
+    "SET_MAPSPEC must not mutate world directly before GEN_WORLD",
+  );
   assert.equal(afterSetMapSpec.state.meta.gridW, compiled.gridW, "SET_MAPSPEC must sync meta.gridW from the spec");
   assert.equal(afterSetMapSpec.state.meta.gridH, compiled.gridH, "SET_MAPSPEC must sync meta.gridH from the spec");
 
@@ -86,7 +90,14 @@ legacyPresetStore.dispatch({ type: "SET_WORLD_PRESET", payload: { presetId: "dry
 const legacyPresetSnapshot = snapshotStore(legacyPresetStore);
 assert.equal(legacyPresetSnapshot.state.map.activeSource, "legacy_preset", "SET_WORLD_PRESET must keep legacy source semantics while syncing MapSpec state");
 assert.equal(legacyPresetSnapshot.state.map.spec.presetId, "dry_basin", "SET_WORLD_PRESET must sync the legacy preset into map.spec");
-assert.equal(legacyPresetSnapshot.state.world.mapSpecSnapshot.presetId, "dry_basin", "SET_WORLD_PRESET must publish a matching world snapshot");
+assert.equal(
+  legacyPresetSnapshot.state.world?.mapSpecSnapshot?.presetId ?? "",
+  "",
+  "SET_WORLD_PRESET must not mutate world directly before GEN_WORLD",
+);
+legacyPresetStore.dispatch({ type: "GEN_WORLD", payload: {} });
+const legacyPresetAfterGen = snapshotStore(legacyPresetStore);
+assert.equal(legacyPresetAfterGen.state.world.mapSpecSnapshot.presetId, "dry_basin", "GEN_WORLD must publish the legacy preset snapshot");
 
 console.log(
   `MAPSPEC_GEN_WORLD_OK same=${sameSeedLeft.afterGenWorld.signature}:${sameSeedLeft.afterGenWorld.signatureMaterialHash}:${sameSeedLeft.afterGenWorld.readModelHash} cross=${crossSpec.afterGenWorld.signature}:${crossSpec.afterGenWorld.signatureMaterialHash}:${crossSpec.afterGenWorld.readModelHash} invalid=${invalidSnapshot.state.map.validation.summary}`,
