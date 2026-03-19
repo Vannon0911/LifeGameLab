@@ -54,7 +54,7 @@ import {
   getWorldPreset,
   normalizeWorldPresetId,
 } from "../worldPresets.js";
-import { compileMapSpec, compileStateMapSpec } from "../mapspec.js";
+import { compileMapSpec, compileStateMapSpec, createLegacyPresetMapSpec } from "../mapspec.js";
 import { evaluateFoundationEligibility } from "../foundationEligibility.js";
 import { deriveStageState } from "./progression.js";
 import {
@@ -699,6 +699,19 @@ function buildWorldGenerationPatches(state, presetId) {
   return patches;
 }
 
+function buildMapSpecCompilePatches(compiledMap) {
+  const normalizedPresetId = normalizeWorldPresetId(compiledMap?.presetId);
+  return [
+    { op: "set", path: "/map/activeSource", value: compiledMap.activeSource },
+    { op: "set", path: "/map/spec", value: compiledMap.spec },
+    { op: "set", path: "/map/compiledHash", value: compiledMap.compiledHash },
+    { op: "set", path: "/map/validation", value: compiledMap.validation },
+    { op: "set", path: "/meta/gridW", value: compiledMap.gridW },
+    { op: "set", path: "/meta/gridH", value: compiledMap.gridH },
+    { op: "set", path: "/meta/worldPresetId", value: normalizedPresetId },
+  ];
+}
+
 export function makeInitialState() {
   return {
     meta: {
@@ -1192,15 +1205,19 @@ export function reducer(state, action, ctx = {}) {
       ];
 
     case "SET_WORLD_PRESET": {
-      const nextState = {
-        ...state,
-        meta: {
-          ...state.meta,
-          worldPresetId: normalizeWorldPresetId(action.payload?.presetId),
-        },
+      const compiledMap = compileStateMapSpec(state, {
+        presetId: normalizeWorldPresetId(action.payload?.presetId),
+      });
+      const legacySpec = createLegacyPresetMapSpec({
+        presetId: compiledMap.presetId,
+        gridW: compiledMap.gridW,
+        gridH: compiledMap.gridH,
+      });
+      const normalizedCompiledMap = {
+        ...compiledMap,
+        spec: legacySpec,
       };
-      const patches = buildWorldGenerationPatches(nextState, nextState.meta.worldPresetId);
-      return patches;
+      return buildMapSpecCompilePatches(normalizedCompiledMap);
     }
 
     case "SET_MAPSPEC": {
@@ -1211,15 +1228,7 @@ export function reducer(state, action, ctx = {}) {
           presetId: state.meta.worldPresetId,
         },
       });
-      return [
-        { op: "set", path: "/map/activeSource", value: compiledMap.activeSource },
-        { op: "set", path: "/map/spec", value: compiledMap.spec },
-        { op: "set", path: "/map/compiledHash", value: compiledMap.compiledHash },
-        { op: "set", path: "/map/validation", value: compiledMap.validation },
-        { op: "set", path: "/world/mapSpecSnapshot", value: compiledMap.snapshot },
-        { op: "set", path: "/meta/gridW", value: compiledMap.gridW },
-        { op: "set", path: "/meta/gridH", value: compiledMap.gridH },
-      ];
+      return buildMapSpecCompilePatches(compiledMap);
     }
 
     case "SET_RENDER_MODE":

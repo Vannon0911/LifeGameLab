@@ -139,7 +139,7 @@ export const actionLifecycle = Object.freeze({
     "SET_MAPSPEC",
     "slice_b",
     "Preset-based boot will be replaced by MapSpec compilation.",
-    ["/map/", "/world/mapSpecSnapshot", "/meta/gridW", "/meta/gridH"]
+    ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"]
   ),
   SET_RENDER_MODE: stable(
     "foundation",
@@ -263,7 +263,7 @@ export const actionLifecycle = Object.freeze({
   SET_MAPSPEC: stable(
     "slice_b",
     "Canonical MapSpec input now drives deterministic world compilation.",
-    ["/map/", "/world/mapSpecSnapshot", "/meta/gridW", "/meta/gridH"]
+    ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"]
   ),
   SELECT_ENTITY: scaffold(
     "slice_a",
