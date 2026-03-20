@@ -16,6 +16,8 @@ Zentrale Ausfuehrungsanweisung fuer Tasks im Repo, ohne Duplikation der Detailre
 `src/project/contract/manifest.js`, `src/kernel/store/createStore.js`, `src/kernel/store/applyPatches.js`
 
 ## Pflichtkette vor Schreiben
+0. Bei `Entry hash drift` oder `Read-order drift`:
+`node tools/llm-preflight.mjs update-lock`
 1. `node tools/llm-preflight.mjs classify --paths <...>`
 2. `node tools/llm-preflight.mjs entry --paths <...> --mode work|security`
 3. `node tools/llm-preflight.mjs ack --paths <...>`
@@ -28,7 +30,7 @@ Zentrale Ausfuehrungsanweisung fuer Tasks im Repo, ohne Duplikation der Detailre
 
 ## Rollenbetrieb
 Rollen, Verantwortungen und Worker-Verzeichnisstruktur sind in
-`workers/llm-entry-sequence/README.md` definiert.
+`agents/llm-entry-sequence/README.md` definiert.
 
 ## Wahrheit und Prioritaet
 - Prozess-SoT: `docs/llm/ENTRY.md` und `docs/llm/OPERATING_PROTOCOL.md`
@@ -38,3 +40,4 @@ Rollen, Verantwortungen und Worker-Verzeichnisstruktur sind in
 
 Bei Konflikt gilt diese Prioritaet:
 `manifest.js` > `ENTRY/OPERATING_PROTOCOL` > `TASK_GATE_INDEX` > Worker-README.
+

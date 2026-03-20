@@ -29,6 +29,9 @@ LLM-spezifische Regeln leben getrennt unter `docs/llm/`.
 
 ### PRUEFEN
 - Session-Start im Chat mit `entry` ist Pflicht, aber nur als menschlicher Handshake. Der Chat-Trigger ersetzt keinen technischen Preflight.
+- Wenn `classify|entry|ack|check` mit `Entry hash drift` oder `Read-order drift` fehlschlaegt:
+  1. `node tools/llm-preflight.mjs update-lock`
+  2. Pflichtkette danach vollstaendig neu starten
 - Danach technisch exakt in dieser Reihenfolge erzwingen:
   1. `node tools/llm-preflight.mjs classify --paths <paths>`
   2. `node tools/llm-preflight.mjs entry --paths <paths> --mode work|security`

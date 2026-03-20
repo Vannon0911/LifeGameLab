@@ -21,6 +21,30 @@ function toCsv(paths) {
   return paths.map((p) => p.replace(/\\/g, "/")).join(",");
 }
 
+function isEntryLockDrift(output) {
+  const text = String(output || "");
+  return text.includes("Entry hash drift") || text.includes("Read-order drift");
+}
+
+function runUpdateLockOrFail() {
+  const res = spawnSync(process.execPath, [preflightScript, "update-lock"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30_000,
+  });
+  if (res.stdout) process.stdout.write(res.stdout);
+  if (res.stderr) process.stderr.write(res.stderr);
+  if (res.error) {
+    console.error(`[git-llm-guard] update-lock execution failed: ${res.error.message}`);
+    process.exit(1);
+  }
+  if (res.status !== 0) {
+    console.error("[git-llm-guard] blocked during update-lock.");
+    process.exit(res.status ?? 1);
+  }
+}
+
 function listChangedPathsForPreCommit() {
   const raw = runGit("git diff --cached --name-only --diff-filter=ACMR");
   if (!raw) return [];
@@ -63,21 +87,32 @@ function listPathsForCommit(commit) {
 function runCheck(paths) {
   if (!paths.length) process.exit(0);
   const csvPaths = toCsv(paths);
-  const res = spawnSync(
-    process.execPath,
-    [preflightScript, "check", "--paths", csvPaths],
-    {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 30_000,
-    },
-  );
+  let res = spawnSync(process.execPath, [preflightScript, "check", "--paths", csvPaths], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30_000,
+  });
   if (res.stdout) process.stdout.write(res.stdout);
   if (res.stderr) process.stderr.write(res.stderr);
   if (res.error) {
     console.error(`[git-llm-guard] preflight execution failed: ${res.error.message}`);
     process.exit(1);
+  }
+  if (res.status !== 0 && isEntryLockDrift(`${res.stdout || ""}\n${res.stderr || ""}`)) {
+    runUpdateLockOrFail();
+    res = spawnSync(process.execPath, [preflightScript, "check", "--paths", csvPaths], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 30_000,
+    });
+    if (res.stdout) process.stdout.write(res.stdout);
+    if (res.stderr) process.stderr.write(res.stderr);
+    if (res.error) {
+      console.error(`[git-llm-guard] preflight execution failed: ${res.error.message}`);
+      process.exit(1);
+    }
   }
   if (res.status !== 0) {
     console.error(
@@ -90,21 +125,32 @@ function runCheck(paths) {
 function runPreflight(command, paths, extraArgs = []) {
   if (!paths.length) return;
   const csvPaths = toCsv(paths);
-  const res = spawnSync(
-    process.execPath,
-    [preflightScript, command, "--paths", csvPaths, ...extraArgs],
-    {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 30_000,
-    },
-  );
+  let res = spawnSync(process.execPath, [preflightScript, command, "--paths", csvPaths, ...extraArgs], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30_000,
+  });
   if (res.stdout) process.stdout.write(res.stdout);
   if (res.stderr) process.stderr.write(res.stderr);
   if (res.error) {
     console.error(`[git-llm-guard] preflight execution failed: ${res.error.message}`);
     process.exit(1);
+  }
+  if (res.status !== 0 && isEntryLockDrift(`${res.stdout || ""}\n${res.stderr || ""}`)) {
+    runUpdateLockOrFail();
+    res = spawnSync(process.execPath, [preflightScript, command, "--paths", csvPaths, ...extraArgs], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 30_000,
+    });
+    if (res.stdout) process.stdout.write(res.stdout);
+    if (res.stderr) process.stderr.write(res.stderr);
+    if (res.error) {
+      console.error(`[git-llm-guard] preflight execution failed: ${res.error.message}`);
+      process.exit(1);
+    }
   }
   if (res.status !== 0) {
     console.error(

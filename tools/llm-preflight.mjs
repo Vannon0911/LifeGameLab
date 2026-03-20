@@ -42,6 +42,27 @@ function readOrderCount(absPath) {
     .filter((line) => /^\d+\.\s+`.+`/.test(line.trim())).length;
 }
 
+function updateEntryLock(lock) {
+  const configuredPath = normalizeComparablePath(lock?.entryPath || "");
+  const entryPathRel = configuredPath || "docs/llm/ENTRY.md";
+  const entryAbs = path.join(root, entryPathRel);
+  if (!fs.existsSync(entryAbs)) {
+    fail(`Cannot update lock. Entry file missing: ${entryPathRel}`);
+  }
+  const next = {
+    entryPath: entryPathRel,
+    sha256: sha256File(entryAbs),
+    requiredReadOrderCount: readOrderCount(entryAbs),
+  };
+  if (!Number.isFinite(next.requiredReadOrderCount) || next.requiredReadOrderCount <= 0) {
+    fail(`Cannot update lock. Invalid read-order count for: ${entryPathRel}`);
+  }
+  fs.writeFileSync(lockPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+  console.log(
+    `[llm-preflight] UPDATE_LOCK_OK entry=${next.entryPath} sha256=${next.sha256} readOrder=${next.requiredReadOrderCount}`,
+  );
+}
+
 function normalizeComparablePath(inputPath) {
   return String(inputPath || "")
     .trim()
@@ -609,6 +630,11 @@ const args = process.argv.slice(3);
 const lock = readJson(lockPath);
 const matrix = readJson(matrixPath);
 
+if (command === "update-lock") {
+  updateEntryLock(lock);
+  process.exit(0);
+}
+
 if (command === "audit") {
   doAudit(args, matrix, lock);
 }
@@ -643,4 +669,4 @@ if (command === "check") {
   process.exit(0);
 }
 
-fail(`Unknown command '${command}'. Use: classify | entry | ack | check | audit`);
+fail(`Unknown command '${command}'. Use: classify | entry | ack | check | audit | update-lock`);

@@ -20,6 +20,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 ## PRUEFEN
 - Task ueber `docs/llm/TASK_ENTRY_MATRIX.json` klassifizieren
 - Session im Chat mit `entry` beginnen; das ist Pflicht, ersetzt aber keinen CLI-Preflight
+- Bei `Entry hash drift` oder `Read-order drift` zuerst `node tools/llm-preflight.mjs update-lock`, danach `classify -> entry -> ack -> check` erneut vollstaendig.
 - technische Kette exakt einhalten:
   1. `node tools/llm-preflight.mjs classify --paths <...>`
   2. `node tools/llm-preflight.mjs entry --paths <...> --mode work|security`
