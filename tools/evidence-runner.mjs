@@ -377,7 +377,7 @@ function executeDispatchStep(runCtx, scenario, harness, step) {
   if (step.kind === "placePlayerStartWindowSquare") {
     const tiles = getPlayerStartWindowSquareTiles(harness.store.getState(), step.size || 1);
     for (const tile of tiles) {
-      harness.store.dispatch({ type: "PLACE_CELL", payload: { x: tile.x, y: tile.y, remove: !!step.remove } });
+      harness.store.dispatch({ type: "PLACE_WORKER", payload: { x: tile.x, y: tile.y, remove: !!step.remove } });
     }
     runCtx.journal.append({
       scenarioId: scenario.id,

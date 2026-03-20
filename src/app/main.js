@@ -46,8 +46,8 @@ store.dispatch = (action) => {
 
 // ── Bootstrap: generate and start world ──────────────────
 store.dispatch({ type: "GEN_WORLD" });
-store.dispatch({ type: "SET_RENDER_MODE", payload: "cells" });
-store.dispatch({ type: "SET_SPEED", payload: 24 });
+store.dispatch({ type: "SET_RENDER_MODE", payload: { mode: "cells" } });
+store.dispatch({ type: "SET_SPEED", payload: { speed: 24 } });
 
 function hasRunnableWorld(state) {
   const world = state?.world;
@@ -514,4 +514,3 @@ startSimInterval();
 requestAnimationFrame(loop);
 
 console.log(`LifeGameLab v${APP_VERSION} gestartet (Schema v${manifest.SCHEMA_VERSION}). store ist verfuegbar.`);
-

@@ -131,6 +131,14 @@ try {
   assert.deepEqual([...TRACKED_REGRESSION_REPO_TESTS].sort(), repoTests, "suite registry must match real repo tests");
   assert.deepEqual([...EVIDENCE_SUITES.regression].sort(), repoTests, "regression suite must execute every repo test");
 
+  const bannedLegacyAction = ["PLACE", "CELL"].join("_");
+  const placeCellRefs = [];
+  for (const relPath of repoTests) {
+    const text = fs.readFileSync(path.join(root, relPath), "utf8");
+    if (text.includes(bannedLegacyAction)) placeCellRefs.push(relPath);
+  }
+  assert.deepEqual(placeCellRefs, [], "tests must not reference legacy worker placement after removal");
+
   const classifyOutput = runPreflight(["classify", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
   assert(classifyOutput.includes("CLASSIFY_OK"), "classify must succeed for testing scope");
   assert(classifyOutput.includes("scope=contracts+testing"), "testing classification must expand contracts dependency");

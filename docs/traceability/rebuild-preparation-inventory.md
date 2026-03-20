@@ -11,8 +11,8 @@ This file is traceability evidence, not Source of Truth.
 ## Action Inventory
 - `stable`: `GEN_WORLD`, `TOGGLE_RUNNING`, `SIM_STEP`, `SET_SPEED`, `SET_SEED`, `SET_SIZE`, `SET_RENDER_MODE`, `SET_PHYSICS`, `SET_UI`, `SET_GLOBAL_LEARNING`, `RESET_GLOBAL_LEARNING`, `SET_TILE`, `SET_WIN_MODE`
 - `rename`: `SET_WORLD_PRESET -> SET_MAPSPEC`, `ISSUE_ORDER -> ISSUE_MOVE`, `SET_OVERLAY -> SET_UI`
-- `deprecated`: `CONFIRM_FOUNDATION`, `CONFIRM_CORE_ZONE`, `START_DNA_ZONE_SETUP`, `TOGGLE_DNA_ZONE_CELL`, `CONFIRM_DNA_ZONE`, `BEGIN_INFRA_BUILD`, `BUILD_INFRA_PATH`, `CONFIRM_INFRA_PATH`, `SET_BRUSH`, `PLACE_CELL`, `PLACE_SPLIT_CLUSTER`, `HARVEST_CELL`, `HARVEST_PULSE`, `PRUNE_CLUSTER`, `RECYCLE_PATCH`, `SEED_SPREAD`, `SET_ZONE`, `BUY_EVOLUTION`, `SET_PLAYER_DOCTRINE`, `SET_PLACEMENT_COST`
-- `new_slice_a`: `SET_MAPSPEC`, `SELECT_ENTITY`, `ISSUE_MOVE`, `PLACE_CORE`, `PLACE_BUILDING`, `PLACE_BELT_SEGMENT`, `PLACE_LINE_SEGMENT`, `SET_CORE_ROUTING`, `QUEUE_WORKER`, `SPAWN_FIGHTER`, `ASSIGN_REPAIR`, `SET_MUTATOR_PATTERN`, `COMMIT_MUTATION`
+- `deprecated`: `CONFIRM_FOUNDATION`, `CONFIRM_CORE_ZONE`, `START_DNA_ZONE_SETUP`, `TOGGLE_DNA_ZONE_CELL`, `CONFIRM_DNA_ZONE`, `BEGIN_INFRA_BUILD`, `BUILD_INFRA_PATH`, `CONFIRM_INFRA_PATH`, `SET_BRUSH`, `PLACE_SPLIT_CLUSTER`, `HARVEST_CELL`, `HARVEST_PULSE`, `PRUNE_CLUSTER`, `RECYCLE_PATCH`, `SEED_SPREAD`, `SET_ZONE`, `BUY_EVOLUTION`, `SET_PLAYER_DOCTRINE`, `SET_PLACEMENT_COST`
+- `new_slice_a`: `SET_MAPSPEC`, `SELECT_ENTITY`, `ISSUE_MOVE`, `PLACE_CORE`, `PLACE_WORKER`, `PLACE_BUILDING`, `PLACE_BELT_SEGMENT`, `PLACE_LINE_SEGMENT`, `SET_CORE_ROUTING`, `QUEUE_WORKER`, `SPAWN_FIGHTER`, `ASSIGN_REPAIR`, `SET_MUTATOR_PATTERN`, `COMMIT_MUTATION`
 
 ## State Inventory
 - `keep`: `meta.seed`, `meta.gridW`, `meta.gridH`, `meta.speed`, `meta.renderMode`, `meta.ui`, `meta.globalLearning`, `world`, `sim.tick`, `sim.running`, `sim.runPhase`, `sim.lastCommand`, `sim.gameResult`, `sim.winMode`, `sim.runSummary`
@@ -40,3 +40,7 @@ Each deprecated action or module must satisfy all of the following before deleti
 2. Reducer case is removed.
 3. Tests are migrated.
 4. Replacement wiring is live.
+
+## Residual Cleanup
+- `tools/demo-live-attest.mjs`
+- `tools/evidence-runner.mjs`

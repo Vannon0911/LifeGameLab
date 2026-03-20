@@ -133,13 +133,7 @@ export class UI {
   }
 
   _placeCoreCompat({ x, y, remove = false }) {
-    if (remove) {
-      return this._dispatch({ type: "PLACE_CELL", payload: { x, y, remove: true } });
-    }
-    return this._dispatchWithLegacyFallback(
-      { type: "PLACE_CORE", payload: { x, y } },
-      { type: "PLACE_CELL", payload: { x, y, remove: false } },
-    );
+    return this._dispatch({ type: "PLACE_WORKER", payload: { x, y, remove: !!remove } });
   }
 
   _getBuilderModeConfig(mode = this._builderMode) {

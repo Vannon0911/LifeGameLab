@@ -18,7 +18,7 @@ This file is a migration map, not canonical truth.
 | `BEGIN_INFRA_BUILD` | action | drop | `PLACE_LINE_SEGMENT` | no dispatch, no reducer, tests migrated |
 | `BUILD_INFRA_PATH` | action | drop | `PLACE_LINE_SEGMENT` | no dispatch, no reducer, tests migrated |
 | `CONFIRM_INFRA_PATH` | action | drop | `PLACE_LINE_SEGMENT` | no dispatch, no reducer, tests migrated |
-| `PLACE_CELL` | action | drop | `PLACE_CORE` | no dispatch, no reducer, tests migrated |
+| `PLACE_CELL` | action | drop | `PLACE_WORKER` | no dispatch, no reducer, tests migrated |
 | `PLACE_SPLIT_CLUSTER` | action | drop | `PLACE_BUILDING` | no dispatch, no reducer, tests migrated |
 | `HARVEST_CELL` | action | drop | `QUEUE_WORKER` | no dispatch, no reducer, tests migrated |
 | `HARVEST_PULSE` | action | drop | `QUEUE_WORKER` | no dispatch, no reducer, tests migrated |

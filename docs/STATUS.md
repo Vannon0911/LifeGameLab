@@ -1,6 +1,6 @@
 # STATUS - Current Head
 
-## Snapshot (2026-03-19)
+## Snapshot (2026-03-20)
 - Slice B MapSpec wiring is now active.
 - Kernel input hardening now blocks non-serializable `SET_MAPSPEC` payloads, rejects cyclic map inputs fail-closed, and keeps invalid `SET_SIZE` dimensions out of committed state.
 - Product SoT was moved to the v1.1 RTS basis in `docs/PRODUCT.md`.
@@ -12,7 +12,7 @@
 - Builder pipeline now keeps world mutation behind `GEN_WORLD`; `SET_MAPSPEC` and `SET_WORLD_PRESET` only compile/sync map/meta state.
 - Slice C visual baseline is now live: UI layout/input modules are mounted, canvas click placement is regression-tested, and tile object placeholders render in-world.
 - Slice C minimal runtime UI is now active: panel stack removed, direct canvas placement flow is live, and movement is paced at 1 tile per second with purely visual interpolation.
-- Slice C worker hardening landed: `PLACE_CELL` no longer stays genesis-locked in run-active flow, observe-mode placement can spawn workers without DNA cost deadlock, and blocked move orders now wait/retry instead of hard-aborting.
+- Slice C worker hardening landed: legacy founder placement now routes through `PLACE_WORKER`, `PLACE_CELL` is gone from active codepaths, and blocked move orders now wait/retry instead of hard-aborting.
 - Map Builder now has a visible panel, tile palette, status feedback, and cursor highlight instead of relying on a blind `M` toggle only.
 - Default web persistence now keeps `map` state, so builder `tilePlan` no longer disappears on reload while `world` and `sim` still regenerate safely.
 - Builder regression coverage now includes `RUN_PHASE.MAP_BUILDER`, `SET_MAP_TILE` -> `GEN_WORLD` roundtrip, and persisted reload survival for `tilePlan`.
@@ -50,7 +50,7 @@ Both files are derived planning evidence only and must not override SoT docs or 
 - New action names may exist before reducer wiring, but they must stay no-op safe until implemented.
 
 ## Next Work Block
-1. Continue Slice C by removing legacy fallbacks (`ISSUE_ORDER`/`PLACE_CELL`) once reducer-wired RTS actions can carry full gameplay flow alone.
+1. Continue Slice C by keeping the `PLACE_WORKER` path and evidence guards current as the slice closes out.
 2. Expand Map Builder from current field/zone overrides to richer product tile semantics only after contract and worldgen support exists.
 3. Preserve the longrun headroom policy and runner wording when additional regression slots are added.
 4. Keep the hardening quick-suite current when future slices add new contract entry points or persistence surfaces.
@@ -61,6 +61,6 @@ Erfuellt: `SET_MAPSPEC` hat aktive UI-Dispatch-Quelle, `dataflow` ist befuellt, 
 2. `todo.slice_b.builder_pipeline` (`done 2026-03-19`)
 Erfuellt: Builder-Flow laeuft ueber `MapSpec -> compile -> GEN_WORLD`; direkte Weltmutation ist aus `SET_MAPSPEC`/`SET_WORLD_PRESET` entfernt.
 3. `todo.slice_c.phase0_replacement`
-Done wenn `CONFIRM_FOUNDATION`, `CONFIRM_CORE_ZONE`, `PLACE_CELL` und `SET_BRUSH` durch den Phase-0-Ersatz technisch abgeloest sind und ihre Removal-Gates geschlossen werden koennen.
+Done wenn `CONFIRM_FOUNDATION`, `CONFIRM_CORE_ZONE`, `PLACE_WORKER` und `SET_BRUSH` durch den Phase-0-Ersatz technisch abgeloest sind und ihre Removal-Gates geschlossen werden koennen.
 4. `todo.truth.regression_wrap`
 Done wenn nach jedem Slice der wrapped Regression-Run wieder `evidence_match` liefert und `output/current-truth.json` auf denselben Slice zeigt.

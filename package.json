@@ -1,6 +1,6 @@
 {
   "name": "lifexlab-game-sandbox",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,3 +17,4 @@
     "test:foundation:visual": "node tools/run-foundation-visual-playwright.mjs"
   }
 }
+

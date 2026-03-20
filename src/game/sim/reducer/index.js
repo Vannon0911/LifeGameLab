@@ -985,7 +985,7 @@ export function reducer(state, action, ctx = {}) {
       return patches;
     }
 
-    case "TOGGLE_DNA_ZONE_CELL":
+    case "TOGGLE_DNA_ZONE_WORKER":
     {
       if (state.sim.runPhase !== RUN_PHASE.DNA_ZONE_SETUP) return [];
       if (!state.sim.zone2Unlocked || state.sim.dnaZoneCommitted) return [];

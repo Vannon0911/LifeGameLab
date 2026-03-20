@@ -1,6 +1,6 @@
 # ARCHITECTURE
 
-**APP_VERSION:** 0.8.5
+**APP_VERSION:** 0.8.6
 
 ## SoT Rule
 - `src/project/contract/manifest.js` stays the executable contract Source of Truth.
@@ -33,6 +33,7 @@
 ## Slice C Minimal UI Runtime
 - UI shell now runs as minimal interaction surface without panel stacks.
 - Canvas interactions now expose direct founder/worker placement and worker movement flow.
+- Legacy founder placement now dispatches `PLACE_WORKER`; `PLACE_CELL` is no longer part of the active runtime surface.
 - Movement interpolation remains renderer-only visual smoothing while simulation stays deterministic and tick-bound.
 - Map Builder now has a dedicated visible panel, tile palette, action feedback, and cursor highlight without bypassing dispatch-only state writes.
 
@@ -51,6 +52,7 @@
 
 ## Contract Truth At Head
 - `actionSchema` contains both live legacy actions and active Slice B MapSpec actions.
+- `PLACE_CELL` has been retired from the active contract surface; `PLACE_WORKER` now carries the founder-placement runtime path.
 - `mutationMatrix` remains authoritative for allowed writes.
 - `simGate` remains authoritative for `/world/*` and `/sim/*` patch validation.
 - `dataflow` exposes dispatch sources plus lifecycle and planned writes.
@@ -83,3 +85,4 @@ High-value reuse candidates:
 - `tests/`: determinism, contract and migration guards.
 - `tools/`: test runners and evidence tooling.
 - `docs/`: SoT docs and derived traceability.
+

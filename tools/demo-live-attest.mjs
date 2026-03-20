@@ -193,7 +193,7 @@ try {
     };
 
     store.dispatch({ type: "SET_SIZE", payload: { w: 64, h: 64 } });
-    store.dispatch({ type: "SET_SPEED", payload: 24 });
+    store.dispatch({ type: "SET_SPEED", payload: { speed: 24 } });
     store.dispatch({ type: "GEN_WORLD", payload: {} });
     store.dispatch({ type: "SET_BRUSH", payload: { brushMode: idsMod.BRUSH_MODE.FOUNDER_PLACE } });
 
@@ -207,9 +207,9 @@ try {
       const x = Math.min(range.x1 - 1, Math.max(range.x0, range.x0 + i));
       const y = range.y0;
       founderCoords.push({ x, y });
-      store.dispatch({ type: "PLACE_CELL", payload: { x, y, remove: false } });
+      store.dispatch({ type: "PLACE_WORKER", payload: { x, y, remove: false } });
       const stAfter = store.getState();
-      assertState(Number(stAfter?.sim?.founderPlaced || 0) === i + 1, `PLACE_CELL_ASSERT_FAIL:${i + 1}`);
+      assertState(Number(stAfter?.sim?.founderPlaced || 0) === i + 1, `PLACE_WORKER_ASSERT_FAIL:${i + 1}`);
     }
 
     store.dispatch({ type: "CONFIRM_FOUNDATION", payload: {} });
@@ -228,7 +228,7 @@ try {
     const workerX = Math.max(0, Math.min(w - 1, sx + 1));
     const workerY = sy;
 
-    store.dispatch({ type: "PLACE_CELL", payload: { x: workerX, y: workerY, remove: false } });
+    store.dispatch({ type: "PLACE_WORKER", payload: { x: workerX, y: workerY, remove: false } });
 
     const rxA = Math.max(0, Math.min(w - 1, sx + 5));
     const ryA = Math.max(0, Math.min(h - 1, sy + 2));

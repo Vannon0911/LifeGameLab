@@ -54,8 +54,19 @@ try {
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
+  const bootstrapErrors = [];
+  page.on("console", (msg) => {
+    if (msg.type() !== "error") return;
+    const text = String(msg.text() || "");
+    if (text.includes("action.payload(") || text.includes("must be object")) bootstrapErrors.push(text);
+  });
+  page.on("pageerror", (err) => {
+    const text = String(err?.message || err || "");
+    if (text.includes("action.payload(") || text.includes("must be object")) bootstrapErrors.push(text);
+  });
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(350);
+  assert.equal(bootstrapErrors.length, 0, `bootstrap must not emit validation errors: ${bootstrapErrors.join(" | ")}`);
 
   const canvasExists = await page.locator("canvas#cv").count();
   assert.equal(canvasExists, 1, "main app must bootstrap canvas#cv");

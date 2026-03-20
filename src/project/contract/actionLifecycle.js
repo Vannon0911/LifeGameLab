@@ -80,7 +80,7 @@ export const actionLifecycle = Object.freeze({
     "DNA zone setup is replaced by RTS building placement.",
     ["/world/buildings", "/sim/lastCommand"]
   ),
-  TOGGLE_DNA_ZONE_CELL: deprecated(
+  TOGGLE_DNA_ZONE_WORKER: deprecated(
     "PLACE_BUILDING",
     "slice_f",
     "DNA zone editing is replaced by explicit RTS footprints.",
@@ -177,12 +177,6 @@ export const actionLifecycle = Object.freeze({
     "Tile editing stays available for the internal Map Builder.",
     ["/world/R"]
   ),
-  PLACE_CELL: deprecated(
-    "PLACE_CORE",
-    "slice_c",
-    "Legacy founder cell placement is replaced by Phase 0 worker/core flow.",
-    ["/world/workers", "/sim/phase0PlantsDelivered", "/sim/lastCommand"]
-  ),
   ISSUE_ORDER: rename(
     "ISSUE_MOVE",
     "slice_c",
@@ -195,7 +189,7 @@ export const actionLifecycle = Object.freeze({
     "Cluster split placement is replaced by explicit splitter building placement.",
     ["/world/buildings", "/sim/lastCommand"]
   ),
-  HARVEST_CELL: deprecated(
+  HARVEST_WORKER: deprecated(
     "QUEUE_WORKER",
     "slice_e",
     "Cell harvest is replaced by worker-driven manual and automated collection.",
@@ -284,6 +278,11 @@ export const actionLifecycle = Object.freeze({
     "slice_a",
     "Scaffolded Phase 0 core placement action; reducer wiring lands in Slice C.",
     ["/world/cores", "/sim/phase0PlantsDelivered", "/sim/phase0CorePlaced", "/sim/lastCommand"]
+  ),
+  PLACE_WORKER: scaffold(
+    "slice_a",
+    "Scaffolded worker placement action; reducer wiring lands in Slice C.",
+    ["/world/workers", "/sim/phase0PlantsDelivered", "/sim/lastCommand"]
   ),
   PLACE_BUILDING: scaffold(
     "slice_a",
