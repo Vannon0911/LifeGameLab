@@ -56,6 +56,8 @@ import { evaluateFoundationEligibility } from "../foundationEligibility.js";
 import { deriveStageState } from "./progression.js";
 import { deriveCanonicalZoneState } from "../canonicalZones.js";
 import { derivePatternBonuses, derivePatternCatalog } from "../patterns.js";
+import { reduceEconomyActions } from "./economy.js";
+import { reduceRunActions } from "./run.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
@@ -871,6 +873,23 @@ function runWorldSimV4(world, meta, sim, rng) {
 
 export function reducer(state, action, ctx = {}) {
   const { rng } = ctx;
+  const economyPatches = reduceEconomyActions(state, action, {
+    defaultGlobalLearning,
+    clamp,
+    cloneJson,
+    cloneTypedArray,
+    paintCircle,
+  });
+  if (economyPatches) return economyPatches;
+
+  const runPatches = reduceRunActions(state, action, {
+    parseWorkerEntityId,
+    buildIssueMovePatches,
+    buildSetWinModePatches,
+    buildSetOverlayPatches,
+  });
+  if (runPatches) return runPatches;
+
   switch (action.type) {
 
     case "GEN_WORLD": {
@@ -1209,61 +1228,6 @@ export function reducer(state, action, ctx = {}) {
       return patches;
     }
 
-    case "SET_GLOBAL_LEARNING": {
-      const prev = state.meta.globalLearning || defaultGlobalLearning();
-      const enabled = action.payload?.enabled ?? prev.enabled;
-      const strength = clamp(Number(action.payload?.strength ?? prev.strength), 0, 1);
-      const next = { ...prev, enabled, strength };
-      const patches = [{ op: "set", path: "/meta/globalLearning", value: next }];
-      if (state.world) patches.push({ op: "set", path: "/world/globalLearning", value: cloneJson(next) });
-      return patches;
-    }
-
-    case "RESET_GLOBAL_LEARNING": {
-      const reset = defaultGlobalLearning();
-      const patches = [{ op: "set", path: "/meta/globalLearning", value: reset }];
-      if (state.world) {
-        patches.push({ op: "set", path: "/world/globalLearning", value: cloneJson(reset) });
-        patches.push({ op: "set", path: "/world/lineageMemory", value: {} });
-      }
-      return patches;
-    }
-
-    case "SET_TILE": {
-      const world = state.world;
-      if (!world) return [];
-      const w = Number(world.w || state.meta.gridW || 0) | 0;
-      const h = Number(world.h || state.meta.gridH || 0) | 0;
-      const x = Number(action.payload?.x) | 0;
-      const y = Number(action.payload?.y) | 0;
-      if (x < 0 || y < 0 || x >= w || y >= h) return [];
-      const mode = String(action.payload?.mode || "set");
-      const radius = Math.max(1, Math.min(10, Number(action.payload?.radius) | 0));
-      const base = world.R;
-      if (!base || !ArrayBuffer.isView(base)) return [];
-      const next = cloneTypedArray(base);
-      const clear = !!action.payload?.clear || mode === "clear" || mode === "erase" || mode === "remove";
-      const rawValue = Number(action.payload?.value);
-      const value = clear ? 0 : clamp(Number.isFinite(rawValue) ? rawValue : 1, 0, 1);
-
-      paintCircle({
-        w, h, x, y, radius,
-        cb: (idx) => {
-          next[idx] = value;
-        }
-      });
-
-      const patches = [{ op: "set", path: "/world/R", value: next }];
-      return patches;
-    }
-
-    case "SELECT_ENTITY": {
-      const entityKind = String(action.payload?.entityKind || "");
-      const entityId = String(action.payload?.entityId || "");
-      return [
-        { op: "set", path: "/sim/selectedEntity", value: { entityKind, entityId } },
-      ];
-    }
 
     case "PLACE_WORKER": {
       return handlePlaceWorker(state, action);
@@ -1370,30 +1334,6 @@ export function reducer(state, action, ctx = {}) {
       ];
     }
 
-    case "ISSUE_MOVE": {
-      const parsed = parseWorkerEntityId(action.payload?.entityId);
-      if (!parsed) return [];
-      return buildIssueMovePatches(
-        state,
-        parsed.fromX,
-        parsed.fromY,
-        Number(action.payload?.targetX) | 0,
-        Number(action.payload?.targetY) | 0,
-        "ISSUE_MOVE",
-        String(action.payload?.entityId || ""),
-      );
-    }
-
-    case "ISSUE_ORDER": {
-      return buildIssueMovePatches(
-        state,
-        Number(action.payload?.fromX) | 0,
-        Number(action.payload?.fromY) | 0,
-        Number(action.payload?.targetX) | 0,
-        Number(action.payload?.targetY) | 0,
-        "ISSUE_ORDER",
-      );
-    }
 
     case "PLACE_SPLIT_CLUSTER": {
       if (isPreRunGenesisPhase(state)) return [];
@@ -1408,16 +1348,6 @@ export function reducer(state, action, ctx = {}) {
     case "SET_ZONE": {
       if (isPreRunGenesisPhase(state)) return [];
       return handleSetZone(state, action);
-    }
-
-    case "SET_WIN_MODE": {
-      const patches = buildSetWinModePatches(state, action);
-      if (!patches.length) return [];
-      return patches;
-    }
-
-    case "SET_OVERLAY": {
-      return buildSetOverlayPatches(action);
     }
 
     default:
