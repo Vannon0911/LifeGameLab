@@ -49,7 +49,7 @@ function runPreflight(args) {
  */
 export async function runPreflightChain(paths, options = {}) {
   const mode = options.mode || "work";
-  const pathArgs = paths.flatMap((p) => ["--paths", p]);
+  const pathArgs = ["--paths", paths.join(",")];
   const steps = [];
 
   // Schritt 1: classify
@@ -87,7 +87,7 @@ export async function runPreflightChain(paths, options = {}) {
  * Prueft nur den aktuellen Preflight-Status (ohne neue Chain zu starten).
  */
 export async function checkPreflightStatus(paths) {
-  const pathArgs = paths.flatMap((p) => ["--paths", p]);
+  const pathArgs = ["--paths", paths.join(",")];
   return runPreflight(["check", ...pathArgs]);
 }
 
@@ -95,6 +95,6 @@ export async function checkPreflightStatus(paths) {
  * Fuehrt nur classify aus (fuer Scope-Ermittlung).
  */
 export async function classifyPaths(paths) {
-  const pathArgs = paths.flatMap((p) => ["--paths", p]);
+  const pathArgs = ["--paths", paths.join(",")];
   return runPreflight(["classify", ...pathArgs]);
 }
