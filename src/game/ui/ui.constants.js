@@ -1,3 +1,39 @@
+// ── Pixel Art Renderer Constants ────────────────────────────────────────────
+/** Hard-coded tile size in physical pixels (spec: 8px). */
+export const TILE_SIZE = 8;
+
+/**
+ * 16-colour palette as 24-bit hex integers.
+ * Index → semantic meaning:
+ *  0  background / empty cell
+ *  1  player worker / alive cell
+ *  2  cpu worker / enemy cell
+ *  3  resource tile (DNA / energy)
+ *  4  infrastructure (INFRA zone)
+ *  5  player territory overlay
+ *  6  cpu territory overlay
+ *  7–15 reserved
+ */
+export const PALETTE = [
+  0x060c12, // 0  bg             — near-black blue
+  0x3bffaa, // 1  player worker  — neon mint
+  0xff4f6e, // 2  cpu worker     — hot coral
+  0xffd36b, // 3  resource/DNA   — gold
+  0x4dc8ff, // 4  infra          — electric blue
+  0x1e4a2e, // 5  player territory (dark green)
+  0x4a1e1e, // 6  cpu territory   (dark red)
+  0x1a2a3a, // 7  reserved
+  0x2a1a3a, // 8  reserved
+  0x0e1e0e, // 9  reserved
+  0x3a2a0a, // 10 reserved
+  0x0a1a2a, // 11 reserved
+  0x1e0e2e, // 12 reserved
+  0x2e1e0e, // 13 reserved
+  0x0e2e1e, // 14 reserved
+  0x1e1e1e, // 15 reserved
+];
+// ────────────────────────────────────────────────────────────────────────────
+
 export const UI_PHYSICS_KEYS = [
   ["L_mean", "Licht", 0.05, 0.60, 0.01],
   ["T_survive", "Überleben", 0.02, 0.25, 0.01],
@@ -70,4 +106,58 @@ export const TECH_LANE_LABELS = {
   cluster: "Cluster",
   growth: "Wachstum",
   evolution: "Evolution",
+};
+
+export const BUILDER_TILE_OPTIONS = Object.freeze([
+  Object.freeze({ mode: "light",      label: "Licht",      hint: "Lichtwert setzen",              value: 0.92, accent: "#ffd47a" }),
+  Object.freeze({ mode: "nutrient",   label: "Naehrstoff", hint: "Naehrstoffwert setzen",          value: 0.86, accent: "#9ef08f" }),
+  Object.freeze({ mode: "water",      label: "Wasser",     hint: "Wasserwert setzen",              value: 0.86, accent: "#76d8ff" }),
+  Object.freeze({ mode: "saturation", label: "Saettigung", hint: "Saettigungswert setzen",         value: 0.70, accent: "#ffc977" }),
+  Object.freeze({ mode: "core",       label: "Kern",       hint: "Zone als Kern markieren",        value: 1,    accent: "#98c7ff" }),
+  Object.freeze({ mode: "dna",        label: "DNA",        hint: "Zone als DNA markieren",         value: 1,    accent: "#d29dff" }),
+  Object.freeze({ mode: "infra",      label: "Infra",      hint: "Zone als Infrastruktur markieren",value: 1,   accent: "#6ee7c7" }),
+  Object.freeze({ mode: "founder",    label: "Founder",    hint: "Founder-Kachel setzen",          value: 1,    accent: "#f6f9ff" }),
+  Object.freeze({ mode: "erase",      label: "Loeschen",   hint: "Override entfernen",             value: 0,    accent: "#ff8a7a", remove: true }),
+]);
+
+export const UI_STRINGS = {
+  MAP_SPEC_EXPORT: "MapSpec in Konsole exportiert.",
+  MAP_SPEC_EXPORT_HINT: "F12 fuer Log",
+  FOUNDER_REMOVED: "Founder entfernt.",
+  FOUNDER_PLACED: "Founder platziert.",
+  FOUNDER_BLOCKED: "Founder-Aktion blockiert.",
+  FOUNDER_HINT: "Genesis: Startkachel anklicken, dann bestaetigen.",
+  LAB_ONLY_BLOCKED: "Labor-Rohwerkzeuge sind ausserhalb des Labor-Panels gesperrt.",
+  LAB_ONLY_HINT: "Wechsle in Labor fuer Legacy-Brushes oder nutze Main-Run-Eingriffe.",
+  INFRA_REMOVED: "Infrastrukturkachel entfernt.",
+  INFRA_SET: "Infrastrukturkachel vorgemerkt.",
+  INFRA_BLOCKED: "Infrastrukturpfad blockiert.",
+  INFRA_HINT: "Pfad muss zusammenhaengend bleiben und an Kern, DNA-Zone oder committete Infrastruktur anschliessen.",
+  WORKER_REMOVED: "Worker entfernt.",
+  WORKER_PLACED: "Worker platziert.",
+  WORKER_BLOCKED: "Worker-Aktion blockiert.",
+  WORKER_MOVE_HINT: "Setzen auf freie Kacheln, Shift+Klick entfernt.",
+  WORKER_MARKED: "Worker markiert.",
+  WORKER_MARKED_HINT: "Waehle jetzt ein Ressource-Tile als Ziel.",
+  MOVE_CANCELLED: "Bewegung abgebrochen.",
+  WORKER_REPOSITIONED: "Worker umgestellt.",
+  NO_RESOURCE_TARGET: "Kein Ressourcen-Ziel.",
+  NO_RESOURCE_TARGET_HINT: "Waehle ein Tile mit sichtbarer Ressource.",
+  ORDER_BLOCKED: "Order blockiert.",
+  ORDER_BLOCKED_HINT: "Pruefe Start-Worker und Ressourcen-Ziel.",
+  ORDER_SET: "Order gesetzt.",
+  ORDER_SET_HINT: "Der Worker bewegt sich tickbasiert zum Ressourcen-Ziel.",
+  HARVEST_OK: "DNA-Ernte ausgeführt.",
+  HARVEST_BLOCKED: "Ernte blockiert.",
+  HARVEST_HINT: "Nächster Schritt: eigenen Worker wählen und Mindestpopulation halten.",
+  SPLIT_OK: "Split-Seed gesetzt.",
+  SPLIT_BLOCKED: "Split-Seed blockiert.",
+  SPLIT_HINT: "Nächster Schritt: Split-Tech, Command-Score und freie 4x4-Zone prüfen.",
+  DNA_ZONE_REMOVED: "DNA-Kachel entfernt.",
+  DNA_ZONE_SET: "DNA-Kachel gesetzt.",
+  DNA_ZONE_BLOCKED: "DNA-Kachel blockiert.",
+  DNA_ZONE_HINT: "Nur lebende eigene Kacheln, nicht im Energiekern, angrenzend an Kern oder DNA-Zone.",
+  MAP_TILE_OK: "Map-Tile aktualisiert.",
+  MAP_TILE_BLOCKED: "Fehler beim Setzen.",
+  MAP_TILE_HINT: "Shift+Klick entfernt Overrides."
 };
