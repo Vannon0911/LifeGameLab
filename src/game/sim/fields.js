@@ -1,8 +1,16 @@
 import { clamp } from "./shared.js";
 import { MAX_LIGHT_INCIDENT } from "./constants.js";
 
+let _diffuseScratch = null;
+let _diffuseScratchLen = 0;
+
 export function diffuse(field, w, h, rate) {
-  const tmp = new Float32Array(field.length);
+  const len = field.length;
+  if (!_diffuseScratch || _diffuseScratchLen < len) {
+    _diffuseScratch = new Float32Array(len);
+    _diffuseScratchLen = len;
+  }
+  const tmp = _diffuseScratch;
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
     const idx = j * w + i;
     let sum = field[idx], cnt = 1;
@@ -12,7 +20,7 @@ export function diffuse(field, w, h, rate) {
     if (j < h - 1) { sum += field[idx + w]; cnt++; }
     tmp[idx] = field[idx] * (1 - rate) + (sum / cnt) * rate;
   }
-  field.set(tmp);
+  field.set(len === _diffuseScratchLen ? tmp : tmp.subarray(0, len));
 }
 
 export function applySeasonalLightAnchor(world, phy, tick) {

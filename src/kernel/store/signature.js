@@ -29,7 +29,16 @@ function _stringify(v, path, ancestors) {
   }
   if (t === "object") {
     if (Array.isArray(v)) return "[" + v.map((entry, index) => _stringify(entry, `${path}[${index}]`, ancestors)).join(",") + "]";
-    if (ArrayBuffer.isView(v)) return "[" + Array.from(v, (entry, index) => _stringify(entry, `${path}[${index}]`, ancestors)).join(",") + "]";
+    if (ArrayBuffer.isView(v)) {
+      // Fast path for typed arrays: all elements are guaranteed to be finite numbers
+      const parts = new Array(v.length);
+      for (let i = 0; i < v.length; i++) {
+        const n = v[i];
+        if (!Number.isFinite(n)) throw new Error(`non-serializable value at path: ${path}[${i}]`);
+        parts[i] = String(n);
+      }
+      return "[" + parts.join(",") + "]";
+    }
     if (!isPlainObject(v)) throw new Error(`non-serializable value at path: ${path}`);
     if (ancestors.has(v)) throw new Error(`circular reference at path: ${path}`);
     ancestors.add(v);

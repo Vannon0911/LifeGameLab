@@ -12,6 +12,30 @@ const LOD_ZOOM_STEPS = [512, 256, 128, 64]; // requested: 512 /2 /2 /2
 let _prevAliveSnapshot = null;
 let _activeMoveHint = null;
 
+// Color string cache to avoid repeated string interpolation in hot rendering loops
+const _colorCache = new Map();
+const _COLOR_CACHE_MAX = 4096;
+
+function rgbaStr(r, g, b, a) {
+  const key = (r << 24 | g << 16 | b << 8 | ((a * 100) | 0)) | 0;
+  let s = _colorCache.get(key);
+  if (s !== undefined) return s;
+  s = `rgba(${r}, ${g}, ${b}, ${a})`;
+  if (_colorCache.size >= _COLOR_CACHE_MAX) _colorCache.clear();
+  _colorCache.set(key, s);
+  return s;
+}
+
+function rgbStr(r, g, b) {
+  const key = (r << 16 | g << 8 | b) | 0;
+  let s = _colorCache.get(key | 0x1000000);
+  if (s !== undefined) return s;
+  s = `rgb(${r}, ${g}, ${b})`;
+  if (_colorCache.size >= _COLOR_CACHE_MAX) _colorCache.clear();
+  _colorCache.set(key | 0x1000000, s);
+  return s;
+}
+
 function computeLodFromZoom(tilePx) {
   // Virtual zoom metric so LOD is device-independent and stable over grid growth.
   const zoom = Math.max(1, tilePx * 32);
@@ -30,6 +54,10 @@ function hslToRgb(h, s, l) {
   return [f(0) * 255, f(8) * 255, f(4) * 255];
 }
 
+let _prevAliveBuffer = null;
+let _prevAliveW = 0;
+let _prevAliveH = 0;
+
 function computeSingleMoveHint(world, alpha = 1) {
   const w = Number(world?.w || 0) | 0;
   const h = Number(world?.h || 0) | 0;
@@ -37,29 +65,36 @@ function computeSingleMoveHint(world, alpha = 1) {
   if (!alive || !ArrayBuffer.isView(alive)) return null;
   const total = w * h;
   if (total <= 0 || alive.length !== total) return null;
-  const currentAlive = [];
-  for (let i = 0; i < total; i++) {
-    if ((Number(alive[i] || 0) | 0) === 1) currentAlive.push(i);
-  }
-  const prev = _prevAliveSnapshot;
-  _prevAliveSnapshot = { w, h, alive: currentAlive };
-  if (!prev || prev.w !== w || prev.h !== h) {
+
+  const prev = _prevAliveBuffer;
+  const prevW = _prevAliveW;
+  const prevH = _prevAliveH;
+
+  if (!prev || prevW !== w || prevH !== h || prev.length !== total) {
+    _prevAliveBuffer = new Uint8Array(alive);
+    _prevAliveW = w;
+    _prevAliveH = h;
     _activeMoveHint = null;
     return null;
   }
 
-  const prevSet = new Set(prev.alive);
-  const currSet = new Set(currentAlive);
-  const removed = [];
-  const added = [];
-  for (const idx of prevSet) {
-    if (!currSet.has(idx)) removed.push(idx);
+  // Diff previous and current alive arrays directly without building index sets
+  let removedIdx = -1, addedIdx = -1;
+  let removedCount = 0, addedCount = 0;
+  for (let i = 0; i < total; i++) {
+    const p = prev[i];
+    const c = alive[i];
+    if (p === c) continue;
+    if (p === 1 && c !== 1) { removedIdx = i; removedCount++; }
+    else if (p !== 1 && c === 1) { addedIdx = i; addedCount++; }
+    if (removedCount > 1 || addedCount > 1) break;
   }
-  for (const idx of currSet) {
-    if (!prevSet.has(idx)) added.push(idx);
-  }
-  if (removed.length === 1 && added.length === 1) {
-    _activeMoveHint = { from: removed[0], to: added[0] };
+
+  // Update snapshot
+  _prevAliveBuffer.set(alive);
+
+  if (removedCount === 1 && addedCount === 1) {
+    _activeMoveHint = { from: removedIdx, to: addedIdx };
   }
   if (_activeMoveHint && alpha < 1) return _activeMoveHint;
   if (alpha >= 1) _activeMoveHint = null;
@@ -340,7 +375,7 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3, 
         const ev = clamp01((Number(E[i]) || 0) / Emax);
         const h0 = Number(hue[i]) || 0;
         const c = hslToRgb(h0, 38 + ev * 40, 46 + ev * 16);
-        ctx.fillStyle = `rgba(${Math.round(c[0])}, ${Math.round(c[1])}, ${Math.round(c[2])}, 0.96)`;
+        ctx.fillStyle = rgbaStr(Math.round(c[0]), Math.round(c[1]), Math.round(c[2]), 0.96);
         const px = offX + x * tilePx;
         const py = offY + y * tilePx;
         ctx.fillRect(px, py, Math.max(1, tilePx), Math.max(1, tilePx));
@@ -456,7 +491,7 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3, 
       const rim = hslToRgb(h0 - 12, Math.max(25, sat - 20), litRim);
       if (isHugeGrid) {
         const side = Math.max(1.4, tilePx * 0.68);
-        ctx.fillStyle = `rgba(${Math.round(core[0])}, ${Math.round(core[1])}, ${Math.round(core[2])}, 0.96)`;
+        ctx.fillStyle = rgbaStr(Math.round(core[0]), Math.round(core[1]), Math.round(core[2]), 0.96);
         ctx.fillRect(cx - side * 0.5, cy - side * 0.5, side, side);
         if (quality >= 1 && tilePx >= 2) {
           ctx.strokeStyle = "rgba(10,16,22,0.55)";
@@ -609,7 +644,7 @@ function drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality = 3) {
       const px = offX + x * tilePx;
       const py = offY + y * tilePx;
       const size = tilePx * step;
-      ctx.fillStyle = `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+      ctx.fillStyle = rgbStr(Math.round(r), Math.round(g), Math.round(b));
       ctx.fillRect(px, py, size, size);
 
       if (detail) {

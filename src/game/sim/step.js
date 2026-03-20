@@ -28,7 +28,7 @@ export function simStep(world, phy, tick) {
   let dominantHueRatio = 0;
   let diversitySampled = 0;
   const diversitySampleLimit = 256;
-  const diversityLineages = [];
+  const diversityLineages = new Set();
 
   // P1-04: Player/CPU-Metriken — Akkumulatoren
   const playerLid = (phy.playerLineageId | 0) || 0;
@@ -98,13 +98,12 @@ const clusterDrive = clamp((world.clusterField?.[i] || 0) * runtime.linkMul, 0, 
 const transferRate = 0.22 + clusterDrive * 0.03;
 const energyIn = energyPotIn * transferRate * runtime.energyMul;
 
-const scarcity2 = clampScarcityByNutrient(R[i]);
 const upkeepVal =
   (traitAt.u(trait, i) * phy.U_base +
   (W[i] * phy.W_penaltySurvive) / Math.max(0.65, runtime.toxinMul) +
   (link[i] || 0) * (phy.costNetwork || 0) / Math.max(0.7, runtime.linkMul) +
   clamp(E[i] / Math.max(0.001, phy.Emax), 0, 1) * (phy.costActivity || 0) +
-  scarcity2 * (phy.costScarcity || 0)) * bufferMult * runtime.upkeepMul + crowdingPenalty;
+  scarcity * (phy.costScarcity || 0)) * bufferMult * runtime.upkeepMul + crowdingPenalty;
 
 // E mutation (smoothed)
 E[i] = clamp(E[i] + energyIn - upkeepVal, 0, phy.Emax);
@@ -134,11 +133,7 @@ W[i] = clamp(W[i] + wTarget * wTransfer, 0, 1);
     if (cpuLid && lid === cpuLid) { cpuAliveCount++; sumCpuEIn += energyIn; }
 
     if (diversitySampled < diversitySampleLimit && lid) {
-      let seen = false;
-      for (let k = 0; k < diversityLineages.length; k++) {
-        if (diversityLineages[k] === lid) { seen = true; break; }
-      }
-      if (!seen) diversityLineages.push(lid);
+      diversityLineages.add(lid);
       diversitySampled++;
     }
 
@@ -217,7 +212,7 @@ W[i] = clamp(W[i] + wTarget * wTransfer, 0, 1);
 
   const invN = 1 / Math.max(1, N);
   const invAlive = 1 / Math.max(1, aliveCount);
-  const lineageDiversity = diversityLineages.length;
+  const lineageDiversity = diversityLineages.size;
   const aliveRatio = aliveCount * invN;
 
   return {

@@ -54,6 +54,28 @@ function getLineageCentroid(world, lineage) {
   return { x: sumX / count, y: sumY / count, count };
 }
 
+function getLinageCentroidPair(world, lid1, lid2) {
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  const N = w * h;
+  let sx1 = 0, sy1 = 0, c1 = 0;
+  let sx2 = 0, sy2 = 0, c2 = 0;
+  const alive = world?.alive;
+  const lineageId = world?.lineageId;
+  const l1 = lid1 | 0;
+  const l2 = lid2 | 0;
+  for (let i = 0; i < N; i++) {
+    if (alive[i] !== 1) continue;
+    const lid = (Number(lineageId[i]) | 0);
+    if (lid === l1) { sx1 += i % w; sy1 += (i / w) | 0; c1++; }
+    else if (lid === l2) { sx2 += i % w; sy2 += (i / w) | 0; c2++; }
+  }
+  return {
+    cpu: c1 ? { x: sx1 / c1, y: sy1 / c1, count: c1 } : null,
+    player: c2 ? { x: sx2 / c2, y: sy2 / c2, count: c2 } : null,
+  };
+}
+
 function distanceSq(ax, ay, bx, by) {
   const dx = ax - bx;
   const dy = ay - by;
@@ -64,14 +86,18 @@ function collectCpuExpandCandidates(world, cpuLid) {
   const w = Number(world?.w || 0) | 0;
   const h = Number(world?.h || 0) | 0;
   const N = w * h;
+  const alive = world?.alive;
+  const lineageId = world?.lineageId;
+  const lid = cpuLid | 0;
   const cpuSeeds = [];
   for (let i = 0; i < N; i++) {
-    if ((Number(world?.alive?.[i] || 0) | 0) !== 1) continue;
-    if ((Number(world?.lineageId?.[i] || 0) | 0) !== (cpuLid | 0)) continue;
+    if (alive[i] !== 1 || (Number(lineageId[i]) | 0) !== lid) continue;
     cpuSeeds.push(i);
   }
   if (!cpuSeeds.length) return [];
-  const candidates = new Set();
+  // Use a Uint8Array as a bitmap to deduplicate candidates efficiently
+  const seen = new Uint8Array(N);
+  const candidates = [];
   for (let s = 0; s < cpuSeeds.length; s++) {
     const idx = cpuSeeds[s];
     const x = idx % w;
@@ -82,18 +108,21 @@ function collectCpuExpandCandidates(world, cpuLid) {
         const yy = y + dy;
         if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
         const j = yy * w + xx;
-        if ((Number(world?.alive?.[j] || 0) | 0) === 1) continue;
-        candidates.add(j);
+        if (alive[j] === 1 || seen[j]) continue;
+        seen[j] = 1;
+        candidates.push(j);
       }
     }
   }
-  return [...candidates];
+  return candidates;
 }
 
 function spawnCpuExpansionCells(world, tick, cpuLid, playerLid, maxSpawn = 3) {
   const w = Number(world?.w || 0) | 0;
-  const cpuCentroid = getLineageCentroid(world, cpuLid);
-  const playerCentroid = getLineageCentroid(world, playerLid);
+  // Compute both centroids in a single grid pass
+  const centroids = getLinageCentroidPair(world, cpuLid, playerLid);
+  const cpuCentroid = centroids.cpu;
+  const playerCentroid = centroids.player;
   if (!cpuCentroid || !playerCentroid) return 0;
   const targetX = playerCentroid.x;
   const targetY = playerCentroid.y;

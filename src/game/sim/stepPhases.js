@@ -10,6 +10,23 @@ import { ZONE_ROLE } from "../contracts/ids.js";
 import { hasZoneRole } from "./canonicalZones.js";
 import { scanCellTopologyPatterns } from "./cellPatterns.js";
 
+// Pre-computed circular offset masks keyed by radius
+const _circleMaskCache = new Map();
+
+function getCircleMask(r) {
+  let offsets = _circleMaskCache.get(r);
+  if (offsets) return offsets;
+  offsets = [];
+  const rr = r * r;
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      if (dx * dx + dy * dy <= rr) offsets.push(dx, dy);
+    }
+  }
+  _circleMaskCache.set(r, offsets);
+  return offsets;
+}
+
 function applyCircularVision(mask, w, h, idx, radius) {
   const r = Math.max(0, Number(radius) | 0);
   if (r <= 0) {
@@ -18,15 +35,12 @@ function applyCircularVision(mask, w, h, idx, radius) {
   }
   const x = idx % w;
   const y = (idx / w) | 0;
-  const rr = r * r;
-  for (let dy = -r; dy <= r; dy++) {
-    for (let dx = -r; dx <= r; dx++) {
-      if ((dx * dx) + (dy * dy) > rr) continue;
-      const xx = x + dx;
-      const yy = y + dy;
-      if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-      mask[(yy * w) + xx] = 1;
-    }
+  const offsets = getCircleMask(r);
+  for (let k = 0; k < offsets.length; k += 2) {
+    const xx = x + offsets[k];
+    const yy = y + offsets[k + 1];
+    if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+    mask[yy * w + xx] = 1;
   }
 }
 

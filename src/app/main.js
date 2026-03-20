@@ -179,21 +179,29 @@ const RenderManager = {
     return pref == null ? cells >= autoThreshold : !!pref;
   },
 
+  _worldViewCache: { tick: -1, summary: "0:0:0" },
+
   summarizeWorldView(state) {
+    const tick = Number(state?.sim?.tick || 0);
+    if (tick === this._worldViewCache.tick) return this._worldViewCache.summary;
     const world = state?.world || {};
-    const countOnes = (mask) => {
-      if (!mask || !ArrayBuffer.isView(mask)) return 0;
-      let total = 0;
-      for (let i = 0; i < mask.length; i++) {
-        if ((Number(mask[i] || 0) | 0) === 1) total++;
-      }
-      return total;
-    };
-    return [
-      countOnes(world.visibility),
-      countOnes(world.explored),
-      countOnes(world.infraCandidateMask),
-    ].join(":");
+    let visCount = 0, expCount = 0, infraCount = 0;
+    const vis = world.visibility;
+    const exp = world.explored;
+    const infra = world.infraCandidateMask;
+    if (vis && ArrayBuffer.isView(vis)) {
+      for (let i = 0; i < vis.length; i++) if (vis[i] === 1) visCount++;
+    }
+    if (exp && ArrayBuffer.isView(exp)) {
+      for (let i = 0; i < exp.length; i++) if (exp[i] === 1) expCount++;
+    }
+    if (infra && ArrayBuffer.isView(infra)) {
+      for (let i = 0; i < infra.length; i++) if (infra[i] === 1) infraCount++;
+    }
+    const summary = visCount + ":" + expCount + ":" + infraCount;
+    this._worldViewCache.tick = tick;
+    this._worldViewCache.summary = summary;
+    return summary;
   },
 
   makeSignature(state, perf) {
@@ -392,11 +400,11 @@ function runRender(perfHints) {
   publishPerfStats(state);
 }
 
-function runUiSync() {
+function runUiSync(state) {
   const now  = globalThis.performance ? globalThis.performance.now() : 0;
-  const tick = store.getState().sim.tick;
+  const tick = state.sim.tick;
   if ((tick !== lastSyncTick && now - lastSyncTs > 70) || now - lastSyncTs > 220) {
-    ui.sync(store.getState());
+    ui.sync(state);
     lastSyncTick = tick;
     lastSyncTs   = now;
   }
@@ -407,13 +415,15 @@ publishPerfStats();
 function startSimInterval() {
   if (simIntervalId !== null) return;
   simIntervalId = setInterval(() => {
-    const state = store.getState();
     if (SIM_RUNTIME_DISABLED) return;
+    const state = store.getState();
     if (!shouldAdvanceSimulation(state)) return;
     const stepped = runOneSimStep();
-    if (stepped) lastSimStepTs = globalThis.performance ? globalThis.performance.now() : lastSimStepTs;
-    runDevBalanceChecks();
-    WorldStateLog.track(store.getState());
+    if (stepped) {
+      lastSimStepTs = globalThis.performance ? globalThis.performance.now() : lastSimStepTs;
+      runDevBalanceChecks();
+      WorldStateLog.track(store.getState());
+    }
   }, TICK_RATE_MS);
 }
 
@@ -500,7 +510,7 @@ function loop(ts) {
       targetMaxFps: PerfBudget.targetMaxFps,
     });
   }
-  runUiSync();
+  runUiSync(state);
   
   if (ts - PerfBudget.lastHudTs > 900) {
     PerfBudget.lastHudTs = ts;

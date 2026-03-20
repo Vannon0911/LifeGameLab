@@ -2,6 +2,10 @@ import { clamp } from "./shared.js";
 import { forNeighbours8 } from "./neighbors.js";
 import { MAX_PLANT_TILE_RATIO, PLANT_ACTIVE_THRESHOLD } from "./constants.js";
 
+let _plantSpreadBuf = null;
+let _plantNextKindBuf = null;
+let _plantBufLen = 0;
+
 export function applyPlantLifecycle(world, phy, tick) {
   const { w, h, L, R, W, P, B, Sat, alive } = world;
   const plantGate = clamp(world.balanceGovernor?.plants ?? 1, 0.28, 1);
@@ -9,8 +13,16 @@ export function applyPlantLifecycle(world, phy, tick) {
 
   if (!world.plantKind || world.plantKind.length !== P.length) world.plantKind = new Int8Array(P.length);
   const plantKind = world.plantKind;
-  const spread = new Float32Array(P.length);
-  const nextKind = new Int8Array(plantKind);
+  const len = P.length;
+  if (!_plantSpreadBuf || _plantBufLen < len) {
+    _plantSpreadBuf = new Float32Array(len);
+    _plantNextKindBuf = new Int8Array(len);
+    _plantBufLen = len;
+  }
+  const spread = _plantSpreadBuf;
+  spread.fill(0);
+  const nextKind = _plantNextKindBuf;
+  nextKind.set(plantKind);
 
   for (let i = 0; i < P.length; i++) {
     const lv = clamp(L[i], 0, 1);

@@ -63,7 +63,8 @@ export function createStore(manifest, project, options = {}) {
     if (!Array.isArray(actionAllowed)) throw new Error(`Missing mutationMatrix contract: ${clean.type}`);
 
     const reducerInput = cloneDeep(doc.state);
-    const reducerInputSignature = hash32(stableStringify(reducerInput));
+    const reducerInputSerialized = stableStringify(reducerInput);
+    const reducerInputSignature = hash32(reducerInputSerialized);
     const reducerRng = createRngStreamsScoped(doc.state.meta.seed, `reducer:${clean.type}:${doc.revisionCount}`);
     const patches = runWithDeterminismGuard(
       () => project.reducer(reducerInput, clean, { rng: reducerRng, revisionCount: doc.revisionCount | 0 }),
@@ -83,7 +84,8 @@ export function createStore(manifest, project, options = {}) {
 
     if (clean.type === "SIM_STEP" && typeof project.simStep === "function") {
       const simInput = cloneDeep(nextState);
-      const simInputSignature = hash32(stableStringify(simInput));
+      const simInputSerialized = stableStringify(simInput);
+      const simInputSignature = hash32(simInputSerialized);
       const simRng = createRngStreamsScoped(doc.state.meta.seed, `simStep:${clean.type}:${doc.revisionCount}`);
       const simPatches = runWithDeterminismGuard(
         () => project.simStep(simInput, clean, { rng: simRng }),
@@ -111,8 +113,7 @@ export function createStore(manifest, project, options = {}) {
     };
 
     deepFreeze(nextDoc.state);
-    const persistedDoc = cloneDeep(nextDoc);
-    driver.save(persistedDoc);
+    driver.save(cloneDeep(nextDoc));
     doc = nextDoc;
     emit();
     return doc;

@@ -25,18 +25,24 @@ function buildPlayerGraph(world, playerLineageId) {
   const adj = new Map();
   if (w <= 0 || h <= 0 || !N) return { adj, w, h };
 
+  // Pre-compute player alive lookup to avoid repeated checks
+  const alive = world?.alive;
+  const lineageId = world?.lineageId;
+  const plid = playerLineageId | 0;
+
   for (let idx = 0; idx < N; idx++) {
-    if (!isPlayerAlive(world, idx, playerLineageId)) continue;
+    if (alive[idx] !== 1 || (Number(lineageId[idx]) | 0) !== plid) continue;
     const x = idx % w;
     const y = (idx / w) | 0;
     const neighbors = [];
-    for (let d = 0; d < NEIGHBOR_DIRS.length; d++) {
-      const [dx, dy] = NEIGHBOR_DIRS[d];
+    for (let d = 0; d < 8; d++) {
+      const dx = NEIGHBOR_DIRS[d][0];
+      const dy = NEIGHBOR_DIRS[d][1];
       const xx = x + dx;
       const yy = y + dy;
       if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
       const j = yy * w + xx;
-      if (!isPlayerAlive(world, j, playerLineageId)) continue;
+      if (alive[j] !== 1 || (Number(lineageId[j]) | 0) !== plid) continue;
       neighbors.push({ idx: j, dir: d });
     }
     adj.set(idx, neighbors);
@@ -59,27 +65,23 @@ function countLineAndAngle(adj) {
   return { line, angle };
 }
 
-function hasEdge(adj, a, b) {
-  const neighbors = adj.get(a);
-  if (!neighbors) return false;
-  for (let i = 0; i < neighbors.length; i++) {
-    if (neighbors[i].idx === b) return true;
-  }
-  return false;
-}
-
 function countTriangles(adj) {
-  const nodes = [...adj.keys()].sort((a, b) => a - b);
+  // Build neighbor-index Sets for O(1) edge lookups instead of O(degree) linear scan
+  const adjSets = new Map();
+  for (const [node, neighbors] of adj) {
+    const s = new Set();
+    for (let i = 0; i < neighbors.length; i++) s.add(neighbors[i].idx);
+    adjSets.set(node, s);
+  }
   let triangles = 0;
-  for (let i = 0; i < nodes.length; i++) {
-    const u = nodes[i];
-    const uNeighbors = (adj.get(u) || []).map((n) => n.idx).filter((v) => v > u).sort((a, b) => a - b);
-    for (let a = 0; a < uNeighbors.length; a++) {
-      const v = uNeighbors[a];
-      for (let b = a + 1; b < uNeighbors.length; b++) {
-        const w = uNeighbors[b];
-        if (!hasEdge(adj, v, w)) continue;
-        triangles++;
+  for (const [u, uSet] of adjSets) {
+    for (const v of uSet) {
+      if (v <= u) continue;
+      const vSet = adjSets.get(v);
+      if (!vSet) continue;
+      for (const w of uSet) {
+        if (w <= v) continue;
+        if (vSet.has(w)) triangles++;
       }
     }
   }
