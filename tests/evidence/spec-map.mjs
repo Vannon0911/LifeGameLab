@@ -279,6 +279,12 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     purpose: "prove live canvas click input places a founder tile through the mounted UI modules",
     counterProbe: "runtime click without a valid paint/input bridge does not mutate founder state",
   }),
+  "tests/test-ui-map-builder-expertmode-e2e.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 360_000,
+    purpose: "prove mounted Map Builder controls force expertMode=true on enter and restore the prior expertMode value on exit",
+    counterProbe: "expertMode drift after a builder toggle cycle is detected as regression",
+  }),
 });
 
 export const REGRESSION_TEST_FILES = Object.freeze(Object.keys(REGRESSION_TEST_STATUS));
