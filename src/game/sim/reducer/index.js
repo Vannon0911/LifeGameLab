@@ -1257,8 +1257,114 @@ export function reducer(state, action, ctx = {}) {
       return patches;
     }
 
+    case "SELECT_ENTITY": {
+      const entityKind = String(action.payload?.entityKind || "");
+      const entityId = String(action.payload?.entityId || "");
+      return [
+        { op: "set", path: "/sim/selectedEntity", value: { entityKind, entityId } },
+      ];
+    }
+
     case "PLACE_WORKER": {
       return handlePlaceWorker(state, action);
+    }
+
+    case "PLACE_CORE": {
+      const world = state.world;
+      if (!world) return [];
+      const w = Number(world.w || state.meta.gridW || 0) | 0;
+      const h = Number(world.h || state.meta.gridH || 0) | 0;
+      const x = Number(action.payload?.x) | 0;
+      const y = Number(action.payload?.y) | 0;
+      const remove = !!action.payload?.remove;
+      if (x < 0 || y < 0 || x >= w || y >= h) return [];
+      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+
+      // Core footprint is 4x4 anchored at (x, y) as top-left.
+      const CORE_SIZE = 4;
+      if (x + CORE_SIZE > w || y + CORE_SIZE > h) return [];
+
+      const prevCores = (world.cores && typeof world.cores === "object") ? world.cores : {};
+      const coreId = `core_${x}_${y}`;
+
+      if (remove) {
+        if (!prevCores[coreId]) return [];
+        const nextCores = { ...prevCores };
+        delete nextCores[coreId];
+        const alive = cloneTypedArray(world.alive);
+        const E = cloneTypedArray(world.E);
+        const lineageId = cloneTypedArray(world.lineageId);
+        for (let dy = 0; dy < CORE_SIZE; dy++) {
+          for (let dx = 0; dx < CORE_SIZE; dx++) {
+            const idx = (y + dy) * w + (x + dx);
+            if ((Number(lineageId[idx]) | 0) === playerLineageId) {
+              alive[idx] = 0;
+              E[idx] = 0;
+              lineageId[idx] = 0;
+            }
+          }
+        }
+        return [
+          { op: "set", path: "/world/cores", value: nextCores },
+          { op: "set", path: "/world/alive", value: alive },
+          { op: "set", path: "/world/E", value: E },
+          { op: "set", path: "/world/lineageId", value: lineageId },
+          { op: "set", path: "/sim/phase0CorePlaced", value: false },
+          { op: "set", path: "/sim/phase0PlantsDelivered", value: 0 },
+          { op: "set", path: "/sim/lastCommand", value: "PLACE_CORE:remove" },
+        ];
+      }
+
+      // Placement guard: founder must be placed and we must be in genesis setup.
+      const runPhase = normalizeRunPhase(state.sim.runPhase, RUN_PHASE.GENESIS_SETUP);
+      if (runPhase !== RUN_PHASE.GENESIS_SETUP) return [];
+      const founderPlaced = Math.max(0, Number(state.sim.founderPlaced || 0) | 0);
+      if (founderPlaced < 1) return [];
+      if (state.sim.phase0CorePlaced) return [];
+
+      // Validate all footprint tiles are unoccupied.
+      if (!world.alive || !ArrayBuffer.isView(world.alive)) return [];
+      for (let dy = 0; dy < CORE_SIZE; dy++) {
+        for (let dx = 0; dx < CORE_SIZE; dx++) {
+          const idx = (y + dy) * w + (x + dx);
+          if ((Number(world.alive[idx]) | 0) === 1) return [];
+        }
+      }
+
+      // Stamp core footprint into world arrays.
+      const alive = cloneTypedArray(world.alive);
+      const E = world.E && ArrayBuffer.isView(world.E) ? cloneTypedArray(world.E) : new Float32Array(w * h);
+      const lineageId = world.lineageId && ArrayBuffer.isView(world.lineageId) ? cloneTypedArray(world.lineageId) : new Uint32Array(w * h);
+      for (let dy = 0; dy < CORE_SIZE; dy++) {
+        for (let dx = 0; dx < CORE_SIZE; dx++) {
+          const idx = (y + dy) * w + (x + dx);
+          alive[idx] = 1;
+          E[idx] = 0;
+          lineageId[idx] = playerLineageId >>> 0;
+        }
+      }
+
+      const nextCores = {
+        ...prevCores,
+        [coreId]: {
+          x,
+          y,
+          size: CORE_SIZE,
+          energy: 0,
+          resourceKind: "raw_plant",
+          lineageId: playerLineageId,
+        },
+      };
+
+      return [
+        { op: "set", path: "/world/cores", value: nextCores },
+        { op: "set", path: "/world/alive", value: alive },
+        { op: "set", path: "/world/E", value: E },
+        { op: "set", path: "/world/lineageId", value: lineageId },
+        { op: "set", path: "/sim/phase0CorePlaced", value: true },
+        { op: "set", path: "/sim/phase0PlantsDelivered", value: 0 },
+        { op: "set", path: "/sim/lastCommand", value: `PLACE_CORE:${x},${y}` },
+      ];
     }
 
     case "ISSUE_MOVE": {

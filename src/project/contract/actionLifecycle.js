@@ -198,9 +198,9 @@ export const actionLifecycle = Object.freeze({
     "Map Builder tile edits compile through the same deterministic MapSpec path as full mapspec updates.",
     ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"]
   ),
-  SELECT_ENTITY: scaffold(
-    "slice_a",
-    "Scaffolded RTS selection action; reducer wiring lands in Slice C.",
+  SELECT_ENTITY: stable(
+    "slice_c",
+    "Canonical RTS entity selection action replaces SET_BRUSH for runtime input.",
     ["/sim/selectedEntity"]
   ),
   ISSUE_MOVE: stable(
@@ -208,10 +208,10 @@ export const actionLifecycle = Object.freeze({
     "Entity-based worker movement is the canonical live runtime order path.",
     ["/sim/selectedUnit", "/sim/selectedEntity", "/sim/unitOrder", "/sim/activeOrder", "/sim/lastCommand"]
   ),
-  PLACE_CORE: scaffold(
-    "slice_a",
-    "Scaffolded Phase 0 core placement action; reducer wiring lands in Slice C.",
-    ["/world/cores", "/sim/phase0PlantsDelivered", "/sim/phase0CorePlaced", "/sim/lastCommand"]
+  PLACE_CORE: stable(
+    "slice_c",
+    "Phase 0 core placement action replaces CONFIRM_FOUNDATION and CONFIRM_CORE_ZONE.",
+    ["/world/cores", "/sim/phase0PlantsDelivered", "/sim/phase0CorePlaced", "/sim/lastCommand", "/world/alive", "/world/E", "/world/lineageId"]
   ),
   PLACE_WORKER: stable(
     "slice_c",
