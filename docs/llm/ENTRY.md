@@ -35,9 +35,8 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - Vor jedem Commit muessen betroffene Dokuquellen inklusive relevanter Stringmatrix-/Inventar-Dateien nachgezogen und am Ende des Arbeitsschritts erneut auf Aktualitaet geprueft werden.
 
 ## Kernel- Und Manifest-Pflichtgate (SoT)
-- `src/project/contract/manifest.js` ist Source of Truth fuer Felder, Actions und Contract-Kette.
-- `src/kernel/store/createStore.js` und `src/kernel/store/applyPatches.js` sind Pflichtgate fuer State-Mutationen.
-- Diese drei Dateien gehoeren in jede Pflicht-Lesereihenfolge, auch wenn der Haupttask UI/Testing ist.
+- Die drei Mindest-Gates aus Schritt 9 sind immer Pflicht, auch bei UI-/Testing-Tasks.
+- `manifest.js` bleibt die Contract-Truth, `createStore.js`/`applyPatches.js` bleiben die Mutations-Gates.
 
 ## Harte Invarianten
 - State nur ueber `dispatch()` plus Patches

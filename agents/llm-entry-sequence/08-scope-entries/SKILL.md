@@ -1,7 +1,9 @@
-# Skill Definition
+# DEPRECATED Skill Wrapper
 
 skill_id: skill-domain-coordination
 linked_agent: agent-domain-coordinator
-role: Domain-Coordinator
+status: deprecated
+merged_into: task-orchestrator
 
-Procedure: Folge `agents/llm-entry-sequence/_shared/BASE_RULES.md` + role delta aus `AGENT.md`.
+Hinweis: Dieser Wrapper bleibt nur als Alias fuer Legacy-Aufrufe bestehen.
+Kanonische Rolle: `task-orchestrator` (siehe `docs/LLM_SPECIALIZATION_CONTRACT.md`).

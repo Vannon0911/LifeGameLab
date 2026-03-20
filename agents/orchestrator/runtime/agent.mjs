@@ -19,6 +19,8 @@ const AGENTS_ROOT = join(REPO_ROOT, "agents", "llm-entry-sequence");
 const SHARED_DIR = join(AGENTS_ROOT, "_shared");
 const ENTRY_DOC = join(REPO_ROOT, "docs", "llm", "ENTRY.md");
 const TASK_GATE_INDEX_DOC = join(REPO_ROOT, "docs", "llm", "entry", "TASK_GATE_INDEX.md");
+let sharedDocsPromise = null;
+const roleCache = new Map();
 
 /**
  * Laedt eine Pflichtdatei und bricht hart ab, wenn sie fehlt oder leer ist.
@@ -34,6 +36,33 @@ async function readRequired(filePath, label) {
     const rel = relative(REPO_ROOT, filePath).replaceAll("\\", "/");
     throw new Error(`Missing required ${label}: ${rel}`);
   }
+}
+
+async function loadSharedDocs() {
+  if (!sharedDocsPromise) {
+    sharedDocsPromise = Promise.all([
+      readRequired(join(SHARED_DIR, "BASE_RULES.md"), "shared BASE_RULES.md"),
+      readRequired(join(SHARED_DIR, "REPORT_SCHEMA.md"), "shared REPORT_SCHEMA.md"),
+      readRequired(ENTRY_DOC, "docs/llm/ENTRY.md"),
+      readRequired(TASK_GATE_INDEX_DOC, "docs/llm/entry/TASK_GATE_INDEX.md"),
+    ]).then(([baseRules, reportSchema, entryDoc, taskGateIndexDoc]) => ({
+      baseRules,
+      reportSchema,
+      entryDoc,
+      taskGateIndexDoc,
+    })).catch((err) => {
+      sharedDocsPromise = null;
+      throw err;
+    });
+  }
+  return sharedDocsPromise;
+}
+
+function readAgentMeta(agentMd, label, fallback = "", allowLabelSuffix = false) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const labelPart = allowLabelSuffix ? `${escaped}[^\\n:]*` : escaped;
+  const match = agentMd.match(new RegExp(`${labelPart}\\s*:\\s*(.+)`));
+  return match?.[1]?.trim() || fallback;
 }
 
 /**
@@ -62,22 +91,31 @@ export const ROLE_PATHS = Object.freeze({
  * Rolle-Definitionen aus dem Dateisystem laden.
  */
 export async function loadRole(rolePath) {
+  const cachedRole = roleCache.get(rolePath);
+  if (cachedRole) return cachedRole;
+  const rolePromise = loadRoleUncached(rolePath).catch((err) => {
+    roleCache.delete(rolePath);
+    throw err;
+  });
+  roleCache.set(rolePath, rolePromise);
+  return rolePromise;
+}
+
+async function loadRoleUncached(rolePath) {
   const fullPath = join(AGENTS_ROOT, rolePath);
-  const [agentMd, skillMd, baseRules, reportSchema, entryDoc, taskGateIndexDoc] = await Promise.all([
+  const [agentMd, skillMd, sharedDocs] = await Promise.all([
     readRequired(join(fullPath, "AGENT.md"), `AGENT.md for role '${rolePath}'`),
     readRequired(join(fullPath, "SKILL.md"), `SKILL.md for role '${rolePath}'`),
-    readRequired(join(SHARED_DIR, "BASE_RULES.md"), "shared BASE_RULES.md"),
-    readRequired(join(SHARED_DIR, "REPORT_SCHEMA.md"), "shared REPORT_SCHEMA.md"),
-    readRequired(ENTRY_DOC, "docs/llm/ENTRY.md"),
-    readRequired(TASK_GATE_INDEX_DOC, "docs/llm/entry/TASK_GATE_INDEX.md"),
+    loadSharedDocs(),
   ]);
+  const { baseRules, reportSchema, entryDoc, taskGateIndexDoc } = sharedDocs;
 
   // Parse Rolle und Scope aus AGENT.md
-  const roleName = agentMd.match(/Rolle:\s*(.+)/)?.[1]?.trim() || basename(rolePath);
-  const scope = agentMd.match(/Erlaubter Scope:\s*(.+)/)?.[1]?.trim() || "";
-  const inputs = agentMd.match(/Inputs:\s*(.+)/)?.[1]?.trim() || "";
-  const outputs = agentMd.match(/Outputs:\s*(.+)/)?.[1]?.trim() || "";
-  const guards = agentMd.match(/Spezifische Guards.*?:\s*(.+)/)?.[1]?.trim() || "";
+  const roleName = readAgentMeta(agentMd, "Rolle", basename(rolePath));
+  const scope = readAgentMeta(agentMd, "Erlaubter Scope");
+  const inputs = readAgentMeta(agentMd, "Inputs");
+  const outputs = readAgentMeta(agentMd, "Outputs");
+  const guards = readAgentMeta(agentMd, "Spezifische Guards", "", true);
 
   return {
     id: rolePath,
@@ -98,7 +136,8 @@ export async function loadRole(rolePath) {
 /**
  * Baut den System-Prompt fuer einen Agent aus seinen Rollendefinitionen.
  */
-export function buildSystemPrompt(role, extraContext = "") {
+export function buildSystemPrompt(role, extraContext = "", options = {}) {
+  const includePolicyDocs = options.includePolicyDocs !== false;
   const parts = [
     `# Du bist: ${role.roleName}`,
     "",
@@ -116,11 +155,11 @@ export function buildSystemPrompt(role, extraContext = "") {
     parts.push("", "## Deine Skill-Definition", role.skillMd);
   }
 
-  if (role.entryDoc) {
+  if (includePolicyDocs && role.entryDoc) {
     parts.push("", "## Pflicht-Entry", role.entryDoc);
   }
 
-  if (role.taskGateIndexDoc) {
+  if (includePolicyDocs && role.taskGateIndexDoc) {
     parts.push("", "## Task-Gate-Index", role.taskGateIndexDoc);
   }
 
