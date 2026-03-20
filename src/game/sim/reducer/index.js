@@ -58,6 +58,8 @@ import { deriveCanonicalZoneState } from "../canonicalZones.js";
 import { derivePatternBonuses, derivePatternCatalog } from "../patterns.js";
 import { reduceEconomyActions } from "./economy.js";
 import { reduceRunActions } from "./run.js";
+import { reduceGenesisActions } from "./genesis.js";
+import { reduceZoneActions } from "./zones.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
@@ -873,6 +875,28 @@ function runWorldSimV4(world, meta, sim, rng) {
 
 export function reducer(state, action, ctx = {}) {
   const { rng } = ctx;
+  const genesisPatches = reduceGenesisActions(state, action, {
+    canConfirmFoundation,
+    RUN_PHASE,
+  });
+  if (genesisPatches) return genesisPatches;
+
+  const zonePatches = reduceZoneActions(state, action, {
+    RUN_PHASE,
+    getWorldPreset,
+    cloneTypedArray,
+    hasAdjacentMarkedTile,
+    hasAdjacentMarkedTile4,
+    getInfraCandidateMask,
+    isAlivePlayerOwnedTile,
+    touchesCommittedInfraAnchor,
+    isPreRunGenesisPhase,
+    handlePlaceSplitCluster,
+    handleHarvestWorker,
+    handleSetZone,
+  });
+  if (zonePatches) return zonePatches;
+
   const economyPatches = reduceEconomyActions(state, action, {
     defaultGlobalLearning,
     clamp,
@@ -894,15 +918,6 @@ export function reducer(state, action, ctx = {}) {
 
     case "GEN_WORLD": {
       const patches = buildWorldGenerationPatches(state);
-      return patches;
-    }
-
-    case "CONFIRM_FOUNDATION": {
-      if (!canConfirmFoundation(state)) return [];
-      const patches = [
-        { op: "set", path: "/sim/runPhase", value: RUN_PHASE.GENESIS_ZONE },
-        { op: "set", path: "/sim/running", value: false },
-      ];
       return patches;
     }
 
@@ -1015,77 +1030,6 @@ export function reducer(state, action, ctx = {}) {
       return patches;
     }
 
-    case "TOGGLE_DNA_ZONE_WORKER":
-    {
-      if (state.sim.runPhase !== RUN_PHASE.DNA_ZONE_SETUP) return [];
-      if (!state.sim.zone2Unlocked || state.sim.dnaZoneCommitted) return [];
-      const world = state.world;
-      if (!world?.alive || !world?.lineageId || !world?.coreZoneMask) return [];
-      const w = Number(world.w || state.meta.gridW || 0) | 0;
-      const h = Number(world.h || state.meta.gridH || 0) | 0;
-      const x = Number(action.payload?.x) | 0;
-      const y = Number(action.payload?.y) | 0;
-      if (x < 0 || y < 0 || x >= w || y >= h) return [];
-      const idx = y * w + x;
-      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-      const maxBudget = Math.max(0, Number(getWorldPreset(state.meta.worldPresetId)?.phaseC?.dnaPlacementBudget || 0) | 0);
-      const budget = Math.max(0, Number(state.sim.zone2PlacementBudget || 0) | 0);
-      const dnaZoneMask = world.dnaZoneMask && ArrayBuffer.isView(world.dnaZoneMask)
-        ? cloneTypedArray(world.dnaZoneMask)
-        : new Uint8Array(w * h);
-      if ((Number(dnaZoneMask[idx]) | 0) === 1) {
-        dnaZoneMask[idx] = 0;
-        const patches = [
-          { op: "set", path: "/world/dnaZoneMask", value: dnaZoneMask },
-          { op: "set", path: "/sim/zone2PlacementBudget", value: Math.min(maxBudget, budget + 1) },
-        ];
-        return patches;
-      }
-      if (budget <= 0) return [];
-      if ((Number(world.alive[idx]) | 0) !== 1) return [];
-      if ((Number(world.lineageId[idx]) | 0) !== playerLineageId) return [];
-      if ((Number(world.coreZoneMask[idx]) | 0) === 1) return [];
-      const touchesCore = hasAdjacentMarkedTile(world.coreZoneMask, idx, w, h);
-      const touchesPlaced = hasAdjacentMarkedTile(dnaZoneMask, idx, w, h);
-      if (!touchesCore && !touchesPlaced) return [];
-      dnaZoneMask[idx] = 1;
-      const patches = [
-        { op: "set", path: "/world/dnaZoneMask", value: dnaZoneMask },
-        { op: "set", path: "/sim/zone2PlacementBudget", value: Math.max(0, budget - 1) },
-      ];
-      return patches;
-    }
-
-    case "BUILD_INFRA_PATH": {
-      if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
-      if (String(state.sim.infraBuildMode || "") !== "path") return [];
-      const world = state.world;
-      if (!world?.alive || !world?.lineageId || !world?.link) return [];
-      const w = Number(world.w || state.meta.gridW || 0) | 0;
-      const h = Number(world.h || state.meta.gridH || 0) | 0;
-      const x = Number(action.payload?.x) | 0;
-      const y = Number(action.payload?.y) | 0;
-      if (x < 0 || y < 0 || x >= w || y >= h) return [];
-      const idx = y * w + x;
-      const remove = !!action.payload?.remove;
-      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-      const infraCandidateMask = getInfraCandidateMask(world, w * h);
-      if ((Number(infraCandidateMask[idx]) | 0) === 1) {
-        if (!remove) return [];
-        infraCandidateMask[idx] = 0;
-        const patches = [{ op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask }];
-        return patches;
-      }
-      if (remove) return [];
-      if (!isAlivePlayerOwnedTile(world, idx, playerLineageId)) return [];
-      if (Number(world.link[idx] || 0) > 0) return [];
-      const touchesAnchor = touchesCommittedInfraAnchor(world, idx, w, h);
-      const touchesCandidate = hasAdjacentMarkedTile4(infraCandidateMask, idx, w, h);
-      if (!touchesAnchor && !touchesCandidate) return [];
-      infraCandidateMask[idx] = 1;
-      const patches = [{ op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask }];
-      return patches;
-    }
 
     case "TOGGLE_RUNNING": {
       const running = action.payload?.running ?? !state.sim.running;
@@ -1334,21 +1278,6 @@ export function reducer(state, action, ctx = {}) {
       ];
     }
 
-
-    case "PLACE_SPLIT_CLUSTER": {
-      if (isPreRunGenesisPhase(state)) return [];
-      return handlePlaceSplitCluster(state, action);
-    }
-
-    case "HARVEST_WORKER": {
-      if (isPreRunGenesisPhase(state)) return [];
-      return handleHarvestWorker(state, action);
-    }
-
-    case "SET_ZONE": {
-      if (isPreRunGenesisPhase(state)) return [];
-      return handleSetZone(state, action);
-    }
 
     default:
       return [];
