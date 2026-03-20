@@ -4,9 +4,9 @@
 
 import { createStore }       from "../kernel/store/createStore.js";
 import { manifest, APP_VERSION } from "../project/project.manifest.js";
-import { reducer, simStepPatch, shouldAdvanceSimulation } from "../game/sim/reducer/index.js";
-import { render }            from "../game/render/renderer.js";
-import { UI }                from "../game/ui/ui.js";
+import { reducer, simStepPatch, shouldAdvanceSimulation } from "../project/project.logic.js";
+import { render }            from "../project/renderer.js";
+import { UI }                from "../project/ui.js";
 import { hashString }        from "../kernel/determinism/rng.js";
 import { createLlmCommandAdapter } from "../project/llm/commandAdapter.js";
 import { assertLlmGateSync } from "../project/llm/gateSync.js";
