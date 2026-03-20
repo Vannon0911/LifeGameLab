@@ -35,7 +35,13 @@ export class AnthropicAdapter extends BaseModelAdapter {
       if (msg.role === "system") {
         systemPrompt += (systemPrompt ? "\n\n" : "") + msg.content;
       } else {
-        chatMessages.push({ role: msg.role, content: msg.content });
+        // Anthropic requires alternating roles — merge consecutive same-role messages
+        const last = chatMessages[chatMessages.length - 1];
+        if (last && last.role === msg.role) {
+          last.content += "\n\n" + msg.content;
+        } else {
+          chatMessages.push({ role: msg.role, content: msg.content });
+        }
       }
     }
 
