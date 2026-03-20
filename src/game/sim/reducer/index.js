@@ -1289,6 +1289,8 @@ export function reducer(state, action, ctx = {}) {
 
       if (remove) {
         if (!prevCores[coreId]) return [];
+        const runPhase = normalizeRunPhase(state.sim.runPhase, RUN_PHASE.GENESIS_SETUP);
+        if (runPhase !== RUN_PHASE.GENESIS_SETUP) return [];
         const nextCores = { ...prevCores };
         delete nextCores[coreId];
         if (!world.alive || !ArrayBuffer.isView(world.alive)) return [];
