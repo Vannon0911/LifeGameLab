@@ -1,175 +1,65 @@
-# LifeGameLab - Gesamtkonzept v0.6
+# LifeGameLab
 
-LifeGameLab ist ein deterministisches Browser-RTS, das mit genau einer Zelle startet.
-Kein Tutorial, keine Gebaeudemenues, keine versteckten Hilfssysteme:
-Der erste Spielzug ist direkte Kontrolle einer einzelnen Zelle im Grid.
+Deterministisches Browser-RTS mit einem radikalen Startpunkt: Du beginnst mit genau einer Zelle.
+Keine Menueschlachten, kein Tutorial-Zirkus, nur direkte Kontrolle, reproduzierbare Simulation und harte Entscheidungen zwischen kurzfristiger Oekonomie und langfristiger Infrastruktur.
 
-## 1. Kernidee
+## Projektstatus
+- Phase: Core-Gameplay und Determinismus-Fundament aktiv
+- Fokus: sichtbare Interpolation im Runtime-Flow und durchgaengiger Worker-Order-Loop
+- Tech: Vanilla JavaScript (ESM), seedbasiertes Sim-Modell, 24 Ticks/Sekunde
 
-Das Spiel baut auf einer harten Kernspannung auf:
+## Kernprinzipien
+- Determinismus zuerst: gleicher Seed + gleiche Inputs => gleicher Verlauf
+- Emergenz statt Klicklisten: Funktionen entstehen aus Zellmustern
+- Strategische Spannung: Worker behalten (Cashflow) vs. Worker binden (Skalierung)
+- Faire Matches: vergleichbare Startchancen ohne triviale Spiegelung
 
-- Nutze ich neue Zellen weiter als Worker?
-- Oder binde ich sie dauerhaft in Muster und Infrastruktur?
+## Quick Start
+### Voraussetzungen
+- Node.js 18+
+- npm 9+
 
-Aus dieser Entscheidung entstehen Oekonomie, Expansion, Zonen, Automatisierung und spaeter Kampf.
+### Setup
+```bash
+npm install
+npm run hooks:install
+```
 
-## 2. Welt und Fairness
+### Lokal starten
+```bash
+npm run serve
+```
+Dann im Browser oeffnen: `http://localhost:8080`
 
-Die Welt ist seedbasiert und reproduzierbar:
+## Tests
+```bash
+npm run test:quick
+npm test
+```
 
-- gleicher Seed -> gleiche Welt
-- gleiche Inputs -> gleiche Sim-Ergebnisse
+## Architektur- und Prozessdokumente
+- [RUNBOOK](./RUNBOOK.md)
+- [Workflow](./docs/WORKFLOW.md)
+- [Architecture](./docs/ARCHITECTURE.md)
+- [Status](./docs/STATUS.md)
 
-Die Karte ist fair, aber nicht trivial gespiegelt.
-Beide Seiten bekommen vergleichbare Startchancen, nicht zwingend identische Geometrie.
+## Repository-Struktur
+- `src/` - Runtime, Simulation, Store, UI-Adapter
+- `tests/` - deterministische Verifikation und Contracts
+- `tools/` - Test-Orchestrierung, Preflight, Guarding
+- `docs/` - Architektur, Prozess, Scope-Gates
 
-Die Ressourcenverteilung erzeugt den Spannungsbogen organisch:
+## Mitmachen
+Contributions sind willkommen. Bitte zuerst [CONTRIBUTING](./CONTRIBUTING.md) lesen.
 
-- Stabilisierung
-- Expansion
-- Konflikt
+## Sicherheit
+Wenn du eine Schwachstelle findest, lies bitte [SECURITY](./SECURITY.md) fuer den Responsible-Disclosure-Prozess.
 
-## 3. Startzustand
+## Changelog
+Aenderungen werden in [CHANGELOG](./CHANGELOG.md) gepflegt.
 
-Jeder Spieler startet mit einer einzigen Zelle.
-Diese Zelle ist der erste Worker und wird direkt bewegt.
+## Code of Conduct
+Siehe [CODE_OF_CONDUCT](./CODE_OF_CONDUCT.md).
 
-Erster Loop:
-
-1. zur nahen Quelle bewegen
-2. abbauen
-3. zweite Zelle erzeugen
-4. Einkommen parallelisieren
-
-## 4. Fruehe Wachstumsphase
-
-Mit zwei Zellen beginnt das eigentliche Wirtschaftsspiel:
-
-- paralleler Abbau
-- schnellerer Ressourcenzuwachs
-- Vorbereitung der ersten Zone
-
-Frueher Kernloop:
-
-- Ressourcen abbauen
-- neue Zellen erzeugen
-- Einkommen stabilisieren
-- erste Zone vorbereiten
-
-## 5. Zonen
-
-Zonen sind feste quadratische Felder im Grid:
-
-- 2x2
-- 4x4
-- 6x6
-- 8x8
-
-Groessere Zonen sind teurer, eroeffnen aber mehr Topologie und mehr Kombinationsraum.
-
-Zonentyp wird beim Platzieren festgelegt:
-
-- Abbauzone
-- Weiterverarbeitungszone
-- Herstellungszone
-
-## 6. Kernentscheidung des Spiels
-
-Ab dem ersten Ueberschuss gilt permanent:
-
-- Worker behalten (kurzfristiger Ertrag)
-- Worker binden (langfristige Investition)
-
-Zu fruehes Binden schwaecht die Wirtschaft.
-Zu spaetes Binden verhindert Infrastruktur.
-
-## 7. Muster -> Objekt
-
-Ab mindestens vier Zellen in einer Zone koennen Verbindungen gelegt werden.
-Das System erkennt daraus Muster und erzeugt bei Bestaetigung Objekte/Funktionen.
-
-Prinzip:
-
-- keine Gebaeudeliste klicken
-- Funktionen durch Muster entdecken
-
-## 8. Wirtschaftsmodell
-
-Drei Stufen:
-
-1. Abbau
-2. Weiterverarbeitung
-3. Herstellung
-
-Ziel des Early Games:
-Grundversorgung auf Selbsttragfaehigkeit bringen.
-
-## 9. Phasen eines Matches
-
-- Early Game: Ueberleben, erste Stabilisierung, erste Zone
-- Mid Game: Teilautomatisierung, freie Zellen fuer Spezialisierung
-- Endgame: Produktions- und Militaer-Synergien dominieren
-
-## 10. Konflikt und Niederlage
-
-Konflikt entsteht durch geteilte, wertvolle Ressourcenraeume.
-Kein Script-Event muss Kampf kuenstlich starten.
-
-Loss Condition:
-
-- letzte Zelle tot -> Match verloren
-- kein Respawn
-
-## 11. Militaerische Entwicklung
-
-Militaer entsteht aus Herstellungsentscheidungen und Kombinationen, nicht nur aus Masse.
-Wichtig ist nicht nur "mehr Armee", sondern "andere Armee".
-
-## 12. Visuelle Lesbarkeit
-
-Zellzustaende muessen direkt sichtbar sein (z. B. Marker, Form, Effekte),
-damit Micro-Entscheidungen ohne Tooltip-Zwang moeglich sind.
-
-## 13. Matchbogen in einem Satz
-
-Start mit einer Zelle -> Wirtschaft stabilisieren -> Zellen in Muster investieren ->
-Objekte und Produktionsketten aufbauen -> Grundversorgung automatisieren ->
-Kaempfer spezialisieren -> durch bessere emergente Kombinationen dominieren.
-
-## 14. Technische Leitplanken
-
-- Vanilla JavaScript
-- deterministischer Kern
-- 24 Ticks pro Sekunde
-- UI dispatcht nur, mutiert State nicht direkt
-- Replay-/Hash-faehige Zustandsentwicklung
-
-## 15. Ehrlicher Ist-Stand (aktueller Head)
-
-Was bereits belastbar ist:
-
-- deterministische Kernel-/Dispatch-Pipeline
-- Tick-Loop ohne dt/catchup-Cap (tick-genauer Catch-up)
-- Founder-Budget auf 1 ausgelegt
-- UI auf neutralen Adapter reduziert
-- Determinismus-/Replay-Testlinie ist aktiv
-
-Was noch fehlt bzw. offen ist:
-
-- renderAlpha-Interpolation sichtbar im Runtime-Flow
-- erste klar sichtbare interpolierte Zellbewegung im Browser
-- durchgaengiger Worker-Order-Flow (select -> move -> execute) als finaler Gameplay-Standard
-
-## 16. Naechster Fokus
-
-Der naechste Schritt ist nicht Feature-Breite, sondern harte Sichtbarkeit des Kerns:
-
-1. renderAlpha sauber im Live-Rendering verankern
-2. 24 Ticks/Sekunde als stabile Basis halten
-3. erste interpolierte Zellbewegung sichtbar und testbar machen
-
----
-
-Repository:
-
-- [Vannon0911/LifeGameLab](https://github.com/Vannon0911/LifeGameLab)
+## Repository
+GitHub: [Vannon0911/LifeGameLab](https://github.com/Vannon0911/LifeGameLab)

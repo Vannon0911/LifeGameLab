@@ -1,7 +1,9 @@
-# Skill Definition
+# DEPRECATED Skill Wrapper
 
 skill_id: skill-quality-review
 linked_agent: agent-quality-reviewer
-role: Quality-Reviewer
+status: deprecated
+merged_into: test-engineer
 
-Procedure: Folge `agents/llm-entry-sequence/_shared/BASE_RULES.md` + role delta aus `AGENT.md`.
+Hinweis: Dieser Wrapper bleibt nur als Alias fuer Legacy-Aufrufe bestehen.
+Kanonische Rolle: `test-engineer` (siehe `docs/LLM_SPECIALIZATION_CONTRACT.md`).

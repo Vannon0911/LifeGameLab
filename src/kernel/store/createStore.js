@@ -6,6 +6,7 @@ import { assertDomainPatchesAllowed } from "../validation/assertDomainPatchesAll
 import { createRngStreamsScoped } from "../determinism/rng.js";
 import { runWithDeterminismGuard, deepFreeze } from "../determinism/runtimeGuards.js";
 import { getDefaultDriver } from "./persistence.js";
+import { isPlainObject } from "../shared/isPlainObject.js";
 
 export function createStore(manifest, project, options = {}) {
   const { SCHEMA_VERSION, stateSchema, actionSchema, mutationMatrix } = manifest;
@@ -170,12 +171,6 @@ function cloneValue(value, path, clones, inProgress) {
   } finally {
     inProgress.delete(value);
   }
-}
-
-function isPlainObject(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value) || ArrayBuffer.isView(value)) return false;
-  const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
 }
 
 function clonePatches(patches) {
