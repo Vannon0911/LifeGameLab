@@ -43,7 +43,7 @@ export const createWebDriver = (key = "llm_kernel_state") => ({
 
 /**
  * createMetaOnlyWebDriver
- * Saves only `meta` (user settings: speed, gridSize, renderMode, physics…).
+ * Saves `meta` and `map` only.
  * Skips `world` (TypedArrays → would corrupt on JSON round-trip) and
  * `sim` (ephemeral tick-stats, always recomputed after GEN_WORLD + first SIM_STEP).
  *
@@ -61,6 +61,9 @@ export const createMetaOnlyWebDriver = (key = "llm_kernel_meta_v1") => ({
       const doc = JSON.parse(raw);
       // Re-inject empty world/sim so sanitizeBySchema fills in defaults.
       if (doc && doc.state) {
+        if (!doc.state.map || typeof doc.state.map !== "object" || Array.isArray(doc.state.map)) {
+          doc.state.map = {};
+        }
         doc.state.world = {};
         doc.state.sim   = {};
       }
@@ -73,7 +76,12 @@ export const createMetaOnlyWebDriver = (key = "llm_kernel_meta_v1") => ({
         schemaVersion: doc.schemaVersion,
         updatedAt:     doc.updatedAt,
         revisionCount: doc.revisionCount,
-        state: { meta: doc.state.meta, world: {}, sim: {} },
+        state: {
+          meta: doc.state.meta,
+          map: doc.state.map || {},
+          world: {},
+          sim: {},
+        },
       };
       localStorage.setItem(key, JSON.stringify(slim));
     } catch {}

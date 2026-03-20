@@ -146,7 +146,7 @@ try {
     if (!spawn) return { ok: false, reason: "no_spawn_slot" };
 
     const spawnIdx = spawn.y * w + spawn.x;
-    store.dispatch({ type: "PLACE_CELL", payload: { x: spawn.x, y: spawn.y, remove: false } });
+  store.dispatch({ type: "PLACE_WORKER", payload: { x: spawn.x, y: spawn.y, remove: false } });
     const afterSpawn = store.getState();
     const workerPlaced =
       (Number(afterSpawn.world.alive?.[spawnIdx] || 0) | 0) === 1 &&

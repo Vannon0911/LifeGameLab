@@ -52,7 +52,7 @@ const mutatingReducerStore = createStore(
 
 const mutatingReducerBefore = snapshotStore(mutatingReducerStore);
 assert.throws(
-  () => mutatingReducerStore.dispatch({ type: "SET_SEED", payload: "p0-mutation-guard" }),
+  () => mutatingReducerStore.dispatch({ type: "SET_SEED", payload: { seed: "p0-mutation-guard" } }),
   /Reducer mutated input state/,
   "mutating reducer must be blocked",
 );
@@ -106,7 +106,7 @@ const mutatingDriverStore = createStore(
     },
   },
 );
-mutatingDriverStore.dispatch({ type: "SET_SEED", payload: "p0-driver-copy" });
+mutatingDriverStore.dispatch({ type: "SET_SEED", payload: { seed: "p0-driver-copy" } });
 const stateAfterDriverSave = mutatingDriverStore.getState();
 assert.equal(stateAfterDriverSave.meta.seed, "p0-driver-copy", "driver-side mutation must not taint committed store state");
 assert.equal(savedDocSeen.state.meta.seed, "MUTATED_BY_DRIVER", "counterprobe must verify mutation happened on persisted copy");

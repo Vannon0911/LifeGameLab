@@ -219,6 +219,12 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     purpose: "prove builder flow mutates only map/meta on SET_MAPSPEC or SET_WORLD_PRESET and rebuilds world only via GEN_WORLD",
     counterProbe: "world rebuild perturbations are blocked until GEN_WORLD is dispatched",
   }),
+  "tests/test-mapspec-builder-phase.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 120_000,
+    purpose: "prove RUN_PHASE.MAP_BUILDER gates tile edits, forces manual tilePlan writes, and only applies builder overrides on GEN_WORLD",
+    counterProbe: "SET_MAP_TILE perturbations stay blocked outside map_builder and become live only after explicit phase entry",
+  }),
   "tests/test-signature-nonserializable.mjs": Object.freeze({
     status: "verified",
     budgetMs: 90_000,
@@ -254,6 +260,12 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     budgetMs: 120_000,
     purpose: "prove null/web/meta-only persistence drivers respect contracts and reject tampered payloads",
     counterProbe: "tampered persistence payload resets to safe defaults and cannot force invalid replay state",
+  }),
+  "tests/test-persistence-map-builder-reload.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 120_000,
+    purpose: "prove default web persistence keeps mapspec tilePlan builder edits across reload and reapplies them on GEN_WORLD",
+    counterProbe: "builder tilePlan perturbation is preserved in persisted map state instead of being dropped on reload",
   }),
   "tests/test-ui-foundation-e2e.mjs": Object.freeze({
     status: "verified",

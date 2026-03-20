@@ -67,13 +67,13 @@ function createDeterministicStore(storageDriver) {
 }
 
 function bootstrapOneFounder(store) {
-  store.dispatch({ type: "SET_SEED", payload: "persist-seed-main" });
+store.dispatch({ type: "SET_SEED", payload: { seed: "persist-seed-main" } });
   store.dispatch({ type: "GEN_WORLD", payload: {} });
   store.dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
   const state = store.getState();
   const preset = getWorldPreset(state.meta.worldPresetId);
   const range = getStartWindowRange(preset.startWindows.player, state.world.w, state.world.h);
-  store.dispatch({ type: "PLACE_CELL", payload: { x: range.x0, y: range.y0, remove: false } });
+  store.dispatch({ type: "PLACE_WORKER", payload: { x: range.x0, y: range.y0, remove: false } });
   store.dispatch({ type: "CONFIRM_FOUNDATION", payload: {} });
   store.dispatch({ type: "CONFIRM_CORE_ZONE", payload: {} });
   store.dispatch({ type: "SIM_STEP", payload: {} });
@@ -98,9 +98,9 @@ try {
   const metaKey = "persist-meta-key";
   const metaDriver = createMetaOnlyWebDriver(metaKey);
   const metaStore = createDeterministicStore(metaDriver);
-  metaStore.dispatch({ type: "SET_SEED", payload: "persist-meta-seed" });
+metaStore.dispatch({ type: "SET_SEED", payload: { seed: "persist-meta-seed" } });
   metaStore.dispatch({ type: "SET_SIZE", payload: { w: 48, h: 48 } });
-  metaStore.dispatch({ type: "SET_SPEED", payload: 30 });
+metaStore.dispatch({ type: "SET_SPEED", payload: { speed: 30 } });
   metaStore.dispatch({ type: "GEN_WORLD", payload: {} });
 
   const metaRaw = stubs.map.get(metaKey);

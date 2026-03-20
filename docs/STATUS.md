@@ -13,6 +13,9 @@
 - Slice C visual baseline is now live: UI layout/input modules are mounted, canvas click placement is regression-tested, and tile object placeholders render in-world.
 - Slice C minimal runtime UI is now active: panel stack removed, direct canvas placement flow is live, and movement is paced at 1 tile per second with purely visual interpolation.
 - Slice C worker hardening landed: `PLACE_CELL` no longer stays genesis-locked in run-active flow, observe-mode placement can spawn workers without DNA cost deadlock, and blocked move orders now wait/retry instead of hard-aborting.
+- Map Builder now has a visible panel, tile palette, status feedback, and cursor highlight instead of relying on a blind `M` toggle only.
+- Default web persistence now keeps `map` state, so builder `tilePlan` no longer disappears on reload while `world` and `sim` still regenerate safely.
+- Builder regression coverage now includes `RUN_PHASE.MAP_BUILDER`, `SET_MAP_TILE` -> `GEN_WORLD` roundtrip, and persisted reload survival for `tilePlan`.
 - Terminology migration advanced: product/architecture/entry docs now use `worker` as canonical runtime wording; legacy `cell` naming remains compatibility-only for action IDs.
 - Slice A contract scaffold test was added and passes.
 - Slice B MapSpec test was added for deterministic compile + world boot.
@@ -33,6 +36,7 @@
 - `src/project/contract/stateSchema.js` now tracks the active migration slice as `slice_b_mapspec`.
 - `src/project/contract/simGate.js` allows future-safe world registries such as `cores`, `buildings`, `workers`, `fighters`, `belts` and `powerLines`.
 - `src/game/sim/mapspec.js` now provides deterministic `validate -> compile` helpers for Slice B.
+- `src/kernel/store/persistence.js` now persists `map` together with `meta` in the default web driver while still stripping `world` and `sim`.
 
 ## Traceability Added
 - `docs/traceability/rebuild-preparation-inventory.md`
@@ -47,7 +51,7 @@ Both files are derived planning evidence only and must not override SoT docs or 
 
 ## Next Work Block
 1. Continue Slice C by removing legacy fallbacks (`ISSUE_ORDER`/`PLACE_CELL`) once reducer-wired RTS actions can carry full gameplay flow alone.
-2. Keep visual playability stable while UI module wiring is expanded beyond the current mounted baseline.
+2. Expand Map Builder from current field/zone overrides to richer product tile semantics only after contract and worldgen support exists.
 3. Preserve the longrun headroom policy and runner wording when additional regression slots are added.
 4. Keep the hardening quick-suite current when future slices add new contract entry points or persistence surfaces.
 

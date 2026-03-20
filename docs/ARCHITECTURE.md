@@ -1,6 +1,6 @@
 # ARCHITECTURE
 
-**APP_VERSION:** 0.8.4
+**APP_VERSION:** 0.8.5
 
 ## SoT Rule
 - `src/project/contract/manifest.js` stays the executable contract Source of Truth.
@@ -34,6 +34,12 @@
 - UI shell now runs as minimal interaction surface without panel stacks.
 - Canvas interactions now expose direct founder/worker placement and worker movement flow.
 - Movement interpolation remains renderer-only visual smoothing while simulation stays deterministic and tick-bound.
+- Map Builder now has a dedicated visible panel, tile palette, action feedback, and cursor highlight without bypassing dispatch-only state writes.
+
+## Slice C Builder Persistence
+- Default web persistence now keeps `map` alongside `meta`; `world` and `sim` still reset on reload.
+- Builder `tilePlan` survives reload and is re-applied only through the normal `GEN_WORLD` compile path.
+- Builder-specific regression coverage now includes phase gating, `SET_MAP_TILE` roundtrip, and persisted reload recovery.
 
 ## Runtime Truth At Head
 - Operative reducer path remains `src/game/sim/reducer/index.js`.

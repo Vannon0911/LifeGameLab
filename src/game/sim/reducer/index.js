@@ -19,8 +19,8 @@ import {
 } from "../../contracts/ids.js";
 import {
   handleBuyEvolution,
-  handleHarvestCell,
-  handlePlaceCell,
+  handleHarvestWorker,
+  handlePlaceWorker,
   handlePlaceSplitCluster,
   handleSetPlayerDoctrine,
   handleSetZone,
@@ -1315,7 +1315,15 @@ export function reducer(state, action, ctx = {}) {
         const v = src[k];
         if (typeof v === "boolean" || typeof v === "string" || typeof v === "number") clean[k] = v;
       }
-      return [{ op: "set", path: "/meta/ui", value: { ...prev, ...clean } }];
+      const patches = [{ op: "set", path: "/meta/ui", value: { ...prev, ...clean } }];
+      if (typeof src.runPhase === "string" && src.runPhase.length > 0) {
+        patches.push({
+          op: "set",
+          path: "/sim/runPhase",
+          value: normalizeRunPhase(src.runPhase, state?.sim?.runPhase || RUN_PHASE.GENESIS_SETUP),
+        });
+      }
+      return patches;
     }
 
     case "SET_GLOBAL_LEARNING": {

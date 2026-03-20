@@ -19,7 +19,7 @@ export function createDeterministicStore(options = {}) {
     { storageDriver: createNullDriver() },
   );
   if (options.seed !== undefined) {
-    store.dispatch({ type: "SET_SEED", payload: String(options.seed) });
+    store.dispatch({ type: "SET_SEED", payload: { seed: String(options.seed) } });
   }
   return store;
 }
@@ -41,7 +41,7 @@ export function bootstrapMainRun(store) {
   store.dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
   const tiles = getPlayerStartWindowSquare(store.getState(), 1);
   for (const tile of tiles) {
-    store.dispatch({ type: "PLACE_CELL", payload: { x: tile.x, y: tile.y, remove: false } });
+    store.dispatch({ type: "PLACE_WORKER", payload: { x: tile.x, y: tile.y, remove: false } });
   }
   store.dispatch({ type: "CONFIRM_FOUNDATION", payload: {} });
   store.dispatch({ type: "CONFIRM_CORE_ZONE", payload: {} });

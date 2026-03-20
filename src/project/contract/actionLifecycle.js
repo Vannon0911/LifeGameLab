@@ -265,6 +265,11 @@ export const actionLifecycle = Object.freeze({
     "Canonical MapSpec input now drives deterministic world compilation.",
     ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"]
   ),
+  SET_MAP_TILE: stable(
+    "slice_c",
+    "Map Builder tile edits compile through the same deterministic MapSpec path as full mapspec updates.",
+    ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"]
+  ),
   SELECT_ENTITY: scaffold(
     "slice_a",
     "Scaffolded RTS selection action; reducer wiring lands in Slice C.",

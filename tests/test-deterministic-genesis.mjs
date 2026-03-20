@@ -37,7 +37,7 @@ function runScenario(seed) {
   store.dispatch({ type: "SET_BRUSH", payload: { brushMode: "founder_place" } });
   const founderTiles = getPlayerStartWindowSquare(store.getState(), 1);
   for (const tile of founderTiles) {
-    store.dispatch({ type: "PLACE_CELL", payload: { x: tile.x, y: tile.y, remove: false } });
+  store.dispatch({ type: "PLACE_WORKER", payload: { x: tile.x, y: tile.y, remove: false } });
   }
   const afterFounders = snapshotStore(store);
   const foundationEligibility = evaluateFoundationEligibility(afterFounders.state);

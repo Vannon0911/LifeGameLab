@@ -99,7 +99,7 @@ export const mutationMatrix = {
   SET_SIZE: ["/meta/gridW", "/meta/gridH"],
   SET_WORLD_PRESET: ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"],
   SET_MAPSPEC: ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"],
-  SET_MAP_TILE: ["/map/spec/tilePlan"],
+  SET_MAP_TILE: ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"],
   SET_RENDER_MODE: ["/meta/renderMode"],
   SET_PHYSICS: ["/meta/physics"],
   SET_BRUSH: ["/meta/brushMode", "/meta/brushRadius"],

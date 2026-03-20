@@ -13,6 +13,57 @@ export function installUiInput(UI) {
     };
     this._speedForGrid = speedForGrid;
 
+    const toggleMapBuilder = () => {
+      const state = this._store.getState();
+      const runPhase = String(state?.sim?.runPhase || "");
+      const entering = runPhase !== RUN_PHASE.MAP_BUILDER;
+      const ui = state?.meta?.ui || {};
+      if (entering) {
+        this._builderPrevUi = {
+          activeTab: String(ui.activeTab || "lage"),
+          panelOpen: !!ui.panelOpen,
+        };
+      }
+      const payload = entering
+        ? {
+            runPhase: RUN_PHASE.MAP_BUILDER,
+            panelOpen: true,
+            activeTab: "builder",
+            expertMode: true,
+          }
+        : {
+            runPhase: RUN_PHASE.GENESIS_SETUP,
+            panelOpen: !!this._builderPrevUi?.panelOpen,
+            activeTab: String(this._builderPrevUi?.activeTab || "lage"),
+          };
+      this._dispatch({ type: "SET_UI", payload });
+      if (!entering) {
+        this._setBuilderHover(null);
+      }
+      this._setActionFeedback({
+        ok: true,
+        message: entering ? "Map Builder aktiv" : "Map Builder beendet",
+        hint: entering
+          ? "Palette waehlt Kacheltypen. Klick malt, Shift loescht Overrides."
+          : "Zurueck im Startmodus.",
+      });
+    };
+
+    const bindBuilderPalette = () => {
+      for (const [mode, btn] of Object.entries(this._builderPaletteButtons || {})) {
+        btn.addEventListener("click", () => {
+          const cfg = this._setBuilderMode(mode, false);
+          if (!cfg) return;
+          this._setActionFeedback({
+            ok: true,
+            message: `Werkzeug: ${cfg.label}`,
+            hint: cfg.hint,
+          });
+        });
+      }
+    };
+    this._toggleMapBuilder = toggleMapBuilder;
+
     const togglePlay = () => {
       const state = this._store.getState();
       const runPhase = String(state?.sim?.runPhase || "");
@@ -83,6 +134,9 @@ export function installUiInput(UI) {
       this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:false } });
       this._dispatch({ type:"GEN_WORLD" });
     });
+    this._btnBuilder?.addEventListener("click", toggleMapBuilder);
+    this._builderExitButton?.addEventListener("click", toggleMapBuilder);
+    bindBuilderPalette();
 
     if (this._dockPlayBtn) this._dockPlayBtn.addEventListener("click", togglePlay);
     if (this._sheetClose) this._sheetClose.addEventListener("click", () => this._closeSheet?.());
@@ -116,10 +170,7 @@ export function installUiInput(UI) {
       else if (e.key === "n" || e.key === "N") { e.preventDefault(); this._btnNew.click(); }
       else if (e.key === "m" || e.key === "M") {
         e.preventDefault();
-        const state = this._store.getState();
-        const nextPhase = state.sim.runPhase === RUN_PHASE.MAP_BUILDER ? RUN_PHASE.GENESIS_SETUP : RUN_PHASE.MAP_BUILDER;
-        this._dispatch({ type: "SET_UI", payload: { runPhase: nextPhase } });
-        this._setActionFeedback({ ok: true, message: `Phase: ${nextPhase}`, hint: "M toggle MapBuilder" });
+        this._toggleMapBuilder?.();
       }
       else if (e.key === "p" || e.key === "P") {
         e.preventDefault();
@@ -142,7 +193,8 @@ export function installUiInput(UI) {
     if (wx<0||wy<0||wx>=state.meta.gridW||wy>=state.meta.gridH) return;
     const runPhase = String(state.sim?.runPhase || "");
     const shiftRemove = !!pointerEvent?.shiftKey;
-    const mode = state.meta.brushMode;
+    const builderActive = runPhase === RUN_PHASE.MAP_BUILDER;
+    const mode = builderActive ? this._builderMode : state.meta.brushMode;
     const radius = state.meta.brushRadius || 3;
     const idx = wy * state.meta.gridW + wx;
     const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
@@ -335,17 +387,14 @@ export function installUiInput(UI) {
       );
       return;
     }
-    if (runPhase === RUN_PHASE.MAP_BUILDER) {
+    if (builderActive) {
       if (!start) return;
-      const brushToMapMode = {
-        [BRUSH_MODE.LIGHT]: "light",
-        [BRUSH_MODE.NUTRIENT]: "nutrient",
-        [BRUSH_MODE.ZONE_PAINT]: "core",
-        [BRUSH_MODE.FOUNDER_PLACE]: "founder",
-      };
-      const mapMode = brushToMapMode[mode] || mode;
+      const builderCfg = this._getBuilderModeConfig?.(mode) || this._getBuilderModeConfig?.("light");
+      const mapMode = builderCfg?.mode || mode;
+      const value = Number.isFinite(Number(builderCfg?.value)) ? Number(builderCfg.value) : 0.8;
+      const remove = !!shiftRemove || !!builderCfg?.remove;
       this._dispatch(
-        { type: "SET_MAP_TILE", payload: { x: wx, y: wy, mode: mapMode, value: shiftRemove ? 0 : 0.8, remove: shiftRemove } },
+        { type: "SET_MAP_TILE", payload: { x: wx, y: wy, mode: mapMode, value: remove ? 0 : value, remove } },
         { ok: "Map-Tile aktualisiert.", blocked: "Fehler beim Setzen.", hint: "Shift+Klick entfernt Overrides." }
       );
       return;
@@ -369,15 +418,36 @@ export function installUiInput(UI) {
   _bindCanvasPaint() {
     this._canvas.style.touchAction = "none";
     this._canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    const updateHover = (e) => {
+      if (!this._rInfo) return;
+      const state = this._store.getState();
+      if (String(state?.sim?.runPhase || "") !== RUN_PHASE.MAP_BUILDER) {
+        this._setBuilderHover(null);
+        return;
+      }
+      const { dpr, tilePx, offX, offY } = this._rInfo;
+      const rect = this._canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const wx = Math.floor((sx * dpr - offX) / tilePx);
+      const wy = Math.floor((sy * dpr - offY) / tilePx);
+      if (wx < 0 || wy < 0 || wx >= state.meta.gridW || wy >= state.meta.gridH) {
+        this._setBuilderHover(null);
+        return;
+      }
+      this._setBuilderHover({ x: wx, y: wy });
+    };
     this._canvas.addEventListener("pointerdown", (e) => {
       this._activePointers.add(e.pointerId);
       this._touchGesture = e.pointerType==="touch" && this._activePointers.size>1;
       this._paintActive = !this._touchGesture;
       this._canvas.setPointerCapture(e.pointerId);
       if (this._touchGesture) return;
+      updateHover(e);
       this._paintAtClient(e.clientX, e.clientY, true, e);
     });
     this._canvas.addEventListener("pointermove", (e) => {
+      updateHover(e);
       if (this._touchGesture||!this._paintActive) return;
       this._paintAtClient(e.clientX, e.clientY, false, e);
     });
@@ -388,6 +458,7 @@ export function installUiInput(UI) {
     };
     this._canvas.addEventListener("pointerup", end);
     this._canvas.addEventListener("pointercancel", end);
+    this._canvas.addEventListener("pointerleave", () => this._setBuilderHover(null));
   }
   });
 }

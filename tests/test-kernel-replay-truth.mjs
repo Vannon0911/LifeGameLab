@@ -14,14 +14,14 @@ function buildReplayActions(seed) {
   prep.dispatch({ type: "SET_BRUSH", payload: { brushMode: "founder_place" } });
   const founderTiles = getPlayerStartWindowSquare(prep.getState(), 1);
   const placeFounderActions = founderTiles.map((tile) => ({
-    type: "PLACE_CELL",
+      type: "PLACE_WORKER",
     payload: { x: tile.x, y: tile.y, remove: false },
   }));
 
   return {
     founderTiles,
     actions: [
-      { type: "SET_SEED", payload: seed },
+    { type: "SET_SEED", payload: { seed } },
       { type: "GEN_WORLD", payload: {} },
       { type: "SET_BRUSH", payload: { brushMode: "founder_place" } },
       ...placeFounderActions,

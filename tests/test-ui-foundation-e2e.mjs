@@ -71,7 +71,7 @@ try {
     ]);
 
     const store = createStore(manifestMod.manifest, { reducer: logicMod.reducer, simStep: logicMod.simStepPatch });
-    store.dispatch({ type: "SET_SEED", payload: "ui-e2e-seed-main" });
+store.dispatch({ type: "SET_SEED", payload: { seed: "ui-e2e-seed-main" } });
     store.dispatch({ type: "GEN_WORLD", payload: {} });
     store.dispatch({ type: "SET_BRUSH", payload: { brushMode: idsMod.BRUSH_MODE.FOUNDER_PLACE } });
 
@@ -83,7 +83,7 @@ try {
     const st = store.getState();
     const preset = presetsMod.getWorldPreset(st.meta.worldPresetId);
     const range = presetsMod.getStartWindowRange(preset.startWindows.player, st.world.w, st.world.h);
-    store.dispatch({ type: "PLACE_CELL", payload: { x: range.x0, y: range.y0, remove: false } });
+store.dispatch({ type: "PLACE_WORKER", payload: { x: range.x0, y: range.y0, remove: false } });
     const eligibility = foundationMod.evaluateFoundationEligibility(store.getState());
     store.dispatch({ type: "CONFIRM_FOUNDATION", payload: {} });
     store.dispatch({ type: "CONFIRM_CORE_ZONE", payload: {} });
