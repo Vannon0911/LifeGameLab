@@ -1291,9 +1291,10 @@ export function reducer(state, action, ctx = {}) {
         if (!prevCores[coreId]) return [];
         const nextCores = { ...prevCores };
         delete nextCores[coreId];
+        if (!world.alive || !ArrayBuffer.isView(world.alive)) return [];
         const alive = cloneTypedArray(world.alive);
-        const E = cloneTypedArray(world.E);
-        const lineageId = cloneTypedArray(world.lineageId);
+        const E = world.E && ArrayBuffer.isView(world.E) ? cloneTypedArray(world.E) : new Float32Array(w * h);
+        const lineageId = world.lineageId && ArrayBuffer.isView(world.lineageId) ? cloneTypedArray(world.lineageId) : new Uint32Array(w * h);
         for (let dy = 0; dy < CORE_SIZE; dy++) {
           for (let dx = 0; dx < CORE_SIZE; dx++) {
             const idx = (y + dy) * w + (x + dx);
