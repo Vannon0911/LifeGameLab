@@ -1,4 +1,4 @@
-export const PHYSICS_KEYS = [
+export const UI_PHYSICS_KEYS = [
   ["L_mean", "Licht", 0.05, 0.60, 0.01],
   ["T_survive", "Überleben", 0.02, 0.25, 0.01],
   ["U_base", "Grundverbrauch", 0.01, 0.18, 0.005],

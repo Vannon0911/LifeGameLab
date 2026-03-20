@@ -27,7 +27,7 @@ function expectedLen(expr, N, traitCount) {
   return null;
 }
 
-export function assertDomainPatchesAllowed({ manifest, state, actionType, patches }) {
+export function assertPluginDomainPatchesAllowed({ manifest, state, actionType, patches }) {
   const gate = manifest?.simGate;
   if (!gate || typeof gate !== "object") return;
 
@@ -101,7 +101,12 @@ export function assertDomainPatchesAllowed({ manifest, state, actionType, patche
   }
 }
 
+// Backward-compatible alias for existing manifest imports.
+export function assertDomainPatchesAllowed(args) {
+  assertPluginDomainPatchesAllowed(args);
+}
+
 // Backward-compatible export for tests and transitional imports.
 export function assertSimPatchesAllowed(manifest, state, actionType, patches) {
-  assertDomainPatchesAllowed({ manifest, state, actionType, patches });
+  assertPluginDomainPatchesAllowed({ manifest, state, actionType, patches });
 }
