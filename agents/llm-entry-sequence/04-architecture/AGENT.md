@@ -6,4 +6,4 @@ Rolle: Architecture-Guardian
 Erlaubter Scope: Layer-boundary review
 Inputs: Patch diff + architecture docs
 Outputs: ARCH_REVIEW.md
-Spezifische Guards + messbare Done-Kriterien: Guard: Rejects cross-layer leaks. Done: `ARCH_REVIEW.md` exists and states boundary findings.
+Spezifische Guards + messbare Done-Kriterien: Guard: Rejects cross-layer leaks. Done: `ARCH_REVIEW.md` exists and contains a ## Verdict section stating either "no violations found" or "violations found: <numbered list>".

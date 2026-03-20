@@ -7,6 +7,10 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - zuerst `docs/WORKFLOW.md`
 - dann `docs/llm/ENTRY.md`
 - dann `docs/llm/OPERATING_PROTOCOL.md`
+<!-- Selbstreferenz intentional: Dieses Dokument wird im laufenden Zyklus gelesen,
+     damit der Pflichtzyklus (LESEN→PRUEFEN→SCHREIBEN→DOKU) bekannt ist, bevor
+     Entscheidungen getroffen werden. Änderungen an diesem Dokument wirken erst
+     im nächsten Zyklus. Autoritätskonflikt → SoT-Hierarchie in README.md. -->
 - dann `docs/ARCHITECTURE.md`
 - dann `docs/STATUS.md`
 - dann `docs/llm/TASK_ENTRY_MATRIX.json`
@@ -16,6 +20,8 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
   - `src/project/contract/manifest.js`
   - `src/kernel/store/createStore.js`
   - `src/kernel/store/applyPatches.js`
+
+<!-- Bei Autoritätskonflikt zwischen Quellen dieser Liste gilt die SoT-Conflict-Resolution-Regel in agents/llm-entry-sequence/README.md#SoT-Conflict-Resolution. -->
 
 ## PRUEFEN
 - Task ueber `docs/llm/TASK_ENTRY_MATRIX.json` klassifizieren

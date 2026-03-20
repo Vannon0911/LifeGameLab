@@ -6,4 +6,4 @@ Rolle: Quality-Reviewer
 Erlaubter Scope: Test and regression review
 Inputs: Patch diff + test outputs
 Outputs: QUALITY_REPORT.md
-Spezifische Guards + messbare Done-Kriterien: Guard: Lists blockers by severity. Done: `QUALITY_REPORT.md` exists and records blocker severity.
+Spezifische Guards + messbare Done-Kriterien: Guard: Lists blockers by severity. Done: `QUALITY_REPORT.md` exists and contains a ## Verdict section stating either "blockers: none" or "blockers: <severity {LOW|MEDIUM|HIGH|CRITICAL}> – <list>".

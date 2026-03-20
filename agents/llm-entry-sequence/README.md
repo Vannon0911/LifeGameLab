@@ -39,6 +39,14 @@ It does not replace repo truth, task classification, or preflight state.
 | `08-scope-entries/05-versioning` | Versioning-Release | Versioning/governance slices | `VERSION_REPORT.md` |
 | `09-global-minimum-gates` | Gate-Compliance-Checker | Final gate review | `GATE_REPORT.md` |
 
+## SoT Conflict Resolution
+
+When two sources in the SoT Hierarchy directly contradict each other, the lower-numbered (higher-authority) source wins.
+
+- LESEN read-order ≠ authority order. Reading Matrix before Gate-Index is required for orientation, but Gate-Index (rank 3) overrules Matrix (rank 4) on direct conflicts.
+- Escalation format: `[SOT-CONFLICT: Rank X overrides Rank Y – <reason>]`. Log the marker in the session before proceeding.
+- Full priority chain: `manifest.js` > `ENTRY + OPERATING_PROTOCOL` > `TASK_GATE_INDEX` > `TASK_ENTRY_MATRIX` > `Worker-README + _shared/*`. ENTRY and OPERATING_PROTOCOL share rank 2; neither overrides the other – conflicts between them require manual resolution.
+
 ## Ownership Rule
 - These files define role behavior only.
 - Product-code edits remain constrained by the repo ruleset and active preflight state.

@@ -2,5 +2,5 @@
 
 ## Minimum Done Criteria
 - Role output file exists and is actionable.
-- Risks and assumptions are explicit.
+- Output contains a `## Risks` section with at least one entry, or the explicit statement `Risks: none identified`.
 - Hand-off to next worker is clear.
