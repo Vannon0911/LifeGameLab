@@ -16,11 +16,8 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 10. `src/kernel/store/createStore.js`
 11. `src/kernel/store/applyPatches.js`
 12. `src/game/ui/ui.constants.js`
-13. `src/game/ui/ui.model.js`
-14. `src/game/ui/ui.dom.js`
-15. `src/game/ui/ui.feedback.js`
-16. `src/game/ui/ui.js`
-17. `src/app/main.js` falls der Task UI-Caller oder Boot-/Reset-Orchestrierung beruehrt
+13. `src/game/ui/ui.js`
+14. `src/app/main.js` falls der Task UI-Caller oder Boot-/Reset-Orchestrierung beruehrt
 
 ## Minimalzugriff Ohne Vollscan
 - Immer zuerst globale Mindest-Gates aus `TASK_GATE_INDEX.md` laden.

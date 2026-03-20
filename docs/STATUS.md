@@ -19,13 +19,10 @@
 - `GEN_WORLD` now compiles from `map.spec` when MapSpec is active and syncs legacy preset runs into the same map snapshot.
 - `SET_MAPSPEC` and `SET_MAP_TILE` now have active UI dispatch sources and dedicated dispatch-source regression guards.
 - Builder pipeline now keeps world mutation behind `GEN_WORLD`; `SET_MAPSPEC`, `SET_MAP_TILE`, and `SET_WORLD_PRESET` only compile/sync map/meta state.
-- Slice C visual baseline is now live: UI layout/input modules are mounted, canvas click placement is regression-tested, and tile object placeholders render in-world.
-- Slice C minimal runtime UI is now active: panel stack removed, direct canvas placement flow is live, and movement is paced at 1 tile per second with purely visual interpolation.
-- Slice C worker hardening landed: legacy founder placement now routes through `PLACE_WORKER`, `PLACE_CELL` is gone from active codepaths, and blocked move orders now wait/retry instead of hard-aborting.
-- Map Builder now has a visible panel, tile palette, status feedback, and cursor highlight instead of relying on a blind `M` toggle only.
-- Default web persistence now keeps `map` state, so builder `tilePlan` no longer disappears on reload while `world` and `sim` still regenerate safely.
-- Builder regression coverage now includes `RUN_PHASE.MAP_BUILDER`, `SET_MAP_TILE` -> `GEN_WORLD` roundtrip, and persisted reload survival for `tilePlan`.
-- Terminology migration advanced: product/architecture/entry docs now use `worker` as canonical runtime wording; legacy `cell` naming remains compatibility-only for action IDs.
+- Slice C visual baseline upgraded to 0.9.0: Implemented minimal RTS layout. The top-bar is completely removed. A minimal sidebar (`ui.stats.js`) exclusively displays necessary RTS statistics alongside the active canvas grid.
+- String extraction retained: `UI_STRINGS` in `ui.constants.js` continues to serve all feedback messages.
+- Module separation restored: `ui.input.js`, `ui.builder.js`, `ui.stats.js` and `ui.orders.js` form a clean layer.
+- Version bump to 0.9.0 finalized.
 - Slice A contract scaffold test was added and passes.
 - Slice B MapSpec test was added for deterministic compile + world boot.
 - Longrun evidence budget now has explicit headroom at `300_000 ms`.
@@ -63,12 +60,11 @@
 - `docs/traceability/rebuild-preparation-inventory.md`
 - `docs/traceability/rebuild-string-matrix.md`
 
-Both files are derived planning evidence only and must not override SoT docs or contracts.
-
-## Guardrails
-- Delete only after replacement.
-- No legacy action may be removed while dispatch sources, reducer cases or tests still depend on it.
-- New action names may exist before reducer wiring, but they must stay no-op safe until implemented.
+Both files## Slice C Minimal UI Runtime (Minimal RTS Layout)
+- UI runtime uses a modular structure: `ui.js`, `ui.input.js`, `ui.builder.js`, `ui.orders.js`, `ui.stats.js`, and `ui.constants.js`.
+- The interface is strictly divided into two areas: a minimal left sidebar for essential RTS metrics (`ui.stats.js`) and the main interaction canvas.
+- Top bars, headers, and floating panels are completely removed.
+- Interaction on the grid remains 100% canvas-based. All feedback strings are statically defined in `ui.constants.js` (`UI_STRINGS`). names may exist before reducer wiring, but they must stay no-op safe until implemented.
 
 ## Next Work Block
 1. Continue Slice C by keeping the `PLACE_WORKER` path and evidence guards current as the slice closes out.
