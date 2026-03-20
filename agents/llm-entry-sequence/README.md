@@ -1,32 +1,44 @@
-# LLM Entry Worker Map (Role-Based)
+# LLM Entry Worker Map
 
-This worker layout is role-driven to accelerate development, not only gate reading.
+## Purpose
+This directory defines role prompts for the LLM layer only.
+It does not replace repo truth, task classification, or preflight state.
 
-## Core Roles
-1. 01-workflow: Task-Orchestrator
-2. 02-entry: Arbiter-Coder (primary coding worker)
-3. 03-operating-protocol: Protocol-Enforcer
-4. 04-architecture: Architecture-Guardian
-5. 05-status: Documentation-Auditor
-6. 06-task-entry-matrix: Scope-Router
-7. 07-task-gate-index: Quality-Reviewer
-8. 08-scope-entries: Domain-Coordinator
-9. 09-global-minimum-gates: Gate-Compliance-Checker (mandatory after each task)
+## SoT Hierarchy
+1. `src/project/contract/manifest.js`
+2. `docs/llm/ENTRY.md` and `docs/llm/OPERATING_PROTOCOL.md`
+3. `docs/llm/entry/TASK_GATE_INDEX.md`
+4. `docs/llm/TASK_ENTRY_MATRIX.json`
+5. `agents/llm-entry-sequence/README.md` and `_shared/*`
 
-## Domain Coding Workers
-- 08-scope-entries/01-ui: UI-Coder
-- 08-scope-entries/02-sim: SIM-Coder
-- 08-scope-entries/03-contracts: Contract-Coder
-- 08-scope-entries/04-testing: Test-Engineer
-- 08-scope-entries/05-versioning: Versioning-Release
+## Operating Boundary
+- The orchestrator coordinates slices and hand-offs.
+- The orchestrator is never authoritative over `classify -> entry -> ack -> check`.
+- Technical truth for scope, entry state, and write permission stays in `tools/llm-preflight.mjs`.
+- No role in this directory may create a shadow workflow, shadow scope map, or shadow source of truth.
 
-## Workflow Contract
-1. Orchestrator slices tasks.
-2. Arbiter-Coder and domain coders implement.
-3. Documentation-Auditor verifies docs after each task.
-4. Gate-Compliance-Checker runs mandatory gate check after each task.
-5. Quality-Reviewer + Architecture-Guardian sign off risks.
+## Shared References
+- Common mission and collaboration rules: `agents/llm-entry-sequence/_shared/BASE_RULES.md`
+- Common minimum done criteria: `agents/llm-entry-sequence/_shared/REPORT_SCHEMA.md`
+
+## Role Matrix
+| Path | Role | Allowed Scope | Primary Output |
+| --- | --- | --- | --- |
+| `01-workflow` | Task-Orchestrator | LLM-layer coordination only | `PLAN.md` |
+| `02-entry` | Arbiter-Coder | Approved slice implementation | `PATCH.md` |
+| `03-operating-protocol` | Protocol-Enforcer | Protocol and invariant review | `PROTOCOL_REPORT.md` |
+| `04-architecture` | Architecture-Guardian | Layer-boundary review | `ARCH_REVIEW.md` |
+| `05-status` | Documentation-Auditor | Documentation sync review | `DOC_AUDIT.md` |
+| `06-task-entry-matrix` | Scope-Router | Scope interpretation against matrix output | `SCOPE_MAP.md` |
+| `07-task-gate-index` | Quality-Reviewer | Test and regression review | `QUALITY_REPORT.md` |
+| `08-scope-entries` | Domain-Coordinator | Cross-domain coordination | `DOMAIN_SYNC.md` |
+| `08-scope-entries/01-ui` | UI-Coder | UI slices | `UI_PATCH_REPORT.md` |
+| `08-scope-entries/02-sim` | SIM-Coder | SIM slices | `SIM_PATCH_REPORT.md` |
+| `08-scope-entries/03-contracts` | Contract-Coder | Contract slices | `CONTRACT_PATCH_REPORT.md` |
+| `08-scope-entries/04-testing` | Test-Engineer | Testing slices | `TEST_REPORT.md` |
+| `08-scope-entries/05-versioning` | Versioning-Release | Versioning/governance slices | `VERSION_REPORT.md` |
+| `09-global-minimum-gates` | Gate-Compliance-Checker | Final gate review | `GATE_REPORT.md` |
 
 ## Ownership Rule
-- Each worker owns only its own folder artifacts.
-- Product-code edits are executed by Arbiter-Coder and domain coders only.
+- These files define role behavior only.
+- Product-code edits remain constrained by the repo ruleset and active preflight state.

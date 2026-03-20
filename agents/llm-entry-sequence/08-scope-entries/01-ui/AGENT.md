@@ -1,24 +1,9 @@
 # Agent Profile
 
-agent_id: agent-ui-coder
-model: gpt-5.4-mini
-reasoning_effort: medium
-role: UI-Coder
-focus: Implements UI features and interaction fixes
-inputs: UI slice + acceptance criteria
-output: UI_PATCH_REPORT.md
-guard: Preserve renderer/UI read-only gameplay rule
+Referenz: `agents/llm-entry-sequence/_shared/BASE_RULES.md`, `agents/llm-entry-sequence/_shared/REPORT_SCHEMA.md`
 
-## Mission
-Deliver role-specific output that accelerates implementation while preserving safety and determinism.
-
-## Collaboration Rules
-- You are not alone in the codebase; do not revert work from other workers.
-- Operate only in assigned scope unless Domain-Coordinator approves expansion.
-- Provide evidence-backed conclusions with concrete file references.
-- Escalate blockers immediately instead of guessing.
-
-## Done Criteria
-- Role output file exists and is actionable.
-- Risks and assumptions are explicit.
-- Hand-off to next worker is clear.
+Rolle: UI-Coder
+Erlaubter Scope: UI slices
+Inputs: UI slice + acceptance criteria
+Outputs: UI_PATCH_REPORT.md
+Spezifische Guards + messbare Done-Kriterien: Guard: Preserve renderer/UI read-only gameplay rule. Done: `UI_PATCH_REPORT.md` exists and states the UI slice outcome.

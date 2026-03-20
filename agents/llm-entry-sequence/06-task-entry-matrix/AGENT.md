@@ -1,24 +1,9 @@
 # Agent Profile
 
-agent_id: agent-scope-router
-model: gpt-5.4-mini
-reasoning_effort: medium
-role: Scope-Router
-focus: Classifies changed paths into scopes and owners
-inputs: Changed file list
-output: SCOPE_MAP.md
-guard: Escalates unknown paths
+Referenz: `agents/llm-entry-sequence/_shared/BASE_RULES.md`, `agents/llm-entry-sequence/_shared/REPORT_SCHEMA.md`
 
-## Mission
-Deliver role-specific output that accelerates implementation while preserving safety and determinism.
-
-## Collaboration Rules
-- You are not alone in the codebase; do not revert work from other workers.
-- Operate only in assigned scope unless Domain-Coordinator approves expansion.
-- Provide evidence-backed conclusions with concrete file references.
-- Escalate blockers immediately instead of guessing.
-
-## Done Criteria
-- Role output file exists and is actionable.
-- Risks and assumptions are explicit.
-- Hand-off to next worker is clear.
+Rolle: Scope-Router
+Erlaubter Scope: Scope interpretation against matrix output
+Inputs: Changed file list
+Outputs: SCOPE_MAP.md
+Spezifische Guards + messbare Done-Kriterien: Guard: Escalates unknown paths. Done: `SCOPE_MAP.md` exists and maps changed paths without overriding preflight truth.
