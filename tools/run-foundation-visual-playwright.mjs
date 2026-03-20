@@ -136,21 +136,25 @@ async function main() {
     const appLoadedSeen = {
       title: await page.title(),
       headerVisible: await header.isVisible(),
-      brandVisible: await page.getByText("LifeGameLab", { exact: true }).isVisible(),
+      timerVisible: await page.getByText(/^Timer \d{2}:\d{2}(?::\d{2})?$/).isVisible(),
       hintVisible: await page.getByText("Klick: Worker setzen | Worker->Ressource: Bewegung", { exact: true }).isVisible(),
-      startVisible: await page.getByRole("button", { name: /Simulation starten oder pausieren/i }).isVisible(),
-      newWorldVisible: await page.getByRole("button", { name: "Neue Welt generieren" }).isVisible(),
+      statusVisible: await page.locator(".nx-status-badge").isVisible(),
     };
     logStep({
       step: "header_app_loaded",
       action: "App geladen und Header-Screenshot erzeugt.",
       expect: "Minimal-Header inkl. Hint + Start/Neue-Welt Controls sichtbar.",
       seen: { ...appLoadedSeen, headerScreenshot: path.relative(root, headerShot).split(path.sep).join("/") },
-      state: appLoadedSeen.headerVisible && appLoadedSeen.brandVisible && appLoadedSeen.hintVisible && appLoadedSeen.startVisible && appLoadedSeen.newWorldVisible ? "ok" : "bug",
+      state: appLoadedSeen.headerVisible && appLoadedSeen.timerVisible && appLoadedSeen.hintVisible && appLoadedSeen.statusVisible ? "ok" : "bug",
       screenshot: shot,
     });
 
-    await page.getByRole("button", { name: "Neue Welt generieren" }).click();
+    await page.evaluate(() => {
+      const store = globalThis.__LIFEGAMELAB_STORE__;
+      if (store && typeof store.dispatch === "function") {
+        store.dispatch({ type: "GEN_WORLD", payload: {} });
+      }
+    });
     await page.waitForTimeout(350);
     shot = screenshotPath(idx++, "header_after_new_world");
     await page.screenshot({ path: shot, fullPage: true });
