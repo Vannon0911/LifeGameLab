@@ -815,7 +815,8 @@ function drawRoundCells(ctx, world, offX, offY, tilePx, meta, sim, quality = 3, 
 // Draw tactical grid lines so tile boundaries stay legible on mobile + dense maps.
 function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0, detailMode = "auto") {
   if (detailMode === "minimal") return;
-  if (lodLevel > 0) return;
+  // Keep grid visible at common play zooms; only suppress at the coarsest LOD.
+  if (lodLevel > 2) return;
   // On dense grids show a lightweight macro-grid, so raster remains readable.
   if (tilePx < 18) {
     if (tilePx < 3) return;
