@@ -128,6 +128,10 @@ export const BRUSH_MODE = Object.freeze({
   NUTRIENT: "nutrient",
   TOXIN: "toxin",
   SATURATION_RESET: "saturation_reset",
+  // Builder-only brush modes
+  SURFACE_PAINT: "surface_paint",
+  RESOURCE_PLACE: "resource_place",
+  ERASER: "eraser",
 });
 
 export const BRUSH_MODE_VALUES = Object.freeze([
@@ -143,7 +147,21 @@ export const BRUSH_MODE_VALUES = Object.freeze([
   BRUSH_MODE.NUTRIENT,
   BRUSH_MODE.TOXIN,
   BRUSH_MODE.SATURATION_RESET,
+  BRUSH_MODE.SURFACE_PAINT,
+  BRUSH_MODE.RESOURCE_PLACE,
+  BRUSH_MODE.ERASER,
 ]);
+
+// Builder-only brush modes (only available in MAP_BUILDER phase)
+export const BUILDER_BRUSH_MODES = Object.freeze([
+  BRUSH_MODE.SURFACE_PAINT,
+  BRUSH_MODE.RESOURCE_PLACE,
+  BRUSH_MODE.ERASER,
+]);
+
+export function isBuilderBrushMode(value) {
+  return BUILDER_BRUSH_MODES.includes(String(value || ""));
+}
 
 export const GOAL_CODE = Object.freeze({
   HARVEST_SECURE: "harvest_secure",

@@ -3,8 +3,10 @@
 // Pure: reads state, writes pixels. Never mutates state.
 // ============================================================
 
-import { OVERLAY_MODE, ZONE_ROLE } from "../contracts/ids.js";
+import { OVERLAY_MODE, ZONE_ROLE, RUN_PHASE } from "../contracts/ids.js";
 import { FOG_HIDDEN, FOG_MEMORY, FOG_VISIBLE, applyFogToColor, getTileFogState } from "./fogOfWar.js";
+import { getSurfaceColor, getResourceColor } from "../sim/mapBuilderResources.js";
+import { getSurfaceVariant, getResourceVariant } from "../sim/tileVariants.js";
 
 function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -296,7 +298,8 @@ export function computeFieldSurfaceColor(world, meta, idx) {
     : computeRenderModeFieldColor(world, meta, idx);
   return applyFogToColor(color, getTileFogState(world, idx));
 }
-
+
+
 function hasStable2x2(world, x, y) {
   const { w, h, alive } = world;
   if (x < 0 || y < 0 || x >= w - 1 || y >= h - 1) return false;
@@ -591,6 +594,67 @@ function drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lodLevel = 0, detailM
   ctx.restore();
 }
 
+// --- Builder-mode rendering ---
+
+function drawBuilderSurface(ctx, state, offX, offY, tilePx) {
+  const w = Number(state.meta?.gridW || 0) | 0;
+  const h = Number(state.meta?.gridH || 0) | 0;
+  if (w <= 0 || h <= 0) return;
+  const surfacePlan = state.map?.spec?.surfacePlan;
+  if (!surfacePlan || typeof surfacePlan !== "object") {
+    // No surface plan yet — fill with default neutral color
+    ctx.fillStyle = "rgb(28,36,44)";
+    ctx.fillRect(offX, offY, w * tilePx, h * tilePx);
+    return;
+  }
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const key = String(y * w + x);
+      const entry = surfacePlan[key];
+      const px = offX + x * tilePx;
+      const py = offY + y * tilePx;
+      if (entry && entry.type) {
+        const variant = getSurfaceVariant(x, y, entry.type);
+        const color = getSurfaceColor(entry.type, variant);
+        ctx.fillStyle = color;
+      } else {
+        ctx.fillStyle = "rgb(28,36,44)";
+      }
+      ctx.fillRect(px, py, tilePx, tilePx);
+    }
+  }
+}
+
+function drawBuilderResources(ctx, state, offX, offY, tilePx) {
+  const w = Number(state.meta?.gridW || 0) | 0;
+  const h = Number(state.meta?.gridH || 0) | 0;
+  if (w <= 0 || h <= 0 || tilePx < 3) return;
+  const resourcePlan = state.map?.spec?.resourcePlan;
+  if (!resourcePlan || typeof resourcePlan !== "object") return;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const key = String(y * w + x);
+      const entry = resourcePlan[key];
+      if (!entry || !entry.kind) continue;
+      const variant = getResourceVariant(x, y, entry.kind);
+      const color = getResourceColor(entry.kind, entry.stage || "placed");
+      const px = offX + x * tilePx;
+      const py = offY + y * tilePx;
+      const inset = Math.max(1, Math.floor(tilePx * 0.2));
+      ctx.fillStyle = color;
+      ctx.fillRect(px + inset, py + inset, tilePx - inset * 2, tilePx - inset * 2);
+      // Draw variant marker (small dot in corner for visual differentiation)
+      if (tilePx >= 8 && variant > 0) {
+        const dotR = Math.max(1, Math.floor(tilePx * 0.08));
+        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.beginPath();
+        ctx.arc(px + tilePx - inset - dotR, py + inset + dotR, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
 function drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality = 3) {
   const { w, h, L, R, P, W, Sat } = world;
   const overlayActive = String(meta?.activeOverlay || OVERLAY_MODE.NONE) !== OVERLAY_MODE.NONE;
@@ -660,7 +724,8 @@ function drawResourceMarkers(ctx, world, offX, offY, tilePx) {
   }
   ctx.restore();
 }
-
+
+
 function drawHarvestProgress(ctx, world, sim, offX, offY, tilePx) {
   const activeOrder = sim?.activeOrder;
   if (!activeOrder || !activeOrder.active || String(activeOrder.type || "") !== "HARVEST") return;
@@ -776,15 +841,23 @@ export function drawFrame(ctx, state, perf = {}) {
   
   // Always use full surface render to keep visible macro-patterns and avoid pixel-brei.
   ctx.imageSmoothingEnabled = false;
-  drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality);
+
+  // Builder mode: render surfacePlan + resourcePlan instead of sim fields
+  const isBuilderPhase = String(state?.sim?.runPhase || "") === RUN_PHASE.MAP_BUILDER;
+  if (isBuilderPhase) {
+    drawBuilderSurface(ctx, state, offX, offY, tilePx);
+    drawBuilderResources(ctx, state, offX, offY, tilePx);
+  } else {
+    drawFieldSurface(ctx, world, meta, offX, offY, tilePx, quality);
+  }
 
   // Minimal tactical presentation: grid + units + structures + resources + fog.
-  if (!overlayActive && quality >= 1) drawResourceMarkers(ctx, world, offX, offY, tilePx);
+  if (!isBuilderPhase && !overlayActive && quality >= 1) drawResourceMarkers(ctx, world, offX, offY, tilePx);
   const moveHint = computeSingleMoveHint(world, alpha);
-  drawRoundCells(ctx, world, offX, offY, tilePx, meta, null, quality, moveHint, alpha);
-  if (!overlayActive && quality >= 1) drawTileObjectPlaceholders(ctx, world, offX, offY, tilePx);
+  if (!isBuilderPhase) drawRoundCells(ctx, world, offX, offY, tilePx, meta, null, quality, moveHint, alpha);
+  if (!isBuilderPhase && !overlayActive && quality >= 1) drawTileObjectPlaceholders(ctx, world, offX, offY, tilePx);
   if (quality >= 1) drawGrid(ctx, offX, offY, imageW, imageH, tilePx, lod.level, detailMode);
-  drawHarvestProgress(ctx, world, state.sim, offX, offY, tilePx);
+  if (!isBuilderPhase) drawHarvestProgress(ctx, world, state.sim, offX, offY, tilePx);
 
   return { tilePx, offX, offY, dpr: perf.dpr, quality, lod };
 }

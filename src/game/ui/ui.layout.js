@@ -215,12 +215,68 @@ export function installUiLayout(UI) {
         this._builderPalette.appendChild(btn);
       }
 
+      // --- Builder tool dropdown ---
+      this._builderToolDropdown = el("select", "nx-builder-tool-dropdown");
+      this._builderToolDropdown.setAttribute("aria-label", "Werkzeug waehlen");
+      this._builderToolDropdown.style.cssText = [
+        "width:100%",
+        "min-height:38px",
+        "padding:0.4rem 0.6rem",
+        "margin-bottom:8px",
+        "border-radius:10px",
+        "border:1px solid rgba(170,190,230,0.22)",
+        "background:rgba(14,18,26,0.88)",
+        "color:#eaf2ff",
+        "font:600 0.86rem/1.2 ui-sans-serif, system-ui, sans-serif",
+        "cursor:pointer",
+      ].join(";");
+      for (const opt of this._builderToolOptions || []) {
+        const option = document.createElement("option");
+        option.value = opt.mode;
+        option.textContent = opt.label;
+        this._builderToolDropdown.appendChild(option);
+      }
+
+      // --- Brush size slider ---
+      const brushRow = el("div", "nx-builder-brush-row");
+      brushRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:8px;";
+      this._builderBrushLabel = el("span", "nx-builder-brush-label", "Pinsel: 1");
+      this._builderBrushLabel.style.cssText = "font:600 0.82rem/1 ui-sans-serif, system-ui, sans-serif;color:#bfd0eb;min-width:64px;";
+      this._builderBrushSlider = el("input", "nx-builder-brush-slider");
+      this._builderBrushSlider.type = "range";
+      this._builderBrushSlider.min = "1";
+      this._builderBrushSlider.max = "5";
+      this._builderBrushSlider.value = "1";
+      this._builderBrushSlider.style.cssText = "flex:1;accent-color:#7cc2ff;";
+      brushRow.append(this._builderBrushLabel, this._builderBrushSlider);
+
+      // --- Undo/Redo buttons ---
+      const undoRedoRow = el("div", "nx-builder-undoredo-row");
+      undoRedoRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:8px;";
+      this._builderUndoBtn = el("button", "nx-btn nx-btn-ghost", "Rueckgaengig");
+      this._builderUndoBtn.setAttribute("aria-label", "Rueckgaengig (Ctrl+Z)");
+      this._builderUndoBtn.style.cssText = "flex:1;padding:0.4rem 0.5rem;";
+      this._builderRedoBtn = el("button", "nx-btn nx-btn-ghost", "Wiederherstellen");
+      this._builderRedoBtn.setAttribute("aria-label", "Wiederherstellen (Ctrl+Y)");
+      this._builderRedoBtn.style.cssText = "flex:1;padding:0.4rem 0.5rem;";
+      undoRedoRow.append(this._builderUndoBtn, this._builderRedoBtn);
+
+      // --- Seed display ---
+      this._builderSeedRow = el("div", "nx-builder-seed-row");
+      this._builderSeedRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:8px;";
+      this._builderSeedLabel = el("span", "nx-builder-seed-label", "Seed: —");
+      this._builderSeedLabel.style.cssText = "font:700 0.86rem/1.2 ui-monospace, SFMono-Regular, monospace;color:#ffd47a;flex:1;";
+      this._builderSeedGenBtn = el("button", "nx-btn nx-btn-ghost", "Seed erzeugen");
+      this._builderSeedGenBtn.setAttribute("aria-label", "Map-Seed generieren");
+      this._builderSeedGenBtn.style.cssText = "padding:0.4rem 0.6rem;";
+      this._builderSeedRow.append(this._builderSeedLabel, this._builderSeedGenBtn);
+
       this._builderPanelStatus = el("div", "nx-builder-panel-status", "Bereit");
       this._builderPanelStatus.style.cssText = "font:700 0.88rem/1.35 ui-sans-serif, system-ui, sans-serif;color:#b9ffd9;margin-bottom:4px;";
       this._builderPanelHint = el("div", "nx-builder-panel-hint", "Klicke auf eine Kachel oder waehle ein Werkzeug.");
       this._builderPanelHint.style.cssText = "font:500 0.8rem/1.45 ui-sans-serif, system-ui, sans-serif;color:#9db0cf;";
 
-      this._builderPanel.append(panelTop, this._builderPanelState, this._builderPanelMode, this._builderPanelMeta, this._builderPalette, this._builderPanelStatus, this._builderPanelHint);
+      this._builderPanel.append(panelTop, this._builderPanelState, this._builderPanelMode, this._builderPanelMeta, this._builderToolDropdown, brushRow, this._builderPalette, undoRedoRow, this._builderSeedRow, this._builderPanelStatus, this._builderPanelHint);
       this._canvasWrap.append(this._builderHoverFrame, this._builderPanel);
 
       this._announcer = el("div", "nx-aria-announcer");
