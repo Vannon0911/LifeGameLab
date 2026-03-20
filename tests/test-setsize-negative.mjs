@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createStore } from "../src/kernel/store/createStore.js";
 import { createNullDriver } from "../src/kernel/store/persistence.js";
 import * as manifest from "../src/project/project.manifest.js";
-import { reducer, simStepPatch } from "../src/project/project.logic.js";
+import { reducer, simStepPatch } from "../src/game/sim/reducer/index.js";
 import { snapshotStore } from "./support/liveTestKit.mjs";
 
 const store = createStore(

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { createStore } from "../src/kernel/store/createStore.js";
 import { manifest } from "../src/project/project.manifest.js";
-import { reducer, simStepPatch } from "../src/project/project.logic.js";
+import { reducer, simStepPatch } from "../src/game/sim/reducer/index.js";
 
 const cycle = { presetId: "river_delta" };
 cycle.self = cycle;
