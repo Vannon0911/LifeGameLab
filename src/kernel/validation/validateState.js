@@ -139,6 +139,7 @@ function cloneUnknownValue(value, path, ancestors = new WeakSet()) {
   try {
     const out = {};
     for (const key of Object.keys(value)) {
+      if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
       out[key] = cloneUnknownValue(value[key], `${path}.${key}`, ancestors);
     }
     return out;

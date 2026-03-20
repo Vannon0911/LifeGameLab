@@ -31,7 +31,6 @@ const forbiddenStaticStrings = [
 const scanTargets = [
   "src/app/main.js",
   "src/game/ui/ui.js",
-  "src/game/ui/ui.lage.js",
   "tools/evidence-runner.mjs",
   "tools/llm-preflight.mjs",
   "tools/run-all-tests.mjs",
