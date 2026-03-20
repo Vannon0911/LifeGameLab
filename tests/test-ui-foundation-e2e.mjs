@@ -1,55 +1,18 @@
 import assert from "node:assert/strict";
-import net from "node:net";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "playwright";
+import { startLocalHttpServer } from "./support/localHttpServer.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const port = 8080;
-const baseUrl = `http://127.0.0.1:${port}`;
-
-function waitForPortOpen(host, targetPort, timeoutMs = 15_000) {
-  const started = Date.now();
-  return new Promise((resolve, reject) => {
-    const probe = () => {
-      const socket = new net.Socket();
-      socket.setTimeout(800);
-      socket.once("connect", () => {
-        socket.destroy();
-        resolve(true);
-      });
-      socket.once("timeout", () => socket.destroy());
-      socket.once("error", () => socket.destroy());
-      socket.once("close", () => {
-        if (Date.now() - started > timeoutMs) {
-          reject(new Error(`port ${targetPort} did not open within ${timeoutMs}ms`));
-        } else {
-          setTimeout(probe, 150);
-        }
-      });
-      socket.connect(targetPort, host);
-    };
-    probe();
-  });
-}
-
-function startLocalServer() {
-  const cmd = process.platform === "win32" ? "python" : "python3";
-  return spawn(cmd, ["-m", "http.server", String(port)], {
-    cwd: root,
-    stdio: "ignore",
-  });
-}
 
 let server = null;
 let browser = null;
 
 try {
-  server = startLocalServer();
-  await waitForPortOpen("127.0.0.1", port, 15_000);
+  server = await startLocalHttpServer(root);
 
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
@@ -64,7 +27,7 @@ try {
     const text = String(err?.message || err || "");
     if (text.includes("action.payload(") || text.includes("must be object")) bootstrapErrors.push(text);
   });
-  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  await page.goto(server.baseUrl, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(350);
   assert.equal(bootstrapErrors.length, 0, `bootstrap must not emit validation errors: ${bootstrapErrors.join(" | ")}`);
 
@@ -124,9 +87,7 @@ store.dispatch({ type: "PLACE_WORKER", payload: { x: range.x0, y: range.y0, remo
       await browser.close();
     } catch {}
   }
-  if (server && !server.killed) {
-    try {
-      server.kill("SIGTERM");
-    } catch {}
+  if (server) {
+    try { server.stop(); } catch {}
   }
 }

@@ -74,40 +74,16 @@ export const actionLifecycle = Object.freeze({
     "Legacy core-zone confirmation collapses into direct core placement.",
     ["/world/cores", "/sim/runPhase", "/sim/phase0CorePlaced"]
   ),
-  START_DNA_ZONE_SETUP: deprecated(
+  TOGGLE_DNA_ZONE_WORKER: rename(
     "PLACE_BUILDING",
     "slice_f",
-    "DNA zone setup is replaced by RTS building placement.",
+    "DNA zone editing remains as transitional compat path until direct building placement fully replaces the flow.",
     ["/world/buildings", "/sim/lastCommand"]
   ),
-  TOGGLE_DNA_ZONE_WORKER: deprecated(
-    "PLACE_BUILDING",
-    "slice_f",
-    "DNA zone editing is replaced by explicit RTS footprints.",
-    ["/world/buildings", "/sim/lastCommand"]
-  ),
-  CONFIRM_DNA_ZONE: deprecated(
-    "PLACE_BUILDING",
-    "slice_f",
-    "DNA zone confirmation is replaced by committed RTS building placement.",
-    ["/world/buildings", "/sim/lastCommand"]
-  ),
-  BEGIN_INFRA_BUILD: deprecated(
+  BUILD_INFRA_PATH: rename(
     "PLACE_LINE_SEGMENT",
     "slice_f",
-    "Legacy infra build mode is replaced by power-line placement.",
-    ["/world/powerLines", "/sim/lastCommand"]
-  ),
-  BUILD_INFRA_PATH: deprecated(
-    "PLACE_LINE_SEGMENT",
-    "slice_f",
-    "Legacy infra path painting is replaced by explicit line segments.",
-    ["/world/powerLines", "/sim/lastCommand"]
-  ),
-  CONFIRM_INFRA_PATH: deprecated(
-    "PLACE_LINE_SEGMENT",
-    "slice_f",
-    "Legacy infra confirmation is replaced by direct line commits.",
+    "Infra path painting remains as transitional compat path until direct line-segment placement fully replaces the flow.",
     ["/world/powerLines", "/sim/lastCommand"]
   ),
   TOGGLE_RUNNING: stable(
@@ -180,62 +156,26 @@ export const actionLifecycle = Object.freeze({
   ISSUE_ORDER: rename(
     "ISSUE_MOVE",
     "slice_c",
-    "Worker orders move from cell-order wording to explicit entity movement.",
-    ["/sim/unitOrder", "/sim/activeOrder", "/sim/selectedUnit", "/sim/lastCommand"]
+    "Worker orders remain as compatibility input while entity-based move is canonical.",
+    ["/sim/selectedUnit", "/sim/selectedEntity", "/sim/unitOrder", "/sim/activeOrder", "/sim/lastCommand"]
   ),
-  PLACE_SPLIT_CLUSTER: deprecated(
+  PLACE_SPLIT_CLUSTER: rename(
     "PLACE_BUILDING",
     "slice_f",
-    "Cluster split placement is replaced by explicit splitter building placement.",
+    "Cluster split placement remains as transitional compat path until explicit splitter placement fully replaces the flow.",
     ["/world/buildings", "/sim/lastCommand"]
   ),
-  HARVEST_WORKER: deprecated(
+  HARVEST_WORKER: rename(
     "QUEUE_WORKER",
     "slice_e",
-    "Cell harvest is replaced by worker-driven manual and automated collection.",
+    "Worker harvest remains as transitional compat path until queue-driven collection fully replaces the flow.",
     ["/world/workers", "/sim/lastCommand"]
   ),
-  HARVEST_PULSE: deprecated(
-    "QUEUE_WORKER",
-    "slice_e",
-    "Pulse harvesting is replaced by worker and building production chains.",
-    ["/world/workers", "/world/resourceNodes", "/sim/lastCommand"]
-  ),
-  PRUNE_CLUSTER: deprecated(
-    "PLACE_BUILDING",
-    "slice_e",
-    "Cluster pruning is replaced by explicit production infrastructure.",
-    ["/world/buildings", "/sim/lastCommand"]
-  ),
-  RECYCLE_PATCH: deprecated(
-    "PLACE_BUILDING",
-    "slice_e",
-    "Patch recycling is replaced by explicit production chains and logistics.",
-    ["/world/buildings", "/sim/lastCommand"]
-  ),
-  SEED_SPREAD: deprecated(
-    "PLACE_BUILDING",
-    "slice_e",
-    "Seed spread is replaced by explicit reproduction buildings.",
-    ["/world/buildings", "/sim/lastCommand"]
-  ),
-  SET_ZONE: deprecated(
+  SET_ZONE: rename(
     "PLACE_BUILDING",
     "slice_f",
-    "Zone painting is replaced by direct RTS footprints and line placement.",
+    "Zone painting remains as transitional compat path until direct RTS footprint placement fully replaces the flow.",
     ["/world/buildings", "/sim/lastCommand"]
-  ),
-  BUY_EVOLUTION: deprecated(
-    "COMMIT_MUTATION",
-    "slice_h",
-    "Evolution purchases are replaced by mutator topology commits.",
-    ["/sim/mutatorDraft", "/world/fighters", "/sim/lastCommand"]
-  ),
-  SET_PLAYER_DOCTRINE: deprecated(
-    "SET_MUTATOR_PATTERN",
-    "slice_h",
-    "Doctrine toggles are replaced by explicit mutator pattern authoring.",
-    ["/sim/mutatorDraft", "/sim/lastCommand"]
   ),
   SET_WIN_MODE: stable(
     "slice_i",
@@ -247,12 +187,6 @@ export const actionLifecycle = Object.freeze({
     "slice_a",
     "Overlay choice survives only if the post-migration UI keeps overlays.",
     ["/meta/activeOverlay"]
-  ),
-  SET_PLACEMENT_COST: deprecated(
-    "",
-    "slice_c",
-    "Placement-cost toggle is not part of the RTS contract surface.",
-    ["/meta/placementCostEnabled"]
   ),
   SET_MAPSPEC: stable(
     "slice_b",
@@ -269,20 +203,20 @@ export const actionLifecycle = Object.freeze({
     "Scaffolded RTS selection action; reducer wiring lands in Slice C.",
     ["/sim/selectedEntity"]
   ),
-  ISSUE_MOVE: scaffold(
-    "slice_a",
-    "Scaffolded RTS movement action; reducer wiring lands in Slice C.",
-    ["/sim/selectedEntity", "/sim/activeOrder", "/sim/lastCommand"]
+  ISSUE_MOVE: stable(
+    "slice_c",
+    "Entity-based worker movement is the canonical live runtime order path.",
+    ["/sim/selectedUnit", "/sim/selectedEntity", "/sim/unitOrder", "/sim/activeOrder", "/sim/lastCommand"]
   ),
   PLACE_CORE: scaffold(
     "slice_a",
     "Scaffolded Phase 0 core placement action; reducer wiring lands in Slice C.",
     ["/world/cores", "/sim/phase0PlantsDelivered", "/sim/phase0CorePlaced", "/sim/lastCommand"]
   ),
-  PLACE_WORKER: scaffold(
-    "slice_a",
-    "Scaffolded worker placement action; reducer wiring lands in Slice C.",
-    ["/world/workers", "/sim/phase0PlantsDelivered", "/sim/lastCommand"]
+  PLACE_WORKER: stable(
+    "slice_c",
+    "Worker placement is the canonical live runtime path for founder and worker commits.",
+    ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/world/founderMask", "/sim/playerDNA", "/sim/founderPlaced"]
   ),
   PLACE_BUILDING: scaffold(
     "slice_a",

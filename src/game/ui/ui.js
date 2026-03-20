@@ -113,26 +113,12 @@ export class UI {
     this._store.dispatch({ type: "GEN_WORLD", payload: {} });
   }
 
-  _dispatchWithLegacyFallback(primaryAction, fallbackAction) {
-    const beforeSignature = this._store?.getSignature?.();
-    const primaryOk = this._dispatch(primaryAction);
-    const afterSignature = this._store?.getSignature?.();
-    const changed = typeof beforeSignature === "string" && typeof afterSignature === "string"
-      ? beforeSignature !== afterSignature
-      : !!primaryOk;
-    if (changed || !fallbackAction) return primaryOk;
-    return this._dispatch(fallbackAction);
-  }
-
-  _issueMoveCompat(from, target) {
+  _issueMove(from, target) {
     const entityId = `worker:${Number(from.x) | 0}:${Number(from.y) | 0}`;
-    return this._dispatchWithLegacyFallback(
-      { type: "ISSUE_MOVE", payload: { entityId, targetX: target.x, targetY: target.y } },
-      { type: "ISSUE_ORDER", payload: { fromX: from.x, fromY: from.y, targetX: target.x, targetY: target.y } },
-    );
+    return this._dispatch({ type: "ISSUE_MOVE", payload: { entityId, targetX: target.x, targetY: target.y } });
   }
 
-  _placeCoreCompat({ x, y, remove = false }) {
+  _placeWorker({ x, y, remove = false }) {
     return this._dispatch({ type: "PLACE_WORKER", payload: { x, y, remove: !!remove } });
   }
 

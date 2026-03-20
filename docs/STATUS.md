@@ -8,8 +8,8 @@
 - Action lifecycle metadata exists for every contract action.
 - `SET_MAPSPEC` now has reducer wiring and no longer behaves as a scaffold no-op.
 - `GEN_WORLD` now compiles from `map.spec` when MapSpec is active and syncs legacy preset runs into the same map snapshot.
-- `SET_MAPSPEC` now has active UI dispatch sources and a dedicated dispatch-source regression guard.
-- Builder pipeline now keeps world mutation behind `GEN_WORLD`; `SET_MAPSPEC` and `SET_WORLD_PRESET` only compile/sync map/meta state.
+- `SET_MAPSPEC` and `SET_MAP_TILE` now have active UI dispatch sources and dedicated dispatch-source regression guards.
+- Builder pipeline now keeps world mutation behind `GEN_WORLD`; `SET_MAPSPEC`, `SET_MAP_TILE`, and `SET_WORLD_PRESET` only compile/sync map/meta state.
 - Slice C visual baseline is now live: UI layout/input modules are mounted, canvas click placement is regression-tested, and tile object placeholders render in-world.
 - Slice C minimal runtime UI is now active: panel stack removed, direct canvas placement flow is live, and movement is paced at 1 tile per second with purely visual interpolation.
 - Slice C worker hardening landed: legacy founder placement now routes through `PLACE_WORKER`, `PLACE_CELL` is gone from active codepaths, and blocked move orders now wait/retry instead of hard-aborting.
@@ -31,9 +31,10 @@
 - `src/kernel/store/signature.js`, `src/kernel/store/createStore.js`, and `src/kernel/validation/validateState.js` now fail closed on non-serializable or circular values instead of collapsing them to `null`.
 - `src/project/project.manifest.js` now exposes `domainPatchGate` as a named export so module-namespace callers hit the same gate path as the app runtime.
 - `src/project/contract/dataflow.js` exposes lifecycle metadata and planned writes per action.
-- `src/project/contract/actionSchema.js` now contains Slice A RTS scaffold actions.
-- `src/project/contract/mutationMatrix.js` now allows `GEN_WORLD` to synchronize `map` state and grid dimensions.
+- `src/project/contract/actionSchema.js` now contains Slice A RTS scaffold actions plus the live `SET_MAP_TILE` builder action.
+- `src/project/contract/mutationMatrix.js` now allows `GEN_WORLD` to synchronize `map` state, grid dimensions, lineage ids, physics, and the world/sim payload.
 - `src/project/contract/stateSchema.js` now tracks the active migration slice as `slice_b_mapspec`.
+- `src/project/contract/stateSchema.js` and `src/project/contract/simGate.js` no longer carry `patternCatalog` or `patternBonuses`; the live mutation surface is now `mutatorDraft` plus the runtime registries listed in `simGate`.
 - `src/project/contract/simGate.js` allows future-safe world registries such as `cores`, `buildings`, `workers`, `fighters`, `belts` and `powerLines`.
 - `src/game/sim/mapspec.js` now provides deterministic `validate -> compile` helpers for Slice B.
 - `src/kernel/store/persistence.js` now persists `map` together with `meta` in the default web driver while still stripping `world` and `sim`.
@@ -57,9 +58,9 @@ Both files are derived planning evidence only and must not override SoT docs or 
 
 ## Atomare Test-TODO (fix, MVP unveraendert)
 1. `todo.slice_b.dispatch_sources` (`done 2026-03-19`)
-Erfuellt: `SET_MAPSPEC` hat aktive UI-Dispatch-Quelle, `dataflow` ist befuellt, Regressionstest vorhanden.
+ Erfuellt: `SET_MAPSPEC` und `SET_MAP_TILE` haben aktive UI-Dispatch-Quellen, `dataflow` ist befuellt, Regressionstests vorhanden.
 2. `todo.slice_b.builder_pipeline` (`done 2026-03-19`)
-Erfuellt: Builder-Flow laeuft ueber `MapSpec -> compile -> GEN_WORLD`; direkte Weltmutation ist aus `SET_MAPSPEC`/`SET_WORLD_PRESET` entfernt.
+ Erfuellt: Builder-Flow laeuft ueber `MapSpec -> compile -> GEN_WORLD`; direkte Weltmutation ist aus `SET_MAPSPEC`/`SET_MAP_TILE`/`SET_WORLD_PRESET` entfernt.
 3. `todo.slice_c.phase0_replacement`
 Done wenn `CONFIRM_FOUNDATION`, `CONFIRM_CORE_ZONE`, `PLACE_WORKER` und `SET_BRUSH` durch den Phase-0-Ersatz technisch abgeloest sind und ihre Removal-Gates geschlossen werden koennen.
 4. `todo.truth.regression_wrap`

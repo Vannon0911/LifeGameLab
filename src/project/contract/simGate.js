@@ -105,7 +105,7 @@ export const simGate = {
       "playerEnergyNet", "playerEnergyStored", "lightShare", "nutrientShare", "seasonPhase",
       "playerDNA", "totalHarvested", "playerStage", "stageProgressScore",
       "harvestYieldTotal", "pruneYieldTotal", "recycleYieldTotal", "seedYieldTotal",
-      "stabilityScore", "ecologyScore", "activeBiomeCount", "patternCatalog", "patternBonuses",
+      "stabilityScore", "ecologyScore", "activeBiomeCount",
       "energySupremacyTicks", "efficiencyTicks", "lossStreakTicks", "stockpileTicks",
       "cpuEnergyIn", "gameResult", "winMode", "gameEndTick", "runSummary", "goal",
     ],

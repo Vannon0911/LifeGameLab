@@ -1,6 +1,6 @@
 # Legacy-Code-Suche (Schnell-Audit)
 
-Stand: 2026-03-15
+Stand: 2026-03-20
 
 ## Vorgehen
 
@@ -22,27 +22,25 @@ Für die Suche nach möglichem Legacy-/Backcompat-Code wurden im Repository folg
 
 **Einschätzung:** Eindeutiger, produktiv genutzter Legacy-Pfad im Frontend.
 
-### 2) Tests, die Legacy-Pfade explizit absichern
+### 2) Aktuelle Tests, die Legacy-/Compat-Verhalten indirekt absichern
 
-- `tests/test-founder-placement.mjs`
-  - Erwartet explizit: `lab PLACE_CELL must retain legacy placement`.
-- `tests/test-bootstrap-gen-world.mjs`
-  - Prüft, dass Lab-Modus den Legacy-Seed behält.
-- `tests/test-wrapper-ban.mjs`
-  - Enthält Guard gegen „legacy wrapper/backcompat references“.
-- `tests/test-visibility-fog.mjs`
-  - Kommentar erwähnt Legacy-Masks/Links.
-- `tests/test-dna-zone-setup-gates.mjs`
-  - Kommentar/Output bezieht sich auf Blockierung von Legacy-Aktionen.
+- `tests/test-llm-contract.mjs`
+  - Verhindert Referenzen auf das entfernte Legacy-Action-String `PLACE_CELL`.
+- `tests/test-slice-a-contract-scaffold.mjs`
+  - Erzwingt explizite Legacy-Koexistenz im Contract (`deprecatedActionMode`, Legacy-/Scaffold-Aktionen, Removal-Gates).
+- `tests/test-mapspec-builder-pipeline.mjs`
+  - Prüft, dass `SET_WORLD_PRESET` weiter die Legacy-Map-Source-Semantik auf `map.spec` spiegelt.
+- `tests/test-mapspec-gen-world.mjs`
+  - Prüft Legacy-Preset-Sync und Fallback-Normalisierung im neuen MapSpec-Weg.
 
-**Einschätzung:** Legacy-Verhalten ist bewusst dokumentiert und testseitig geschützt.
+**Einschätzung:** Legacy-Verhalten ist weiterhin abgesichert, aber anders als in der alten Audit-Notiz: nicht mehr über die früher genannten Einzeltests, sondern vor allem über Contract-, MapSpec- und Naming-Guards.
 
 ## Treffer mit mittlerer Relevanz
 
 - `tools/test-suites.mjs`
-  - Referenz auf Fallback-Test (`test-render-worker-fallback.mjs`).
-- `tests/test-render-worker-fallback.mjs`
-  - Validiert Fallback-Hooks für Worker-Renderpfad.
+  - Führt weiterhin einen `legacy-node-test` als separaten Evidenz-Surface.
+- `tools/evidence-runner.mjs`
+  - Referenziert den Legacy-Surface weiterhin explizit für Nachweisläufe.
 
 **Einschätzung:** Eher Resilienz/Fallback als „Legacy“, aber potenziell Backcompat-nah.
 
@@ -58,4 +56,4 @@ Für die Suche nach möglichem Legacy-/Backcompat-Code wurden im Repository folg
 2. Legacy-Pfade in `src/game/ui/ui.js` pro Kontext in kleine, klar benannte Helper auslagern.
 3. Für jeden bestätigten Legacy-Pfad ein Ticket mit Exit-Kriterium anlegen
    (z. B. „entfernbar, wenn Test A/B auf neuen Pfad umgestellt“).
-4. `tests/test-wrapper-ban.mjs` um eine Positivliste ergänzen, falls bestimmte Backcompat-Hooks dauerhaft erlaubt bleiben sollen.
+4. Die Audit-Datei selbst regelmäßig gegen den aktuellen Testbaum spiegeln; die bisher erwähnten Einzeltests existieren am aktuellen Head nicht mehr.

@@ -78,6 +78,65 @@ function runScenario(seed) {
   };
 }
 
+function assertIssueMoveLive(seed) {
+  const store = createDeterministicStore({ seed });
+  store.dispatch({ type: "GEN_WORLD", payload: {} });
+  store.dispatch({ type: "SET_BRUSH", payload: { brushMode: "founder_place" } });
+  const founderTile = getPlayerStartWindowSquare(store.getState(), 1)[0];
+  store.dispatch({ type: "PLACE_WORKER", payload: { x: founderTile.x, y: founderTile.y, remove: false } });
+  store.dispatch({ type: "CONFIRM_FOUNDATION", payload: {} });
+  store.dispatch({ type: "CONFIRM_CORE_ZONE", payload: {} });
+  store.dispatch({ type: "SET_PHYSICS", payload: { C_birth_base: 999 } });
+
+  const state = store.getState();
+  const w = Number(state.meta.gridW || 0) | 0;
+  const h = Number(state.meta.gridH || 0) | 0;
+  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+  const neighborsOf = (x, y) => [
+    { x: x + 1, y },
+    { x: x - 1, y },
+    { x, y: y + 1 },
+    { x, y: y - 1 },
+  ].filter((c) => c.x >= 0 && c.y >= 0 && c.x < w && c.y < h);
+
+  let spawn = null;
+  for (let yy = 0; yy < h && !spawn; yy++) {
+    for (let xx = 0; xx < w && !spawn; xx++) {
+      const idx = yy * w + xx;
+      if ((Number(state.world.alive?.[idx] || 0) | 0) !== 0) continue;
+      const target = neighborsOf(xx, yy).find((c) => {
+        const nIdx = c.y * w + c.x;
+        return (Number(state.world.alive?.[nIdx] || 0) | 0) === 0;
+      });
+      if (target) spawn = { x: xx, y: yy, target };
+    }
+  }
+
+  assert(spawn, "ISSUE_MOVE test must find a valid spawn slot");
+  const spawnIdx = spawn.y * w + spawn.x;
+  store.dispatch({ type: "PLACE_WORKER", payload: { x: spawn.x, y: spawn.y, remove: false } });
+  const afterSpawn = store.getState();
+  assert.equal((Number(afterSpawn.world.alive?.[spawnIdx] || 0) | 0), 1, "ISSUE_MOVE test must place a worker");
+  assert.equal((Number(afterSpawn.world.lineageId?.[spawnIdx] || 0) | 0), playerLineageId, "ISSUE_MOVE test must place own worker");
+
+  store.dispatch({ type: "SET_TILE", payload: { x: spawn.target.x, y: spawn.target.y, radius: 1, value: 1 } });
+  store.dispatch({ type: "ISSUE_MOVE", payload: { entityId: `worker:${spawn.x}:${spawn.y}`, targetX: spawn.target.x, targetY: spawn.target.y } });
+
+  const ordered = store.getState();
+  assert.equal(String(ordered.sim.selectedEntity?.entityKind || ""), "worker", "ISSUE_MOVE must set selectedEntity");
+  assert.equal(String(ordered.sim.selectedEntity?.entityId || ""), `worker:${spawn.x}:${spawn.y}`, "ISSUE_MOVE must set selectedEntity id");
+  assert.equal(Number(ordered.sim.selectedUnit ?? -1) | 0, spawnIdx, "ISSUE_MOVE must seed selectedUnit");
+  assert.equal(String(ordered.sim.lastCommand || ""), `ISSUE_MOVE:${spawn.x},${spawn.y}->${spawn.target.x},${spawn.target.y}`, "ISSUE_MOVE must write canonical lastCommand");
+
+  for (let i = 0; i < 23; i++) store.dispatch({ type: "SIM_STEP", payload: {} });
+  const p23 = Number(store.getState().sim.selectedUnit ?? -1) | 0;
+  store.dispatch({ type: "SIM_STEP", payload: {} });
+  const p24 = Number(store.getState().sim.selectedUnit ?? -1) | 0;
+
+  assert.equal(p23, spawnIdx, "ISSUE_MOVE must not move before tick 24");
+  assert.notEqual(p24, spawnIdx, "ISSUE_MOVE must move on tick 24");
+}
+
 function assertSameSeedReplay(left, right, label) {
   assert.deepEqual(left.founderTiles, right.founderTiles, `${label}: founder placement path must be deterministic`);
   for (const anchor of ["afterCore", "step1", "step4"]) {
@@ -88,6 +147,7 @@ function assertSameSeedReplay(left, right, label) {
 }
 
 assertFoundationBlockedUntilEligible("p0-seed-foundation-block");
+assertIssueMoveLive("p0-seed-issue-move");
 
 const sameSeedLeft = runScenario("p0-seed-main");
 const sameSeedRight = runScenario("p0-seed-main");

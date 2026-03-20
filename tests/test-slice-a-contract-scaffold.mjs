@@ -33,7 +33,6 @@ for (const actionType of renamedActions) {
 
 const scaffoldActions = [
   "SELECT_ENTITY",
-  "ISSUE_MOVE",
   "PLACE_CORE",
   "PLACE_BUILDING",
   "PLACE_BELT_SEGMENT",
@@ -48,6 +47,23 @@ const scaffoldActions = [
 
 assert.equal(actionLifecycle.SET_MAPSPEC?.status, ACTION_LIFECYCLE_STATUS.STABLE, "SET_MAPSPEC must graduate from scaffold to active Slice B action");
 assert(Array.isArray(dataflow.actions.SET_MAPSPEC?.plannedWrites), "SET_MAPSPEC must keep declared planned writes after reducer wiring");
+
+const runtimeActions = ["ISSUE_MOVE", "PLACE_WORKER"];
+for (const actionType of runtimeActions) {
+  assert.equal(actionLifecycle[actionType]?.status, ACTION_LIFECYCLE_STATUS.STABLE, `${actionType} must be marked as an active runtime action`);
+  assert(Array.isArray(dataflow.actions[actionType]?.dispatchSources), `${actionType} must expose dispatch sources`);
+  assert(dataflow.actions[actionType].dispatchSources.length > 0, `${actionType} must stay wired to at least one live dispatch source`);
+}
+
+assert.deepEqual(dataflow.actions.ISSUE_MOVE?.dispatchSources || [], ["src/game/ui/ui.js"], "ISSUE_MOVE must only dispatch from the live UI runtime path");
+assert.deepEqual(dataflow.actions.PLACE_WORKER?.dispatchSources || [], ["src/game/ui/ui.js"], "PLACE_WORKER must only dispatch from the live UI runtime path");
+assert.equal(actionLifecycle.ISSUE_ORDER?.status, ACTION_LIFECYCLE_STATUS.RENAME, "ISSUE_ORDER must remain a compatibility rename, not an active source of truth");
+assert.deepEqual(dataflow.actions.ISSUE_ORDER?.dispatchSources || [], [], "ISSUE_ORDER must be disarmed from active dispatch sources");
+
+for (const actionType of ["CONFIRM_FOUNDATION", "SET_BRUSH"]) {
+  assert.equal(actionLifecycle[actionType]?.status, ACTION_LIFECYCLE_STATUS.DEPRECATED, `${actionType} must stay disarmed as a deprecated action`);
+  assert.deepEqual(dataflow.actions[actionType]?.dispatchSources || [], [], `${actionType} must have no active dispatch sources`);
+}
 
 for (const actionType of scaffoldActions) {
   assert.equal(actionLifecycle[actionType]?.status, ACTION_LIFECYCLE_STATUS.NEW_SLICE_A, `${actionType} must be marked as Slice A scaffold`);
@@ -72,7 +88,6 @@ for (const simKey of ["phase0PlantsDelivered", "phase0CorePlaced", "queuedWorker
 
 const noopCases = [
   { type: "SELECT_ENTITY", payload: { entityKind: ENTITY_KIND.WORKER, entityId: "worker-1" } },
-  { type: "ISSUE_MOVE", payload: { entityId: "worker-1", targetX: 3, targetY: 4 } },
   { type: "PLACE_CORE", payload: { x: 5, y: 6 } },
   { type: "PLACE_BUILDING", payload: { x: 7, y: 8, buildingKind: BUILDING_KIND.WORKER_DEPOT, facing: "north" } },
   { type: "PLACE_BELT_SEGMENT", payload: { x: 9, y: 10, direction: "east", remove: false } },

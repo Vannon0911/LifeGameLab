@@ -167,8 +167,6 @@ export const stateSchema = {
         infraBuildCostEnergy: { type: "number", default: 0 },
         infraBuildCostDNA: { type: "number", default: 0 },
         cpuBootstrapDone: { type: "number", default: 0 },
-        patternCatalog: { type: "object", default: {}, shape: {}, allowUnknown: true },
-        patternBonuses: { type: "object", default: {}, shape: {}, allowUnknown: true },
         aliveCount: { type: "number", default: 0 },
         aliveRatio: { type: "number", default: 0 },
         meanLAlive: { type: "number", default: 0 },

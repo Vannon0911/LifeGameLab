@@ -18,11 +18,9 @@ import {
   normalizeRunPhase,
 } from "../../contracts/ids.js";
 import {
-  handleBuyEvolution,
   handleHarvestWorker,
   handlePlaceWorker,
   handlePlaceSplitCluster,
-  handleSetPlayerDoctrine,
   handleSetZone,
 } from "../playerActions.js";
 import {
@@ -36,7 +34,6 @@ import {
 import {
   defaultGlobalLearning,
   defaultDevMutationVault,
-  DEV_MUTATION_CATALOG,
   mergeWorldLearningIntoBank,
   applyGlobalLearningToWorld,
 } from "./techTreeOps.js";
@@ -57,12 +54,6 @@ import {
 import { compileMapSpec, compileStateMapSpec, createLegacyPresetMapSpec } from "../mapspec.js";
 import { evaluateFoundationEligibility } from "../foundationEligibility.js";
 import { deriveStageState } from "./progression.js";
-import {
-  handleHarvestPulse,
-  handlePruneCluster,
-  handleRecyclePatch,
-  handleSeedSpread,
-} from "../mainRunActions.js";
 import { deriveCanonicalZoneState } from "../canonicalZones.js";
 import { derivePatternBonuses, derivePatternCatalog } from "../patterns.js";
 
@@ -437,6 +428,51 @@ function createEmptyActiveOrder() {
     progress: 0,
     maxProgress: HARVEST_TICKS,
   };
+}
+
+function parseWorkerEntityId(entityId) {
+  if (typeof entityId !== "string") return null;
+  const match = /^worker:(-?\d+):(-?\d+)$/.exec(entityId.trim());
+  if (!match) return null;
+  return { fromX: Number(match[1]) | 0, fromY: Number(match[2]) | 0 };
+}
+
+function buildIssueMovePatches(state, fromX, fromY, targetX, targetY, commandType = "ISSUE_MOVE", entityId = "") {
+  if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
+  const world = state.world;
+  if (!world?.alive || !world?.lineageId || !world?.R) return [];
+  const w = Number(world.w || state.meta.gridW || 0) | 0;
+  const h = Number(world.h || state.meta.gridH || 0) | 0;
+  if (fromX < 0 || fromY < 0 || fromX >= w || fromY >= h) return [];
+  if (targetX < 0 || targetY < 0 || targetX >= w || targetY >= h) return [];
+  const fromIdx = fromY * w + fromX;
+  const targetIdx = targetY * w + targetX;
+  if (fromIdx === targetIdx) return [];
+  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
+  const isOwnAlive =
+    (Number(world.alive[fromIdx] || 0) | 0) === 1 &&
+    (Number(world.lineageId[fromIdx] || 0) | 0) === playerLineageId;
+  if (!isOwnAlive) return [];
+  if (Number(world.R[targetIdx] || 0) <= 0.05) return [];
+  const normalizedEntityId = entityId || `worker:${fromX}:${fromY}`;
+  const order = { active: true, fromX, fromY, targetX, targetY };
+  const activeOrder = {
+    active: true,
+    type: "HARVEST",
+    fromX,
+    fromY,
+    targetX,
+    targetY,
+    progress: 0,
+    maxProgress: HARVEST_TICKS,
+  };
+  return [
+    { op: "set", path: "/sim/selectedUnit", value: fromIdx },
+    { op: "set", path: "/sim/selectedEntity", value: { entityKind: "worker", entityId: normalizedEntityId } },
+    { op: "set", path: "/sim/unitOrder", value: order },
+    { op: "set", path: "/sim/activeOrder", value: activeOrder },
+    { op: "set", path: "/sim/lastCommand", value: `${commandType}:${fromX},${fromY}->${targetX},${targetY}` },
+  ];
 }
 
 function canConfirmCoreZone(state) {
@@ -960,31 +996,6 @@ export function reducer(state, action, ctx = {}) {
       return patches;
     }
 
-    case "START_DNA_ZONE_SETUP":
-    {
-      if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
-      if (Number(state.sim.unlockedZoneTier || 0) < 1) return [];
-      if (String(state.sim.nextZoneUnlockKind || "") !== "DNA") return [];
-      if (Number(state.sim.zoneUnlockProgress || 0) + 1e-9 < 1) return [];
-      if (state.sim.zone2Unlocked || state.sim.dnaZoneCommitted) return [];
-      const preset = getWorldPreset(state.meta.worldPresetId);
-      const placementBudget = Math.max(0, Number(preset?.phaseC?.dnaPlacementBudget || 0) | 0);
-      if (placementBudget <= 0) return [];
-      const sourceMask = state.world?.dnaZoneMask && ArrayBuffer.isView(state.world.dnaZoneMask)
-        ? state.world.dnaZoneMask
-        : new Uint8Array(Number(state.meta.gridW || 0) * Number(state.meta.gridH || 0));
-      const dnaZoneMask = cloneTypedArray(sourceMask);
-      dnaZoneMask.fill(0);
-      const patches = [
-        { op: "set", path: "/world/dnaZoneMask", value: dnaZoneMask },
-        { op: "set", path: "/sim/runPhase", value: RUN_PHASE.DNA_ZONE_SETUP },
-        { op: "set", path: "/sim/running", value: false },
-        { op: "set", path: "/sim/zone2Unlocked", value: true },
-        { op: "set", path: "/sim/zone2PlacementBudget", value: placementBudget },
-      ];
-      return patches;
-    }
-
     case "TOGGLE_DNA_ZONE_WORKER":
     {
       if (state.sim.runPhase !== RUN_PHASE.DNA_ZONE_SETUP) return [];
@@ -1026,80 +1037,6 @@ export function reducer(state, action, ctx = {}) {
       return patches;
     }
 
-    case "CONFIRM_DNA_ZONE": {
-      if (state.sim.runPhase !== RUN_PHASE.DNA_ZONE_SETUP) return [];
-      if (!state.sim.zone2Unlocked || state.sim.dnaZoneCommitted) return [];
-      const world = state.world;
-      if (!world?.alive || !world?.lineageId || !world?.dnaZoneMask || !world?.coreZoneMask) return [];
-      const w = Number(world.w || state.meta.gridW || 0) | 0;
-      const h = Number(world.h || state.meta.gridH || 0) | 0;
-      const maxBudget = Math.max(0, Number(getWorldPreset(state.meta.worldPresetId)?.phaseC?.dnaPlacementBudget || 0) | 0);
-      if (maxBudget <= 0) return [];
-      const selectedIndices = collectMaskIndices(world.dnaZoneMask);
-      if (selectedIndices.length !== maxBudget) return [];
-      if (Math.max(0, Number(state.sim.zone2PlacementBudget || 0) | 0) !== 0) return [];
-      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-      let touchesCore = false;
-      for (const idx of selectedIndices) {
-        if ((Number(world.alive[idx]) | 0) !== 1) return [];
-        if ((Number(world.lineageId[idx]) | 0) !== playerLineageId) return [];
-        if ((Number(world.coreZoneMask[idx]) | 0) === 1) return [];
-        if (!touchesCore && hasAdjacentMarkedTile(world.coreZoneMask, idx, w, h)) touchesCore = true;
-      }
-      if (!touchesCore) return [];
-      if (!areFounderTilesConnected8(selectedIndices, w, h)) return [];
-      const nextInfraUnlockCostDNA = Math.max(0, Number(getWorldPreset(state.meta.worldPresetId)?.phaseC?.nextInfraUnlockCostDNA || 0));
-      const phaseD = getWorldPreset(state.meta.worldPresetId)?.phaseD || {};
-      const infraBuildCostEnergy = Math.max(0, Number(phaseD.infraBuildCostEnergy || 0));
-      const infraBuildCostDNA = Math.max(0, Number(phaseD.infraBuildCostDNA || 0));
-      const infraCandidateMask = getInfraCandidateMask(world, w * h);
-      infraCandidateMask.fill(0);
-      const canonicalState = buildCanonicalRuntimeState(
-        { ...world, infraCandidateMask, dnaZoneMask: cloneTypedArray(world.dnaZoneMask) },
-        state.meta.worldPresetId,
-        playerLineageId,
-      );
-      const patches = [
-        { op: "set", path: "/world/dnaZoneMask", value: cloneTypedArray(world.dnaZoneMask) },
-        { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
-        { op: "set", path: "/sim/dnaZoneCommitted", value: true },
-        { op: "set", path: "/sim/unlockedZoneTier", value: 2 },
-        { op: "set", path: "/sim/nextZoneUnlockKind", value: "INFRA" },
-        { op: "set", path: "/sim/nextZoneUnlockCostEnergy", value: 0 },
-        { op: "set", path: "/sim/zoneUnlockProgress", value: 0 },
-        { op: "set", path: "/sim/coreEnergyStableTicks", value: 0 },
-        { op: "set", path: "/sim/nextInfraUnlockCostDNA", value: nextInfraUnlockCostDNA },
-        { op: "set", path: "/sim/infrastructureUnlocked", value: false },
-        { op: "set", path: "/sim/infraBuildMode", value: "" },
-        { op: "set", path: "/sim/infraBuildCostEnergy", value: infraBuildCostEnergy },
-        { op: "set", path: "/sim/infraBuildCostDNA", value: infraBuildCostDNA },
-        { op: "set", path: "/sim/zone2PlacementBudget", value: 0 },
-        { op: "set", path: "/sim/runPhase", value: RUN_PHASE.RUN_ACTIVE },
-        { op: "set", path: "/sim/running", value: true },
-      ];
-      pushCanonicalRuntimePatches(patches, canonicalState);
-      return patches;
-    }
-
-    case "BEGIN_INFRA_BUILD": {
-      if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
-      if (!state.sim.dnaZoneCommitted) return [];
-      if (String(state.sim.nextZoneUnlockKind || "") !== "INFRA") return [];
-      if (String(state.sim.infraBuildMode || "") !== "") return [];
-      const startCosts = getInfraStartCosts(state.sim);
-      if (Number(state.sim.playerDNA || 0) + 1e-9 < startCosts.dna) return [];
-      if (Number(state.sim.playerEnergyStored || 0) + 1e-9 < startCosts.energy) return [];
-      const tileCount = Number(state.world?.w || state.meta.gridW || 0) * Number(state.world?.h || state.meta.gridH || 0);
-      const infraCandidateMask = getInfraCandidateMask(state.world, tileCount);
-      infraCandidateMask.fill(0);
-      const patches = [
-        { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
-        { op: "set", path: "/sim/infraBuildMode", value: "path" },
-        { op: "set", path: "/sim/running", value: false },
-      ];
-      return patches;
-    }
-
     case "BUILD_INFRA_PATH": {
       if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
       if (String(state.sim.infraBuildMode || "") !== "path") return [];
@@ -1128,60 +1065,6 @@ export function reducer(state, action, ctx = {}) {
       if (!touchesAnchor && !touchesCandidate) return [];
       infraCandidateMask[idx] = 1;
       const patches = [{ op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask }];
-      return patches;
-    }
-
-    case "CONFIRM_INFRA_PATH": {
-      if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
-      if (String(state.sim.infraBuildMode || "") !== "path") return [];
-      const world = state.world;
-      if (!world?.alive || !world?.lineageId || !world?.link) return [];
-      const w = Number(world.w || state.meta.gridW || 0) | 0;
-      const h = Number(world.h || state.meta.gridH || 0) | 0;
-      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-      const infraCandidateMask = getInfraCandidateMask(world, w * h);
-      const candidateIndices = collectMaskIndices(infraCandidateMask);
-      if (!candidateIndices.length) {
-        infraCandidateMask.fill(0);
-        const patches = [
-          { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
-          { op: "set", path: "/sim/infraBuildMode", value: "" },
-          { op: "set", path: "/sim/running", value: true },
-        ];
-        return patches;
-      }
-      if (!areIndicesConnected4(candidateIndices, w, h)) return [];
-      let touchesAnchor = false;
-      for (const idx of candidateIndices) {
-        if (!isAlivePlayerOwnedTile(world, idx, playerLineageId)) return [];
-        if (Number(world.link[idx] || 0) > 0) return [];
-        if (!touchesAnchor && touchesCommittedInfraAnchor(world, idx, w, h)) touchesAnchor = true;
-      }
-      if (!touchesAnchor) return [];
-      const startCosts = getInfraStartCosts(state.sim);
-      if (Number(state.sim.playerDNA || 0) + 1e-9 < startCosts.dna) return [];
-      if (Number(state.sim.playerEnergyStored || 0) + 1e-9 < startCosts.energy) return [];
-      const nextE = spendPlayerEnergyFromCells(world, playerLineageId, startCosts.energy);
-      if (!nextE) return [];
-      const link = cloneTypedArray(world.link);
-      for (const idx of candidateIndices) link[idx] = 1;
-      infraCandidateMask.fill(0);
-      const canonicalState = buildCanonicalRuntimeState(
-        { ...world, link, infraCandidateMask },
-        state.meta.worldPresetId,
-        playerLineageId,
-      );
-      const patches = [
-        { op: "set", path: "/world/infraCandidateMask", value: infraCandidateMask },
-        { op: "set", path: "/world/link", value: link },
-        { op: "set", path: "/world/E", value: nextE },
-        { op: "set", path: "/sim/playerDNA", value: Math.max(0, Number(state.sim.playerDNA || 0) - startCosts.dna) },
-        { op: "set", path: "/sim/playerEnergyStored", value: Math.max(0, Number(state.sim.playerEnergyStored || 0) - startCosts.energy) },
-        { op: "set", path: "/sim/infrastructureUnlocked", value: true },
-        { op: "set", path: "/sim/infraBuildMode", value: "" },
-        { op: "set", path: "/sim/running", value: true },
-      ];
-      pushCanonicalRuntimePatches(patches, canonicalState);
       return patches;
     }
 
@@ -1378,44 +1261,29 @@ export function reducer(state, action, ctx = {}) {
       return handlePlaceWorker(state, action);
     }
 
+    case "ISSUE_MOVE": {
+      const parsed = parseWorkerEntityId(action.payload?.entityId);
+      if (!parsed) return [];
+      return buildIssueMovePatches(
+        state,
+        parsed.fromX,
+        parsed.fromY,
+        Number(action.payload?.targetX) | 0,
+        Number(action.payload?.targetY) | 0,
+        "ISSUE_MOVE",
+        String(action.payload?.entityId || ""),
+      );
+    }
+
     case "ISSUE_ORDER": {
-      if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
-      const world = state.world;
-      if (!world?.alive || !world?.lineageId || !world?.R) return [];
-      const w = Number(world.w || state.meta.gridW || 0) | 0;
-      const h = Number(world.h || state.meta.gridH || 0) | 0;
-      const fromX = Number(action.payload?.fromX) | 0;
-      const fromY = Number(action.payload?.fromY) | 0;
-      const targetX = Number(action.payload?.targetX) | 0;
-      const targetY = Number(action.payload?.targetY) | 0;
-      if (fromX < 0 || fromY < 0 || fromX >= w || fromY >= h) return [];
-      if (targetX < 0 || targetY < 0 || targetX >= w || targetY >= h) return [];
-      const fromIdx = fromY * w + fromX;
-      const targetIdx = targetY * w + targetX;
-      if (fromIdx === targetIdx) return [];
-      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-      const isOwnAlive =
-        (Number(world.alive[fromIdx] || 0) | 0) === 1 &&
-        (Number(world.lineageId[fromIdx] || 0) | 0) === playerLineageId;
-      if (!isOwnAlive) return [];
-      if (Number(world.R[targetIdx] || 0) <= 0.05) return [];
-      const order = { active: true, fromX, fromY, targetX, targetY };
-      const activeOrder = {
-        active: true,
-        type: "HARVEST",
-        fromX,
-        fromY,
-        targetX,
-        targetY,
-        progress: 0,
-        maxProgress: HARVEST_TICKS,
-      };
-      return [
-        { op: "set", path: "/sim/selectedUnit", value: fromIdx },
-        { op: "set", path: "/sim/unitOrder", value: order },
-        { op: "set", path: "/sim/activeOrder", value: activeOrder },
-        { op: "set", path: "/sim/lastCommand", value: `ISSUE_ORDER:${fromX},${fromY}->${targetX},${targetY}` },
-      ];
+      return buildIssueMovePatches(
+        state,
+        Number(action.payload?.fromX) | 0,
+        Number(action.payload?.fromY) | 0,
+        Number(action.payload?.targetX) | 0,
+        Number(action.payload?.targetY) | 0,
+        "ISSUE_ORDER",
+      );
     }
 
     case "PLACE_SPLIT_CLUSTER": {
@@ -1428,38 +1296,9 @@ export function reducer(state, action, ctx = {}) {
       return handleHarvestWorker(state, action);
     }
 
-    case "HARVEST_PULSE": {
-      if (isPreRunGenesisPhase(state)) return [];
-      return handleHarvestPulse(state, action);
-    }
-
-    case "PRUNE_CLUSTER": {
-      if (isPreRunGenesisPhase(state)) return [];
-      return handlePruneCluster(state, action);
-    }
-
-    case "RECYCLE_PATCH": {
-      if (isPreRunGenesisPhase(state)) return [];
-      return handleRecyclePatch(state, action);
-    }
-
-    case "SEED_SPREAD": {
-      if (isPreRunGenesisPhase(state)) return [];
-      return handleSeedSpread(state, action);
-    }
-
     case "SET_ZONE": {
       if (isPreRunGenesisPhase(state)) return [];
       return handleSetZone(state, action);
-    }
-
-    case "SET_PLAYER_DOCTRINE": {
-      return handleSetPlayerDoctrine(state, action);
-    }
-
-    case "BUY_EVOLUTION": {
-      if (isPreRunGenesisPhase(state)) return [];
-      return handleBuyEvolution(state, action, DEV_MUTATION_CATALOG);
     }
 
     case "SET_WIN_MODE": {
@@ -1470,12 +1309,6 @@ export function reducer(state, action, ctx = {}) {
 
     case "SET_OVERLAY": {
       return buildSetOverlayPatches(action);
-    }
-
-    case "SET_PLACEMENT_COST": {
-      const enabled = !!action.payload?.enabled;
-      const patches = [{ op: "set", path: "/meta/placementCostEnabled", value: enabled }];
-      return patches;
     }
 
     default:

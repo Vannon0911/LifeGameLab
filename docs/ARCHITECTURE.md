@@ -27,7 +27,7 @@
 - Legacy worker-RTS runtime is still present and remains bootable.
 - MapSpec compile wiring is now active without deleting live legacy flows.
 - Action lifecycle metadata now marks every action as `stable`, `rename`, `deprecated` or `new_slice_a`.
-- `SET_MAPSPEC` is now an active reducer path; the remaining RTS placeholders stay no-op until their slices land.
+- `SET_MAPSPEC` and `SET_MAP_TILE` are now active reducer paths; the remaining RTS placeholders stay no-op until their slices land.
 - Replacement planning is machine-readable in contracts and human-readable in `docs/traceability/`.
 
 ## Slice C Minimal UI Runtime
@@ -49,10 +49,12 @@
 - Renderer orchestration in `src/app/main.js` and `src/game/render/renderer.js` remains canonical and reusable.
 - Top-level `map` state is now a live deterministic compile input, not just scaffold.
 - Legacy preset actions now sync through the same MapSpec compile path.
+- Builder tile edits now follow the same deterministic `SET_MAP_TILE -> GEN_WORLD` compile path as full MapSpec updates.
 
 ## Contract Truth At Head
 - `actionSchema` contains both live legacy actions and active Slice B MapSpec actions.
 - `PLACE_CELL` has been retired from the active contract surface; `PLACE_WORKER` now carries the founder-placement runtime path.
+- `patternCatalog` and `patternBonuses` are no longer part of the live state schema or sim gate; `mutatorDraft` is the current mutation draft surface.
 - `mutationMatrix` remains authoritative for allowed writes.
 - `simGate` remains authoritative for `/world/*` and `/sim/*` patch validation.
 - `dataflow` exposes dispatch sources plus lifecycle and planned writes.
@@ -85,4 +87,3 @@ High-value reuse candidates:
 - `tests/`: determinism, contract and migration guards.
 - `tools/`: test runners and evidence tooling.
 - `docs/`: SoT docs and derived traceability.
-

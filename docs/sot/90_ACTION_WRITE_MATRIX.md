@@ -4,40 +4,42 @@
 |---|---|
 | GEN_WORLD | `/meta/worldPresetId`, `/meta/physics`, `/meta/playerLineageId`, `/meta/cpuLineageId`, `/world/`, `/world/actionMap`, `/sim/` |
 | CONFIRM_FOUNDATION | `/sim/runPhase`, `/sim/running` |
-| CONFIRM_CORE_ZONE | `/world/alive`, `/world/E`, `/world/reserve`, `/world/link`, `/world/lineageId`, `/world/hue`, `/world/trait`, `/world/age`, `/world/born`, `/world/died`, `/world/W`, `/world/coreZoneMask`, `/world/zoneRole`, `/world/zoneId`, `/world/zoneMeta`, `/sim/patternCatalog`, `/sim/patternBonuses`, `/sim/unlockedZoneTier`, `/sim/nextZoneUnlockKind`, `/sim/nextZoneUnlockCostEnergy`, `/sim/zoneUnlockProgress`, `/sim/coreEnergyStableTicks`, `/sim/zone2Unlocked`, `/sim/zone2PlacementBudget`, `/sim/dnaZoneCommitted`, `/sim/nextInfraUnlockCostDNA`, `/sim/cpuBootstrapDone`, `/sim/aliveCount`, `/sim/playerAliveCount`, `/sim/cpuAliveCount`, `/sim/runPhase`, `/sim/running` |
-| START_DNA_ZONE_SETUP | `/world/dnaZoneMask`, `/sim/runPhase`, `/sim/running`, `/sim/zone2Unlocked`, `/sim/zone2PlacementBudget` |
-| TOGGLE_DNA_ZONE_CELL | `/world/dnaZoneMask`, `/sim/zone2PlacementBudget` |
-| CONFIRM_DNA_ZONE | `/world/dnaZoneMask`, `/world/infraCandidateMask`, `/world/zoneRole`, `/world/zoneId`, `/world/zoneMeta`, `/sim/dnaZoneCommitted`, `/sim/unlockedZoneTier`, `/sim/nextZoneUnlockKind`, `/sim/nextZoneUnlockCostEnergy`, `/sim/zoneUnlockProgress`, `/sim/coreEnergyStableTicks`, `/sim/nextInfraUnlockCostDNA`, `/sim/infrastructureUnlocked`, `/sim/infraBuildMode`, `/sim/infraBuildCostEnergy`, `/sim/infraBuildCostDNA`, `/sim/patternCatalog`, `/sim/patternBonuses`, `/sim/zone2PlacementBudget`, `/sim/runPhase`, `/sim/running` |
-| BEGIN_INFRA_BUILD | `/world/infraCandidateMask`, `/sim/infraBuildMode`, `/sim/running` |
+| CONFIRM_CORE_ZONE | `/world/alive`, `/world/E`, `/world/reserve`, `/world/link`, `/world/lineageId`, `/world/hue`, `/world/trait`, `/world/age`, `/world/born`, `/world/died`, `/world/W`, `/world/coreZoneMask`, `/world/zoneRole`, `/world/zoneId`, `/world/zoneMeta`, `/sim/unlockedZoneTier`, `/sim/nextZoneUnlockKind`, `/sim/nextZoneUnlockCostEnergy`, `/sim/zoneUnlockProgress`, `/sim/coreEnergyStableTicks`, `/sim/zone2Unlocked`, `/sim/zone2PlacementBudget`, `/sim/dnaZoneCommitted`, `/sim/nextInfraUnlockCostDNA`, `/sim/cpuBootstrapDone`, `/sim/aliveCount`, `/sim/playerAliveCount`, `/sim/cpuAliveCount`, `/sim/runPhase`, `/sim/running` |
+| TOGGLE_DNA_ZONE_WORKER | `/world/dnaZoneMask`, `/sim/zone2PlacementBudget` |
 | BUILD_INFRA_PATH | `/world/infraCandidateMask` |
-| CONFIRM_INFRA_PATH | `/world/infraCandidateMask`, `/world/link`, `/world/zoneRole`, `/world/zoneId`, `/world/zoneMeta`, `/world/E`, `/sim/patternCatalog`, `/sim/patternBonuses`, `/sim/playerDNA`, `/sim/playerEnergyStored`, `/sim/infrastructureUnlocked`, `/sim/infraBuildMode`, `/sim/running` |
 | TOGGLE_RUNNING | `/sim/running` |
 | SIM_STEP | `/meta/globalLearning`, `/meta/gridW`, `/meta/gridH`, `/meta/simStepCount`, `/sim/runSummary`, `/world/`, `/sim/` |
 | SET_SPEED | `/meta/speed` |
 | SET_SEED | `/meta/seed` |
 | SET_SIZE | `/meta/gridW`, `/meta/gridH` |
-| SET_WORLD_PRESET | `/meta/worldPresetId`, `/meta/physics`, `/meta/playerLineageId`, `/meta/cpuLineageId`, `/world/`, `/sim/` |
+| SET_WORLD_PRESET | `/map/`, `/meta/gridW`, `/meta/gridH`, `/meta/worldPresetId` |
+| SET_MAPSPEC | `/map/`, `/meta/gridW`, `/meta/gridH`, `/meta/worldPresetId` |
+| SET_MAP_TILE | `/map/`, `/meta/gridW`, `/meta/gridH`, `/meta/worldPresetId` |
 | SET_RENDER_MODE | `/meta/renderMode` |
 | SET_PHYSICS | `/meta/physics` |
 | SET_BRUSH | `/meta/brushMode`, `/meta/brushRadius` |
-| SET_UI | `/meta/ui` |
+| SET_UI | `/meta/ui`, `/sim/runPhase` |
 | SET_GLOBAL_LEARNING | `/meta/globalLearning`, `/world/globalLearning` |
 | RESET_GLOBAL_LEARNING | `/meta/globalLearning`, `/world/globalLearning`, `/world/lineageMemory` |
 | SET_TILE | `/world/R` |
-| PLACE_CELL | `/world/alive`, `/world/E`, `/world/reserve`, `/world/link`, `/world/lineageId`, `/world/hue`, `/world/trait`, `/world/age`, `/world/born`, `/world/died`, `/world/W`, `/world/founderMask`, `/sim/playerDNA`, `/sim/founderPlaced` |
-| ISSUE_ORDER | `/sim/unitOrder`, `/sim/activeOrder`, `/sim/selectedUnit`, `/sim/lastCommand` |
+| SELECT_ENTITY | `/sim/selectedEntity` |
+| PLACE_WORKER | `/world/alive`, `/world/E`, `/world/reserve`, `/world/link`, `/world/lineageId`, `/world/hue`, `/world/trait`, `/world/age`, `/world/born`, `/world/died`, `/world/W`, `/world/founderMask`, `/sim/playerDNA`, `/sim/founderPlaced` |
+| ISSUE_ORDER | `/sim/selectedUnit`, `/sim/selectedEntity`, `/sim/unitOrder`, `/sim/activeOrder`, `/sim/lastCommand` |
+| ISSUE_MOVE | `/sim/selectedUnit`, `/sim/selectedEntity`, `/sim/unitOrder`, `/sim/activeOrder`, `/sim/lastCommand` |
+| PLACE_CORE | `/world/cores`, `/sim/phase0PlantsDelivered`, `/sim/phase0CorePlaced`, `/sim/lastCommand`, `/world/alive`, `/world/E`, `/world/lineageId` |
+| PLACE_BUILDING | `/world/buildings`, `/sim/lastCommand` |
+| PLACE_BELT_SEGMENT | `/world/belts`, `/sim/lastCommand` |
+| PLACE_LINE_SEGMENT | `/world/powerLines`, `/sim/lastCommand` |
+| SET_CORE_ROUTING | `/world/cores`, `/sim/lastCommand` |
+| QUEUE_WORKER | `/world/workers`, `/world/cores`, `/sim/queuedWorkerCount`, `/sim/lastCommand` |
+| SPAWN_FIGHTER | `/world/fighters`, `/world/workers`, `/sim/lastCommand` |
+| ASSIGN_REPAIR | `/world/workers`, `/sim/lastCommand` |
 | PLACE_SPLIT_CLUSTER | `/world/alive`, `/world/E`, `/world/reserve`, `/world/link`, `/world/lineageId`, `/world/hue`, `/world/trait`, `/world/age`, `/world/born`, `/world/died`, `/world/W`, `/sim/playerDNA` |
-| HARVEST_CELL | `/sim/playerDNA`, `/sim/totalHarvested`, `/world/alive`, `/world/E` |
-| HARVEST_PULSE | `/world/P`, `/world/R`, `/world/Sat`, `/world/lineageMemory`, `/sim/playerDNA`, `/sim/harvestYieldTotal`, `/sim/meanWaterField`, `/sim/stabilityScore`, `/sim/ecologyScore`, `/sim/stageProgressScore`, `/sim/activeBiomeCount`, `/sim/playerStage` |
-| PRUNE_CLUSTER | `/world/P`, `/world/W`, `/world/lineageMemory`, `/sim/playerDNA`, `/sim/pruneYieldTotal`, `/sim/meanWaterField`, `/sim/stabilityScore`, `/sim/ecologyScore`, `/sim/stageProgressScore`, `/sim/activeBiomeCount`, `/sim/playerStage` |
-| RECYCLE_PATCH | `/world/W`, `/world/R`, `/world/Sat`, `/world/lineageMemory`, `/sim/playerDNA`, `/sim/recycleYieldTotal`, `/sim/meanWaterField`, `/sim/stabilityScore`, `/sim/ecologyScore`, `/sim/stageProgressScore`, `/sim/activeBiomeCount`, `/sim/playerStage` |
-| SEED_SPREAD | `/world/P`, `/world/R`, `/world/B`, `/world/lineageMemory`, `/sim/playerDNA`, `/sim/seedYieldTotal`, `/sim/meanWaterField`, `/sim/stabilityScore`, `/sim/ecologyScore`, `/sim/stageProgressScore`, `/sim/activeBiomeCount`, `/sim/playerStage` |
+| HARVEST_WORKER | `/sim/playerDNA`, `/sim/totalHarvested`, `/world/alive`, `/world/E` |
 | SET_ZONE | `/world/zoneMap` |
-| BUY_EVOLUTION | `/sim/playerDNA`, `/world/trait`, `/world/hue`, `/world/lineageMemory` |
-| SET_PLAYER_DOCTRINE | `/world/lineageMemory` |
+| SET_MUTATOR_PATTERN | `/sim/mutatorDraft` |
+| COMMIT_MUTATION | `/sim/mutatorDraft`, `/world/fighters`, `/sim/lastCommand` |
 | SET_WIN_MODE | `/sim/winMode` |
 | SET_OVERLAY | `/meta/activeOverlay` |
-| SET_PLACEMENT_COST | `/meta/placementCostEnabled` |
-
-Action Schema Count: 36
-Mutation Matrix Count: 36
+Action Schema Count: 39
+Mutation Matrix Count: 39

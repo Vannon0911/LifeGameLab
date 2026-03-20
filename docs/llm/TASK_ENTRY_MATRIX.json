@@ -65,6 +65,7 @@
     "triggerPrefixes": [
       ".gitignore",
       "agents/llm-entry-sequence/",
+      "agents/orchestrator/",
       "README.md",
       "RUNBOOK.md",
       "package.json",

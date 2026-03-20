@@ -1,60 +1,23 @@
 import assert from "node:assert/strict";
-import net from "node:net";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "playwright";
+import { startLocalHttpServer } from "./support/localHttpServer.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const port = 8080;
-const baseUrl = `http://127.0.0.1:${port}`;
-
-function waitForPortOpen(host, targetPort, timeoutMs = 15_000) {
-  const started = Date.now();
-  return new Promise((resolve, reject) => {
-    const probe = () => {
-      const socket = new net.Socket();
-      socket.setTimeout(800);
-      socket.once("connect", () => {
-        socket.destroy();
-        resolve(true);
-      });
-      socket.once("timeout", () => socket.destroy());
-      socket.once("error", () => socket.destroy());
-      socket.once("close", () => {
-        if (Date.now() - started > timeoutMs) {
-          reject(new Error(`port ${targetPort} did not open within ${timeoutMs}ms`));
-        } else {
-          setTimeout(probe, 150);
-        }
-      });
-      socket.connect(targetPort, host);
-    };
-    probe();
-  });
-}
-
-function startLocalServer() {
-  const cmd = process.platform === "win32" ? "python" : "python3";
-  return spawn(cmd, ["-m", "http.server", String(port)], {
-    cwd: root,
-    stdio: "ignore",
-  });
-}
 
 let server = null;
 let browser = null;
 
 try {
-  server = startLocalServer();
-  await waitForPortOpen("127.0.0.1", port, 15_000);
+  server = await startLocalHttpServer(root);
 
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
-  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  await page.goto(server.baseUrl, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(500);
 
   const clickTarget = await page.evaluate(async () => {
@@ -156,7 +119,7 @@ try {
     }
 
     store.dispatch({ type: "SET_TILE", payload: { x: spawn.target.x, y: spawn.target.y, radius: 1, value: 1 } });
-    store.dispatch({ type: "ISSUE_ORDER", payload: { fromX: spawn.x, fromY: spawn.y, targetX: spawn.target.x, targetY: spawn.target.y } });
+    store.dispatch({ type: "ISSUE_MOVE", payload: { entityId: `worker:${spawn.x}:${spawn.y}`, targetX: spawn.target.x, targetY: spawn.target.y } });
 
     const pos = () => {
       const s = store.getState();
@@ -196,9 +159,7 @@ try {
       await browser.close();
     } catch {}
   }
-  if (server && !server.killed) {
-    try {
-      server.kill("SIGTERM");
-    } catch {}
+  if (server) {
+    try { server.stop(); } catch {}
   }
 }

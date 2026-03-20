@@ -9,14 +9,14 @@ Derived from:
 This file is traceability evidence, not Source of Truth.
 
 ## Action Inventory
-- `stable`: `GEN_WORLD`, `TOGGLE_RUNNING`, `SIM_STEP`, `SET_SPEED`, `SET_SEED`, `SET_SIZE`, `SET_RENDER_MODE`, `SET_PHYSICS`, `SET_UI`, `SET_GLOBAL_LEARNING`, `RESET_GLOBAL_LEARNING`, `SET_TILE`, `SET_WIN_MODE`
-- `rename`: `SET_WORLD_PRESET -> SET_MAPSPEC`, `ISSUE_ORDER -> ISSUE_MOVE`, `SET_OVERLAY -> SET_UI`
-- `deprecated`: `CONFIRM_FOUNDATION`, `CONFIRM_CORE_ZONE`, `START_DNA_ZONE_SETUP`, `TOGGLE_DNA_ZONE_CELL`, `CONFIRM_DNA_ZONE`, `BEGIN_INFRA_BUILD`, `BUILD_INFRA_PATH`, `CONFIRM_INFRA_PATH`, `SET_BRUSH`, `PLACE_SPLIT_CLUSTER`, `HARVEST_CELL`, `HARVEST_PULSE`, `PRUNE_CLUSTER`, `RECYCLE_PATCH`, `SEED_SPREAD`, `SET_ZONE`, `BUY_EVOLUTION`, `SET_PLAYER_DOCTRINE`, `SET_PLACEMENT_COST`
-- `new_slice_a`: `SET_MAPSPEC`, `SELECT_ENTITY`, `ISSUE_MOVE`, `PLACE_CORE`, `PLACE_WORKER`, `PLACE_BUILDING`, `PLACE_BELT_SEGMENT`, `PLACE_LINE_SEGMENT`, `SET_CORE_ROUTING`, `QUEUE_WORKER`, `SPAWN_FIGHTER`, `ASSIGN_REPAIR`, `SET_MUTATOR_PATTERN`, `COMMIT_MUTATION`
+- `stable`: `GEN_WORLD`, `TOGGLE_RUNNING`, `SIM_STEP`, `SET_SPEED`, `SET_SEED`, `SET_SIZE`, `SET_RENDER_MODE`, `SET_PHYSICS`, `SET_UI`, `SET_GLOBAL_LEARNING`, `RESET_GLOBAL_LEARNING`, `SET_TILE`, `SET_WIN_MODE`, `SET_MAPSPEC`, `SET_MAP_TILE`, `ISSUE_MOVE`, `PLACE_WORKER`
+- `rename`: `SET_WORLD_PRESET -> SET_MAPSPEC`, `ISSUE_ORDER -> ISSUE_MOVE`, `SET_OVERLAY -> SET_UI`, `TOGGLE_DNA_ZONE_WORKER -> PLACE_BUILDING`, `BUILD_INFRA_PATH -> PLACE_LINE_SEGMENT`, `PLACE_SPLIT_CLUSTER -> PLACE_BUILDING`, `HARVEST_WORKER -> QUEUE_WORKER`, `SET_ZONE -> PLACE_BUILDING`
+- `deprecated`: `CONFIRM_FOUNDATION`, `CONFIRM_CORE_ZONE`, `SET_BRUSH`
+- `new_slice_a`: `SELECT_ENTITY`, `PLACE_CORE`, `PLACE_BUILDING`, `PLACE_BELT_SEGMENT`, `PLACE_LINE_SEGMENT`, `SET_CORE_ROUTING`, `QUEUE_WORKER`, `SPAWN_FIGHTER`, `ASSIGN_REPAIR`, `SET_MUTATOR_PATTERN`, `COMMIT_MUTATION`
 
 ## State Inventory
 - `keep`: `meta.seed`, `meta.gridW`, `meta.gridH`, `meta.speed`, `meta.renderMode`, `meta.ui`, `meta.globalLearning`, `world`, `sim.tick`, `sim.running`, `sim.runPhase`, `sim.lastCommand`, `sim.gameResult`, `sim.winMode`, `sim.runSummary`
-- `adapt`: `meta.worldPresetId`, `meta.activeOverlay`, `sim.activeOrder`, `sim.patternCatalog`, `sim.patternBonuses`, `sim.playerAliveCount`, `sim.cpuAliveCount`, `sim.playerEnergyIn`, `sim.playerEnergyOut`, `sim.playerEnergyNet`, `sim.playerEnergyStored`
+- `adapt`: `meta.worldPresetId`, `meta.activeOverlay`, `sim.activeOrder`, `sim.playerAliveCount`, `sim.cpuAliveCount`, `sim.playerEnergyIn`, `sim.playerEnergyOut`, `sim.playerEnergyNet`, `sim.playerEnergyStored`
 - `replace`: founder and DNA flow keys, infrastructure unlock keys, evolution and doctrine keys
 - `slice_a_scaffold`: top-level `map`, `sim.phase0PlantsDelivered`, `sim.phase0CorePlaced`, `sim.queuedWorkerCount`, `sim.selectedEntity`, `sim.mutatorDraft`, `sim.deprecatedActionMode`
 - `delete_later`: `sim.founderBudget`, `sim.founderPlaced`, `sim.unlockedZoneTier`, `sim.zone2Unlocked`, `sim.zone2PlacementBudget`, `sim.dnaZoneCommitted`, `sim.infrastructureUnlocked`, `sim.infraBuildMode`, `sim.infraBuildCostEnergy`, `sim.infraBuildCostDNA`, `sim.playerDNA`, `sim.playerStage`

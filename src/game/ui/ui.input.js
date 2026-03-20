@@ -211,7 +211,7 @@ export function installUiInput(UI) {
     const isResourceTile = resourceValue > 0.05;
 
     if (start && runPhase === RUN_PHASE.GENESIS_SETUP) {
-      const placed = this._placeCoreCompat({ x: wx, y: wy, remove: shiftRemove || isOwnFounder });
+      const placed = this._placeWorker({ x: wx, y: wy, remove: shiftRemove || isOwnFounder });
       this._setActionFeedback({
         ok: !!placed,
         message: placed
@@ -255,7 +255,7 @@ export function installUiInput(UI) {
       }
       if (!this._moveSelection) {
         if (!isOwnAliveTile) {
-          const placed = this._placeCoreCompat({ x: wx, y: wy, remove: shiftRemove });
+          const placed = this._placeWorker({ x: wx, y: wy, remove: shiftRemove });
           this._setActionFeedback({
             ok: !!placed,
             message: placed
@@ -297,7 +297,7 @@ export function installUiInput(UI) {
 
       if (!isResourceTile) {
         if (!isOwnAliveTile) {
-          const placed = this._placeCoreCompat({ x: wx, y: wy, remove: shiftRemove });
+          const placed = this._placeWorker({ x: wx, y: wy, remove: shiftRemove });
           this._setActionFeedback({
             ok: !!placed,
             message: placed
@@ -315,7 +315,7 @@ export function installUiInput(UI) {
         return;
       }
 
-      const ordered = this._issueMoveCompat(
+      const ordered = this._issueMove(
         { x: selected.x, y: selected.y },
         { x: wx, y: wy },
       );
@@ -363,7 +363,7 @@ export function installUiInput(UI) {
         (Number(state.world?.lineageId?.[idx] || 0) | 0) === playerLineageId &&
         (Number(state.world?.founderMask?.[idx] || 0) | 0) === 1 &&
         String(state.sim?.runPhase || "") === "genesis_setup";
-      const placed = this._placeCoreCompat({ x: wx, y: wy, remove: isOwnFounder });
+      const placed = this._placeWorker({ x: wx, y: wy, remove: isOwnFounder });
       this._setActionFeedback({
         ok: !!placed,
         message: placed
@@ -404,7 +404,7 @@ export function installUiInput(UI) {
     if (mode === BRUSH_MODE.WORKER_ADD || mode === BRUSH_MODE.WORKER_REMOVE) {
       if (!start) return;
       const removed = mode === BRUSH_MODE.WORKER_REMOVE;
-      const placed = this._placeCoreCompat({ x: wx, y: wy, remove: removed });
+      const placed = this._placeWorker({ x: wx, y: wy, remove: removed });
       this._setActionFeedback({
         ok: !!placed,
         message: placed

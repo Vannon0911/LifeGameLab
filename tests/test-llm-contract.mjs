@@ -22,6 +22,7 @@ const matrix = JSON.parse(fs.readFileSync(path.join(root, "docs/llm/TASK_ENTRY_M
 const testingConfig = matrix.testing;
 const testingEntry = fs.readFileSync(path.join(root, "docs/llm/testing/TESTING_TASK_ENTRY.md"), "utf8");
 const gateIndex = fs.readFileSync(path.join(root, "docs/llm/entry/TASK_GATE_INDEX.md"), "utf8");
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const lock = JSON.parse(fs.readFileSync(path.join(root, "docs/llm/entry/LLM_ENTRY_LOCK.json"), "utf8"));
 const entryPath = path.join(root, lock.entryPath);
 const entryText = fs.readFileSync(entryPath, "utf8");
@@ -109,6 +110,26 @@ try {
   for (const scopedPath of ["tests/", "tools/llm-preflight.mjs", "tools/run-test-suite.mjs", "tools/run-all-tests.mjs", "tools/test-suites.mjs", "tools/evidence-runner.mjs", "docs/llm/testing/"]) {
     assert(triggerPrefixes.includes(scopedPath), `testing triggerPrefixes must include ${scopedPath}`);
   }
+
+  const testingPreflightPaths = [
+    "tests/",
+    "tools/llm-preflight.mjs",
+    "tools/run-test-suite.mjs",
+    "tools/run-all-tests.mjs",
+    "tools/test-suites.mjs",
+    "tools/evidence-runner.mjs",
+  ];
+  for (const scriptName of ["llm:preflight:start", "llm:preflight:ack", "llm:preflight:check"]) {
+    const script = String(packageJson.scripts?.[scriptName] || "");
+    assert(script.length > 0, `${scriptName} must be defined in package.json`);
+    for (const scopedPath of testingPreflightPaths) {
+      assert(script.includes(scopedPath), `${scriptName} must include ${scopedPath}`);
+    }
+  }
+  assert(
+    String(packageJson.scripts?.["test:contracts"] || "") === "node tests/test-llm-contract.mjs && node tests/test-slice-a-contract-scaffold.mjs",
+    "test:contracts must run the contract gate pair",
+  );
 
   const entryHash = sha256Text(entryText);
   assert.equal(String(lock.sha256 || ""), entryHash, "entry lock hash must match current ENTRY.md");
