@@ -14,7 +14,7 @@
 - src/kernel/determinism/runtimeGuards.js
 - src/kernel/store/applyPatches.js
 - src/game/plugin/gates.js
-- src/project/contract/simGate.js
+- src/game/contracts/simGate.js
 - src/kernel/validation/validateState.js
 
 ## Funktionale Matrix

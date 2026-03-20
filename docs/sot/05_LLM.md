@@ -1,49 +1,49 @@
 # 05 LLM
 
 ## SoT
-- command envelope adapter: src/project/llm/commandAdapter.js
-- advisor model: src/project/llm/advisorModel.js
-- read model: src/project/llm/readModel.js
-- gate sync: src/project/llm/gateSync.js
+- command envelope adapter: tools/llm/commandAdapter.mjs
+- advisor model: tools/llm/advisorModel.mjs
+- read model: tools/llm/readModel.mjs
+- gate sync: tools/llm/gateSync.mjs
 
 ## Funktionale Matrix
 | File | Line | Symbol | Kind |
 |---|---:|---|---|
-| src/project/llm/advisorModel.js | 182 | clamp01 | function |
-| src/project/llm/advisorModel.js | 186 | getPlayerMemory | function |
-| src/project/llm/advisorModel.js | 191 | getDoctrinePolicy | function |
-| src/project/llm/advisorModel.js | 195 | toClass | function |
-| src/project/llm/advisorModel.js | 202 | buildReasonCodes | function |
-| src/project/llm/advisorModel.js | 209 | buildBottleneck | function |
-| src/project/llm/advisorModel.js | 224 | getStructureId | function |
-| src/project/llm/advisorModel.js | 232 | getStructureLabel | function |
-| src/project/llm/advisorModel.js | 236 | getStageTargets | function |
-| src/project/llm/advisorModel.js | 242 | getZoneCoverage | function |
-| src/project/llm/advisorModel.js | 260 | buildCanonicalZoneSummary | function |
-| src/project/llm/advisorModel.js | 279 | buildPatternSummary | function |
-| src/project/llm/advisorModel.js | 299 | buildCellTopologySummary | function |
-| src/project/llm/advisorModel.js | 309 | getPatternClassCount | function |
-| src/project/llm/advisorModel.js | 318 | getTechBlockedReasonCodes | function |
-| src/project/llm/advisorModel.js | 345 | buildBlockedTechReasonLabels | function |
-| src/project/llm/advisorModel.js | 358 | findSplitOrigin | function |
-| src/project/llm/advisorModel.js | 386 | analyzeSplit | function |
-| src/project/llm/advisorModel.js | 412 | scoreTechCandidate | function |
-| src/project/llm/advisorModel.js | 422 | pickTechTargets | function |
-| src/project/llm/advisorModel.js | 446 | buildWinProgress | function |
-| src/project/llm/advisorModel.js | 528 | selectPrimary | function |
-| src/project/llm/advisorModel.js | 540 | selectSecondary | function |
-| src/project/llm/advisorModel.js | 552 | classRank | function |
-| src/project/llm/advisorModel.js | 559 | zoneToOverlay | function |
-| src/project/llm/advisorModel.js | 568 | getZoneRecommendation | function |
-| src/project/llm/advisorModel.js | 588 | getOverlayRecommendation | function |
-| src/project/llm/advisorModel.js | 607 | getNextLever | function |
-| src/project/llm/advisorModel.js | 618 | getNextAction | function |
-| src/project/llm/advisorModel.js | 644 | buildGoalCode | function |
-| src/project/llm/advisorModel.js | 652 | buildAdvisorModel | function |
-| src/project/llm/advisorModel.js | 924 | buildAdvisorDebugModel | function |
-| src/project/llm/commandAdapter.js | 3 | toPlainAction | function |
-| src/project/llm/commandAdapter.js | 21 | createLlmCommandAdapter | function |
-| src/project/llm/commandAdapter.js | 22 | llmCommandAdapter | function |
-| src/project/llm/gateSync.js | 3 | assertLlmGateSync | function |
-| src/project/llm/readModel.js | 13 | buildLlmReadModel | function |
-| src/project/llm/readModel.js | 26 | renderLlmReadModelAsText | function |
+| tools/llm/advisorModel.mjs | 182 | clamp01 | function |
+| tools/llm/advisorModel.mjs | 186 | getPlayerMemory | function |
+| tools/llm/advisorModel.mjs | 191 | getDoctrinePolicy | function |
+| tools/llm/advisorModel.mjs | 195 | toClass | function |
+| tools/llm/advisorModel.mjs | 202 | buildReasonCodes | function |
+| tools/llm/advisorModel.mjs | 209 | buildBottleneck | function |
+| tools/llm/advisorModel.mjs | 224 | getStructureId | function |
+| tools/llm/advisorModel.mjs | 232 | getStructureLabel | function |
+| tools/llm/advisorModel.mjs | 236 | getStageTargets | function |
+| tools/llm/advisorModel.mjs | 242 | getZoneCoverage | function |
+| tools/llm/advisorModel.mjs | 260 | buildCanonicalZoneSummary | function |
+| tools/llm/advisorModel.mjs | 279 | buildPatternSummary | function |
+| tools/llm/advisorModel.mjs | 299 | buildCellTopologySummary | function |
+| tools/llm/advisorModel.mjs | 309 | getPatternClassCount | function |
+| tools/llm/advisorModel.mjs | 318 | getTechBlockedReasonCodes | function |
+| tools/llm/advisorModel.mjs | 345 | buildBlockedTechReasonLabels | function |
+| tools/llm/advisorModel.mjs | 358 | findSplitOrigin | function |
+| tools/llm/advisorModel.mjs | 386 | analyzeSplit | function |
+| tools/llm/advisorModel.mjs | 412 | scoreTechCandidate | function |
+| tools/llm/advisorModel.mjs | 422 | pickTechTargets | function |
+| tools/llm/advisorModel.mjs | 446 | buildWinProgress | function |
+| tools/llm/advisorModel.mjs | 528 | selectPrimary | function |
+| tools/llm/advisorModel.mjs | 540 | selectSecondary | function |
+| tools/llm/advisorModel.mjs | 552 | classRank | function |
+| tools/llm/advisorModel.mjs | 559 | zoneToOverlay | function |
+| tools/llm/advisorModel.mjs | 568 | getZoneRecommendation | function |
+| tools/llm/advisorModel.mjs | 588 | getOverlayRecommendation | function |
+| tools/llm/advisorModel.mjs | 607 | getNextLever | function |
+| tools/llm/advisorModel.mjs | 618 | getNextAction | function |
+| tools/llm/advisorModel.mjs | 644 | buildGoalCode | function |
+| tools/llm/advisorModel.mjs | 652 | buildAdvisorModel | function |
+| tools/llm/advisorModel.mjs | 924 | buildAdvisorDebugModel | function |
+| tools/llm/commandAdapter.mjs | 3 | toPlainAction | function |
+| tools/llm/commandAdapter.mjs | 21 | createLlmCommandAdapter | function |
+| tools/llm/commandAdapter.mjs | 22 | llmCommandAdapter | function |
+| tools/llm/gateSync.mjs | 3 | assertLlmGateSync | function |
+| tools/llm/readModel.mjs | 13 | buildLlmReadModel | function |
+| tools/llm/readModel.mjs | 26 | renderLlmReadModelAsText | function |

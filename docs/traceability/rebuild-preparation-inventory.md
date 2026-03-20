@@ -3,8 +3,8 @@
 Derived from:
 - `docs/PRODUCT.md`
 - `docs/ARCHITECTURE.md`
-- `src/project/contract/manifest.js`
-- `src/project/contract/actionLifecycle.js`
+- `src/game/contracts/manifest.js`
+- `src/game/contracts/actionLifecycle.js`
 
 This file is traceability evidence, not Source of Truth.
 

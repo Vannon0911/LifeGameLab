@@ -3,7 +3,7 @@
 **APP_VERSION:** 0.8.6
 
 ## SoT Rule
-- `src/project/contract/manifest.js` stays the executable contract Source of Truth.
+- `src/game/contracts/manifest.js` stays the executable contract Source of Truth.
 - `docs/PRODUCT.md` stays the product Source of Truth.
 - `docs/traceability/*` stays derived evidence only.
 
@@ -16,12 +16,27 @@
 
 ## Canonical Modules
 - `src/kernel/*`: deterministic kernel, patching, persistence, RNG and validation.
-- `src/project/contract/*`: state, action, mutation, gate, lifecycle and dataflow contracts.
-- `src/game/contracts/*`: product-facing enums and shared identifiers.
+- `src/game/contracts/*`: state, action, mutation, gate, lifecycle and shared runtime identifiers.
+- `src/game/runtime/*`: canonical gameplay runtime entrypoints for reducer and sim-step wiring.
 - `src/game/sim/*`: active legacy runtime plus reusable deterministic algorithms.
 - `src/game/render/*`: canonical renderer and worker renderer.
-- `src/game/ui/*`: current adapter shell and legacy-facing wiring.
+- `src/game/ui/*`: current UI shell and dispatch-only runtime interaction.
+- `src/game/viewmodel/*`: read-only gameplay presentation labels and UI-derived view helpers.
 - `src/app/*`: boot, runtime loop and crash surfaces.
+- `tools/llm/*`: dev-only LLM adapters, read models and gate tooling. Runtime code must not import them.
+
+## Current Cleanup Slice
+- Foundation eligibility now belongs to `src/game/runtime/foundationEligibility.js`; `src/game/sim/foundationEligibility.js` is compatibility-only.
+- Fog read-model shaping now belongs to `src/game/viewmodel/fogIntel.js`; `src/game/render/fogOfWar.js` is render-only again.
+- Lage-panel read helpers now belong to `src/game/viewmodel/lageStats.js` instead of being embedded inside the UI renderer.
+- Reducer phase checks now belong to `src/game/sim/gates/phaseGates.js`; the reducer consumes them instead of owning phase gating inline.
+- Worker order parsing and patch builders now belong to `src/game/sim/commands/orderCommands.js`; reducer order handling stays behaviorally unchanged.
+- Grid and mask primitives now belong to `src/game/sim/grid/index.js`; reducer placement and visibility logic consumes them instead of defining adjacency helpers inline.
+- Active worker order execution now belongs to `src/game/runtime/processActiveOrderRuntime.js`, with movement/navigation support in `src/game/runtime/orderNavigation.js`; `simStepPatch` delegates instead of owning the state machine inline.
+- Shared alive/role/mask counting helpers now belong to `src/game/runtime/stateCounts.js`; reducer and win-condition code consume the same counting logic instead of drifting in parallel.
+- Infra candidate-mask cloning and committed-anchor checks now belong to `src/game/runtime/infraRuntime.js`; reducer infra-path setup consumes that runtime helper instead of owning the infra staging helpers inline.
+- `src/game/sim/worldPresets.js`, `src/game/sim/mapspec.js`, and `src/game/sim/worldgen.js` now act as stable public facades; preset catalog/runtime, MapSpec compile logic, and world generation internals live behind them in dedicated submodules.
+- Founder connectivity checks are now consolidated in `src/game/sim/grid/index.js` (`areIndicesConnected8`) and consumed by both runtime foundation eligibility and phase gates, removing duplicate 8-neighbor connectivity logic.
 
 ## Slice B MapSpec Baseline
 - Legacy worker-RTS runtime is still present and remains bootable.
@@ -43,8 +58,11 @@
 - Builder-specific regression coverage now includes phase gating, `SET_MAP_TILE` roundtrip, and persisted reload recovery.
 
 ## Runtime Truth At Head
+- Boot now imports directly from `src/game/manifest.js`, `src/game/runtime/index.js`, `src/game/render/renderer.js`, and `src/game/ui/ui.js`.
 - Operative reducer path remains `src/game/sim/reducer/index.js`.
 - `src/game/sim/reducer.js` remains the compatibility facade.
+- `src/game/runtime/index.js` remains the stable public sim-step surface even though active order execution now delegates into runtime helper modules.
+- `src/game/sim/worldPresets.js`, `src/game/sim/mapspec.js`, and `src/game/sim/worldgen.js` remain the stable path-pinned surfaces consumed by runtime and tests.
 - Boot still dispatches `GEN_WORLD`, but world boot now compiles through `map.spec`.
 - Renderer orchestration in `src/app/main.js` and `src/game/render/renderer.js` remains canonical and reusable.
 - Top-level `map` state is now a live deterministic compile input, not just scaffold.
@@ -81,9 +99,8 @@ High-value reuse candidates:
 
 ## Repo Structure
 - `src/app/`: bootstrap and runtime orchestration.
-- `src/core/`: compatibility kernel facade.
-- `src/game/`: runtime gameplay, renderer and UI.
-- `src/project/`: manifest, contracts and adapters.
+- `src/kernel/`: deterministic engine and state-write authority.
+- `src/game/`: runtime gameplay, manifest, contracts, renderer, UI and viewmodels.
 - `tests/`: determinism, contract and migration guards.
-- `tools/`: test runners and evidence tooling.
+- `tools/`: test runners, evidence tooling and dev-only LLM helpers.
 - `docs/`: SoT docs and derived traceability.

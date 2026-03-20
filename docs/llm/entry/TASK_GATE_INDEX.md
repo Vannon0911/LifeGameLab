@@ -6,7 +6,7 @@ Reihenfolge: diese Datei kommt erst nach `docs/WORKFLOW.md`, `docs/llm/ENTRY.md`
 Danach werden alle Task-Sets fuer alle klassifizierten Scopes gelesen, nicht nur eins.
 
 ## Globale Mindest-Gates (immer)
-1. `src/project/contract/manifest.js` (SoT)
+1. `src/game/contracts/manifest.js` (SoT)
 2. `src/kernel/store/createStore.js`
 3. `src/kernel/store/applyPatches.js`
 
@@ -19,10 +19,10 @@ Danach werden alle Task-Sets fuer alle klassifizierten Scopes gelesen, nicht nur
 1. `src/game/ui/ui.js`
 2. `src/game/ui/ui.model.js`
 3. `src/game/ui/ui.constants.js`
-4. `src/project/ui.js`
+4. `src/game/ui/ui.js`
 5. `src/app/main.js` (wenn Caller/Boot betroffen)
 
-## SIM Task
+## GAMEPLAY Task
 1. `src/game/sim/reducer/index.js`
 2. `src/game/sim/step.js`
 3. `src/game/sim/stepPhases.js`
@@ -30,11 +30,11 @@ Danach werden alle Task-Sets fuer alle klassifizierten Scopes gelesen, nicht nur
 5. `src/game/sim/worldgen.js`
 
 ## CONTRACTS Task
-1. `src/project/contract/stateSchema.js`
-2. `src/project/contract/actionSchema.js`
-3. `src/project/contract/mutationMatrix.js`
-4. `src/project/contract/simGate.js`
-5. `src/project/contract/dataflow.js`
+1. `src/game/contracts/stateSchema.js`
+2. `src/game/contracts/actionSchema.js`
+3. `src/game/contracts/mutationMatrix.js`
+4. `src/game/contracts/simGate.js`
+5. `src/game/contracts/dataflow.js`
 
 ## TESTING Task
 1. `tools/llm-preflight.mjs`
@@ -45,7 +45,7 @@ Danach werden alle Task-Sets fuer alle klassifizierten Scopes gelesen, nicht nur
 
 ## VERSIONING Task
 1. `package.json`
-2. `src/project/contract/manifest.js`
+2. `src/game/contracts/manifest.js`
 3. `docs/STATUS.md`
 4. `docs/ARCHITECTURE.md`
 

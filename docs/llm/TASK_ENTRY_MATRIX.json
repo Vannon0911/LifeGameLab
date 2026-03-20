@@ -1,40 +1,36 @@
 {
   "ui": {
     "dependsOn": [
-      "sim",
+      "gameplay",
       "contracts"
     ],
     "triggerPrefixes": [
       "src/app/",
       "src/game/ui/",
-      "src/project/ui.js",
       "src/game/render/",
       "docs/llm/ui/"
     ],
     "requiredEntry": "docs/llm/ui/UI_TASK_ENTRY.md"
   },
-  "sim": {
+  "gameplay": {
     "dependsOn": [
       "contracts"
     ],
     "triggerPrefixes": [
+      "src/game/runtime/",
       "src/game/sim/",
       "src/game/plugin/",
-      "src/core/runtime/",
-      "src/project/project.logic.js",
       "docs/llm/sim/"
     ],
-    "requiredEntry": "docs/llm/sim/SIM_TASK_ENTRY.md"
+    "requiredEntry": "docs/llm/gameplay/GAMEPLAY_TASK_ENTRY.md"
   },
   "contracts": {
     "dependsOn": [],
     "triggerPrefixes": [
       "src/game/contracts/",
-      "src/project/contract/",
-      "src/project/project.manifest.js",
-      "src/project/llm/",
-      "src/core/kernel/",
+      "src/game/manifest.js",
       "src/kernel/",
+      "tools/llm/",
       "docs/llm/contracts/"
     ],
     "requiredEntry": "docs/llm/contracts/CONTRACT_TASK_ENTRY.md"
@@ -70,7 +66,7 @@
       "README.md",
       "RUNBOOK.md",
       "package.json",
-      "src/project/contract/manifest.js",
+      "src/game/contracts/manifest.js",
       "docs/WORKFLOW.md",
       "docs/PRODUCT.md",
       "docs/ARCHITECTURE.md",

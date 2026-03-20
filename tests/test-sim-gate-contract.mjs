@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { manifest } from "../src/project/contract/manifest.js";
+import { manifest } from "../src/game/contracts/manifest.js";
 import { assertSimPatchesAllowed } from "../src/game/sim/gate.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -88,7 +88,7 @@ for (const validPatch of [
   );
 }
 
-const simGateSource = fs.readFileSync(path.join(root, "src/project/contract/simGate.js"), "utf8");
+const simGateSource = fs.readFileSync(path.join(root, "src/game/contracts/simGate.js"), "utf8");
 assert.equal((simGateSource.match(/zoneRole:\s*\{\s*type:\s*"ta"/g) || []).length, 1, "simGate source must not duplicate zoneRole");
 assert.equal((simGateSource.match(/zoneId:\s*\{\s*type:\s*"ta"/g) || []).length, 1, "simGate source must not duplicate zoneId");
 assert.equal((simGateSource.match(/zoneMeta:\s*\{\s*type:\s*"object"\s*\}/g) || []).length, 1, "simGate source must not duplicate zoneMeta");

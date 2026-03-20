@@ -1,4 +1,4 @@
-import { LLM_POLICY } from "./policy.js";
+import { LLM_POLICY } from "./policy.mjs";
 
 export function assertLlmGateSync(manifest) {
   const missing = [];

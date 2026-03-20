@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 
 import { stableStringify } from "../src/kernel/store/signature.js";
 import { createStore } from "../src/kernel/store/createStore.js";
-import { manifest } from "../src/project/project.manifest.js";
-import { reducer, simStepPatch } from "../src/project/project.logic.js";
+import { manifest } from "../src/game/manifest.js";
+import { reducer, simStepPatch } from "../src/game/runtime/index.js";
 import { createDeterministicStore, snapshotStore } from "./support/liveTestKit.mjs";
 
 const store = createDeterministicStore({ seed: "redteam-kernel-hardening" });

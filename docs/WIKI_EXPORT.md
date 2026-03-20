@@ -16,8 +16,8 @@ The following files were used as context for generating this wiki page:
 - [docs/traceability/rebuild-string-matrix.md](docs/traceability/rebuild-string-matrix.md)
 - [index.html](index.html)
 - [package.json](package.json)
-- [src/project/contract/actionLifecycle.js](src/project/contract/actionLifecycle.js)
-- [src/project/contract/manifest.js](src/project/contract/manifest.js)
+- [src/game/contracts/actionLifecycle.js](src/game/contracts/actionLifecycle.js)
+- [src/game/contracts/manifest.js](src/game/contracts/manifest.js)
 
 </details>
 
@@ -43,7 +43,7 @@ The codebase is organized into canonical modules that enforce a strict separatio
 | Directory | Role |
 | :--- | :--- |
 | `src/kernel/` | Deterministic store, patching, and validation [docs/ARCHITECTURE.md:18]() |
-| `src/project/contract/` | Executable Source of Truth for state and actions [docs/ARCHITECTURE.md:19]() |
+| `src/game/contracts/` | Executable Source of Truth for state and actions [docs/ARCHITECTURE.md:19]() |
 | `src/game/sim/` | Simulation logic, world generation, and reducers [docs/ARCHITECTURE.md:21]() |
 | `src/game/render/` | Read-only Canvas and Worker renderers [docs/ARCHITECTURE.md:22]() |
 | `src/app/` | Bootstrap and runtime orchestration [docs/ARCHITECTURE.md:24]() |
@@ -79,8 +79,8 @@ graph TD
         UI["src/game/ui/ui.js"]
         Store["src/kernel/store/createStore.js"]
         Reducer["src/game/sim/reducer/index.js"]
-        Matrix["src/project/contract/mutationMatrix.js"]
-        Schema["src/project/contract/stateSchema.js"]
+        Matrix["src/game/contracts/mutationMatrix.js"]
+        Schema["src/game/contracts/stateSchema.js"]
     end
 
     UserAction -->|dispatch| Store
@@ -90,14 +90,14 @@ graph TD
     Store -->|enforce shape| Schema
     Store -.->|read-only| UI
 ```
-**Sources:** [docs/ARCHITECTURE.md:11-15](), [src/project/contract/manifest.js:1-20]()
+**Sources:** [docs/ARCHITECTURE.md:11-15](), [src/game/contracts/manifest.js:1-20]()
 
 ### Action Lifecycle and Migration
 The system uses an explicit lifecycle to manage the transition from legacy "Cell" logic to the new "Worker" RTS logic.
 
 ```mermaid
 graph LR
-    subgraph "Contract Definitions (src/project/contract/actionLifecycle.js)"
+    subgraph "Contract Definitions (src/game/contracts/actionLifecycle.js)"
         STABLE["STABLE (e.g., GEN_WORLD)"]
         RENAME["RENAME (e.g., ISSUE_ORDER -> ISSUE_MOVE)"]
         DEPRECATED["DEPRECATED (e.g., SET_BRUSH)"]
@@ -113,12 +113,12 @@ graph LR
     RENAME --> G1 & G2 & G3
     DEPRECATED --> G1 & G2 & G3
 ```
-**Sources:** [src/project/contract/actionLifecycle.js:1-13](), [docs/traceability/rebuild-string-matrix.md:7-20]()
+**Sources:** [src/game/contracts/actionLifecycle.js:1-13](), [docs/traceability/rebuild-string-matrix.md:7-20]()
 
 ## 5. Subsystem Relations
 
 The major subsystems relate through a strict unidirectional flow:
-1.  **Contracts** define the allowed state shape and action payloads [src/project/contract/manifest.js]().
+1.  **Contracts** define the allowed state shape and action payloads [src/game/contracts/manifest.js]().
 2.  **Kernel** provides the execution environment, ensuring that the **Simulation** logic (Reducers/Step) only modifies state via approved patches [docs/ARCHITECTURE.md:18]().
 3.  **Renderer** observes the state to draw the grid but has no knowledge of the underlying business logic [docs/ARCHITECTURE.md:14]().
 4.  **Testing/Evidence** framework validates that the entire chain remains deterministic and that migrations do not break existing replays [docs/ARCHITECTURE.md:76-81]().
@@ -147,8 +147,8 @@ The following files were used as context for generating this wiki page:
 - [docs/traceability/rebuild-string-matrix.md](docs/traceability/rebuild-string-matrix.md)
 - [index.html](index.html)
 - [package.json](package.json)
-- [src/project/contract/actionLifecycle.js](src/project/contract/actionLifecycle.js)
-- [src/project/contract/manifest.js](src/project/contract/manifest.js)
+- [src/game/contracts/actionLifecycle.js](src/game/contracts/actionLifecycle.js)
+- [src/game/contracts/manifest.js](src/game/contracts/manifest.js)
 
 </details>
 
@@ -219,7 +219,7 @@ graph TD
         UI["ui.js / ui.input.js"]
     end
 
-    subgraph "Contract Layer (src/project/contract/)"
+    subgraph "Contract Layer (src/game/contracts/)"
         AL["actionLifecycle.js"]
         AS["actionSchema.js"]
         MM["mutationMatrix.js"]
@@ -243,7 +243,7 @@ graph TD
     RED -- "Mutate State" --> VS
     VS -- "Final Commit" --> STEP
 ```
-Sources: [src/project/contract/actionLifecycle.js:1-6]() [src/project/contract/manifest.js:11-20]() [docs/ARCHITECTURE.md:18-24]()
+Sources: [src/game/contracts/actionLifecycle.js:1-6]() [src/game/contracts/manifest.js:11-20]() [docs/ARCHITECTURE.md:18-24]()
 
 ### Data Flow: MapSpec to World Generation
 World generation is no longer a direct mutation but a deterministic compilation process starting from a `MapSpec`.
@@ -273,16 +273,16 @@ graph LR
     COM --> GW
     GW --> SIM
 ```
-Sources: [docs/STATUS.md:10-12]() [docs/ARCHITECTURE.md:48-52]() [src/project/contract/actionLifecycle.js:60-64]()
+Sources: [docs/STATUS.md:10-12]() [docs/ARCHITECTURE.md:48-52]() [src/game/contracts/actionLifecycle.js:60-64]()
 
 ### State Domains
-The state is divided into four primary domains to ensure persistence and validation boundaries [src/project/contract/actionLifecycle.js:63, 194]():
+The state is divided into four primary domains to ensure persistence and validation boundaries [src/game/contracts/actionLifecycle.js:63, 194]():
 *   **meta:** Configuration, seed, and grid dimensions.
 *   **map:** The `MapSpec` and tile-level design data (persisted) [docs/STATUS.md:17-18]().
 *   **world:** Runtime entities (Cores, Workers, Buildings) and resource fields.
 *   **sim:** Volatile simulation data (ticks, run phase, current orders).
 
-Sources: [README.md:1-176](), [docs/PRODUCT.md:1-153](), [docs/ARCHITECTURE.md:1-90](), [docs/STATUS.md:1-68](), [src/project/contract/actionLifecycle.js:1-221](), [src/project/contract/manifest.js:1-30]().
+Sources: [README.md:1-176](), [docs/PRODUCT.md:1-153](), [docs/ARCHITECTURE.md:1-90](), [docs/STATUS.md:1-68](), [src/game/contracts/actionLifecycle.js:1-221](), [src/game/contracts/manifest.js:1-30]().
 
 ---
 
@@ -310,8 +310,8 @@ The following files were used as context for generating this wiki page:
 - [docs/traceability/rebuild-preparation-inventory.md](docs/traceability/rebuild-preparation-inventory.md)
 - [docs/traceability/rebuild-string-matrix.md](docs/traceability/rebuild-string-matrix.md)
 - [package.json](package.json)
-- [src/project/contract/actionLifecycle.js](src/project/contract/actionLifecycle.js)
-- [src/project/contract/manifest.js](src/project/contract/manifest.js)
+- [src/game/contracts/actionLifecycle.js](src/game/contracts/actionLifecycle.js)
+- [src/game/contracts/manifest.js](src/game/contracts/manifest.js)
 
 </details>
 
@@ -321,12 +321,12 @@ The LifeGameLab repository is organized to enforce a strict separation between t
 
 ## Top-Level Directory Layout
 
-The repository follows a manifest-first design where the `src/project/` directory defines the "laws" of the state, and `src/kernel/` enforces them.
+The repository follows a manifest-first design where the `src/game/` directory defines the "laws" of the state, and `src/kernel/` enforces them.
 
 | Directory | Purpose | Key Content |
 | :--- | :--- | :--- |
 | `src/kernel/` | Sole write authority for state. | Store, Patching, Validation, RNG. |
-| `src/project/` | Executable Source of Truth (SoT). | Manifest, State/Action Schemas, Mutation Matrix. |
+| `src/game/` | Executable Source of Truth (SoT). | Manifest, State/Action Schemas, Mutation Matrix. |
 | `src/game/` | Runtime implementation. | Simulation loop, Renderer, UI adapters, Enums. |
 | `src/app/` | Orchestration. | Bootstrap, Main Loop, Crash handling. |
 | `docs/` | Documentation and Decision Logs. | Product SoT, Architecture SoT, Status, Traceability. |
@@ -349,10 +349,10 @@ graph TD
     end
 
     subgraph "Contract Layer (The Laws)"
-        MANIFEST["src/project/contract/manifest.js"]
-        SCHEMA["src/project/contract/stateSchema.js"]
-        MATRIX["src/project/contract/mutationMatrix.js"]
-        LIFECYCLE["src/project/contract/actionLifecycle.js"]
+        MANIFEST["src/game/contracts/manifest.js"]
+        SCHEMA["src/game/contracts/stateSchema.js"]
+        MATRIX["src/game/contracts/mutationMatrix.js"]
+        LIFECYCLE["src/game/contracts/actionLifecycle.js"]
     end
 
     subgraph "Kernel Layer (The Enforcer)"
@@ -386,10 +386,10 @@ The Kernel is the deterministic heart of the application. It handles the `create
 *   **Patching:** `applyPatches.js` implements a subset of JSON Patch with strict path validation [src/kernel/store/applyPatches.js:1-50]().
 *   **Validation:** `validateState.js` and `validateAction.js` ensure state remains within schema bounds and actions are well-formed [src/kernel/validation/validateState.js:1-115]().
 
-### 2. Contracts (`src/project/contract/`)
+### 2. Contracts (`src/game/contracts/`)
 This module is the executable Source of Truth.
-*   **Action Lifecycle:** `actionLifecycle.js` tracks the migration status of actions (e.g., `STABLE`, `RENAME`, `DEPRECATED`) and defines "Removal Gates" for legacy code [src/project/contract/actionLifecycle.js:1-57]().
-*   **Mutation Matrix:** `mutationMatrix.js` defines which actions are allowed to modify which parts of the state [src/project/contract/manifest.js:3]().
+*   **Action Lifecycle:** `actionLifecycle.js` tracks the migration status of actions (e.g., `STABLE`, `RENAME`, `DEPRECATED`) and defines "Removal Gates" for legacy code [src/game/contracts/actionLifecycle.js:1-57]().
+*   **Mutation Matrix:** `mutationMatrix.js` defines which actions are allowed to modify which parts of the state [src/game/contracts/manifest.js:3]().
 *   **Sim Gate:** `simGate.js` defines the TypedArray memory layout for the simulation world [docs/STATUS.md:37-38]().
 
 ### 3. Simulation (`src/game/sim/`)
@@ -419,8 +419,8 @@ graph LR
         W_PROC --> GEN_WORLD["action: GEN_WORLD"]
         W_PROC --> MAPSPEC["src/game/sim/mapspec.js"]
         
-        A_MIG --> LIFECYCLE_E["src/project/contract/actionLifecycle.js"]
-        A_MIG --> MATRIX_E["src/project/contract/mutationMatrix.js"]
+        A_MIG --> LIFECYCLE_E["src/game/contracts/actionLifecycle.js"]
+        A_MIG --> MATRIX_E["src/game/contracts/mutationMatrix.js"]
         
         S_PROT --> SCH_VAL["src/kernel/validation/validateState.js"]
         S_PROT --> DOM_GATE["src/kernel/validation/assertDomainPatchesAllowed.js"]
@@ -465,14 +465,14 @@ The following files were used as context for generating this wiki page:
 - [src/kernel/store/signature.js](src/kernel/store/signature.js)
 - [src/kernel/validation/assertDomainPatchesAllowed.js](src/kernel/validation/assertDomainPatchesAllowed.js)
 - [src/kernel/validation/validateState.js](src/kernel/validation/validateState.js)
-- [src/project/contract/actionLifecycle.js](src/project/contract/actionLifecycle.js)
-- [src/project/contract/actionSchema.js](src/project/contract/actionSchema.js)
-- [src/project/contract/dataflow.js](src/project/contract/dataflow.js)
-- [src/project/contract/manifest.js](src/project/contract/manifest.js)
-- [src/project/contract/mutationMatrix.js](src/project/contract/mutationMatrix.js)
-- [src/project/contract/simGate.js](src/project/contract/simGate.js)
-- [src/project/contract/stateSchema.js](src/project/contract/stateSchema.js)
-- [src/project/project.manifest.js](src/project/project.manifest.js)
+- [src/game/contracts/actionLifecycle.js](src/game/contracts/actionLifecycle.js)
+- [src/game/contracts/actionSchema.js](src/game/contracts/actionSchema.js)
+- [src/game/contracts/dataflow.js](src/game/contracts/dataflow.js)
+- [src/game/contracts/manifest.js](src/game/contracts/manifest.js)
+- [src/game/contracts/mutationMatrix.js](src/game/contracts/mutationMatrix.js)
+- [src/game/contracts/simGate.js](src/game/contracts/simGate.js)
+- [src/game/contracts/stateSchema.js](src/game/contracts/stateSchema.js)
+- [src/game/manifest.js](src/game/manifest.js)
 - [tests/test-dispatch-error-state-stability.mjs](tests/test-dispatch-error-state-stability.mjs)
 - [tests/test-slice-a-contract-scaffold.mjs](tests/test-slice-a-contract-scaffold.mjs)
 
@@ -488,7 +488,7 @@ The system is built on five foundational pillars that govern all data flow and s
 
 | Principle | Description | Implementation Mechanism |
 | :--- | :--- | :--- |
-| **Manifest-First Design** | The structure and permissions of the system are defined in executable contracts before implementation. | `src/project/contract/` [src/project/contract/manifest.js:1-20]() |
+| **Manifest-First Design** | The structure and permissions of the system are defined in executable contracts before implementation. | `src/game/contracts/` [src/game/contracts/manifest.js:1-20]() |
 | **Patch-Only Updates** | State cannot be mutated directly; it is updated via atomic JSON-like patches. | `applyPatches` in `src/kernel/store/` [src/kernel/store/createStore.js:70-80]() |
 | **Sole Write Authority** | The Kernel is the only component allowed to commit changes to the gameplay state. | `createStore` closure [src/kernel/store/createStore.js:58-118]() |
 | **Read-Only UI/Renderer** | Presentation layers receive a frozen state and cannot dispatch direct mutations. | `deepFreeze` on state [src/kernel/store/createStore.js:112-120]() |
@@ -539,7 +539,7 @@ graph TD
     STORE -->|applies| PATCHER
     PATCHER -->|updates| VALIDATOR
 ```
-**Sources:** [src/project/contract/dataflow.js:5-45](), [src/kernel/store/createStore.js:58-102](), [docs/ARCHITECTURE.md:17-24]()
+**Sources:** [src/game/contracts/dataflow.js:5-45](), [src/kernel/store/createStore.js:58-102](), [docs/ARCHITECTURE.md:17-24]()
 
 ---
 
@@ -550,9 +550,9 @@ LifeGameLab uses a "Manifest-First" approach. Every action must be registered in
 ### Action Migration (The Slice Model)
 To facilitate the transition from a legacy prototype to a clean RTS architecture, the system uses **Slices** (A, B, C, etc.) and an `actionLifecycle` ledger.
 
-*   **STABLE**: Production-ready actions (e.g., `GEN_WORLD`). [src/project/contract/actionLifecycle.js:60-64]()
-*   **RENAME/DEPRECATED**: Actions slated for removal or replacement (e.g., `SET_BRUSH` -> `SELECT_ENTITY`). [src/project/contract/actionLifecycle.js:130-135]()
-*   **SCAFFOLD**: New actions defined for future slices but not yet wired to a reducer (e.g., `PLACE_CORE`). [src/project/contract/actionLifecycle.js:211-215]()
+*   **STABLE**: Production-ready actions (e.g., `GEN_WORLD`). [src/game/contracts/actionLifecycle.js:60-64]()
+*   **RENAME/DEPRECATED**: Actions slated for removal or replacement (e.g., `SET_BRUSH` -> `SELECT_ENTITY`). [src/game/contracts/actionLifecycle.js:130-135]()
+*   **SCAFFOLD**: New actions defined for future slices but not yet wired to a reducer (e.g., `PLACE_CORE`). [src/game/contracts/actionLifecycle.js:211-215]()
 
 ### Removal Gates
 An action cannot be deleted until it passes four mandatory gates:
@@ -561,7 +561,7 @@ An action cannot be deleted until it passes four mandatory gates:
 3. `tests_migrated`: Regression tests cover the replacement.
 4. `replacement_wired`: The new action is fully functional.
 
-**Sources:** [src/project/contract/actionLifecycle.js:1-59](), [docs/ARCHITECTURE.md:29-32](), [docs/STATUS.md:49-52]()
+**Sources:** [src/game/contracts/actionLifecycle.js:1-59](), [docs/ARCHITECTURE.md:29-32](), [docs/STATUS.md:49-52]()
 
 ---
 
@@ -602,7 +602,7 @@ sequenceDiagram
     K->>K: applyPatches & sanitizeBySchema
     K->>UI: emit() / subscriber update
 ```
-**Sources:** [src/kernel/store/createStore.js:58-118](), [src/project/contract/mutationMatrix.js:1-79](), [tests/test-dispatch-error-state-stability.mjs:9-37]()
+**Sources:** [src/kernel/store/createStore.js:58-118](), [src/game/contracts/mutationMatrix.js:1-79](), [tests/test-dispatch-error-state-stability.mjs:9-37]()
 
 ---
 
@@ -627,14 +627,14 @@ To guarantee that a game can be perfectly replayed from a seed, all sources of e
 
 The following files were used as context for generating this wiki page:
 
-- [src/core/kernel/hash32.js](src/core/kernel/hash32.js)
-- [src/core/kernel/patches.js](src/core/kernel/patches.js)
-- [src/core/kernel/persistence.js](src/core/kernel/persistence.js)
-- [src/core/kernel/physics.js](src/core/kernel/physics.js)
-- [src/core/kernel/rng.js](src/core/kernel/rng.js)
-- [src/core/kernel/schema.js](src/core/kernel/schema.js)
-- [src/core/kernel/stableStringify.js](src/core/kernel/stableStringify.js)
-- [src/core/kernel/store.js](src/core/kernel/store.js)
+- [src/kernel/hash32.js](src/kernel/hash32.js)
+- [src/kernel/patches.js](src/kernel/patches.js)
+- [src/kernel/persistence.js](src/kernel/persistence.js)
+- [src/kernel/physics.js](src/kernel/physics.js)
+- [src/kernel/rng.js](src/kernel/rng.js)
+- [src/kernel/schema.js](src/kernel/schema.js)
+- [src/kernel/stableStringify.js](src/kernel/stableStringify.js)
+- [src/kernel/store.js](src/kernel/store.js)
 - [src/game/contracts/ids.js](src/game/contracts/ids.js)
 - [src/kernel/determinism/rng.js](src/kernel/determinism/rng.js)
 - [src/kernel/store/applyPatches.js](src/kernel/store/applyPatches.js)
@@ -642,8 +642,8 @@ The following files were used as context for generating this wiki page:
 - [src/kernel/store/signature.js](src/kernel/store/signature.js)
 - [src/kernel/validation/assertDomainPatchesAllowed.js](src/kernel/validation/assertDomainPatchesAllowed.js)
 - [src/kernel/validation/validateState.js](src/kernel/validation/validateState.js)
-- [src/project/llm/policy.js](src/project/llm/policy.js)
-- [src/project/project.manifest.js](src/project/project.manifest.js)
+- [tools/llm/policy.mjs](tools/llm/policy.mjs)
+- [src/game/manifest.js](src/game/manifest.js)
 - [tests/test-dispatch-error-state-stability.mjs](tests/test-dispatch-error-state-stability.mjs)
 
 </details>
@@ -673,13 +673,13 @@ graph TD
         Guard["runtimeGuards.js"]
     end
 
-    subgraph "Contract Layer (src/project/contract/)"
+    subgraph "Contract Layer (src/game/contracts/)"
         Schema["stateSchema"]
         Matrix["mutationMatrix"]
         Gate["simGate"]
     end
 
-    subgraph "Logic Layer (src/project/)"
+    subgraph "Logic Layer (src/game/)"
         Reducer["project.reducer"]
         SimStep["project.simStep"]
     end
@@ -693,7 +693,7 @@ graph TD
     Patches -- "updates" --> Store
     RNG -- "provides entropy to" --> Reducer
 ```
-**Sources:** [src/kernel/store/createStore.js:1-8](), [src/project/project.manifest.js:1-12]()
+**Sources:** [src/kernel/store/createStore.js:1-8](), [src/game/manifest.js:1-12]()
 
 ---
 
@@ -758,16 +758,16 @@ For details, see [Persistence, Signature, and RNG](#2.3).
 
 The following files were used as context for generating this wiki page:
 
-- [src/core/kernel/schema.js](src/core/kernel/schema.js)
-- [src/core/kernel/store.js](src/core/kernel/store.js)
+- [src/kernel/schema.js](src/kernel/schema.js)
+- [src/kernel/store.js](src/kernel/store.js)
 - [src/game/contracts/ids.js](src/game/contracts/ids.js)
 - [src/kernel/determinism/runtimeGuards.js](src/kernel/determinism/runtimeGuards.js)
 - [src/kernel/store/createStore.js](src/kernel/store/createStore.js)
 - [src/kernel/store/signature.js](src/kernel/store/signature.js)
 - [src/kernel/validation/assertDomainPatchesAllowed.js](src/kernel/validation/assertDomainPatchesAllowed.js)
 - [src/kernel/validation/validateState.js](src/kernel/validation/validateState.js)
-- [src/project/llm/policy.js](src/project/llm/policy.js)
-- [src/project/project.manifest.js](src/project/project.manifest.js)
+- [tools/llm/policy.mjs](tools/llm/policy.mjs)
+- [src/game/manifest.js](src/game/manifest.js)
 - [tests/test-contract-no-bypass.mjs](tests/test-contract-no-bypass.mjs)
 - [tests/test-dispatch-error-state-stability.mjs](tests/test-dispatch-error-state-stability.mjs)
 
@@ -906,12 +906,12 @@ The following files were used as context for generating this wiki page:
 - [src/kernel/store/signature.js](src/kernel/store/signature.js)
 - [src/kernel/validation/assertDomainPatchesAllowed.js](src/kernel/validation/assertDomainPatchesAllowed.js)
 - [src/kernel/validation/validateState.js](src/kernel/validation/validateState.js)
-- [src/project/contract/actionSchema.js](src/project/contract/actionSchema.js)
-- [src/project/contract/dataflow.js](src/project/contract/dataflow.js)
-- [src/project/contract/mutationMatrix.js](src/project/contract/mutationMatrix.js)
-- [src/project/contract/simGate.js](src/project/contract/simGate.js)
-- [src/project/contract/stateSchema.js](src/project/contract/stateSchema.js)
-- [src/project/project.manifest.js](src/project/project.manifest.js)
+- [src/game/contracts/actionSchema.js](src/game/contracts/actionSchema.js)
+- [src/game/contracts/dataflow.js](src/game/contracts/dataflow.js)
+- [src/game/contracts/mutationMatrix.js](src/game/contracts/mutationMatrix.js)
+- [src/game/contracts/simGate.js](src/game/contracts/simGate.js)
+- [src/game/contracts/stateSchema.js](src/game/contracts/stateSchema.js)
+- [src/game/manifest.js](src/game/manifest.js)
 - [tests/test-contract-no-bypass.mjs](tests/test-contract-no-bypass.mjs)
 - [tests/test-dispatch-error-state-stability.mjs](tests/test-dispatch-error-state-stability.mjs)
 - [tests/test-slice-a-contract-scaffold.mjs](tests/test-slice-a-contract-scaffold.mjs)
@@ -960,7 +960,7 @@ graph TD
     F --> G
     I --> K
 ```
-**Sources:** [src/kernel/store/createStore.js:58-118](), [src/project/contract/dataflow.js:47-61]()
+**Sources:** [src/kernel/store/createStore.js:58-118](), [src/game/contracts/dataflow.js:47-61]()
 
 ---
 
@@ -968,12 +968,12 @@ graph TD
 
 The `sanitizeBySchema` function (imported into `createStore.js`) is responsible for ensuring the state tree matches the shape defined in `stateSchema.js`. It performs several critical tasks:
 
-1.  **Defaulting**: If a key is missing in the current state, the value defined in `stateSchema` is injected [src/project/contract/stateSchema.js:10-100]().
-2.  **Clamping and Truncation**: For numeric values with `min`/`max` constraints or strings with `maxLen`, the sanitizer enforces these limits [src/project/contract/actionSchema.js:19-21]().
-3.  **TypedArray Coercion**: The kernel uses `TypedArrays` (e.g., `Float32Array`, `Uint8Array`) for high-performance simulation data. The sanitizer ensures these buffers are correctly allocated and sized based on the grid dimensions [src/project/contract/simGate.js:43-65]().
+1.  **Defaulting**: If a key is missing in the current state, the value defined in `stateSchema` is injected [src/game/contracts/stateSchema.js:10-100]().
+2.  **Clamping and Truncation**: For numeric values with `min`/`max` constraints or strings with `maxLen`, the sanitizer enforces these limits [src/game/contracts/actionSchema.js:19-21]().
+3.  **TypedArray Coercion**: The kernel uses `TypedArrays` (e.g., `Float32Array`, `Uint8Array`) for high-performance simulation data. The sanitizer ensures these buffers are correctly allocated and sized based on the grid dimensions [src/game/contracts/simGate.js:43-65]().
 4.  **Deep Freezing**: After sanitization and before the state is made available to the rest of the system, `deepFreeze` is called to prevent accidental mutations outside the dispatch pipeline [src/kernel/store/createStore.js:112-120]().
 
-**Sources:** [src/kernel/store/createStore.js:25-42](), [src/project/contract/stateSchema.js:10-120](), [src/kernel/determinism/runtimeGuards.js:129-140]()
+**Sources:** [src/kernel/store/createStore.js:25-42](), [src/game/contracts/stateSchema.js:10-120](), [src/kernel/determinism/runtimeGuards.js:129-140]()
 
 ---
 
@@ -982,13 +982,13 @@ The `sanitizeBySchema` function (imported into `createStore.js`) is responsible 
 The kernel does not allow arbitrary state updates. Every action is audited against a **Mutation Matrix** and a **Domain Patch Gate**.
 
 ### Mutation Matrix Path Enforcement
-The `mutationMatrix.js` file defines exactly which state paths an action is permitted to modify. For example, the `SET_SEED` action is only allowed to touch `/meta/seed` [src/project/contract/mutationMatrix.js:48-48](). If a reducer returns a patch for `/world/E` during a `SET_SEED` dispatch, the kernel throws an error and rolls back [src/kernel/store/createStore.js:77-78]().
+The `mutationMatrix.js` file defines exactly which state paths an action is permitted to modify. For example, the `SET_SEED` action is only allowed to touch `/meta/seed` [src/game/contracts/mutationMatrix.js:48-48](). If a reducer returns a patch for `/world/E` during a `SET_SEED` dispatch, the kernel throws an error and rolls back [src/kernel/store/createStore.js:77-78]().
 
 ### Domain Patch Gate (`assertDomainPatchesAllowed`)
 While the mutation matrix handles path-level permissions, `assertDomainPatchesAllowed.js` provides logic-based enforcement. It prevents "impossible" transitions, such as:
 *   Writing to `world` domains before `GEN_WORLD` has been called.
 *   Modifying `sim` counters during a read-only phase.
-*   Enforcing `TypedArray` length invariants (e.g., ensuring a `Uint8Array` for the grid matches `gridW * gridH`) [src/project/contract/simGate.js:33-36]().
+*   Enforcing `TypedArray` length invariants (e.g., ensuring a `Uint8Array` for the grid matches `gridW * gridH`) [src/game/contracts/simGate.js:33-36]().
 
 ### Mapping Actions to Permissions
 The following diagram bridges the intent of an action to its enforced code-level write permissions.
@@ -1001,7 +1001,7 @@ graph LR
     N3["'Place Unit'"]
     end
 
-    subgraph "Code Entity Space: src/project/contract/mutationMatrix.js"
+    subgraph "Code Entity Space: src/game/contracts/mutationMatrix.js"
     E1["GEN_WORLD"]
     E2["SET_SPEED"]
     E3["PLACE_WORKER"]
@@ -1024,7 +1024,7 @@ graph LR
     E3 --> D4
     E3 --> D2
 ```
-**Sources:** [src/project/contract/mutationMatrix.js:1-79](), [src/project/contract/actionSchema.js:1-64]()
+**Sources:** [src/game/contracts/mutationMatrix.js:1-79](), [src/game/contracts/actionSchema.js:1-64]()
 
 ---
 
@@ -1052,12 +1052,12 @@ The kernel implements strict isolation to ensure that failed validations do not 
 
 The following files were used as context for generating this wiki page:
 
-- [src/core/kernel/hash32.js](src/core/kernel/hash32.js)
-- [src/core/kernel/patches.js](src/core/kernel/patches.js)
-- [src/core/kernel/persistence.js](src/core/kernel/persistence.js)
-- [src/core/kernel/physics.js](src/core/kernel/physics.js)
-- [src/core/kernel/rng.js](src/core/kernel/rng.js)
-- [src/core/kernel/stableStringify.js](src/core/kernel/stableStringify.js)
+- [src/kernel/hash32.js](src/kernel/hash32.js)
+- [src/kernel/patches.js](src/kernel/patches.js)
+- [src/kernel/persistence.js](src/kernel/persistence.js)
+- [src/kernel/physics.js](src/kernel/physics.js)
+- [src/kernel/rng.js](src/kernel/rng.js)
+- [src/kernel/stableStringify.js](src/kernel/stableStringify.js)
 - [src/game/contracts/ids.js](src/game/contracts/ids.js)
 - [src/kernel/determinism/rng.js](src/kernel/determinism/rng.js)
 - [src/kernel/store/applyPatches.js](src/kernel/store/applyPatches.js)
@@ -1066,7 +1066,7 @@ The following files were used as context for generating this wiki page:
 - [src/kernel/store/signature.js](src/kernel/store/signature.js)
 - [src/kernel/validation/assertDomainPatchesAllowed.js](src/kernel/validation/assertDomainPatchesAllowed.js)
 - [src/kernel/validation/validateState.js](src/kernel/validation/validateState.js)
-- [src/project/project.manifest.js](src/project/project.manifest.js)
+- [src/game/manifest.js](src/game/manifest.js)
 - [tests/test-dispatch-error-state-stability.mjs](tests/test-dispatch-error-state-stability.mjs)
 
 </details>
@@ -1194,20 +1194,20 @@ The following files were used as context for generating this wiki page:
 - [docs/traceability/rebuild-preparation-inventory.md](docs/traceability/rebuild-preparation-inventory.md)
 - [docs/traceability/rebuild-string-matrix.md](docs/traceability/rebuild-string-matrix.md)
 - [package.json](package.json)
-- [src/project/contract/actionLifecycle.js](src/project/contract/actionLifecycle.js)
-- [src/project/contract/actionSchema.js](src/project/contract/actionSchema.js)
-- [src/project/contract/dataflow.js](src/project/contract/dataflow.js)
-- [src/project/contract/manifest.js](src/project/contract/manifest.js)
-- [src/project/contract/mutationMatrix.js](src/project/contract/mutationMatrix.js)
-- [src/project/contract/simGate.js](src/project/contract/simGate.js)
-- [src/project/contract/stateSchema.js](src/project/contract/stateSchema.js)
+- [src/game/contracts/actionLifecycle.js](src/game/contracts/actionLifecycle.js)
+- [src/game/contracts/actionSchema.js](src/game/contracts/actionSchema.js)
+- [src/game/contracts/dataflow.js](src/game/contracts/dataflow.js)
+- [src/game/contracts/manifest.js](src/game/contracts/manifest.js)
+- [src/game/contracts/mutationMatrix.js](src/game/contracts/mutationMatrix.js)
+- [src/game/contracts/simGate.js](src/game/contracts/simGate.js)
+- [src/game/contracts/stateSchema.js](src/game/contracts/stateSchema.js)
 - [tests/test-slice-a-contract-scaffold.mjs](tests/test-slice-a-contract-scaffold.mjs)
 
 </details>
 
 
 
-The **Contract Layer** serves as the executable Source of Truth (SoT) for the LifeGameLab architecture [docs/ARCHITECTURE.md:5-8](). It defines the shape of the game state, the rules for valid actions, and the permissions for state mutations. By centralizing these definitions in `src/project/contract/`, the system ensures that the [Deterministic Kernel](#2) can enforce strict validation and sanitization without needing to understand specific gameplay mechanics.
+The **Contract Layer** serves as the executable Source of Truth (SoT) for the LifeGameLab architecture [docs/ARCHITECTURE.md:5-8](). It defines the shape of the game state, the rules for valid actions, and the permissions for state mutations. By centralizing these definitions in `src/game/contracts/`, the system ensures that the [Deterministic Kernel](#2) can enforce strict validation and sanitization without needing to understand specific gameplay mechanics.
 
 ## Architecture Role
 
@@ -1233,17 +1233,17 @@ graph TD
         C -->|Layout in| C1["simGate.world.keys"]
     end
 
-    [src/project/contract/actionSchema.js:48]()
-    [src/project/contract/mutationMatrix.js:63]()
-    [src/project/contract/stateSchema.js:17-18]()
-    [src/project/contract/simGate.js:43-65]()
+    [src/game/contracts/actionSchema.js:48]()
+    [src/game/contracts/mutationMatrix.js:63]()
+    [src/game/contracts/stateSchema.js:17-18]()
+    [src/game/contracts/simGate.js:43-65]()
 
-    Sources: [src/project/contract/actionSchema.js](), [src/project/contract/mutationMatrix.js](), [src/project/contract/stateSchema.js](), [src/project/contract/simGate.js]()
+    Sources: [src/game/contracts/actionSchema.js](), [src/game/contracts/mutationMatrix.js](), [src/game/contracts/stateSchema.js](), [src/game/contracts/simGate.js]()
 ```
 
 ## Core Modules
 
-The contract layer is composed of several specialized modules, all aggregated and exported via the central manifest [src/project/contract/manifest.js:11-20]().
+The contract layer is composed of several specialized modules, all aggregated and exported via the central manifest [src/game/contracts/manifest.js:11-20]().
 
 | Module | Responsibility | Key File |
 | :--- | :--- | :--- |
@@ -1274,30 +1274,30 @@ sequenceDiagram
     C-->>K: Allowed Paths
     K->>K: applyPatches() (Only if paths match)
 ```
-Sources: [src/project/contract/dataflow.js:5-45](), [src/project/contract/mutationMatrix.js:1-79]()
+Sources: [src/game/contracts/dataflow.js:5-45](), [src/game/contracts/mutationMatrix.js:1-79]()
 
 ---
 
 ## Child Pages
 
 ### [State Schema and SimGate](#3.1)
-Documents the structural definition of the `meta`, `map`, `world`, and `sim` domains. It details how `simGate.js` manages high-performance `TypedArray` buffers for simulation fields like Energy (`E`), Life (`L`), and Toxin (`P`) [src/project/contract/simGate.js:44-51]().
+Documents the structural definition of the `meta`, `map`, `world`, and `sim` domains. It details how `simGate.js` manages high-performance `TypedArray` buffers for simulation fields like Energy (`E`), Life (`L`), and Toxin (`P`) [src/game/contracts/simGate.js:44-51]().
 
 ### [Action Schema, Mutation Matrix, and Dataflow](#3.2)
-Covers the validation of action payloads (e.g., `SET_MAPSPEC` [src/project/contract/actionSchema.js:13-27]()) and the `mutationMatrix` which prevents unauthorized state writes (e.g., `SET_SPEED` only allowed to write to `/meta/speed` [src/project/contract/mutationMatrix.js:47]()).
+Covers the validation of action payloads (e.g., `SET_MAPSPEC` [src/game/contracts/actionSchema.js:13-27]()) and the `mutationMatrix` which prevents unauthorized state writes (e.g., `SET_SPEED` only allowed to write to `/meta/speed` [src/game/contracts/mutationMatrix.js:47]()).
 
 ### [Action Lifecycle and Migration Slices](#3.3)
-Explains how the project migrates from legacy "Cell" logic to "RTS Worker" logic using `actionLifecycle.js`. It tracks statuses like `STABLE`, `RENAME`, and `DEPRECATED` [src/project/contract/actionLifecycle.js:1-6](), and enforces "Removal Gates" to ensure legacy code is only deleted after replacements are fully wired and tested [src/project/contract/actionLifecycle.js:8-13]().
+Explains how the project migrates from legacy "Cell" logic to "RTS Worker" logic using `actionLifecycle.js`. It tracks statuses like `STABLE`, `RENAME`, and `DEPRECATED` [src/game/contracts/actionLifecycle.js:1-6](), and enforces "Removal Gates" to ensure legacy code is only deleted after replacements are fully wired and tested [src/game/contracts/actionLifecycle.js:8-13]().
 
 ### [Domain Identifiers and Enums](#3.4)
-Centralized documentation for `src/game/contracts/ids.js`. This includes critical constants for game phases (`RUN_PHASE`), win conditions (`WIN_MODE`), and interaction modes (`BRUSH_MODE`) [src/project/contract/stateSchema.js:1-8]().
+Centralized documentation for `src/game/contracts/ids.js`. This includes critical constants for game phases (`RUN_PHASE`), win conditions (`WIN_MODE`), and interaction modes (`BRUSH_MODE`) [src/game/contracts/stateSchema.js:1-8]().
 
 ---
 **Sources:**
 - [docs/ARCHITECTURE.md:5-20]()
 - [docs/STATUS.md:28-41]()
-- [src/project/contract/manifest.js:1-30]()
-- [src/project/contract/dataflow.js:47-61]()
+- [src/game/contracts/manifest.js:1-30]()
+- [src/game/contracts/dataflow.js:47-61]()
 
 ---
 
@@ -1315,12 +1315,12 @@ The following files were used as context for generating this wiki page:
 - [src/kernel/store/signature.js](src/kernel/store/signature.js)
 - [src/kernel/validation/assertDomainPatchesAllowed.js](src/kernel/validation/assertDomainPatchesAllowed.js)
 - [src/kernel/validation/validateState.js](src/kernel/validation/validateState.js)
-- [src/project/contract/actionSchema.js](src/project/contract/actionSchema.js)
-- [src/project/contract/dataflow.js](src/project/contract/dataflow.js)
-- [src/project/contract/mutationMatrix.js](src/project/contract/mutationMatrix.js)
-- [src/project/contract/simGate.js](src/project/contract/simGate.js)
-- [src/project/contract/stateSchema.js](src/project/contract/stateSchema.js)
-- [src/project/project.manifest.js](src/project/project.manifest.js)
+- [src/game/contracts/actionSchema.js](src/game/contracts/actionSchema.js)
+- [src/game/contracts/dataflow.js](src/game/contracts/dataflow.js)
+- [src/game/contracts/mutationMatrix.js](src/game/contracts/mutationMatrix.js)
+- [src/game/contracts/simGate.js](src/game/contracts/simGate.js)
+- [src/game/contracts/stateSchema.js](src/game/contracts/stateSchema.js)
+- [src/game/manifest.js](src/game/manifest.js)
 - [tests/test-dispatch-error-state-stability.mjs](tests/test-dispatch-error-state-stability.mjs)
 - [tests/test-slice-a-contract-scaffold.mjs](tests/test-slice-a-contract-scaffold.mjs)
 
@@ -1344,11 +1344,11 @@ The game state is divided into four primary domains: `meta`, `map`, `world`, and
 | `sim` | Simulation metrics, counters, and phase state. | Regenerated |
 
 ### Key Schema Configurations
-- **Meta Domain**: Contains `seed` (default: `"life-light"`), `gridW`/`gridH`, and the `migrationSlice` (currently `"slice_b_mapspec"`) [src/project/contract/stateSchema.js:16-21]().
-- **Map Domain**: Tracks the `activeSource` (e.g., `"legacy_preset"`) and holds the `compiledHash` for map integrity [src/project/contract/stateSchema.js:74-75]().
-- **Sim Domain**: Manages the `runPhase` (using `RUN_PHASE` enums) and simulation counters like `aliveCount` and `playerDNA` [src/project/contract/stateSchema.js:94-170]().
+- **Meta Domain**: Contains `seed` (default: `"life-light"`), `gridW`/`gridH`, and the `migrationSlice` (currently `"slice_b_mapspec"`) [src/game/contracts/stateSchema.js:16-21]().
+- **Map Domain**: Tracks the `activeSource` (e.g., `"legacy_preset"`) and holds the `compiledHash` for map integrity [src/game/contracts/stateSchema.js:74-75]().
+- **Sim Domain**: Manages the `runPhase` (using `RUN_PHASE` enums) and simulation counters like `aliveCount` and `playerDNA` [src/game/contracts/stateSchema.js:94-170]().
 
-Sources: [src/project/contract/stateSchema.js:10-170](), [src/game/contracts/ids.js:80-87]()
+Sources: [src/game/contracts/stateSchema.js:10-170](), [src/game/contracts/ids.js:80-87]()
 
 ---
 
@@ -1370,9 +1370,9 @@ Most spatial data is stored in flat `TypedArrays` of length `N` (where $N = grid
 | `zoneId`| `ta` | `Uint16Array` | Mapping of cells to specific Zone IDs. |
 
 ### Simulation Key Registry
-The `simGate.sim.keys` array explicitly lists every allowed property in the simulation domain, categorized by type (`booleanKeys`, `stringKeys`, `objectKeys`) to facilitate automated validation and serialization [src/project/contract/simGate.js:95-115]().
+The `simGate.sim.keys` array explicitly lists every allowed property in the simulation domain, categorized by type (`booleanKeys`, `stringKeys`, `objectKeys`) to facilitate automated validation and serialization [src/game/contracts/simGate.js:95-115]().
 
-Sources: [src/project/contract/simGate.js:32-116]()
+Sources: [src/game/contracts/simGate.js:32-116]()
 
 ---
 
@@ -1404,7 +1404,7 @@ graph TD
         E1 --> F1["validateState.js: sanitizeBySchema()"]
     end
 ```
-Sources: [src/game/contracts/ids.js:1-87](), [src/project/contract/simGate.js:43-52](), [src/project/contract/stateSchema.js:10-100]()
+Sources: [src/game/contracts/ids.js:1-87](), [src/game/contracts/simGate.js:43-52](), [src/game/contracts/stateSchema.js:10-100]()
 
 ### State Mutation Pipeline
 This diagram shows how the Kernel uses the `mutationMatrix` and `simGate` to protect the state during a `dispatch`.
@@ -1426,7 +1426,7 @@ sequenceDiagram
     K->>K: deepFreeze(cleanState)
     K-->>U: emit()
 ```
-Sources: [src/kernel/store/createStore.js:58-117](), [src/project/contract/mutationMatrix.js:1-79](), [src/project/contract/actionSchema.js:1-64]()
+Sources: [src/kernel/store/createStore.js:58-117](), [src/game/contracts/mutationMatrix.js:1-79](), [src/game/contracts/actionSchema.js:1-64]()
 
 ---
 
@@ -1434,14 +1434,14 @@ Sources: [src/kernel/store/createStore.js:58-117](), [src/project/contract/mutat
 
 The `simGate` defines hard limits to prevent memory exhaustion and ensure deterministic performance across environments.
 
-- **maxPatches**: 5,000 per dispatch [src/project/contract/simGate.js:34-34]().
-- **maxTiles**: 250,000 (equivalent to a 500x500 grid) [src/project/contract/simGate.js:35-35]().
-- **traitCount**: Fixed at 7 per cell for the `trait` `Float32Array` [src/project/contract/simGate.js:38-38]().
+- **maxPatches**: 5,000 per dispatch [src/game/contracts/simGate.js:34-34]().
+- **maxTiles**: 250,000 (equivalent to a 500x500 grid) [src/game/contracts/simGate.js:35-35]().
+- **traitCount**: Fixed at 7 per cell for the `trait` `Float32Array` [src/game/contracts/simGate.js:38-38]().
 
 ### Patch Isolation and Cloning
 The kernel ensures that any object passed in a patch is deeply cloned and frozen. This prevents "reference leaks" where a reducer might accidentally hold a reference to the live state [tests/test-dispatch-error-state-stability.mjs:152-156]().
 
-Sources: [src/project/contract/simGate.js:33-38](), [src/kernel/store/createStore.js:128-159]()
+Sources: [src/game/contracts/simGate.js:33-38](), [src/kernel/store/createStore.js:128-159]()
 
 ---
 
@@ -1459,13 +1459,13 @@ The following files were used as context for generating this wiki page:
 - [docs/traceability/rebuild-preparation-inventory.md](docs/traceability/rebuild-preparation-inventory.md)
 - [docs/traceability/rebuild-string-matrix.md](docs/traceability/rebuild-string-matrix.md)
 - [package.json](package.json)
-- [src/project/contract/actionLifecycle.js](src/project/contract/actionLifecycle.js)
-- [src/project/contract/actionSchema.js](src/project/contract/actionSchema.js)
-- [src/project/contract/dataflow.js](src/project/contract/dataflow.js)
-- [src/project/contract/manifest.js](src/project/contract/manifest.js)
-- [src/project/contract/mutationMatrix.js](src/project/contract/mutationMatrix.js)
-- [src/project/contract/simGate.js](src/project/contract/simGate.js)
-- [src/project/contract/stateSchema.js](src/project/contract/stateSchema.js)
+- [src/game/contracts/actionLifecycle.js](src/game/contracts/actionLifecycle.js)
+- [src/game/contracts/actionSchema.js](src/game/contracts/actionSchema.js)
+- [src/game/contracts/dataflow.js](src/game/contracts/dataflow.js)
+- [src/game/contracts/manifest.js](src/game/contracts/manifest.js)
+- [src/game/contracts/mutationMatrix.js](src/game/contracts/mutationMatrix.js)
+- [src/game/contracts/simGate.js](src/game/contracts/simGate.js)
+- [src/game/contracts/stateSchema.js](src/game/contracts/stateSchema.js)
 - [tests/test-sim-gate-contract.mjs](tests/test-sim-gate-contract.mjs)
 - [tests/test-slice-a-contract-scaffold.mjs](tests/test-slice-a-contract-scaffold.mjs)
 
@@ -1477,25 +1477,25 @@ This page documents the contract layer responsible for defining the shape of pla
 
 ## 1. Action Schema (`actionSchema.js`)
 
-The `actionSchema.js` file defines the structural requirements for every action payload dispatched to the kernel. It serves as a serialization guard, preventing non-serializable objects (like class instances or circular references) from poisoning the deterministic state [src/project/contract/actionSchema.js:1-64]().
+The `actionSchema.js` file defines the structural requirements for every action payload dispatched to the kernel. It serves as a serialization guard, preventing non-serializable objects (like class instances or circular references) from poisoning the deterministic state [src/game/contracts/actionSchema.js:1-64]().
 
 ### Implementation Details
 Each action type is mapped to a schema object that specifies:
-*   **Type**: Usually `object` or `string` [src/project/contract/actionSchema.js:14-63]().
-*   **Shape**: A nested definition of allowed keys and their types (e.g., `number`, `boolean`, `string`) [src/project/contract/actionSchema.js:18-24]().
-*   **Constraints**: Includes `min`, `max`, `default`, and `int` (integer) requirements for numeric fields [src/project/contract/actionSchema.js:20-22]().
+*   **Type**: Usually `object` or `string` [src/game/contracts/actionSchema.js:14-63]().
+*   **Shape**: A nested definition of allowed keys and their types (e.g., `number`, `boolean`, `string`) [src/game/contracts/actionSchema.js:18-24]().
+*   **Constraints**: Includes `min`, `max`, `default`, and `int` (integer) requirements for numeric fields [src/game/contracts/actionSchema.js:20-22]().
 *   **Hardening**: Actions like `SET_MAPSPEC` are strictly hardened to explicit JSON-safe fields rather than allowing unknown properties [docs/STATUS.md:30-31]().
 
 ### Payload Validation Flow
 The kernel uses `sanitizeBySchema` during the dispatch lifecycle to coerce incoming payloads into the defined shape, clamping values and applying defaults where necessary [src/kernel/validation/validateState.js:31-31]().
 
-Sources: [src/project/contract/actionSchema.js:1-64](), [docs/STATUS.md:30-31](), [src/kernel/validation/validateState.js:31-31]()
+Sources: [src/game/contracts/actionSchema.js:1-64](), [docs/STATUS.md:30-31](), [src/kernel/validation/validateState.js:31-31]()
 
 ---
 
 ## 2. Mutation Matrix (`mutationMatrix.js`)
 
-The `mutationMatrix.js` is a declarative map that defines exactly which parts of the state tree an action is permitted to modify. This is the primary "write authority" configuration used by the kernel's `assertDomainPatchesAllowed` check [src/project/contract/mutationMatrix.js:1-79]().
+The `mutationMatrix.js` is a declarative map that defines exactly which parts of the state tree an action is permitted to modify. This is the primary "write authority" configuration used by the kernel's `assertDomainPatchesAllowed` check [src/game/contracts/mutationMatrix.js:1-79]().
 
 ### Matrix Structure
 The matrix maps an action type to an array of allowed JSON pointer paths:
@@ -1512,44 +1512,44 @@ The matrix maps an action type to an array of allowed JSON pointer paths:
 2.  **Patch Generation**: The reducer produces a set of RFC 6902 patches.
 3.  **Gate Check**: The kernel iterates through every patch. If a patch's `path` does not start with one of the allowed strings in the `mutationMatrix` for that action, the entire transaction is rolled back [src/kernel/store/createStore.js:25-31]().
 
-Sources: [src/project/contract/mutationMatrix.js:1-79](), [docs/STATUS.md:35-35](), [src/kernel/store/createStore.js:25-31]()
+Sources: [src/game/contracts/mutationMatrix.js:1-79](), [docs/STATUS.md:35-35](), [src/kernel/store/createStore.js:25-31]()
 
 ---
 
 ## 3. Dataflow and Dispatch Audit (`dataflow.js`)
 
-The `dataflow.js` module provides a comprehensive audit of where actions originate within the codebase and links them to their lifecycle status. It is used for both runtime validation and generating developer traceability reports [src/project/contract/dataflow.js:47-60]().
+The `dataflow.js` module provides a comprehensive audit of where actions originate within the codebase and links them to their lifecycle status. It is used for both runtime validation and generating developer traceability reports [src/game/contracts/dataflow.js:47-60]().
 
 ### Dispatch Source Tracking
-The `DISPATCH_SOURCES` constant explicitly lists the files allowed to trigger specific actions. This prevents "shadow dispatches" from unauthorized modules [src/project/contract/dataflow.js:5-45]().
+The `DISPATCH_SOURCES` constant explicitly lists the files allowed to trigger specific actions. This prevents "shadow dispatches" from unauthorized modules [src/game/contracts/dataflow.js:5-45]().
 
 **Example Mapping:**
-*   `SET_MAPSPEC`: Authorized only from `src/game/ui/ui.js` [src/project/contract/dataflow.js:17-17]().
-*   `SET_MAP_TILE`: Authorized only from `src/game/ui/ui.input.js` [src/project/contract/dataflow.js:18-18]().
-*   `SIM_STEP`: Authorized from `src/app/main.js` (ticker) and `src/game/ui/ui.input.js` (manual step) [src/project/contract/dataflow.js:12-12]().
+*   `SET_MAPSPEC`: Authorized only from `src/game/ui/ui.js` [src/game/contracts/dataflow.js:17-17]().
+*   `SET_MAP_TILE`: Authorized only from `src/game/ui/ui.input.js` [src/game/contracts/dataflow.js:18-18]().
+*   `SIM_STEP`: Authorized from `src/app/main.js` (ticker) and `src/game/ui/ui.input.js` (manual step) [src/game/contracts/dataflow.js:12-12]().
 
-Sources: [src/project/contract/dataflow.js:5-60](), [docs/STATUS.md:33-33]()
+Sources: [src/game/contracts/dataflow.js:5-60](), [docs/STATUS.md:33-33]()
 
 ---
 
 ## 4. Action Lifecycle and Migration
 
-Actions in the contract layer carry metadata regarding their migration status from the legacy "Cell" model to the "Worker RTS" model. This is managed in `actionLifecycle.js` [src/project/contract/actionLifecycle.js:59-221]().
+Actions in the contract layer carry metadata regarding their migration status from the legacy "Cell" model to the "Worker RTS" model. This is managed in `actionLifecycle.js` [src/game/contracts/actionLifecycle.js:59-221]().
 
 ### Lifecycle Statuses
-*   **STABLE**: Canonical actions (e.g., `GEN_WORLD`, `SIM_STEP`) [src/project/contract/actionLifecycle.js:15-24]().
-*   **RENAME**: Actions being phased into new names (e.g., `SET_WORLD_PRESET` -> `SET_MAPSPEC`) [src/project/contract/actionLifecycle.js:26-35]().
-*   **DEPRECATED**: Actions slated for removal (e.g., `CONFIRM_FOUNDATION`) [src/project/contract/actionLifecycle.js:37-46]().
-*   **NEW_SLICE_A**: Scaffolded actions for future slices (e.g., `PLACE_CORE`) [src/project/contract/actionLifecycle.js:48-57]().
+*   **STABLE**: Canonical actions (e.g., `GEN_WORLD`, `SIM_STEP`) [src/game/contracts/actionLifecycle.js:15-24]().
+*   **RENAME**: Actions being phased into new names (e.g., `SET_WORLD_PRESET` -> `SET_MAPSPEC`) [src/game/contracts/actionLifecycle.js:26-35]().
+*   **DEPRECATED**: Actions slated for removal (e.g., `CONFIRM_FOUNDATION`) [src/game/contracts/actionLifecycle.js:37-46]().
+*   **NEW_SLICE_A**: Scaffolded actions for future slices (e.g., `PLACE_CORE`) [src/game/contracts/actionLifecycle.js:48-57]().
 
 ### Removal Gates
 An action cannot be removed until it passes four "Removal Gates":
 1.  `dispatch_sources_removed`
 2.  `reducer_case_removed`
 3.  `tests_migrated`
-4.  `replacement_wired` [src/project/contract/actionLifecycle.js:8-13]()
+4.  `replacement_wired` [src/game/contracts/actionLifecycle.js:8-13]()
 
-Sources: [src/project/contract/actionLifecycle.js:1-221](), [docs/STATUS.md:8-8](), [docs/traceability/rebuild-preparation-inventory.md:37-43]()
+Sources: [src/game/contracts/actionLifecycle.js:1-221](), [docs/STATUS.md:8-8](), [docs/traceability/rebuild-preparation-inventory.md:37-43]()
 
 ---
 
@@ -1567,9 +1567,9 @@ graph TD
 
     subgraph "Code Entity Space (Contract Layer)"
         "UI_Input"["src/game/ui/ui.input.js"]
-        "ActionSchema"["src/project/contract/actionSchema.js"]
-        "MutationMatrix"["src/project/contract/mutationMatrix.js"]
-        "DataflowAudit"["src/project/contract/dataflow.js"]
+        "ActionSchema"["src/game/contracts/actionSchema.js"]
+        "MutationMatrix"["src/game/contracts/mutationMatrix.js"]
+        "DataflowAudit"["src/game/contracts/dataflow.js"]
     end
 
     subgraph "Kernel Space (Write Authority)"
@@ -1591,7 +1591,7 @@ graph TD
     "Validate_State" -- "Approved Patches" --> "Apply_Patches"
     "Apply_Patches" --> "State_Tree"["Immutable State Tree"]
 ```
-Sources: [src/kernel/store/createStore.js:21-40](), [src/project/contract/dataflow.js:5-10](), [src/project/contract/actionSchema.js:1-5](), [src/project/contract/mutationMatrix.js:1-5]()
+Sources: [src/kernel/store/createStore.js:21-40](), [src/game/contracts/dataflow.js:5-10](), [src/game/contracts/actionSchema.js:1-5](), [src/game/contracts/mutationMatrix.js:1-5]()
 
 ### Action Migration Lifecycle
 This diagram illustrates the transition of actions through different slices and the enforcement of removal gates.
@@ -1615,7 +1615,7 @@ stateDiagram-v2
     "DEPRECATED" --> Gates
     Gates --> [*] : Action removed from actionSchema.js
 ```
-Sources: [src/project/contract/actionLifecycle.js:1-57](), [docs/traceability/rebuild-preparation-inventory.md:37-43](), [docs/STATUS.md:49-52]()
+Sources: [src/game/contracts/actionLifecycle.js:1-57](), [docs/traceability/rebuild-preparation-inventory.md:37-43](), [docs/STATUS.md:49-52]()
 
 ---
 
@@ -1635,13 +1635,13 @@ The following files were used as context for generating this wiki page:
 - [docs/traceability/rebuild-preparation-inventory.md](docs/traceability/rebuild-preparation-inventory.md)
 - [docs/traceability/rebuild-string-matrix.md](docs/traceability/rebuild-string-matrix.md)
 - [package.json](package.json)
-- [src/project/contract/actionLifecycle.js](src/project/contract/actionLifecycle.js)
-- [src/project/contract/actionSchema.js](src/project/contract/actionSchema.js)
-- [src/project/contract/dataflow.js](src/project/contract/dataflow.js)
-- [src/project/contract/manifest.js](src/project/contract/manifest.js)
-- [src/project/contract/mutationMatrix.js](src/project/contract/mutationMatrix.js)
-- [src/project/contract/simGate.js](src/project/contract/simGate.js)
-- [src/project/contract/stateSchema.js](src/project/contract/stateSchema.js)
+- [src/game/contracts/actionLifecycle.js](src/game/contracts/actionLifecycle.js)
+- [src/game/contracts/actionSchema.js](src/game/contracts/actionSchema.js)
+- [src/game/contracts/dataflow.js](src/game/contracts/dataflow.js)
+- [src/game/contracts/manifest.js](src/game/contracts/manifest.js)
+- [src/game/contracts/mutationMatrix.js](src/game/contracts/mutationMatrix.js)
+- [src/game/contracts/simGate.js](src/game/contracts/simGate.js)
+- [src/game/contracts/stateSchema.js](src/game/contracts/stateSchema.js)
 - [tests/test-slice-a-contract-scaffold.mjs](tests/test-slice-a-contract-scaffold.mjs)
 
 </details>
@@ -1661,7 +1661,7 @@ The codebase uses a machine-readable lifecycle state for every action defined in
 | **Deprecated** | `ACTION_LIFECYCLE_STATUS.DEPRECATED` | Actions slated for total removal once their replacement logic is fully wired (e.g., `CONFIRM_FOUNDATION`). |
 | **New Slice A** | `ACTION_LIFECYCLE_STATUS.NEW_SLICE_A` | Scaffolded actions for the new RTS engine that may not yet have full reducer wiring. |
 
-Sources: `[src/project/contract/actionLifecycle.js:1-6]()`, `[src/project/contract/actionLifecycle.js:15-57]()`
+Sources: `[src/game/contracts/actionLifecycle.js:1-6]()`, `[src/game/contracts/actionLifecycle.js:15-57]()`
 
 ## Removal Gates and Metadata
 
@@ -1676,7 +1676,7 @@ To ensure architectural integrity, no legacy action can be removed from the code
 ### Planned Writes
 The `plannedWrites` metadata field in `actionLifecycle.js` lists the state paths an action *will* eventually be allowed to modify. This allows the `dataflow.js` module to provide a comprehensive view of the system's intended state-write matrix even before the `mutationMatrix.js` is fully updated.
 
-Sources: `[src/project/contract/actionLifecycle.js:8-13]()`, `[src/project/contract/dataflow.js:47-61]()`, `[docs/STATUS.md:49-52]()`
+Sources: `[src/game/contracts/actionLifecycle.js:8-13]()`, `[src/game/contracts/dataflow.js:47-61]()`, `[docs/STATUS.md:49-52]()`
 
 ## Migration Roadmap (Slices A/B/C)
 
@@ -1723,7 +1723,7 @@ graph TD
 
     DF -->|Exported as| MANIFEST["manifest.dataflow"]
 ```
-Sources: `[src/project/contract/dataflow.js:1-61]()`, `[src/project/contract/manifest.js:1-20]()`
+Sources: `[src/game/contracts/dataflow.js:1-61]()`, `[src/game/contracts/manifest.js:1-20]()`
 
 ## Implementation Details
 
@@ -1745,7 +1745,7 @@ While `actionLifecycle.js` is the executable Source of Truth (SoT), the project 
 *   `rebuild-string-matrix.md`: Maps old string identifiers to new ones.
 *   `rebuild-preparation-inventory.md`: Lists which state keys are being kept, adapted, or deleted.
 
-Sources: `[src/project/contract/actionLifecycle.js:71-76]()`, `[docs/traceability/rebuild-string-matrix.md:1-20]()`, `[docs/traceability/rebuild-preparation-inventory.md:11-23]()`
+Sources: `[src/game/contracts/actionLifecycle.js:71-76]()`, `[docs/traceability/rebuild-string-matrix.md:1-20]()`, `[docs/traceability/rebuild-preparation-inventory.md:11-23]()`
 
 ### System State Transition: From Presets to MapSpec
 This diagram illustrates the Slice B transition where `SET_WORLD_PRESET` is replaced by the `MapSpec` compilation flow.
@@ -1769,7 +1769,7 @@ graph LR
     SNAP -->|Triggered by| GW["GEN_WORLD"]
     GW -->|Initializes| WORLD["world.* TypedArrays"]
 ```
-Sources: `[src/project/contract/actionLifecycle.js:114-119]()`, `[src/project/contract/actionLifecycle.js:191-200]()`, `[docs/STATUS.md:10-12]()`, `[docs/ARCHITECTURE.md:48-52]()`
+Sources: `[src/game/contracts/actionLifecycle.js:114-119]()`, `[src/game/contracts/actionLifecycle.js:191-200]()`, `[docs/STATUS.md:10-12]()`, `[docs/ARCHITECTURE.md:48-52]()`
 
 ## Summary of Active Slices
 
@@ -1797,12 +1797,12 @@ The following files were used as context for generating this wiki page:
 - [src/kernel/store/signature.js](src/kernel/store/signature.js)
 - [src/kernel/validation/assertDomainPatchesAllowed.js](src/kernel/validation/assertDomainPatchesAllowed.js)
 - [src/kernel/validation/validateState.js](src/kernel/validation/validateState.js)
-- [src/project/contract/actionSchema.js](src/project/contract/actionSchema.js)
-- [src/project/contract/dataflow.js](src/project/contract/dataflow.js)
-- [src/project/contract/mutationMatrix.js](src/project/contract/mutationMatrix.js)
-- [src/project/contract/simGate.js](src/project/contract/simGate.js)
-- [src/project/contract/stateSchema.js](src/project/contract/stateSchema.js)
-- [src/project/project.manifest.js](src/project/project.manifest.js)
+- [src/game/contracts/actionSchema.js](src/game/contracts/actionSchema.js)
+- [src/game/contracts/dataflow.js](src/game/contracts/dataflow.js)
+- [src/game/contracts/mutationMatrix.js](src/game/contracts/mutationMatrix.js)
+- [src/game/contracts/simGate.js](src/game/contracts/simGate.js)
+- [src/game/contracts/stateSchema.js](src/game/contracts/stateSchema.js)
+- [src/game/manifest.js](src/game/manifest.js)
 - [tests/test-dispatch-error-state-stability.mjs](tests/test-dispatch-error-state-stability.mjs)
 - [tests/test-slice-a-contract-scaffold.mjs](tests/test-slice-a-contract-scaffold.mjs)
 
@@ -1815,8 +1815,8 @@ This page documents the enumerable constants and domain identifiers defined in `
 ## Overview and Implementation
 
 All domain identifiers are defined as frozen objects using `Object.freeze()` to prevent runtime mutations [src/game/contracts/ids.js:1-10](). These constants are heavily utilized in:
-1.  **State Schema**: Defining default values for the game state [src/project/contract/stateSchema.js:16-26]().
-2.  **Action Payloads**: Validating incoming dispatch data [src/project/contract/actionSchema.js:45-63]().
+1.  **State Schema**: Defining default values for the game state [src/game/contracts/stateSchema.js:16-26]().
+2.  **Action Payloads**: Validating incoming dispatch data [src/game/contracts/actionSchema.js:45-63]().
 3.  **Simulation Logic**: Determining win/loss conditions and entity behaviors [src/game/contracts/ids.js:231-250]().
 4.  **UI/Rendering**: Mapping internal states to user-facing labels and visual modes [src/game/contracts/ids.js:18-27]().
 
@@ -1848,7 +1848,7 @@ graph TD
     S_PHASE -->|"used to initialize"| K_INIT
     K_INIT -->|"populates"| K_STATE
 ```
-Sources: [src/game/contracts/ids.js:1-131](), [src/project/contract/stateSchema.js:1-100](), [src/kernel/store/createStore.js:24-26]()
+Sources: [src/game/contracts/ids.js:1-131](), [src/game/contracts/stateSchema.js:1-100](), [src/kernel/store/createStore.js:24-26]()
 
 ---
 
@@ -1890,7 +1890,7 @@ Used for selecting and identifying objects within the `world` domain [src/game/c
 ## Interaction Enums
 
 ### BRUSH_MODE
-Determines the behavior of user input (clicks/drags) on the game grid. This is stored in `meta.brushMode` [src/project/contract/stateSchema.js:22]().
+Determines the behavior of user input (clicks/drags) on the game grid. This is stored in `meta.brushMode` [src/game/contracts/stateSchema.js:22]().
 
 | Mode | Context |
 | :--- | :--- |
@@ -1936,15 +1936,15 @@ graph LR
     D --> E["Kernel: applyPatches()"]
     E --> F["state.meta.brushMode"]
 ```
-Sources: [src/game/contracts/ids.js:206-229](), [src/project/contract/actionSchema.js:40](), [src/kernel/store/createStore.js:78-81]()
+Sources: [src/game/contracts/ids.js:206-229](), [src/game/contracts/actionSchema.js:40](), [src/kernel/store/createStore.js:78-81]()
 
 ---
 Sources:
 - `src/game/contracts/ids.js`
-- `src/project/contract/stateSchema.js`
-- `src/project/contract/actionSchema.js`
+- `src/game/contracts/stateSchema.js`
+- `src/game/contracts/actionSchema.js`
 - `src/kernel/store/createStore.js`
-- `src/project/contract/simGate.js`
+- `src/game/contracts/simGate.js`
 
 ---
 
@@ -2702,7 +2702,7 @@ The following files were used as context for generating this wiki page:
 - [src/game/sim/reducer/winConditions.js](src/game/sim/reducer/winConditions.js)
 - [src/game/sim/worldAi.js](src/game/sim/worldAi.js)
 - [src/game/techTree.js](src/game/techTree.js)
-- [src/project/project.logic.js](src/project/project.logic.js)
+- [src/game/runtime/index.js](src/game/runtime/index.js)
 
 </details>
 
@@ -3473,8 +3473,8 @@ The following files were used as context for generating this wiki page:
 - [src/game/ui/ui.lage.js](src/game/ui/ui.lage.js)
 - [src/game/ui/ui.model.js](src/game/ui/ui.model.js)
 - [src/game/ui/ui.panels.js](src/game/ui/ui.panels.js)
-- [src/project/llm/advisorModel.js](src/project/llm/advisorModel.js)
-- [src/project/llm/readModel.js](src/project/llm/readModel.js)
+- [tools/llm/advisorModel.mjs](tools/llm/advisorModel.mjs)
+- [tools/llm/readModel.mjs](tools/llm/readModel.mjs)
 
 </details>
 
@@ -3542,7 +3542,7 @@ Sources: [src/game/ui/ui.input.js:1-181](), [src/game/contracts/ids.js:1-20](), 
 The UI uses a panel-based system to display complex simulation data. The primary dashboard is the **Lagebericht** (Situation Report).
 
 ### Advisor Metrics and AdvisorModel
-The `Lagebericht` panel uses the `advisorModel.js` to translate raw simulation numbers into human-readable "Strategic Advice" [src/project/llm/advisorModel.js:36-66]().
+The `Lagebericht` panel uses the `advisorModel.js` to translate raw simulation numbers into human-readable "Strategic Advice" [tools/llm/advisorModel.mjs:36-66]().
 - **Bottlenecks**: Identifies the primary constraint on growth (e.g., `energy`, `toxin`, `collapse`) [src/game/ui/ui.model.js:61-75]().
 - **Risk State**: Categorizes the colony's health from `Stable` to `Collapse` [src/game/ui/ui.model.js:25-31]().
 - **Influence Phase**: Determines the level of control the player has based on the `commandScore` (Beobachten, Lenken, Kommandieren) [src/game/ui/ui.model.js:16-23]().
@@ -3575,7 +3575,7 @@ graph LR
     GET_B --> RENDER
     GET_G --> RENDER
 ```
-Sources: [src/game/ui/ui.lage.js:70-160](), [src/game/ui/ui.model.js:1-100](), [src/project/llm/advisorModel.js:20-66]()
+Sources: [src/game/ui/ui.lage.js:70-160](), [src/game/ui/ui.model.js:1-100](), [tools/llm/advisorModel.mjs:20-66]()
 
 ## UI Overlay and Feedback
 
@@ -4038,7 +4038,7 @@ The following files were used as context for generating this wiki page:
 - [src/kernel/store/signature.js](src/kernel/store/signature.js)
 - [src/kernel/validation/assertDomainPatchesAllowed.js](src/kernel/validation/assertDomainPatchesAllowed.js)
 - [src/kernel/validation/validateState.js](src/kernel/validation/validateState.js)
-- [src/project/project.manifest.js](src/project/project.manifest.js)
+- [src/game/manifest.js](src/game/manifest.js)
 - [tests/evidence/spec-map.mjs](tests/evidence/spec-map.mjs)
 - [tests/test-contract-no-bypass.mjs](tests/test-contract-no-bypass.mjs)
 - [tests/test-dispatch-error-state-stability.mjs](tests/test-dispatch-error-state-stability.mjs)
@@ -4493,7 +4493,7 @@ graph TD
     end
 
     subgraph "Code Entity Space (Source of Truth)"
-        Manifest["src/project/contract/manifest.js"]
+        Manifest["src/game/contracts/manifest.js"]
         Store["src/kernel/store/createStore.js"]
         ApplyPatches["src/kernel/store/applyPatches.js"]
     end
@@ -4561,7 +4561,7 @@ graph LR
 
     subgraph "Code Enforcement"
         PreflightTool["tools/llm-preflight.mjs"]
-        ManifestGate["src/project/contract/manifest.js"]
+        ManifestGate["src/game/contracts/manifest.js"]
         KernelGate["src/kernel/store/createStore.js"]
     end
 
@@ -4588,7 +4588,7 @@ For details, see [Trae Skills and IDE Integration](#7.4).
 ## Mandatory Invariants
 *   **No Bypass**: Circumventing guards via `--no-verify` or `HUSKY=0` is strictly forbidden [docs/llm/ENTRY.md:49]().
 *   **Slice Versioning**: Every completed task must increment the version by `0.0.1`. Sub-steps are documented as `a/b/c/d` [docs/llm/ENTRY.md:66]().
-*   **Sot Hierarchy**: `src/project/contract/manifest.js` is the ultimate Source of Truth for the state and action schema [docs/llm/ENTRY.md:38]().
+*   **Sot Hierarchy**: `src/game/contracts/manifest.js` is the ultimate Source of Truth for the state and action schema [docs/llm/ENTRY.md:38]().
 
 Sources: [docs/llm/ENTRY.md:42-51](), [docs/llm/OPERATING_PROTOCOL.md:43-52](), [docs/WORKFLOW.md:56-65]()
 
@@ -4797,7 +4797,7 @@ To avoid expensive global repository scans and ensure the LLM understands the cu
 
 ### Global Minimum Gates (SoT)
 Regardless of the task (even if it is purely UI-related), the LLM must read these three files to understand the state mutation constraints:
-*   `src/project/contract/manifest.js`: Source of Truth for fields and actions [docs/llm/ENTRY.md:38-38]().
+*   `src/game/contracts/manifest.js`: Source of Truth for fields and actions [docs/llm/ENTRY.md:38-38]().
 *   `src/kernel/store/createStore.js`: The dispatch and state lifecycle [docs/llm/ENTRY.md:39-39]().
 *   `src/kernel/store/applyPatches.js`: The atomic mutation logic [docs/llm/ENTRY.md:39-39]().
 
@@ -4818,7 +4818,7 @@ graph TD
         ELock["docs/llm/entry/LLM_ENTRY_LOCK.json"]
         Matrix["docs/llm/TASK_ENTRY_MATRIX.json"]
         Preflight["tools/llm-preflight.mjs"]
-        Manifest["src/project/contract/manifest.js"]
+        Manifest["src/game/contracts/manifest.js"]
     end
 
     Start --> WF
@@ -4838,7 +4838,7 @@ The `TASK_ENTRY_MATRIX.json` defines how file paths map to specific task scopes 
 ### Scope Definitions
 | Scope | Trigger Prefixes | Dependencies | Required Entry File |
 | :--- | :--- | :--- | :--- |
-| **contracts** | `src/game/contracts/`, `src/project/contract/`, `src/kernel/` | None | `CONTRACT_TASK_ENTRY.md` |
+| **contracts** | `src/game/contracts/`, `src/game/contracts/`, `src/kernel/` | None | `CONTRACT_TASK_ENTRY.md` |
 | **sim** | `src/game/sim/`, `src/core/runtime/` | `contracts` | `SIM_TASK_ENTRY.md` |
 | **ui** | `src/app/`, `src/game/ui/`, `src/game/render/` | `sim`, `contracts` | `UI_TASK_ENTRY.md` |
 | **testing** | `tests/`, `tools/` | `contracts` | `TESTING_TASK_ENTRY.md` |
@@ -4877,7 +4877,7 @@ Sources: [docs/llm/ENTRY.md:26-34](), [docs/llm/OPERATING_PROTOCOL.md:30-34](), 
 
 In the event of conflicting information between different documentation layers or code, the following hierarchy is enforced [RUNBOOK.md:41-42]():
 
-1.  **`src/project/contract/manifest.js`**: Highest authority (Runtime/Contract SoT).
+1.  **`src/game/contracts/manifest.js`**: Highest authority (Runtime/Contract SoT).
 2.  **`docs/llm/ENTRY.md` / `OPERATING_PROTOCOL.md`**: Process SoT.
 3.  **`docs/llm/entry/TASK_GATE_INDEX.md`**: Gate SoT.
 4.  **Worker-specific READMEs**: Lowest authority.
@@ -5092,9 +5092,9 @@ These skills are responsible for generating code within specific domain boundari
 
 | Skill Name | Role Mapping | Target Paths |
 |:---|:---|:---|
-| `contract-coder` | `03-contracts/AGENT.md` | `src/project/contract/`, `src/game/contracts/` |
+| `contract-coder` | `03-contracts/AGENT.md` | `src/game/contracts/`, `src/game/contracts/` |
 | `sim-coder` | `02-sim/AGENT.md` | `src/game/sim/` (Deterministic logic only) |
-| `ui-coder` | `01-ui/AGENT.md` | `src/game/ui/`, `src/project/ui.js` (Read-only) |
+| `ui-coder` | `01-ui/AGENT.md` | `src/game/ui/`, `src/game/ui/ui.js` (Read-only) |
 | `arbiter-coder` | `02-entry/AGENT.md` | General implementation of approved slices. |
 
 **Sources:**
@@ -5265,7 +5265,7 @@ graph TD
 
     subgraph "Code Entity Space"
         C --> D["tools/llm-preflight.mjs"]
-        D --> E["src/project/contract/manifest.js"]
+        D --> E["src/game/contracts/manifest.js"]
         D --> F["src/kernel/store/createStore.js"]
         D --> G["src/kernel/store/applyPatches.js"]
         
@@ -5332,7 +5332,7 @@ graph LR
     end
 
     subgraph "Code & State"
-        T2 -- "Validates" --> C1["src/core/kernel/"]
+        T2 -- "Validates" --> C1["src/kernel/"]
         T4 -- "Screenshots" --> C2["output/web-game/debug-loop/"]
         T6 -- "Checks" --> C3["docs/llm/entry/LLM_ENTRY_LOCK.json"]
     end
@@ -5488,7 +5488,7 @@ graph LR
         UI_Files["src/game/ui/*"]
         Sim_Files["src/game/sim/*"]
         Contract_Files["src/game/contracts/*"]
-        Manifest["src/project/contract/manifest.js"]
+        Manifest["src/game/contracts/manifest.js"]
         Store["src/kernel/store/createStore.js"]
     end
 
@@ -5529,8 +5529,8 @@ The following files were used as context for generating this wiki page:
 - [docs/traceability/rebuild-string-matrix.md](docs/traceability/rebuild-string-matrix.md)
 - [docs/traceability/sim-runtime-archive-2026-03-18.md](docs/traceability/sim-runtime-archive-2026-03-18.md)
 - [package.json](package.json)
-- [src/project/contract/actionLifecycle.js](src/project/contract/actionLifecycle.js)
-- [src/project/contract/manifest.js](src/project/contract/manifest.js)
+- [src/game/contracts/actionLifecycle.js](src/game/contracts/actionLifecycle.js)
+- [src/game/contracts/manifest.js](src/game/contracts/manifest.js)
 
 </details>
 
@@ -5544,7 +5544,7 @@ LifeGameLab operates on a strict "Manifest-first" design principle [docs/ARCHITE
 
 | Tier | Component | Description | File Path |
 | :--- | :--- | :--- | :--- |
-| **L0** | **Executable Contract** | The final authority on state shape and allowed mutations. | [src/project/contract/manifest.js:11-20]() |
+| **L0** | **Executable Contract** | The final authority on state shape and allowed mutations. | [src/game/contracts/manifest.js:11-20]() |
 | **L1** | **Product SoT** | The canonical definition of game mechanics and vocabulary. | [docs/PRODUCT.md:1-10]() |
 | **L2** | **Modular SoTs** | Domain-specific documentation modules (Kernel, Sim, UI). | [docs/sot/00_INDEX.md:1-13]() |
 | **L3** | **Traceability** | Derived evidence and migration planning (non-canonical). | [docs/traceability/README.md:1-4]() |
@@ -5561,8 +5561,8 @@ graph TD
     end
 
     subgraph "Code Entity Space"
-        Manifest["src/project/contract/manifest.js"]
-        ActionLifecycle["src/project/contract/actionLifecycle.js"]
+        Manifest["src/game/contracts/manifest.js"]
+        ActionLifecycle["src/game/contracts/actionLifecycle.js"]
         CurrentTruth["output/current-truth.json"]
     end
 
@@ -5579,7 +5579,7 @@ graph TD
     Manifest -.->|"Evidence Runner"| CurrentTruth
     Status -->|"Context"| StringMatrix
 ```
-Sources: [docs/ARCHITECTURE.md:5-9](), [docs/STATUS.md:42-46](), [src/project/contract/manifest.js:1-6]()
+Sources: [docs/ARCHITECTURE.md:5-9](), [docs/STATUS.md:42-46](), [src/game/contracts/manifest.js:1-6]()
 
 ## Traceability System Components
 
@@ -5599,16 +5599,16 @@ Sources: [docs/STATUS.md:42-46](), [docs/traceability/rebuild-string-matrix.md:1
 
 ## Action Lifecycle and Removal Gates
 
-To prevent breaking the simulation during migration, every action in the contract layer is assigned a lifecycle status in `actionLifecycle.js` [src/project/contract/actionLifecycle.js:1-6]().
+To prevent breaking the simulation during migration, every action in the contract layer is assigned a lifecycle status in `actionLifecycle.js` [src/game/contracts/actionLifecycle.js:1-6]().
 
 ### Lifecycle Statuses
-*   `STABLE`: Canonical entrypoints (e.g., `GEN_WORLD`, `SIM_STEP`) [src/project/contract/actionLifecycle.js:60-64]().
-*   `RENAME`: Actions slated for renaming (e.g., `SET_WORLD_PRESET` -> `SET_MAPSPEC`) [src/project/contract/actionLifecycle.js:114-119]().
-*   `DEPRECATED`: Actions to be removed (e.g., `CONFIRM_FOUNDATION`) [src/project/contract/actionLifecycle.js:65-70]().
-*   `NEW_SLICE_A`: Scaffolded actions for future implementation [src/project/contract/actionLifecycle.js:201-205]().
+*   `STABLE`: Canonical entrypoints (e.g., `GEN_WORLD`, `SIM_STEP`) [src/game/contracts/actionLifecycle.js:60-64]().
+*   `RENAME`: Actions slated for renaming (e.g., `SET_WORLD_PRESET` -> `SET_MAPSPEC`) [src/game/contracts/actionLifecycle.js:114-119]().
+*   `DEPRECATED`: Actions to be removed (e.g., `CONFIRM_FOUNDATION`) [src/game/contracts/actionLifecycle.js:65-70]().
+*   `NEW_SLICE_A`: Scaffolded actions for future implementation [src/game/contracts/actionLifecycle.js:201-205]().
 
 ### Removal Gate Enforcement
-An action can only be removed if it satisfies the `REPLACEMENT_GATES` [src/project/contract/actionLifecycle.js:8-13]():
+An action can only be removed if it satisfies the `REPLACEMENT_GATES` [src/game/contracts/actionLifecycle.js:8-13]():
 1.  **`dispatch_sources_removed`**: No UI or internal callers remain.
 2.  **`reducer_case_removed`**: Logic has been migrated out of `reducer/index.js`.
 3.  **`tests_migrated`**: Regression tests now cover the replacement path.
@@ -5632,7 +5632,7 @@ stateDiagram-v2
     REPLACEMENT_GATES --> DELETED: "All Gates Closed"
     DELETED --> [*]
 ```
-Sources: [src/project/contract/actionLifecycle.js:1-58](), [docs/traceability/rebuild-preparation-inventory.md:37-42]()
+Sources: [src/game/contracts/actionLifecycle.js:1-58](), [docs/traceability/rebuild-preparation-inventory.md:37-42]()
 
 ## Mandatory Documentation Update Cycle
 
@@ -5647,7 +5647,7 @@ The following diagram illustrates how code-level changes in `actionLifecycle.js`
 
 ```mermaid
 graph LR
-    subgraph "src/project/contract/"
+    subgraph "src/game/contracts/"
         AL["actionLifecycle.js"]
         MM["mutationMatrix.js"]
     end
@@ -5661,7 +5661,7 @@ graph LR
     AL -->|"Defines PlannedWrites"| RPI
     MM -->|"Allowed Paths"| RPI
 ```
-Sources: [src/project/contract/actionLifecycle.js:59-64](), [docs/traceability/rebuild-string-matrix.md:1-5](), [docs/traceability/rebuild-preparation-inventory.md:1-9]()
+Sources: [src/game/contracts/actionLifecycle.js:59-64](), [docs/traceability/rebuild-string-matrix.md:1-5](), [docs/traceability/rebuild-preparation-inventory.md:1-9]()
 
 ---
 
@@ -5847,14 +5847,14 @@ The following files were used as context for generating this wiki page:
 - [src/kernel/store/signature.js](src/kernel/store/signature.js)
 - [src/kernel/validation/assertDomainPatchesAllowed.js](src/kernel/validation/assertDomainPatchesAllowed.js)
 - [src/kernel/validation/validateState.js](src/kernel/validation/validateState.js)
-- [src/project/contract/actionLifecycle.js](src/project/contract/actionLifecycle.js)
-- [src/project/contract/actionSchema.js](src/project/contract/actionSchema.js)
-- [src/project/contract/dataflow.js](src/project/contract/dataflow.js)
-- [src/project/contract/manifest.js](src/project/contract/manifest.js)
-- [src/project/contract/mutationMatrix.js](src/project/contract/mutationMatrix.js)
-- [src/project/contract/simGate.js](src/project/contract/simGate.js)
-- [src/project/contract/stateSchema.js](src/project/contract/stateSchema.js)
-- [src/project/project.manifest.js](src/project/project.manifest.js)
+- [src/game/contracts/actionLifecycle.js](src/game/contracts/actionLifecycle.js)
+- [src/game/contracts/actionSchema.js](src/game/contracts/actionSchema.js)
+- [src/game/contracts/dataflow.js](src/game/contracts/dataflow.js)
+- [src/game/contracts/manifest.js](src/game/contracts/manifest.js)
+- [src/game/contracts/mutationMatrix.js](src/game/contracts/mutationMatrix.js)
+- [src/game/contracts/simGate.js](src/game/contracts/simGate.js)
+- [src/game/contracts/stateSchema.js](src/game/contracts/stateSchema.js)
+- [src/game/manifest.js](src/game/manifest.js)
 - [tests/evidence/spec-map.mjs](tests/evidence/spec-map.mjs)
 - [tests/test-dispatch-error-state-stability.mjs](tests/test-dispatch-error-state-stability.mjs)
 - [tests/test-mapspec-builder-pipeline.mjs](tests/test-mapspec-builder-pipeline.mjs)
@@ -5880,13 +5880,13 @@ The **Kernel** is the central, authoritative layer responsible for state managem
 *   **Signature**: A FNV-1a hash of the serialized state used to detect non-deterministic drift [src/kernel/store/signature.js:1-10]().
 
 ### Manifest-First Design
-A design philosophy where the **Manifest** (`src/project/contract/manifest.js`) serves as the executable Source of Truth (SoT). It aggregates schemas, mutation matrices, and lifecycle metadata that the Kernel uses to enforce system invariants at runtime [src/project/contract/manifest.js:4-29]().
+A design philosophy where the **Manifest** (`src/game/contracts/manifest.js`) serves as the executable Source of Truth (SoT). It aggregates schemas, mutation matrices, and lifecycle metadata that the Kernel uses to enforce system invariants at runtime [src/game/contracts/manifest.js:4-29]().
 
 ### Slice Migration Model
 The project uses "Slices" (e.g., Slice A, Slice B, Slice C) to manage the transition from a legacy RTS codebase to a new architecture.
 *   **Slice B (MapSpec)**: Introduced deterministic map compilation [docs/STATUS.md:4-10]().
 *   **Slice C (Minimal UI)**: Introduced direct canvas interactions and worker placement [docs/ARCHITECTURE.md:33-39]().
-*   **Removal Gates**: Conditions defined in `actionLifecycle.js` (e.g., `dispatch_sources_removed`) that must be met before legacy code can be deleted [src/project/contract/actionLifecycle.js:1-15]().
+*   **Removal Gates**: Conditions defined in `actionLifecycle.js` (e.g., `dispatch_sources_removed`) that must be met before legacy code can be deleted [src/game/contracts/actionLifecycle.js:1-15]().
 
 ### Mapping: Natural Language to Code Entity (Kernel)
 
@@ -5900,9 +5900,9 @@ graph TD
 
     subgraph "Code Entity Space"
         CE_Kernel["src/kernel/store/createStore.js"]
-        CE_Matrix["src/project/contract/mutationMatrix.js"]
-        CE_Manifest["src/project/contract/manifest.js"]
-        CE_Schema["src/project/contract/stateSchema.js"]
+        CE_Matrix["src/game/contracts/mutationMatrix.js"]
+        CE_Manifest["src/game/contracts/manifest.js"]
+        CE_Schema["src/game/contracts/stateSchema.js"]
     end
 
     NL_Auth --> CE_Kernel
@@ -5911,7 +5911,7 @@ graph TD
     CE_Manifest --> CE_Schema
     CE_Kernel -- "Uses" --> CE_Manifest
 ```
-Sources: [docs/ARCHITECTURE.md:10-15](), [src/project/contract/manifest.js:4-29](), [src/kernel/store/createStore.js:5-27]().
+Sources: [docs/ARCHITECTURE.md:10-15](), [src/game/contracts/manifest.js:4-29](), [src/kernel/store/createStore.js:5-27]().
 
 ---
 
@@ -5935,10 +5935,10 @@ An enum-based classification of spatial areas within the world, defined in `ZONE
 
 ### State Domains
 The game state is partitioned into four primary domains:
-1.  **Meta**: Global configuration (seed, grid size, speed) [src/project/contract/stateSchema.js:30-40]().
-2.  **Map**: Persistent blueprint and `tilePlan` [src/project/contract/stateSchema.js:30-40]().
-3.  **World**: Runtime TypedArrays representing the physical simulation (alive, energy, toxins) [src/project/contract/simGate.js:31-38]().
-4.  **Sim**: Higher-level simulation logic (run phase, player scores, tech tree) [src/project/contract/stateSchema.js:30-40]().
+1.  **Meta**: Global configuration (seed, grid size, speed) [src/game/contracts/stateSchema.js:30-40]().
+2.  **Map**: Persistent blueprint and `tilePlan` [src/game/contracts/stateSchema.js:30-40]().
+3.  **World**: Runtime TypedArrays representing the physical simulation (alive, energy, toxins) [src/game/contracts/simGate.js:31-38]().
+4.  **Sim**: Higher-level simulation logic (run phase, player scores, tech tree) [src/game/contracts/stateSchema.js:30-40]().
 
 ---
 
@@ -5949,7 +5949,7 @@ The game state is partitioned into four primary domains:
 | **SoT** | Source of Truth. Usually refers to the Manifest or Product docs. | [docs/ARCHITECTURE.md:5-9]() |
 | **LOD** | Level of Detail. The renderer adjusts visual complexity based on zoom. | [src/game/render/renderer.js:11-22]() |
 | **BFS** | Breadth-First Search. Used for connectivity checks in zone topology. | [src/game/sim/reducer/index.js:68-92]() |
-| **TypedArray** | Optimized memory buffers (e.g., `Uint8Array`) used for the grid simulation. | [src/project/contract/simGate.js:31-38]() |
+| **TypedArray** | Optimized memory buffers (e.g., `Uint8Array`) used for the grid simulation. | [src/game/contracts/simGate.js:31-38]() |
 | **FNV-1a** | The non-cryptographic hash algorithm used for state signatures. | [src/kernel/store/signature.js:1-10]() |
 | **Preflight** | Mandatory LLM workflow check before code changes are accepted. | [tools/llm-preflight.mjs:1-15]() |
 

@@ -52,132 +52,47 @@ import {
   normalizeWorldPresetId,
 } from "../worldPresets.js";
 import { compileMapSpec, compileStateMapSpec, createLegacyPresetMapSpec } from "../mapspec.js";
-import { evaluateFoundationEligibility } from "../foundationEligibility.js";
 import { deriveStageState } from "./progression.js";
 import { deriveCanonicalZoneState } from "../canonicalZones.js";
 import { derivePatternBonuses, derivePatternCatalog } from "../patterns.js";
+import {
+  getInfraCandidateMask,
+  touchesCommittedInfraAnchor,
+} from "../../runtime/infraRuntime.js";
+import {
+  countAlivePlayerMaskedCells,
+  countAlivePlayerRoleCells,
+} from "../../runtime/stateCounts.js";
+import {
+  collectMaskIndices,
+  hasAdjacentMarkedTile,
+  hasAdjacentMarkedTile4,
+  hasAdjacentRoleTile4,
+  isRoleMarked,
+} from "../grid/index.js";
+import {
+  canConfirmCoreZone,
+  canConfirmFoundation,
+  collectFounderIndices,
+  isGenesisSetupInStandardMode,
+  isPreRunGenesisPhase,
+  shouldAdvanceSimulation,
+} from "../gates/phaseGates.js";
+import {
+  buildIssueMovePatches,
+  createEmptyActiveOrder,
+  HARVEST_TICKS,
+  parseWorkerEntityId,
+} from "../commands/orderCommands.js";
+import { processActiveOrderRuntime } from "../../runtime/processActiveOrderRuntime.js";
+
+export { shouldAdvanceSimulation } from "../gates/phaseGates.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
 }
 
 const TICKS_PER_SECOND = 24;
-const HARVEST_SECONDS = 5;
-const HARVEST_TICKS = TICKS_PER_SECOND * HARVEST_SECONDS;
-
-function areFounderTilesConnected8(indices, w, h) {
-  if (indices.length === 0) return false;
-  const set = new Set(indices);
-  const seen = new Set();
-  const queue = [indices[0]];
-  seen.add(indices[0]);
-  while (queue.length > 0) {
-    const idx = queue.shift();
-    const x = idx % w;
-    const y = (idx / w) | 0;
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        if (dx === 0 && dy === 0) continue;
-        const xx = x + dx;
-        const yy = y + dy;
-        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-        const j = yy * w + xx;
-        if (!set.has(j) || seen.has(j)) continue;
-        seen.add(j);
-        queue.push(j);
-      }
-    }
-  }
-  return seen.size === indices.length;
-}
-
-function hasAdjacentMarkedTile(mask, idx, w, h) {
-  if (!mask || !ArrayBuffer.isView(mask)) return false;
-  const x = idx % w;
-  const y = (idx / w) | 0;
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      if (dx === 0 && dy === 0) continue;
-      const xx = x + dx;
-      const yy = y + dy;
-      if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-      const j = yy * w + xx;
-      if ((Number(mask[j]) | 0) === 1) return true;
-    }
-  }
-  return false;
-}
-
-function hasAdjacentMarkedTile4(mask, idx, w, h) {
-  if (!mask || !ArrayBuffer.isView(mask)) return false;
-  const x = idx % w;
-  const y = (idx / w) | 0;
-  const neighbors = [
-    [x - 1, y],
-    [x + 1, y],
-    [x, y - 1],
-    [x, y + 1],
-  ];
-  for (const [xx, yy] of neighbors) {
-    if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-    const j = yy * w + xx;
-    if ((Number(mask[j]) | 0) === 1) return true;
-  }
-  return false;
-}
-
-function areIndicesConnected4(indices, w, h) {
-  if (indices.length === 0) return false;
-  const set = new Set(indices);
-  const seen = new Set([indices[0]]);
-  const queue = [indices[0]];
-  while (queue.length > 0) {
-    const idx = queue.shift();
-    const x = idx % w;
-    const y = (idx / w) | 0;
-    const neighbors = [
-      [x - 1, y],
-      [x + 1, y],
-      [x, y - 1],
-      [x, y + 1],
-    ];
-    for (const [xx, yy] of neighbors) {
-      if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-      const j = yy * w + xx;
-      if (!set.has(j) || seen.has(j)) continue;
-      seen.add(j);
-      queue.push(j);
-    }
-  }
-  return seen.size === indices.length;
-}
-
-function isMarked(mask, idx) {
-  return !!mask && ArrayBuffer.isView(mask) && ((Number(mask[idx]) | 0) === 1);
-}
-
-function hasAdjacentRoleTile4(zoneRole, idx, w, h, roleIds) {
-  if (!zoneRole || !ArrayBuffer.isView(zoneRole)) return false;
-  const wanted = new Set(Array.isArray(roleIds) ? roleIds : [roleIds]);
-  const x = idx % w;
-  const y = (idx / w) | 0;
-  const neighbors = [
-    [x - 1, y],
-    [x + 1, y],
-    [x, y - 1],
-    [x, y + 1],
-  ];
-  for (const [xx, yy] of neighbors) {
-    if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-    const j = yy * w + xx;
-    if (wanted.has(Number(zoneRole[j]) | 0)) return true;
-  }
-  return false;
-}
-
-function isRoleMarked(zoneRole, idx, roleId) {
-  return !!zoneRole && ArrayBuffer.isView(zoneRole) && ((Number(zoneRole[idx]) | 0) === (roleId | 0));
-}
 
 function buildCanonicalRuntimeState(world, presetId, playerLineageId, sourceZoneRole = null) {
   const zoneState = deriveCanonicalZoneState(world, playerLineageId, sourceZoneRole);
@@ -197,21 +112,6 @@ function pushCanonicalRuntimePatches(patches, canonicalState) {
 
 function countAlivePlayerInfraCells(world, playerLineageId) {
   return countAlivePlayerRoleCells(world, playerLineageId, ZONE_ROLE.INFRA);
-}
-
-function countAlivePlayerRoleCells(world, playerLineageId, roleId) {
-  const zoneRole = world?.zoneRole;
-  const alive = world?.alive;
-  const lineageId = world?.lineageId;
-  if (!zoneRole || !alive || !lineageId) return 0;
-  let count = 0;
-  for (let i = 0; i < zoneRole.length; i++) {
-    if ((Number(zoneRole[i]) | 0) !== (roleId | 0)) continue;
-    if ((Number(alive[i]) | 0) !== 1) continue;
-    if ((Number(lineageId[i]) | 0) !== (playerLineageId | 0)) continue;
-    count++;
-  }
-  return count;
 }
 
 function getVisionRadii(presetId) {
@@ -265,23 +165,9 @@ function deriveVisibilityState(world, presetId, playerLineageId) {
   return { visibility, explored };
 }
 
-function getInfraCandidateMask(world, size) {
-  if (world?.infraCandidateMask && ArrayBuffer.isView(world.infraCandidateMask)) {
-    return cloneTypedArray(world.infraCandidateMask);
-  }
-  return new Uint8Array(size);
-}
-
 function isAlivePlayerOwnedTile(world, idx, playerLineageId) {
   return (Number(world?.alive?.[idx] || 0) | 0) === 1
     && (Number(world?.lineageId?.[idx] || 0) | 0) === (playerLineageId | 0);
-}
-
-function touchesCommittedInfraAnchor(world, idx, w, h) {
-  return isRoleMarked(world?.zoneRole, idx, ZONE_ROLE.CORE)
-    || isRoleMarked(world?.zoneRole, idx, ZONE_ROLE.DNA)
-    || isRoleMarked(world?.zoneRole, idx, ZONE_ROLE.INFRA)
-    || hasAdjacentRoleTile4(world?.zoneRole, idx, w, h, [ZONE_ROLE.CORE, ZONE_ROLE.DNA, ZONE_ROLE.INFRA]);
 }
 
 function getInfraStartCosts(sim) {
@@ -311,206 +197,8 @@ function spendPlayerEnergyFromCells(world, playerLineageId, amount) {
   return remaining > 1e-6 ? null : nextE;
 }
 
-function canConfirmFoundation(state) {
-  return !!evaluateFoundationEligibility(state).eligible;
-}
-
-function collectFounderIndices(state) {
-  const world = state.world;
-  if (!world?.alive || !world?.lineageId || !world?.founderMask) return null;
-  const w = Number(world.w || state.meta.gridW || 0) | 0;
-  const h = Number(world.h || state.meta.gridH || 0) | 0;
-  if (w <= 0 || h <= 0) return null;
-  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-
-  const founderIndices = [];
-  for (let i = 0; i < world.founderMask.length; i++) {
-    if ((Number(world.founderMask[i]) | 0) !== 1) continue;
-    founderIndices.push(i);
-  }
-  if (founderIndices.length !== 1) return null;
-
-  for (const idx of founderIndices) {
-    if ((Number(world.alive[idx]) | 0) !== 1) return null;
-    if ((Number(world.lineageId[idx]) | 0) !== playerLineageId) return null;
-  }
-  if (!areFounderTilesConnected8(founderIndices, w, h)) return null;
-  return founderIndices;
-}
-
-function collectMaskIndices(mask) {
-  if (!mask || !ArrayBuffer.isView(mask)) return [];
-  const indices = [];
-  for (let i = 0; i < mask.length; i++) {
-    if ((Number(mask[i]) | 0) === 1) indices.push(i);
-  }
-  return indices;
-}
-
-function findNextStepBfs4(world, fromIdx, targetIdx, w, h) {
-  if (fromIdx === targetIdx) return fromIdx;
-  const total = w * h;
-  if (fromIdx < 0 || targetIdx < 0 || fromIdx >= total || targetIdx >= total) return -1;
-  const alive = world?.alive;
-  if (!alive || !ArrayBuffer.isView(alive)) return -1;
-
-  const prev = new Int32Array(total);
-  prev.fill(-1);
-  const seen = new Uint8Array(total);
-  const queue = new Int32Array(total);
-  let qh = 0;
-  let qt = 0;
-  queue[qt++] = fromIdx;
-  seen[fromIdx] = 1;
-
-  while (qh < qt) {
-    const idx = queue[qh++];
-    if (idx === targetIdx) break;
-    const x = idx % w;
-    const y = (idx / w) | 0;
-    const candidates = [
-      [x - 1, y],
-      [x + 1, y],
-      [x, y - 1],
-      [x, y + 1],
-    ];
-    for (const [nx, ny] of candidates) {
-      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-      const nIdx = ny * w + nx;
-      if (seen[nIdx]) continue;
-      if (nIdx !== targetIdx && (Number(alive[nIdx] || 0) | 0) === 1) continue;
-      seen[nIdx] = 1;
-      prev[nIdx] = idx;
-      queue[qt++] = nIdx;
-    }
-  }
-
-  if (!seen[targetIdx]) return -1;
-  let step = targetIdx;
-  while (prev[step] !== -1 && prev[step] !== fromIdx) {
-    step = prev[step];
-  }
-  return prev[step] === fromIdx ? step : targetIdx;
-}
-
-function moveEntityTile(world, fromIdx, toIdx) {
-  if (fromIdx === toIdx) return;
-  const scalarKeys = ["E", "reserve", "link", "lineageId", "hue", "age", "born", "died", "W", "clusterField", "superId"];
-  for (const key of scalarKeys) {
-    const arr = world?.[key];
-    if (!arr || !ArrayBuffer.isView(arr)) continue;
-    arr[toIdx] = arr[fromIdx];
-    arr[fromIdx] = 0;
-  }
-  if (world?.alive && ArrayBuffer.isView(world.alive)) {
-    world.alive[toIdx] = 1;
-    world.alive[fromIdx] = 0;
-  }
-  const trait = world?.trait;
-  if (trait && ArrayBuffer.isView(trait)) {
-    const fromOff = fromIdx * 7;
-    const toOff = toIdx * 7;
-    for (let i = 0; i < 7; i++) {
-      trait[toOff + i] = trait[fromOff + i];
-      trait[fromOff + i] = 0;
-    }
-  }
-}
-
-function createEmptyActiveOrder() {
-  return {
-    active: false,
-    type: "",
-    fromX: -1,
-    fromY: -1,
-    targetX: -1,
-    targetY: -1,
-    progress: 0,
-    maxProgress: HARVEST_TICKS,
-  };
-}
-
-function parseWorkerEntityId(entityId) {
-  if (typeof entityId !== "string") return null;
-  const match = /^worker:(-?\d+):(-?\d+)$/.exec(entityId.trim());
-  if (!match) return null;
-  return { fromX: Number(match[1]) | 0, fromY: Number(match[2]) | 0 };
-}
-
-function buildIssueMovePatches(state, fromX, fromY, targetX, targetY, commandType = "ISSUE_MOVE", entityId = "") {
-  if (state.sim.runPhase !== RUN_PHASE.RUN_ACTIVE) return [];
-  const world = state.world;
-  if (!world?.alive || !world?.lineageId || !world?.R) return [];
-  const w = Number(world.w || state.meta.gridW || 0) | 0;
-  const h = Number(world.h || state.meta.gridH || 0) | 0;
-  if (fromX < 0 || fromY < 0 || fromX >= w || fromY >= h) return [];
-  if (targetX < 0 || targetY < 0 || targetX >= w || targetY >= h) return [];
-  const fromIdx = fromY * w + fromX;
-  const targetIdx = targetY * w + targetX;
-  if (fromIdx === targetIdx) return [];
-  const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-  const isOwnAlive =
-    (Number(world.alive[fromIdx] || 0) | 0) === 1 &&
-    (Number(world.lineageId[fromIdx] || 0) | 0) === playerLineageId;
-  if (!isOwnAlive) return [];
-  if (Number(world.R[targetIdx] || 0) <= 0.05) return [];
-  const normalizedEntityId = entityId || `worker:${fromX}:${fromY}`;
-  const order = { active: true, fromX, fromY, targetX, targetY };
-  const activeOrder = {
-    active: true,
-    type: "HARVEST",
-    fromX,
-    fromY,
-    targetX,
-    targetY,
-    progress: 0,
-    maxProgress: HARVEST_TICKS,
-  };
-  return [
-    { op: "set", path: "/sim/selectedUnit", value: fromIdx },
-    { op: "set", path: "/sim/selectedEntity", value: { entityKind: "worker", entityId: normalizedEntityId } },
-    { op: "set", path: "/sim/unitOrder", value: order },
-    { op: "set", path: "/sim/activeOrder", value: activeOrder },
-    { op: "set", path: "/sim/lastCommand", value: `${commandType}:${fromX},${fromY}->${targetX},${targetY}` },
-  ];
-}
-
-function canConfirmCoreZone(state) {
-  if (state.sim.runPhase !== RUN_PHASE.GENESIS_ZONE) return false;
-  const founderIndices = collectFounderIndices(state);
-  if (!founderIndices) return false;
-  const coreZoneMask = state.world?.coreZoneMask;
-  if (!coreZoneMask || !ArrayBuffer.isView(coreZoneMask)) return false;
-  for (let i = 0; i < coreZoneMask.length; i++) {
-    if ((Number(coreZoneMask[i]) | 0) !== 0) return false;
-  }
-  return true;
-}
-
-function isGenesisSetupInStandardMode(state) {
-  return normalizeRunPhase(state?.sim?.runPhase, RUN_PHASE.GENESIS_SETUP) === RUN_PHASE.GENESIS_SETUP;
-}
-
-function isPreRunGenesisPhase(state) {
-  return normalizeRunPhase(state?.sim?.runPhase, RUN_PHASE.GENESIS_SETUP) !== RUN_PHASE.RUN_ACTIVE;
-}
-
 function countAlivePlayerCoreCells(world, playerLineageId) {
   return countAlivePlayerRoleCells(world, playerLineageId, ZONE_ROLE.CORE);
-}
-
-function countAlivePlayerMaskedCells(mask, world, playerLineageId) {
-  const alive = world?.alive;
-  const lineageId = world?.lineageId;
-  if (!mask || !alive || !lineageId) return 0;
-  let count = 0;
-  for (let i = 0; i < mask.length; i++) {
-    if ((Number(mask[i]) | 0) !== 1) continue;
-    if ((Number(alive[i]) | 0) !== 1) continue;
-    if ((Number(lineageId[i]) | 0) !== (playerLineageId | 0)) continue;
-    count++;
-  }
-  return count;
 }
 
 function seededStartPhysics(seed, basePhysics) {
@@ -821,11 +509,6 @@ export function makeInitialState() {
       gameResult: GAME_RESULT.NONE, gameEndTick: 0,
     },
   };
-}
-
-export function shouldAdvanceSimulation(state) {
-  const runPhase = String(state?.sim?.runPhase || RUN_PHASE.GENESIS_SETUP);
-  return !!state?.sim?.running && runPhase === RUN_PHASE.RUN_ACTIVE;
 }
 
 // Simulation bridge: clone mutable world buffers, then run step orchestrator.
@@ -1439,7 +1122,7 @@ export function simStepPatch(state, action, ctx) {
   const preStepAlive = state.world?.alive && ArrayBuffer.isView(state.world.alive)
     ? state.world.alive
     : null;
-  const { world: worldMutable, metrics } = runWorldSimV4(state.world, state.meta, state.sim, rngStreams);
+  let { world: worldMutable, metrics } = runWorldSimV4(state.world, state.meta, state.sim, rngStreams);
 
   const nextLearning = mergeWorldLearningIntoBank(worldMutable, state.meta.globalLearning, metrics);
   worldMutable.globalLearning = cloneJson(nextLearning);
@@ -1470,136 +1153,14 @@ export function simStepPatch(state, action, ctx) {
     };
   simOut.lastCommand = String(state.sim.lastCommand || "");
   simOut.lastAutoAction = "";
-
-  const activeOrder = simOut.activeOrder;
-  if (activeOrder?.active) {
-    const w = Number(worldMutable?.w || state.meta.gridW || 0) | 0;
-    const h = Number(worldMutable?.h || state.meta.gridH || 0) | 0;
-    const fromX = Number(activeOrder.fromX) | 0;
-    const fromY = Number(activeOrder.fromY) | 0;
-    const targetX = Number(activeOrder.targetX) | 0;
-    const targetY = Number(activeOrder.targetY) | 0;
-    const targetIdx = targetY * w + targetX;
-    const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-    let unitIdx = Number(simOut.selectedUnit ?? -1) | 0;
-    if (unitIdx < 0 || unitIdx >= w * h || (Number(worldMutable.alive?.[unitIdx] || 0) | 0) !== 1) {
-      unitIdx = fromY * w + fromX;
-    }
-    const validUnit =
-      unitIdx >= 0 &&
-      unitIdx < w * h &&
-      (Number(worldMutable.alive?.[unitIdx] || 0) | 0) === 1 &&
-      (Number(worldMutable.lineageId?.[unitIdx] || 0) | 0) === playerLineageId;
-
-    if (!validUnit || targetX < 0 || targetY < 0 || targetX >= w || targetY >= h) {
-      simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
-      simOut.activeOrder = createEmptyActiveOrder();
-      simOut.selectedUnit = -1;
-      simOut.lastAutoAction = "ORDER_ABORTED";
-    } else if (unitIdx === targetIdx) {
-      const maxProgress = Math.max(1, Number(activeOrder.maxProgress || HARVEST_TICKS) | 0);
-      const nextProgress = Math.min(maxProgress, (Number(activeOrder.progress || 0) | 0) + 1);
-      if (nextProgress < maxProgress) {
-        simOut.activeOrder = {
-          ...activeOrder,
-          active: true,
-          type: "HARVEST",
-          fromX: unitIdx % w,
-          fromY: (unitIdx / w) | 0,
-          targetX,
-          targetY,
-          progress: nextProgress,
-          maxProgress,
-        };
-        simOut.unitOrder = { active: true, fromX: unitIdx % w, fromY: (unitIdx / w) | 0, targetX, targetY };
-        simOut.selectedUnit = unitIdx;
-        simOut.lastAutoAction = `HARVEST_PROGRESS:${nextProgress}/${maxProgress}`;
-      } else {
-        simOut.playerDNA = Number(simOut.playerDNA || 0) + 1;
-        simOut.totalHarvested = Number(simOut.totalHarvested || 0) + 1;
-        simOut.unitOrder = { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 };
-        simOut.activeOrder = createEmptyActiveOrder();
-        simOut.selectedUnit = unitIdx;
-        simOut.lastAutoAction = `HARVEST_AUTO:${targetX},${targetY}`;
-      }
-    } else {
-      const travelTicks = Math.max(1, TICKS_PER_SECOND | 0);
-      const travelProgress = (Number(activeOrder.progress || 0) | 0) + 1;
-      if (travelProgress < travelTicks) {
-        simOut.unitOrder = {
-          active: true,
-          fromX: unitIdx % w,
-          fromY: (unitIdx / w) | 0,
-          targetX,
-          targetY,
-        };
-        simOut.activeOrder = {
-          ...activeOrder,
-          active: true,
-          type: "HARVEST",
-          fromX: unitIdx % w,
-          fromY: (unitIdx / w) | 0,
-          targetX,
-          targetY,
-          progress: travelProgress,
-          maxProgress: Math.max(1, Number(activeOrder.maxProgress || HARVEST_TICKS) | 0),
-        };
-        simOut.selectedUnit = unitIdx;
-        simOut.lastAutoAction = `MOVE_WAIT:${travelProgress}/${travelTicks}`;
-      } else {
-        const navigationWorld = preStepAlive ? { ...worldMutable, alive: preStepAlive } : worldMutable;
-        const nextIdx = findNextStepBfs4(navigationWorld, unitIdx, targetIdx, w, h);
-        const occupiedAtTickStart = nextIdx >= 0 && (Number(preStepAlive?.[nextIdx] || 0) | 0) === 1;
-        const hardBlocked = nextIdx < 0 || (occupiedAtTickStart && nextIdx !== targetIdx);
-        if (hardBlocked) {
-          simOut.unitOrder = {
-            active: true,
-            fromX: unitIdx % w,
-            fromY: (unitIdx / w) | 0,
-            targetX,
-            targetY,
-          };
-          simOut.activeOrder = {
-            ...activeOrder,
-            active: true,
-            type: "HARVEST",
-            fromX: unitIdx % w,
-            fromY: (unitIdx / w) | 0,
-            targetX,
-            targetY,
-            progress: 0,
-            maxProgress: Math.max(1, Number(activeOrder.maxProgress || HARVEST_TICKS) | 0),
-          };
-          simOut.selectedUnit = unitIdx;
-          simOut.lastAutoAction = "ORDER_WAIT_BLOCKED";
-        } else {
-          moveEntityTile(worldMutable, unitIdx, nextIdx);
-          const nx = nextIdx % w;
-          const ny = (nextIdx / w) | 0;
-          simOut.selectedUnit = nextIdx;
-          simOut.unitOrder = {
-            active: true,
-            fromX: nx,
-            fromY: ny,
-            targetX,
-            targetY,
-          };
-          simOut.activeOrder = {
-            ...activeOrder,
-            active: true,
-            type: "HARVEST",
-            fromX: nx,
-            fromY: ny,
-            targetX,
-            targetY,
-            progress: 0,
-            maxProgress: Math.max(1, Number(activeOrder.maxProgress || HARVEST_TICKS) | 0),
-          };
-          simOut.lastAutoAction = `MOVE_STEP:${nx},${ny}`;
-        }
-      }
-    }
-  }
+  ({ worldMutable, simOut } = processActiveOrderRuntime({
+    worldMutable,
+    preStepAlive,
+    simOut,
+    meta: state.meta,
+    ticksPerSecond: TICKS_PER_SECOND,
+    harvestTicks: HARVEST_TICKS,
+  }));
 
   simOut.expansionWork = Math.max(0, simOut.expansionWork + expansionWorkGain(simOut));
   simOut.nextExpandCost = expansionWorkCost(worldMutable, simOut);

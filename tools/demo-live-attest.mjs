@@ -156,10 +156,10 @@ try {
   await page.evaluate(async () => {
     const [{ createStore }, manifestMod, logicMod, rendererMod, uiMod, idsMod, presetsMod] = await Promise.all([
       import("/src/kernel/store/createStore.js"),
-      import("/src/project/project.manifest.js"),
-      import("/src/project/project.logic.js"),
-      import("/src/project/renderer.js"),
-      import("/src/project/ui.js"),
+      import("/src/game/manifest.js"),
+      import("/src/game/runtime/index.js"),
+      import("/src/game/render/renderer.js"),
+      import("/src/game/ui/ui.js"),
       import("/src/game/contracts/ids.js"),
       import("/src/game/sim/worldPresets.js"),
     ]);

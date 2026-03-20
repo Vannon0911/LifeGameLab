@@ -6,7 +6,7 @@ import {
   RESULT_REASON_LABELS,
   WIN_MODE_LABELS,
   ZONE_LABELS,
-} from "../../project/llm/advisorModel.js";
+} from "../viewmodel/advisorLabels.js";
 
 export function getPlayerMemory(state) {
   const playerLineageId = Number(state?.meta?.playerLineageId || 0);

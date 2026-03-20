@@ -23,7 +23,7 @@ LLM-spezifische Regeln leben getrennt unter `docs/llm/`.
 7. `docs/llm/entry/TASK_GATE_INDEX.md` fuer minimales Gate-Set lesen
 8. Alle passenden Task-Entries fuer alle klassifizierten Scopes lesen
 9. Globale Mindest-Gates lesen:
-   - `src/project/contract/manifest.js`
+   - `src/game/contracts/manifest.js`
    - `src/kernel/store/createStore.js`
    - `src/kernel/store/applyPatches.js`
 
@@ -58,7 +58,7 @@ LLM-spezifische Regeln leben getrennt unter `docs/llm/`.
 - `docs/STATUS.md` ist Kommentar-/Entscheidungslog, nicht Truth-Quelle.
 - `docs/ARCHITECTURE.md` ist die einzige technische Snapshot-Doku.
 - `docs/PRODUCT.md` ist die einzige Produkt- und Scope-Basis.
-- `src/project/contract/manifest.js` bleibt Source of Truth.
+- `src/game/contracts/manifest.js` bleibt Source of Truth.
 - `src/kernel/store/createStore.js` und `src/kernel/store/applyPatches.js` bleiben Pflichtgates fuer jede Task-Ausfuehrung.
 - Rueckverfolgbare Belege bleiben als kleine Textnachweise unter `docs/traceability/`; Massenausgaben und Bilder gehoeren nicht in den kanonischen Repo-Kern.
 - Ab jetzt gilt Slice-Versionierung strikt: jeder abgeschlossene Slice erhoeht die Version um `0.0.1`. Teilschritte werden nur als Anhang `a`, `b`, `c`, `d` dokumentiert und ersetzen keinen Version-Bump.

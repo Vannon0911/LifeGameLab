@@ -30,5 +30,5 @@
 - Wenn `docs/llm/ENTRY.md` oder task-spezifischer Entry geaendert wurde: Ack neu setzen.
 - Wenn Pfade mehreren Tasks zugeordnet werden: in Subtasks splitten, je Subtask eigener Zyklus.
 - Kernel- und Manifest-Pflichtgate gilt immer:
-  - `src/project/contract/manifest.js` ist SoT
+  - `src/game/contracts/manifest.js` ist SoT
   - `src/kernel/store/createStore.js` und `src/kernel/store/applyPatches.js` bleiben Pflichtreferenzen

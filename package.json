@@ -9,6 +9,7 @@
     "llm:preflight:start": "node tools/llm-preflight.mjs entry --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs --mode work",
     "llm:preflight:ack": "node tools/llm-preflight.mjs ack --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs",
     "llm:preflight:check": "node tools/llm-preflight.mjs check --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs",
+    "llm:pipeline:check": "node tools/check-llm-pipeline.mjs",
     "test": "node tools/run-all-tests.mjs",
     "test:quick": "node tools/run-test-suite.mjs quick",
     "test:truth": "node tools/run-test-suite.mjs truth",

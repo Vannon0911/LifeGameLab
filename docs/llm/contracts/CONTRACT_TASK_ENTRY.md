@@ -12,24 +12,24 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 6. `docs/llm/TASK_ENTRY_MATRIX.json`
 7. `docs/llm/entry/TASK_GATE_INDEX.md` (CONTRACTS + globale Mindest-Gates)
 8. diese Datei
-9. `src/project/contract/manifest.js`
+9. `src/game/contracts/manifest.js`
 10. `src/kernel/store/createStore.js`
 11. `src/kernel/store/applyPatches.js`
-12. `src/project/contract/stateSchema.js`
-13. `src/project/contract/actionSchema.js`
-14. `src/project/contract/mutationMatrix.js`
-15. `src/project/contract/simGate.js`
-16. `src/project/contract/dataflow.js`
+12. `src/game/contracts/stateSchema.js`
+13. `src/game/contracts/actionSchema.js`
+14. `src/game/contracts/mutationMatrix.js`
+15. `src/game/contracts/simGate.js`
+16. `src/game/contracts/dataflow.js`
 
 ## Minimalzugriff Ohne Vollscan
 - Immer zuerst globale Mindest-Gates aus `TASK_GATE_INDEX.md` laden.
 - Danach nur CONTRACTS-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
-- `node tools/llm-preflight.mjs classify --paths src/project/contract/,src/kernel/,src/project/project.manifest.js`
-- `node tools/llm-preflight.mjs entry --paths src/project/contract/,src/kernel/,src/project/project.manifest.js --mode work`
-- `node tools/llm-preflight.mjs ack --paths src/project/contract/,src/kernel/,src/project/project.manifest.js`
-- `node tools/llm-preflight.mjs check --paths src/project/contract/,src/kernel/,src/project/project.manifest.js`
+- `node tools/llm-preflight.mjs classify --paths src/game/contracts/,src/kernel/,src/game/manifest.js`
+- `node tools/llm-preflight.mjs entry --paths src/game/contracts/,src/kernel/,src/game/manifest.js --mode work`
+- `node tools/llm-preflight.mjs ack --paths src/game/contracts/,src/kernel/,src/game/manifest.js`
+- `node tools/llm-preflight.mjs check --paths src/game/contracts/,src/kernel/,src/game/manifest.js`
 
 ## SCHREIBEN (pflicht)
 - Kein Schreiben ohne `docs/llm/ENTRY.md` + passenden Task-Entry.
@@ -50,5 +50,5 @@ Keine neue Action/Feldlogik vor vollstaendigem Contract.
 - Pro abgeschlossenem Slice ist die Version um `0.0.1` zu erhoehen; Teilstufen `a/b/c/d` werden nur als Dokumentanhang gefuehrt.
 
 ## Klassifizierungs-Hinweis
-- `src/project/contract/*`, `src/kernel/*`, `src/project/project.manifest.js` und `src/game/contracts/*` gehoeren zum Contract-Task.
+- `src/game/contracts/*`, `src/kernel/*`, `src/game/manifest.js` und `src/game/contracts/*` gehoeren zum Contract-Task.
 - Insbesondere `src/game/contracts/ids.js` ist Contract-Core und darf nicht aus der Matrix fallen.

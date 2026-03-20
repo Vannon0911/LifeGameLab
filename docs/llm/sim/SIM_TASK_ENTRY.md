@@ -1,4 +1,7 @@
-# Sim Task Entry
+# Sim Task Entry (Deprecated)
+
+> Deprecated: Diese Datei bleibt nur fuer Rueckwaertskompatibilitaet.
+> Kanonischer Entry ist `docs/llm/gameplay/GAMEPLAY_TASK_ENTRY.md`.
 
 ## Pflichtzyklus
 LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
@@ -12,7 +15,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 6. `docs/llm/TASK_ENTRY_MATRIX.json`
 7. `docs/llm/entry/TASK_GATE_INDEX.md` (SIM + globale Mindest-Gates)
 8. diese Datei
-9. `src/project/contract/manifest.js`
+9. `src/game/contracts/manifest.js`
 10. `src/kernel/store/createStore.js`
 11. `src/kernel/store/applyPatches.js`
 12. `src/game/sim/reducer/index.js`
@@ -26,10 +29,10 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Danach nur SIM-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
-- `node tools/llm-preflight.mjs classify --paths src/game/sim/,src/project/project.logic.js`
-- `node tools/llm-preflight.mjs entry --paths src/game/sim/,src/project/project.logic.js --mode work`
-- `node tools/llm-preflight.mjs ack --paths src/game/sim/,src/project/project.logic.js`
-- `node tools/llm-preflight.mjs check --paths src/game/sim/,src/project/project.logic.js`
+- `node tools/llm-preflight.mjs classify --paths src/game/sim/,src/game/runtime/index.js`
+- `node tools/llm-preflight.mjs entry --paths src/game/sim/,src/game/runtime/index.js --mode work`
+- `node tools/llm-preflight.mjs ack --paths src/game/sim/,src/game/runtime/index.js`
+- `node tools/llm-preflight.mjs check --paths src/game/sim/,src/game/runtime/index.js`
 
 ## SCHREIBEN (pflicht)
 - Kein Schreiben ohne `docs/llm/ENTRY.md` + passenden Task-Entry.

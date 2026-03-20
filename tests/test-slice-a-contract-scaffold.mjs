@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 
-import { actionSchema } from "../src/project/contract/actionSchema.js";
-import { mutationMatrix } from "../src/project/contract/mutationMatrix.js";
-import { dataflow } from "../src/project/contract/dataflow.js";
-import { stateSchema } from "../src/project/contract/stateSchema.js";
-import { simGate } from "../src/project/contract/simGate.js";
-import { actionLifecycle, ACTION_LIFECYCLE_STATUS } from "../src/project/contract/actionLifecycle.js";
+import { actionSchema } from "../src/game/contracts/actionSchema.js";
+import { mutationMatrix } from "../src/game/contracts/mutationMatrix.js";
+import { dataflow } from "../src/game/contracts/dataflow.js";
+import { stateSchema } from "../src/game/contracts/stateSchema.js";
+import { simGate } from "../src/game/contracts/simGate.js";
+import { actionLifecycle, ACTION_LIFECYCLE_STATUS } from "../src/game/contracts/actionLifecycle.js";
 import { BUILDING_KIND, ENTITY_KIND, RESOURCE_KIND } from "../src/game/contracts/ids.js";
 import { createDeterministicStore, snapshotStore } from "./support/liveTestKit.mjs";
 

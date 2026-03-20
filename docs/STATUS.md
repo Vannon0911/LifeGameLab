@@ -1,6 +1,15 @@
 # STATUS - Current Head
 
 ## Snapshot (2026-03-20)
+- Runtime now boots directly against canonical `src/game/*` and `src/kernel/*` modules; legacy `src/project/*` and `src/core/kernel/*` facades were removed.
+- Dev-only LLM helpers now live under `tools/llm/*`, and runtime/UI imports no longer depend on LLM modules.
+- Sim cleanup follow-up landed: foundation eligibility moved to `src/game/runtime/foundationEligibility.js`, fog intel moved to `src/game/viewmodel/fogIntel.js`, and Lage-panel stat helpers moved to `src/game/viewmodel/lageStats.js`.
+- Reducer cleanup continued: phase gating moved into `src/game/sim/gates/phaseGates.js`, and worker order parsing/patch builders moved into `src/game/sim/commands/orderCommands.js`.
+- Reducer cleanup continued again: grid and mask helpers moved into `src/game/sim/grid/index.js`, and active order execution moved into `src/game/runtime/processActiveOrderRuntime.js` with navigation in `src/game/runtime/orderNavigation.js`.
+- Runtime/sim helper cleanup continued: shared alive/role/mask counters moved into `src/game/runtime/stateCounts.js`, removing duplicate counting logic between reducer and win-conditions.
+- Runtime/sim helper cleanup continued again: infra candidate-mask hydration and committed-anchor checks moved into `src/game/runtime/infraRuntime.js`, shrinking inline infra staging logic in the reducer.
+- Worldgen/MapSpec/presets cleanup landed behind stable facades: `src/game/sim/worldPresets.js`, `src/game/sim/mapspec.js`, and `src/game/sim/worldgen.js` now re-export dedicated internal modules instead of owning the full implementations inline.
+- Sim-layer dedupe cleanup landed: duplicate founder 8-neighbor connectivity logic was consolidated into `src/game/sim/grid/index.js` and reused by both foundation eligibility and phase-gate checks.
 - Slice B MapSpec wiring is now active.
 - Kernel input hardening now blocks non-serializable `SET_MAPSPEC` payloads, rejects cyclic map inputs fail-closed, and keeps invalid `SET_SIZE` dimensions out of committed state.
 - Product SoT was moved to the v1.1 RTS basis in `docs/PRODUCT.md`.
@@ -26,18 +35,29 @@
 - Legacy runtime still remains active and intentionally untouched as live fallback.
 
 ## Verified Current Truth
-- `src/project/contract/manifest.js` exports `actionLifecycle` alongside schema, matrix, gate and dataflow.
-- `src/project/contract/actionSchema.js` now hardens `SET_MAPSPEC` to an explicit JSON-safe field set instead of `allowUnknown`.
+- `src/game/contracts/manifest.js` exports `actionLifecycle` alongside schema, matrix, gate and dataflow.
+- `src/game/runtime/index.js` is now the canonical reducer/sim-step entry instead of `src/project/project.logic.js`.
+- `src/game/contracts/actionSchema.js` now hardens `SET_MAPSPEC` to an explicit JSON-safe field set instead of `allowUnknown`.
 - `src/kernel/store/signature.js`, `src/kernel/store/createStore.js`, and `src/kernel/validation/validateState.js` now fail closed on non-serializable or circular values instead of collapsing them to `null`.
-- `src/project/project.manifest.js` now exposes `domainPatchGate` as a named export so module-namespace callers hit the same gate path as the app runtime.
-- `src/project/contract/dataflow.js` exposes lifecycle metadata and planned writes per action.
-- `src/project/contract/actionSchema.js` now contains Slice A RTS scaffold actions plus the live `SET_MAP_TILE` builder action.
-- `src/project/contract/mutationMatrix.js` now allows `GEN_WORLD` to synchronize `map` state, grid dimensions, lineage ids, physics, and the world/sim payload.
-- `src/project/contract/stateSchema.js` now tracks the active migration slice as `slice_b_mapspec`.
-- `src/project/contract/stateSchema.js` and `src/project/contract/simGate.js` no longer carry `patternCatalog` or `patternBonuses`; the live mutation surface is now `mutatorDraft` plus the runtime registries listed in `simGate`.
-- `src/project/contract/simGate.js` allows future-safe world registries such as `cores`, `buildings`, `workers`, `fighters`, `belts` and `powerLines`.
+- `src/game/manifest.js` now exposes `domainPatchGate` as a named export so module-namespace callers hit the same gate path as the app runtime.
+- `src/game/contracts/dataflow.js` exposes lifecycle metadata and planned writes per action.
+- `src/game/contracts/actionSchema.js` now contains Slice A RTS scaffold actions plus the live `SET_MAP_TILE` builder action.
+- `src/game/contracts/mutationMatrix.js` now allows `GEN_WORLD` to synchronize `map` state, grid dimensions, lineage ids, physics, and the world/sim payload.
+- `src/game/contracts/stateSchema.js` now tracks the active migration slice as `slice_b_mapspec`.
+- `src/game/contracts/stateSchema.js` and `src/game/contracts/simGate.js` still carry `patternCatalog` and `patternBonuses`; removal remains open until Gameplay migration completes.
+- `src/game/contracts/simGate.js` allows future-safe world registries such as `cores`, `buildings`, `workers`, `fighters`, `belts` and `powerLines`.
 - `src/game/sim/mapspec.js` now provides deterministic `validate -> compile` helpers for Slice B.
 - `src/kernel/store/persistence.js` now persists `map` together with `meta` in the default web driver while still stripping `world` and `sim`.
+- `src/game/ui/ui.model.js` now reads presentation labels from `src/game/viewmodel/advisorLabels.js` instead of importing Dev-LLM modules.
+- `src/game/ui/ui.lage.js` no longer imports `src/game/sim/foundationEligibility.js` directly; the runtime boundary now owns that read selector.
+- `src/game/render/fogOfWar.js` now contains render-only fog logic; advisor fog shaping moved into `src/game/viewmodel/fogIntel.js`.
+- `src/game/sim/reducer/index.js` now re-exports `shouldAdvanceSimulation` while consuming extracted gate and order command modules instead of defining them inline.
+- `src/game/sim/reducer/index.js` now delegates active order execution through `src/game/runtime/processActiveOrderRuntime.js` while keeping the runtime/public export surface stable.
+- `src/game/runtime/stateCounts.js` now owns shared role/mask counting helpers used by both `src/game/sim/reducer/index.js` and `src/game/sim/reducer/winConditions.js`.
+- `src/game/runtime/infraRuntime.js` now owns shared infra staging helpers used by `src/game/sim/reducer/index.js` for candidate-mask cloning and committed-anchor checks.
+- `src/game/sim/world/presetCatalog.js`, `src/game/sim/world/presetRuntime.js`, `src/game/sim/world/generationRuntime.js`, and `src/game/sim/mapspec/runtime.js` now own the moved preset/worldgen/MapSpec logic while the old top-level sim paths remain stable facades.
+- `src/game/sim/grid/index.js` now owns shared 8-neighbor founder connectivity checks used by `src/game/runtime/foundationEligibility.js` and `src/game/sim/gates/phaseGates.js`.
+- `tests/test-active-order-runtime.mjs` now hardens blocked, wait, harvest-progress, and harvest-complete branches for the extracted active-order runtime.
 
 ## Traceability Added
 - `docs/traceability/rebuild-preparation-inventory.md`
