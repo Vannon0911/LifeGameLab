@@ -98,6 +98,20 @@ export function installUiInput(UI) {
       this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:!running } });
     };
 
+    const openBuilder = () => {
+      const state = this._store.getState();
+      const runPhase = String(state?.sim?.runPhase || "");
+      if (runPhase === RUN_PHASE.MAP_BUILDER) {
+        this._setActionFeedback({
+          ok: true,
+          message: "Builder ist bereits aktiv.",
+          hint: "Klick malt, Shift entfernt Overrides.",
+        });
+        return;
+      }
+      toggleMapBuilder();
+    };
+
     this._btnPlay?.addEventListener("click", togglePlay);
     this._btnStep?.addEventListener("click", () => {
       const state = this._store.getState();
@@ -137,6 +151,15 @@ export function installUiInput(UI) {
       this._dispatch({ type:"GEN_WORLD" });
     });
     this._btnBuilder?.addEventListener("click", toggleMapBuilder);
+    this._btnMenuPlay?.addEventListener("click", togglePlay);
+    this._btnMenuBuild?.addEventListener("click", openBuilder);
+    this._btnMenuMore?.addEventListener("click", () => {
+      this._setActionFeedback({
+        ok: true,
+        message: "Mehr-Menü folgt.",
+        hint: "Platzhalter fuer weitere Optionen.",
+      });
+    });
     this._builderExitButton?.addEventListener("click", toggleMapBuilder);
     bindBuilderPalette();
 

@@ -23,16 +23,24 @@ export function installUiLayout(UI) {
       const header = el("header", "nx-minimal-header");
       header.style.cssText = [
         "display:flex",
-        "align-items:center",
+        "align-items:stretch",
+        "flex-direction:column",
         "gap:12px",
-        "flex-wrap:wrap",
-        "justify-content:space-between",
         "padding:14px 16px",
         "border-radius:20px",
         "border:1px solid rgba(170,190,230,0.16)",
         "background:linear-gradient(135deg, rgba(14,18,29,0.92), rgba(19,29,44,0.82))",
         "backdrop-filter:blur(12px)",
         "box-shadow:0 14px 34px rgba(2,6,12,0.34)",
+      ].join(";");
+
+      const headerTop = el("div", "nx-header-top");
+      headerTop.style.cssText = [
+        "display:flex",
+        "align-items:center",
+        "gap:12px",
+        "flex-wrap:wrap",
+        "justify-content:space-between",
       ].join(";");
 
       this._timer = el("div", "nx-header-timer", "Timer 00:00");
@@ -73,7 +81,25 @@ export function installUiLayout(UI) {
       ].join(";");
 
       actions.append(this._statusBadge);
-      header.append(this._timer, this._headerHint, actions);
+      headerTop.append(this._timer, this._headerHint, actions);
+
+      this._mainMenu = el("nav", "nx-main-menu");
+      this._mainMenu.setAttribute("aria-label", "Hauptmenü");
+      this._mainMenu.style.cssText = [
+        "display:flex",
+        "align-items:center",
+        "gap:8px",
+        "flex-wrap:wrap",
+      ].join(";");
+      this._btnMenuPlay = el("button", "nx-btn nx-btn-primary", "SPIELEN");
+      this._btnMenuPlay.setAttribute("aria-label", "Spiel starten");
+      this._btnMenuBuild = el("button", "nx-btn", "BAUEN");
+      this._btnMenuBuild.setAttribute("aria-label", "Builder öffnen");
+      this._btnMenuMore = el("button", "nx-btn", "(...)");
+      this._btnMenuMore.setAttribute("aria-label", "Weitere Optionen");
+      this._mainMenu.append(this._btnMenuPlay, this._btnMenuBuild, this._btnMenuMore);
+
+      header.append(headerTop, this._mainMenu);
 
       const stage = el("main", "nx-stage");
       stage.style.cssText = [

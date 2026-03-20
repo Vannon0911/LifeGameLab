@@ -185,6 +185,7 @@ export class UI {
     const ui = state?.meta?.ui || {};
     const cfg = this._getBuilderModeConfig(this._builderMode);
     const modeLabel = cfg ? cfg.label : "Licht";
+    const running = !!state?.sim?.running;
     if (this._btnBuilder) {
       this._btnBuilder.textContent = isBuilder ? "Builder an" : "Map Builder";
       this._btnBuilder.dataset.active = isBuilder ? "true" : "false";
@@ -193,6 +194,17 @@ export class UI {
         ? "linear-gradient(135deg, rgba(34, 78, 46, 0.98), rgba(18, 30, 23, 0.96))"
         : "linear-gradient(135deg, rgba(30, 37, 53, 0.95), rgba(18, 22, 31, 0.93))";
       this._btnBuilder.style.color = isBuilder ? "#dffff0" : "#eaf2ff";
+    }
+    if (this._btnMenuBuild) {
+      this._btnMenuBuild.dataset.active = isBuilder ? "true" : "false";
+      this._btnMenuBuild.style.borderColor = isBuilder ? "rgba(126, 255, 183, 0.8)" : "rgba(255,255,255,0.16)";
+      this._btnMenuBuild.style.background = isBuilder
+        ? "linear-gradient(135deg, rgba(34, 78, 46, 0.98), rgba(18, 30, 23, 0.96))"
+        : "linear-gradient(135deg, rgba(30,37,53,0.95), rgba(18,22,31,0.93))";
+      this._btnMenuBuild.style.color = isBuilder ? "#dffff0" : "#eaf2ff";
+    }
+    if (this._btnMenuPlay) {
+      this._btnMenuPlay.textContent = running ? "PAUSE" : "SPIELEN";
     }
     if (this._headerHint) {
       this._headerHint.textContent = isBuilder
