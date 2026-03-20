@@ -1,7 +1,9 @@
 import { RUN_PHASE } from "../contracts/ids.js";
-import { announceInLiveRegion, createActionFeedback } from "./ui.feedback.js";
+import { announceInLiveRegion, createActionFeedback } from "./ui.hud.js";
 import { installUiInput } from "./ui.input.js";
 import { installUiLayout } from "./ui.layout.js";
+import { buildAppliedMapSpec } from "./ui.builder.js";
+import { issueWorkerMove } from "./ui.orders.js";
 
 const BUILDER_TILE_OPTIONS = Object.freeze([
   Object.freeze({ mode: "light", label: "Licht", hint: "Lichtwert setzen", value: 0.92, accent: "#ffd47a" }),
@@ -98,24 +100,13 @@ export class UI {
   _applyCurrentMapSpec() {
     const state = this._store?.getState?.();
     if (!state) return;
-    const mapSpec = state?.map?.spec && typeof state.map.spec === "object" ? state.map.spec : {};
-    const presetId = String(mapSpec.presetId || state?.meta?.worldPresetId || "river_delta");
-    const gridW = Math.max(1, Math.trunc(Number(mapSpec.gridW ?? state?.meta?.gridW ?? 16)));
-    const gridH = Math.max(1, Math.trunc(Number(mapSpec.gridH ?? state?.meta?.gridH ?? 16)));
-    const nextMapSpec = {
-      name: String(mapSpec.name || ""),
-      presetId,
-      gridW,
-      gridH,
-      tileSize: Math.max(1, Math.trunc(Number(mapSpec.tileSize ?? 1))),
-    };
+    const nextMapSpec = buildAppliedMapSpec(state);
     this._store.dispatch({ type: "SET_MAPSPEC", payload: { mapSpec: nextMapSpec } });
     this._store.dispatch({ type: "GEN_WORLD", payload: {} });
   }
 
   _issueMove(from, target) {
-    const entityId = `worker:${Number(from.x) | 0}:${Number(from.y) | 0}`;
-    return this._dispatch({ type: "ISSUE_MOVE", payload: { entityId, targetX: target.x, targetY: target.y } });
+    return issueWorkerMove(this._dispatch, from, target);
   }
 
   _placeWorker({ x, y, remove = false }) {
