@@ -168,11 +168,13 @@ export function installUiInput(UI) {
   _bindGlobalKeys() {
     window.addEventListener("keydown", (e) => {
       if (e.target && ["INPUT","SELECT","TEXTAREA"].includes(e.target.tagName)) return;
-      if (e.code === "Space") { e.preventDefault(); this._btnPlay.click(); }
-      else if (e.key === "n" || e.key === "N") { e.preventDefault(); this._btnNew.click(); }
-      else if (e.key === "m" || e.key === "M") {
+      if (e.code === "Space") {
         e.preventDefault();
-        this._toggleMapBuilder?.();
+        this._btnPlay?.click?.();
+      }
+      else if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        this._btnNew?.click?.();
       }
       else if (e.key === "p" || e.key === "P") {
         e.preventDefault();

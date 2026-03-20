@@ -34,7 +34,7 @@ export class UI {
     this._builderTileOptions = BUILDER_TILE_OPTIONS;
     this._builderTileLookup = new Map(BUILDER_TILE_OPTIONS.map((entry) => [entry.mode, entry]));
     this._builderPaletteButtons = Object.create(null);
-    this._feedbackState = createActionFeedback({ ok: true, message: "Bereit", hint: "Map Builder mit M aktivieren" });
+    this._feedbackState = createActionFeedback({ ok: true, message: "Bereit", hint: "Klick auf Kacheln setzt oder entfernt Worker." });
     this._dispatch = (action) => {
       try {
         this._store.dispatch(action);
@@ -90,11 +90,28 @@ export class UI {
   sync(state) {
     const current = state && typeof state === "object" ? state : this._store?.getState?.();
     if (!current) return;
+    const tick = Math.max(0, Number(current?.sim?.tick || 0) | 0);
+    if (this._timer) {
+      this._timer.textContent = `Timer ${this._formatTimer(tick)}`;
+    }
     const runPhase = String(current?.sim?.runPhase || "");
     const isBuilder = runPhase === RUN_PHASE.MAP_BUILDER;
     this._syncBuilderPhaseUi?.(current, isBuilder);
     this._syncBuilderHoverOverlay?.(current, isBuilder);
     this._refreshActionFeedbackView?.(current, isBuilder);
+  }
+
+  _formatTimer(tick) {
+    const seconds = Math.max(0, Math.floor(tick / 24));
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    const hours = Math.floor(mins / 60);
+    const mm = String(mins % 60).padStart(2, "0");
+    const ss = String(secs).padStart(2, "0");
+    if (hours > 0) {
+      return `${String(hours).padStart(2, "0")}:${mm}:${ss}`;
+    }
+    return `${mm}:${ss}`;
   }
 
   _applyCurrentMapSpec() {

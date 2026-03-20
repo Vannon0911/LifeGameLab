@@ -35,28 +35,26 @@ export function installUiLayout(UI) {
         "box-shadow:0 14px 34px rgba(2,6,12,0.34)",
       ].join(";");
 
-      this._brand = el("div", "nx-brand", "LifeGameLab");
-      this._brand.style.cssText = "font:700 1.1rem/1.1 ui-sans-serif, system-ui, sans-serif;letter-spacing:0.08em;text-transform:uppercase;color:#f5fbff;";
+      this._timer = el("div", "nx-header-timer", "Timer 00:00");
+      this._timer.style.cssText = [
+        "display:inline-flex",
+        "align-items:center",
+        "min-height:36px",
+        "padding:0 12px",
+        "border-radius:999px",
+        "border:1px solid rgba(170,190,230,0.22)",
+        "background:rgba(18,27,40,0.82)",
+        "color:#f5fbff",
+        "font:700 0.95rem/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+        "letter-spacing:0.04em",
+        "white-space:nowrap",
+      ].join(";");
 
       this._headerHint = el("div", "nx-minimal-hint", "Klick: Worker setzen | Worker->Ressource: Bewegung");
       this._headerHint.style.cssText = "flex:1;min-width:220px;font:500 0.92rem/1.4 ui-sans-serif, system-ui, sans-serif;color:#bfd0eb;";
 
       const actions = el("div", "nx-top-actions");
       actions.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;";
-
-      this._btnBuilder = el("button", "nx-btn nx-btn-builder", "Map Builder");
-      this._btnBuilder.setAttribute("aria-label", "Map Builder umschalten");
-      this._btnBuilder.style.cssText = [
-        "border:1px solid rgba(255,255,255,0.16)",
-        "background:linear-gradient(135deg, rgba(30,37,53,0.95), rgba(18,22,31,0.93))",
-        "color:#eaf2ff",
-      ].join(";");
-
-      this._btnPlay = el("button", "nx-btn nx-btn-primary", "▶ Start");
-      this._btnPlay.setAttribute("aria-label", "Simulation starten oder pausieren");
-      this._btnNew = el("button", "nx-btn", "Neue Welt");
-      this._btnNew.setAttribute("aria-label", "Neue Welt generieren");
-      this._btnStep = el("button", "nx-btn nx-btn-dev hidden", "+1");
 
       this._statusBadge = el("div", "nx-status-badge", "Bereit");
       this._statusBadge.setAttribute("aria-live", "polite");
@@ -74,8 +72,8 @@ export function installUiLayout(UI) {
         "white-space:nowrap",
       ].join(";");
 
-      actions.append(this._btnBuilder, this._btnPlay, this._btnNew, this._btnStep, this._statusBadge);
-      header.append(this._brand, this._headerHint, actions);
+      actions.append(this._statusBadge);
+      header.append(this._timer, this._headerHint, actions);
 
       const stage = el("main", "nx-stage");
       stage.style.cssText = [

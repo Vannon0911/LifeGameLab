@@ -17,6 +17,8 @@
     "test:full": "node tools/run-all-tests.mjs",
     "test:session": "node tools/run-verification-session.mjs",
     "test:foundation:visual": "node tools/run-foundation-visual-playwright.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.2"
   }
 }
-
