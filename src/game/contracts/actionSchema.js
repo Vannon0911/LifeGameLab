@@ -35,6 +35,40 @@ export const actionSchema = {
       remove: { type: "boolean" },
     },
   },
+  SET_SURFACE_TILE: {
+    type: "object",
+    shape: {
+      tiles: { type: "object" },
+      surfaceType: { type: "string" },
+      brushSize: { type: "number" },
+    },
+  },
+  SET_RESOURCE_TILE: {
+    type: "object",
+    shape: {
+      tiles: { type: "object" },
+      resourceKind: { type: "string" },
+      resourceStage: { type: "string" },
+      brushSize: { type: "number" },
+    },
+  },
+  ERASE_TILE_CONTENT: {
+    type: "object",
+    shape: {
+      tiles: { type: "object" },
+      layer: { type: "string" },
+      brushSize: { type: "number" },
+    },
+  },
+  BUILDER_UNDO: { type: "object", shape: {} },
+  BUILDER_REDO: { type: "object", shape: {} },
+  SET_BUILDER_BRUSH_SIZE: {
+    type: "object",
+    shape: {
+      size: { type: "number" },
+    },
+  },
+  GENERATE_MAP_SEED: { type: "object", shape: {} },
   SET_RENDER_MODE: { type: "object", shape: {}, allowUnknown: true },
   SET_PHYSICS: { type: "object", shape: {}, allowUnknown: true },
   SET_BRUSH: { type: "object", shape: {}, allowUnknown: true },

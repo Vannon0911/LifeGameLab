@@ -1,9 +1,24 @@
-import { RUN_PHASE } from "../contracts/ids.js";
+import { BRUSH_MODE, RUN_PHASE } from "../contracts/ids.js";
 import { announceInLiveRegion, createActionFeedback } from "./ui.hud.js";
 import { installUiInput } from "./ui.input.js";
 import { installUiLayout } from "./ui.layout.js";
 import { buildAppliedMapSpec } from "./ui.builder.js";
 import { issueWorkerMove } from "./ui.orders.js";
+import { createBuilderHistory } from "./ui.history.js";
+import { createCircleMenu } from "./ui.circleMenu.js";
+import { createViewportController } from "./ui.viewport.js";
+import { getCursorStyle } from "./ui.cursors.js";
+import { getBrushTiles } from "../sim/brushShapes.js";
+import {
+  SURFACE_TYPE,
+  SURFACE_TYPE_VALUES,
+  RESOURCE_KIND_BUILDER,
+  RESOURCE_KIND_BUILDER_VALUES,
+  RESOURCE_STAGE,
+  SURFACE_TYPE_LABEL,
+  RESOURCE_KIND_BUILDER_LABEL,
+} from "../sim/mapBuilderResources.js";
+import { selectAreAllTilesFilled, generateMapSeed, formatSeedDisplay } from "../sim/mapSeedGen.js";
 
 const BUILDER_TILE_OPTIONS = Object.freeze([
   Object.freeze({ mode: "light", label: "Licht", hint: "Lichtwert setzen", value: 0.92, accent: "#ffd47a" }),
@@ -15,6 +30,13 @@ const BUILDER_TILE_OPTIONS = Object.freeze([
   Object.freeze({ mode: "infra", label: "Infra", hint: "Zone als Infrastruktur markieren", value: 1, accent: "#6ee7c7" }),
   Object.freeze({ mode: "founder", label: "Founder", hint: "Founder-Kachel setzen", value: 1, accent: "#f6f9ff" }),
   Object.freeze({ mode: "erase", label: "Loeschen", hint: "Override entfernen", value: 0, accent: "#ff8a7a", remove: true }),
+]);
+
+// Builder-specific tool options for circle menu and dropdown
+const BUILDER_TOOL_OPTIONS = Object.freeze([
+  Object.freeze({ mode: BRUSH_MODE.SURFACE_PAINT, label: "Oberflaeche", hint: "Oberflaechentyp malen", accent: "#6ec96e" }),
+  Object.freeze({ mode: BRUSH_MODE.RESOURCE_PLACE, label: "Ressource", hint: "Ressource platzieren", accent: "#c49858" }),
+  Object.freeze({ mode: BRUSH_MODE.ERASER, label: "Loeschen", hint: "Tile-Inhalt loeschen", accent: "#ff8a7a" }),
 ]);
 
 export class UI {
@@ -34,6 +56,12 @@ export class UI {
     this._builderTileOptions = BUILDER_TILE_OPTIONS;
     this._builderTileLookup = new Map(BUILDER_TILE_OPTIONS.map((entry) => [entry.mode, entry]));
     this._builderPaletteButtons = Object.create(null);
+    this._builderToolOptions = BUILDER_TOOL_OPTIONS;
+    this._builderBrushSize = 1;
+    this._builderSurfaceType = SURFACE_TYPE.GRASS;
+    this._builderResourceKind = RESOURCE_KIND_BUILDER.TREE;
+    this._builderResourceStage = RESOURCE_STAGE.PLACED;
+    this._builderHistory = createBuilderHistory(200);
     this._feedbackState = createActionFeedback({ ok: true, message: "Bereit", hint: "Klick auf Kacheln setzt oder entfernt Worker." });
     this._dispatch = (action) => {
       try {

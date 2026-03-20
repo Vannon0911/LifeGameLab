@@ -1,4 +1,6 @@
-import { BRUSH_MODE, RUN_PHASE } from "../contracts/ids.js";
+import { BRUSH_MODE, RUN_PHASE, isBuilderBrushMode } from "../contracts/ids.js";
+import { getBrushTiles } from "../sim/brushShapes.js";
+import { selectAreAllTilesFilled, formatSeedDisplay } from "../sim/mapSeedGen.js";
 
 export function installUiInput(UI) {
   Object.assign(UI.prototype, {
@@ -163,6 +165,40 @@ export function installUiInput(UI) {
     this._builderExitButton?.addEventListener("click", toggleMapBuilder);
     bindBuilderPalette();
 
+    // Builder tool dropdown
+    this._builderToolDropdown?.addEventListener("change", (e) => {
+      const mode = e.target.value;
+      this._dispatch({ type: "SET_BRUSH", payload: { brushMode: mode } });
+      const opt = (this._builderToolOptions || []).find((o) => o.mode === mode);
+      this._setActionFeedback({ ok: true, message: `Werkzeug: ${opt?.label || mode}`, hint: opt?.hint || "" });
+    });
+
+    // Builder brush size slider
+    this._builderBrushSlider?.addEventListener("input", (e) => {
+      const size = Number(e.target.value) | 0;
+      this._builderBrushSize = size;
+      this._dispatch({ type: "SET_BUILDER_BRUSH_SIZE", payload: { size } });
+      if (this._builderBrushLabel) this._builderBrushLabel.textContent = `Pinsel: ${size}`;
+    });
+
+    // Builder undo/redo buttons
+    this._builderUndoBtn?.addEventListener("click", () => this._builderUndo?.());
+    this._builderRedoBtn?.addEventListener("click", () => this._builderRedo?.());
+
+    // Seed generation button
+    this._builderSeedGenBtn?.addEventListener("click", () => {
+      const state = this._store.getState();
+      if (!selectAreAllTilesFilled(state)) {
+        this._setActionFeedback({ ok: false, message: "Nicht alle Tiles belegt.", hint: "Alle Tiles muessen belegt sein." });
+        return;
+      }
+      this._dispatch({ type: "GENERATE_MAP_SEED", payload: {} });
+      const nextState = this._store.getState();
+      const seed = nextState?.map?.spec?.generatedSeed || "";
+      if (this._builderSeedLabel) this._builderSeedLabel.textContent = `Seed: ${seed ? formatSeedDisplay(seed) : "\u2014"}`;
+      this._setActionFeedback({ ok: true, message: `Seed: ${seed ? formatSeedDisplay(seed) : "\u2014"}`, hint: "" });
+    });
+
     if (this._dockPlayBtn) this._dockPlayBtn.addEventListener("click", togglePlay);
     if (this._sheetClose) this._sheetClose.addEventListener("click", () => this._closeSheet?.());
     if (this._sheetBackdrop) this._sheetBackdrop.addEventListener("click", () => this._closeSheet?.());
@@ -191,9 +227,37 @@ export function installUiInput(UI) {
   _bindGlobalKeys() {
     window.addEventListener("keydown", (e) => {
       if (e.target && ["INPUT","SELECT","TEXTAREA"].includes(e.target.tagName)) return;
+      const state = this._store.getState();
+      const isBuilder = String(state?.sim?.runPhase || "") === RUN_PHASE.MAP_BUILDER;
       if (e.code === "Space") {
         e.preventDefault();
         this._btnPlay?.click?.();
+      }
+      else if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey) && !e.shiftKey && isBuilder) {
+        e.preventDefault();
+        this._builderUndo?.();
+      }
+      else if (((e.key === "y" || e.key === "Y") && (e.ctrlKey || e.metaKey)) && isBuilder) {
+        e.preventDefault();
+        this._builderRedo?.();
+      }
+      else if (((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey) && e.shiftKey) && isBuilder) {
+        e.preventDefault();
+        this._builderRedo?.();
+      }
+      else if (e.key === "[" && isBuilder) {
+        e.preventDefault();
+        const next = Math.max(1, (this._builderBrushSize || 1) - 1);
+        this._builderBrushSize = next;
+        this._dispatch({ type: "SET_BUILDER_BRUSH_SIZE", payload: { size: next } });
+        this._setActionFeedback({ ok: true, message: `Pinsel: ${next}`, hint: "" });
+      }
+      else if (e.key === "]" && isBuilder) {
+        e.preventDefault();
+        const next = Math.min(5, (this._builderBrushSize || 1) + 1);
+        this._builderBrushSize = next;
+        this._dispatch({ type: "SET_BUILDER_BRUSH_SIZE", payload: { size: next } });
+        this._setActionFeedback({ ok: true, message: `Pinsel: ${next}`, hint: "" });
       }
       else if (e.key === "n" || e.key === "N") {
         e.preventDefault();
@@ -201,12 +265,33 @@ export function installUiInput(UI) {
       }
       else if (e.key === "p" || e.key === "P") {
         e.preventDefault();
-        const state = this._store.getState();
         console.log("MAP_SPEC_EXPORT:", JSON.stringify(state.map?.spec || {}, null, 2));
         this._setActionFeedback({ ok: true, message: "MapSpec in Konsole exportiert.", hint: "F12 fuer Log" });
       }
       else if (e.key === "Escape") this._closeContext?.();
     });
+  },
+
+  _builderUndo() {
+    if (!this._builderHistory) return;
+    const result = this._builderHistory.undo();
+    if (!result) {
+      this._setActionFeedback({ ok: false, message: "Nichts zum Rueckgaengig machen.", hint: "" });
+      return;
+    }
+    this._dispatch({ type: "BUILDER_UNDO", payload: { inverse: result.inverse } });
+    this._setActionFeedback({ ok: true, message: `Rueckgaengig: ${result.label}`, hint: "" });
+  },
+
+  _builderRedo() {
+    if (!this._builderHistory) return;
+    const result = this._builderHistory.redo();
+    if (!result) {
+      this._setActionFeedback({ ok: false, message: "Nichts zum Wiederherstellen.", hint: "" });
+      return;
+    }
+    this._dispatch({ type: "BUILDER_REDO", payload: { forward: result.forward } });
+    this._setActionFeedback({ ok: true, message: `Wiederherstellen: ${result.label}`, hint: "" });
   },
 
   _paintAtClient(clientX, clientY, start, pointerEvent = null) {
@@ -416,6 +501,48 @@ export function installUiInput(UI) {
     }
     if (builderActive) {
       if (!start) return;
+      // Handle new builder brush modes (surface, resource, eraser)
+      if (isBuilderBrushMode(mode)) {
+        const brushSize = this._builderBrushSize || 1;
+        const gridW = state.meta.gridW || 16;
+        const gridH = state.meta.gridH || 16;
+        const tiles = getBrushTiles(wx, wy, brushSize, gridW, gridH);
+        if (!tiles.length) return;
+        const spec = state.map?.spec || {};
+        const prevSurfacePlan = spec.surfacePlan && typeof spec.surfacePlan === "object" ? { ...spec.surfacePlan } : {};
+        const prevResourcePlan = spec.resourcePlan && typeof spec.resourcePlan === "object" ? { ...spec.resourcePlan } : {};
+
+        if (mode === BRUSH_MODE.SURFACE_PAINT) {
+          const surfaceType = this._builderSurfaceType || "grass";
+          this._builderHistory?.push({
+            forward: { surfacePlan: (() => { const n = { ...prevSurfacePlan }; for (const t of tiles) n[String(t.y * gridW + t.x)] = { type: surfaceType }; return n; })() },
+            inverse: { surfacePlan: prevSurfacePlan },
+            label: "Surface Paint",
+          });
+          this._dispatch({ type: "SET_SURFACE_TILE", payload: { tiles, surfaceType } });
+          this._setActionFeedback({ ok: true, message: "Oberflaeche gemalt.", hint: "" });
+        } else if (mode === BRUSH_MODE.RESOURCE_PLACE) {
+          const resourceKind = this._builderResourceKind || "tree";
+          const resourceStage = this._builderResourceStage || "placed";
+          this._builderHistory?.push({
+            forward: { resourcePlan: (() => { const n = { ...prevResourcePlan }; for (const t of tiles) n[String(t.y * gridW + t.x)] = { kind: resourceKind, stage: resourceStage }; return n; })() },
+            inverse: { resourcePlan: prevResourcePlan },
+            label: "Resource Place",
+          });
+          this._dispatch({ type: "SET_RESOURCE_TILE", payload: { tiles, resourceKind, resourceStage } });
+          this._setActionFeedback({ ok: true, message: "Ressource platziert.", hint: "" });
+        } else if (mode === BRUSH_MODE.ERASER) {
+          this._builderHistory?.push({
+            forward: { surfacePlan: (() => { const n = { ...prevSurfacePlan }; for (const t of tiles) delete n[String(t.y * gridW + t.x)]; return n; })(), resourcePlan: (() => { const n = { ...prevResourcePlan }; for (const t of tiles) delete n[String(t.y * gridW + t.x)]; return n; })() },
+            inverse: { surfacePlan: prevSurfacePlan, resourcePlan: prevResourcePlan },
+            label: "Erase",
+          });
+          this._dispatch({ type: "ERASE_TILE_CONTENT", payload: { tiles, layer: "all" } });
+          this._setActionFeedback({ ok: true, message: "Inhalt geloescht.", hint: "" });
+        }
+        return;
+      }
+      // Legacy builder modes
       const builderCfg = this._getBuilderModeConfig?.(mode) || this._getBuilderModeConfig?.("light");
       const mapMode = builderCfg?.mode || mode;
       const value = Number.isFinite(Number(builderCfg?.value)) ? Number(builderCfg.value) : 0.8;
