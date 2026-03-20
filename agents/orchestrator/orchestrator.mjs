@@ -76,6 +76,17 @@ export const PIPELINES = Object.freeze({
     "quality-reviewer",
     "gate-compliance-checker",
   ],
+
+  /** Red Team v2: 3 Scanner + 3 Angreifer + Monitor in Runden */
+  "red-team-v2": [
+    "protocol-enforcer",
+    "architecture-guardian",
+    "quality-reviewer",
+    "arbiter-coder",
+    "sim-coder",
+    "contract-coder",
+    "gate-compliance-checker",
+  ],
 });
 
 /**
@@ -92,6 +103,18 @@ export function createOrchestrator(config = {}) {
     if (verbose) console.log("[orchestrator]", ...args);
   }
 
+  function toRoleRunSpec(roleRef) {
+    if (typeof roleRef === "string") {
+      return { roleKey: roleRef, resultKey: roleRef };
+    }
+    if (roleRef && typeof roleRef === "object") {
+      const roleKey = String(roleRef.roleKey || roleRef.role || "").trim();
+      const resultKey = String(roleRef.resultKey || roleRef.alias || roleKey).trim();
+      if (roleKey) return { roleKey, resultKey: resultKey || roleKey };
+    }
+    throw new Error(`Invalid role reference: ${JSON.stringify(roleRef)}`);
+  }
+
   /**
    * Gibt den Model-Adapter fuer eine bestimmte Rolle zurueck.
    */
@@ -106,8 +129,9 @@ export function createOrchestrator(config = {}) {
   /**
    * Fuehrt einen einzelnen Agent-Step aus.
    */
-  async function runAgent(roleKey, task, contextFromPrevious, session) {
-    log(`Starting agent: ${roleKey}`);
+  async function runAgent(roleRef, task, contextFromPrevious, session) {
+    const { roleKey, resultKey } = toRoleRunSpec(roleRef);
+    log(`Starting agent: ${resultKey} (${roleKey})`);
 
     const rolePath = ROLE_PATHS[roleKey];
     if (!rolePath) {
@@ -122,8 +146,8 @@ export function createOrchestrator(config = {}) {
         content: `[DRY RUN] ${role.roleName} wuerde hier ausgefuehrt.\nTask: ${task}\nModel: ${model}\nScope: ${role.scope}`,
         usage: { promptTokens: 0, completionTokens: 0 },
       };
-      session.addResult(roleKey, dryResult);
-      log(`  [dry-run] ${roleKey} completed`);
+      session.addResult(resultKey, dryResult);
+      log(`  [dry-run] ${resultKey} completed`);
       return dryResult;
     }
 
@@ -142,8 +166,8 @@ export function createOrchestrator(config = {}) {
     const prompt = buildTaskPrompt(role, task);
     const response = await agent.send(prompt);
 
-    session.addResult(roleKey, response);
-    log(`  ${roleKey} completed (${response.usage.completionTokens} tokens)`);
+    session.addResult(resultKey, response);
+    log(`  ${resultKey} completed (${response.usage.completionTokens} tokens)`);
 
     return response;
   }
@@ -165,6 +189,160 @@ export function createOrchestrator(config = {}) {
       `## Guards`,
       role.guards,
     ].join("\n");
+  }
+
+  function buildRedTeamRoundReport(round, blockers, scannerOutputs, attackerOutputs) {
+    const blockerLines = blockers.length > 0
+      ? blockers.map((b, idx) => `${idx + 1}. ${b}`).join("\n")
+      : "Keine bestaetigten Luecken in dieser Runde.";
+
+    const scannerLines = scannerOutputs.map((x) => `- ${x.key}: ${x.summary}`).join("\n");
+    const attackerLines = attackerOutputs.map((x) => `- ${x.key}: ${x.summary}`).join("\n");
+    return [
+      `# BLOCKER REPORT — Runde ${round}`,
+      "",
+      "## Status",
+      blockers.length > 0 ? "BLOCKER_OFFEN" : "NO_BLOCKER",
+      "",
+      "## Bestaetigte Blocker",
+      blockerLines,
+      "",
+      "## Scanner-Summary",
+      scannerLines || "- (keine)",
+      "",
+      "## Angreifer-Summary",
+      attackerLines || "- (keine)",
+      "",
+      "## Guard",
+      "Kein Testverfahren darf veraendert werden, nur um gruen zu werden.",
+      "Aenderungen sind nur erlaubt, wenn echte Produkt-/Contract-Luecken geschlossen werden.",
+    ].join("\n");
+  }
+
+  function summarizeContent(content) {
+    const first = String(content || "").split(/\r?\n/).find((line) => line.trim().length > 0) || "";
+    return first.slice(0, 220) || "(leer)";
+  }
+
+  function extractConfirmedBlockers(attackerOutputs) {
+    const blockers = [];
+    for (const entry of attackerOutputs) {
+      const text = String(entry.content || "");
+      if (/(^|\n)\s*FINAL:\s*LUECKE_BESTAETIGT\b/i.test(text) || /(^|\n)\s*FINAL:\s*GAP_CONFIRMED\b/i.test(text)) {
+        blockers.push(`${entry.resultKey} bestaetigt eine Luecke`);
+      }
+    }
+    return blockers;
+  }
+
+  async function runRedTeamV2(task, options, session) {
+    const rounds = Math.max(1, Number(options.rounds || 1) | 0);
+    const scannerRoles = [
+      { roleKey: "protocol-enforcer", resultKey: "scanner-1-protocol" },
+      { roleKey: "architecture-guardian", resultKey: "scanner-2-architecture" },
+      { roleKey: "quality-reviewer", resultKey: "scanner-3-quality" },
+    ];
+    const attackerRoles = [
+      { roleKey: "arbiter-coder", resultKey: "attacker-1-arbiter" },
+      { roleKey: "sim-coder", resultKey: "attacker-2-sim" },
+      { roleKey: "contract-coder", resultKey: "attacker-3-contract" },
+    ];
+    const monitorRole = { roleKey: "gate-compliance-checker", resultKey: "monitor-gate" };
+
+    for (let round = 1; round <= rounds; round++) {
+      log(`RED_TEAM_V2 round ${round}/${rounds} start`);
+
+      const scanTask = [
+        task,
+        "",
+        `RUNDE ${round}: Scanner-Auftrag`,
+        "Finde jeden scheinbar 'gruenen' Testfall, der nur Surface-Sicherheit beweist.",
+        "Suche konkrete Gegenbeispiele, die den Claim trotzdem umgehen.",
+        "Output muss enthalten: entweder 'KEINE_LUECKE' oder 'LUECKE_GEFUNDEN'.",
+      ].join("\n");
+
+      const scanContext = session.buildContext();
+      const scannerResults = await Promise.all(scannerRoles.map(async (spec) => {
+        try {
+          const response = await runAgent(spec, scanTask, scanContext, session);
+          return { ...spec, content: response?.content || "" };
+        } catch (err) {
+          session.addError(spec.resultKey, err);
+          return { ...spec, content: `ERROR: ${err.message}` };
+        }
+      }));
+
+      const attackTask = [
+        task,
+        "",
+        `RUNDE ${round}: Angreifer-Auftrag`,
+        "Pruefe die Scanner-Funde aktiv auf Reproduzierbarkeit.",
+        "Wenn reproduzierbare Luecke besteht, gib als letzte Zeile aus: FINAL: LUECKE_BESTAETIGT",
+        "Wenn Scanner falsch liegt oder nichts reproduzierbar ist, gib als letzte Zeile aus: FINAL: WIDERLEGT",
+        "",
+        "WICHTIGER GUARD:",
+        "Kein Testverfahren im Code so aendern, dass es nur formal besteht.",
+        "Nur reale Luecken schliessen.",
+      ].join("\n");
+      const attackerContext = scannerResults.map((x) => `--- ${x.resultKey} ---\n${x.content}`).join("\n\n");
+      const attackerResults = await Promise.all(attackerRoles.map(async (spec) => {
+        try {
+          const response = await runAgent(spec, attackTask, attackerContext, session);
+          return { ...spec, content: response?.content || "" };
+        } catch (err) {
+          session.addError(spec.resultKey, err);
+          return { ...spec, content: `ERROR: ${err.message}` };
+        }
+      }));
+
+      const blockers = extractConfirmedBlockers(attackerResults);
+      const infraBlockers = [...scannerResults, ...attackerResults]
+        .filter((x) => /^ERROR:/i.test(String(x.content || "")))
+        .map((x) => `${x.resultKey} failed: ${String(x.content || "").slice(0, 140)}`);
+      blockers.push(...infraBlockers);
+      const scannerSummaries = scannerResults.map((x) => ({
+        key: x.resultKey,
+        summary: summarizeContent(x.content),
+      }));
+      const attackerSummaries = attackerResults.map((x) => ({
+        key: x.resultKey,
+        summary: summarizeContent(x.content),
+      }));
+
+      session.addResult(`blocker-report-round-${round}`, {
+        content: buildRedTeamRoundReport(round, blockers, scannerSummaries, attackerSummaries),
+        usage: { promptTokens: 0, completionTokens: 0 },
+      });
+
+      if (infraBlockers.length > 0) {
+        session.status = "failed";
+        session.addError(`red-team-v2-round-${round}`, new Error("Infra/API blocker detected during red-team round"));
+        break;
+      }
+
+      if (blockers.length > 0) {
+        const fixTask = [
+          task,
+          "",
+          `RUNDE ${round}: BLOCKER_OFFEN`,
+          "Bestaetigte Luecken schliessen.",
+          "Anschliessend gehaerteten Test erneut laufen lassen.",
+          "Nicht am Test vorbeibauen, nicht Test lockern.",
+        ].join("\n");
+        const fixContext = [
+          "Scanner-Ausgaben:",
+          scannerResults.map((x) => `--- ${x.resultKey} ---\n${x.content}`).join("\n\n"),
+          "Angreifer-Ausgaben:",
+          attackerResults.map((x) => `--- ${x.resultKey} ---\n${x.content}`).join("\n\n"),
+        ].join("\n\n");
+        await runAgent({ roleKey: "arbiter-coder", resultKey: `fixer-round-${round}` }, fixTask, fixContext, session);
+        await runAgent(monitorRole, `${task}\n\nRUNDE ${round}: Pruefe, ob Blocker geschlossen sind.`, session.buildContext(), session);
+      } else {
+        await runAgent(monitorRole, `${task}\n\nRUNDE ${round}: Keine Blocker, finale Freigabe pruefen.`, session.buildContext(), session);
+        log(`RED_TEAM_V2 round ${round} completed without blockers`);
+        break;
+      }
+    }
   }
 
   /**
@@ -211,6 +389,23 @@ export function createOrchestrator(config = {}) {
         log("[dry-run] Preflight skipped");
         session.preflight = { ok: true, steps: [], dryRun: true };
       }
+    }
+
+    // Spezialmodus: Red Team v2
+    if (pipelineName === "red-team-v2") {
+      try {
+        await runRedTeamV2(task, options, session);
+      } catch (err) {
+        session.addError("red-team-v2", err);
+        session.status = "failed";
+      }
+      if (session.status === "running") {
+        session.status = session.errors.length > 0 ? "failed" : "completed";
+      }
+      const savedPath = await session.save();
+      log(`Session saved to ${savedPath}`);
+      log(`Status: ${session.status}`);
+      return session;
     }
 
     // Pipeline ausfuehren

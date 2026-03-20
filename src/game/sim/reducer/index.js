@@ -44,6 +44,7 @@ import {
   expandWorldPreserve,
 } from "./worldRules.js";
 import { applyWinConditions, applyGoalCode } from "./winConditions.js";
+import { selectAreAllTilesFilled, generateMapSeed } from "../mapSeedGen.js";
 import { buildSetOverlayPatches, buildSetWinModePatches } from "./controlActions.js";
 import {
   applyPresetPhysicsOverrides,
@@ -801,6 +802,124 @@ export function reducer(state, action, ctx = {}) {
       const compiled = compileMapSpec(nextSpec, { fallback: { gridW: w, gridH: h, presetId: state.meta.worldPresetId } });
       
       return buildMapSpecCompilePatches(compiled);
+    }
+
+    // --- Builder split actions ---
+
+    case "SET_SURFACE_TILE": {
+      if (state.sim.runPhase !== RUN_PHASE.MAP_BUILDER) return [];
+      const tiles = action.payload?.tiles;
+      const surfaceType = String(action.payload?.surfaceType || "");
+      if (!tiles || !Array.isArray(tiles) || !surfaceType) return [];
+      const spec = state.map?.spec || {};
+      const nextSurfacePlan = { ...(spec.surfacePlan || {}) };
+      const w = Number(state.meta.gridW || 0) | 0;
+      const h = Number(state.meta.gridH || 0) | 0;
+      for (const tile of tiles) {
+        const tx = Number(tile?.x) | 0;
+        const ty = Number(tile?.y) | 0;
+        if (tx < 0 || ty < 0 || tx >= w || ty >= h) continue;
+        const key = String(ty * w + tx);
+        nextSurfacePlan[key] = { type: surfaceType };
+      }
+      return [
+        { op: "set", path: "/map/spec/surfacePlan", value: nextSurfacePlan },
+        { op: "set", path: "/map/spec/generatedSeed", value: "" },
+      ];
+    }
+
+    case "SET_RESOURCE_TILE": {
+      if (state.sim.runPhase !== RUN_PHASE.MAP_BUILDER) return [];
+      const tiles = action.payload?.tiles;
+      const resourceKind = String(action.payload?.resourceKind || "");
+      const resourceStage = String(action.payload?.resourceStage || "placed");
+      if (!tiles || !Array.isArray(tiles) || !resourceKind) return [];
+      const spec = state.map?.spec || {};
+      const nextResourcePlan = { ...(spec.resourcePlan || {}) };
+      const w = Number(state.meta.gridW || 0) | 0;
+      const h = Number(state.meta.gridH || 0) | 0;
+      for (const tile of tiles) {
+        const tx = Number(tile?.x) | 0;
+        const ty = Number(tile?.y) | 0;
+        if (tx < 0 || ty < 0 || tx >= w || ty >= h) continue;
+        const key = String(ty * w + tx);
+        nextResourcePlan[key] = { kind: resourceKind, stage: resourceStage };
+      }
+      return [
+        { op: "set", path: "/map/spec/resourcePlan", value: nextResourcePlan },
+        { op: "set", path: "/map/spec/generatedSeed", value: "" },
+      ];
+    }
+
+    case "ERASE_TILE_CONTENT": {
+      if (state.sim.runPhase !== RUN_PHASE.MAP_BUILDER) return [];
+      const tiles = action.payload?.tiles;
+      const layer = String(action.payload?.layer || "all");
+      if (!tiles || !Array.isArray(tiles)) return [];
+      const spec = state.map?.spec || {};
+      const nextSurfacePlan = { ...(spec.surfacePlan || {}) };
+      const nextResourcePlan = { ...(spec.resourcePlan || {}) };
+      const w = Number(state.meta.gridW || 0) | 0;
+      const h = Number(state.meta.gridH || 0) | 0;
+      for (const tile of tiles) {
+        const tx = Number(tile?.x) | 0;
+        const ty = Number(tile?.y) | 0;
+        if (tx < 0 || ty < 0 || tx >= w || ty >= h) continue;
+        const key = String(ty * w + tx);
+        if (layer === "surface" || layer === "all") delete nextSurfacePlan[key];
+        if (layer === "resource" || layer === "all") delete nextResourcePlan[key];
+      }
+      const patches = [
+        { op: "set", path: "/map/spec/generatedSeed", value: "" },
+      ];
+      if (layer === "surface" || layer === "all") {
+        patches.push({ op: "set", path: "/map/spec/surfacePlan", value: nextSurfacePlan });
+      }
+      if (layer === "resource" || layer === "all") {
+        patches.push({ op: "set", path: "/map/spec/resourcePlan", value: nextResourcePlan });
+      }
+      return patches;
+    }
+
+    case "BUILDER_UNDO": {
+      if (state.sim.runPhase !== RUN_PHASE.MAP_BUILDER) return [];
+      const inverse = action.payload?.inverse;
+      if (!inverse || typeof inverse !== "object") return [];
+      const patches = [{ op: "set", path: "/map/spec/generatedSeed", value: "" }];
+      if (inverse.surfacePlan !== undefined) {
+        patches.push({ op: "set", path: "/map/spec/surfacePlan", value: inverse.surfacePlan });
+      }
+      if (inverse.resourcePlan !== undefined) {
+        patches.push({ op: "set", path: "/map/spec/resourcePlan", value: inverse.resourcePlan });
+      }
+      return patches;
+    }
+
+    case "BUILDER_REDO": {
+      if (state.sim.runPhase !== RUN_PHASE.MAP_BUILDER) return [];
+      const forward = action.payload?.forward;
+      if (!forward || typeof forward !== "object") return [];
+      const patches = [{ op: "set", path: "/map/spec/generatedSeed", value: "" }];
+      if (forward.surfacePlan !== undefined) {
+        patches.push({ op: "set", path: "/map/spec/surfacePlan", value: forward.surfacePlan });
+      }
+      if (forward.resourcePlan !== undefined) {
+        patches.push({ op: "set", path: "/map/spec/resourcePlan", value: forward.resourcePlan });
+      }
+      return patches;
+    }
+
+    case "SET_BUILDER_BRUSH_SIZE": {
+      const size = Number(action.payload?.size) | 0;
+      const clamped = Math.max(1, Math.min(5, size));
+      return [{ op: "set", path: "/meta/brushRadius", value: clamped }];
+    }
+
+    case "GENERATE_MAP_SEED": {
+      if (state.sim.runPhase !== RUN_PHASE.MAP_BUILDER) return [];
+      if (!selectAreAllTilesFilled(state)) return [];
+      const seed = generateMapSeed(state);
+      return [{ op: "set", path: "/map/spec/generatedSeed", value: seed }];
     }
 
     case "SET_RENDER_MODE": {

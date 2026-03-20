@@ -73,7 +73,16 @@ export const stateSchema = {
       shape: {
         activeSource: { type: "string", default: "legacy_preset" },
         compiledHash: { type: "string", default: "" },
-        spec: { type: "object", default: { version: "gdd_v1_1", mode: "manual" }, shape: {}, allowUnknown: true },
+        spec: {
+          type: "object",
+          default: { version: "gdd_v1_1", mode: "manual" },
+          shape: {
+            surfacePlan: { type: "object", default: {}, shape: {}, allowUnknown: true },
+            resourcePlan: { type: "object", default: {}, shape: {}, allowUnknown: true },
+            generatedSeed: { type: "string", default: "" },
+          },
+          allowUnknown: true,
+        },
         validation: {
           type: "object",
           default: { status: "uncompiled", issueCount: 0, summary: "slice_a_scaffold" },
