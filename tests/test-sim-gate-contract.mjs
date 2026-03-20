@@ -93,7 +93,9 @@ assert.equal((simGateSource.match(/zoneRole:\s*\{\s*type:\s*"ta"/g) || []).lengt
 assert.equal((simGateSource.match(/zoneId:\s*\{\s*type:\s*"ta"/g) || []).length, 1, "simGate source must not duplicate zoneId");
 assert.equal((simGateSource.match(/zoneMeta:\s*\{\s*type:\s*"object"\s*\}/g) || []).length, 1, "simGate source must not duplicate zoneMeta");
 
-const worldgenSource = fs.readFileSync(path.join(root, "src/game/sim/worldgen.js"), "utf8");
+const worldgenFacadeSource = fs.readFileSync(path.join(root, "src/game/sim/worldgen.js"), "utf8");
+const worldgenRuntimeSource = fs.readFileSync(path.join(root, "src/game/sim/world/generationRuntime.js"), "utf8");
+const worldgenSource = `${worldgenFacadeSource}\n${worldgenRuntimeSource}`;
 assert.equal((worldgenSource.match(/zoneRole:\s*new\s+Int8Array\(N\)/g) || []).length, 1, "worldgen must initialize zoneRole exactly once");
 assert.equal((worldgenSource.match(/zoneId:\s*new\s+Uint16Array\(N\)/g) || []).length, 1, "worldgen must initialize zoneId exactly once");
 assert.equal((worldgenSource.match(/zoneRole:\s*new\s+Uint8Array\(N\)/g) || []).length, 0, "worldgen must not keep stale zoneRole ctor");
