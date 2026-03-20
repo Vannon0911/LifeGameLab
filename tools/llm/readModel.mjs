@@ -1,6 +1,6 @@
-import { BRUSH_MODE } from "../../game/contracts/ids.js";
-import { applyFogIntelToAdvisorModel } from "../../game/render/fogOfWar.js";
-import { buildAdvisorModel } from "./advisorModel.js";
+import { BRUSH_MODE } from "../../src/game/contracts/ids.js";
+import { applyFogIntelToAdvisorModel } from "../../src/game/viewmodel/fogIntel.js";
+import { buildAdvisorModel } from "./advisorModel.mjs";
 
 const TOOL_ALIASES = Object.freeze({
   paint_light: "light",

@@ -5,7 +5,7 @@ import {
   OVERLAY_MODE,
   RUN_PHASE,
   WIN_MODE,
-} from "../../game/contracts/ids.js";
+} from "./ids.js";
 
 export const stateSchema = {
   type: "object",

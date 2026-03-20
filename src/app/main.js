@@ -3,13 +3,11 @@
 // ============================================================
 
 import { createStore }       from "../kernel/store/createStore.js";
-import { manifest, APP_VERSION } from "../project/project.manifest.js";
-import { reducer, simStepPatch, shouldAdvanceSimulation } from "../game/sim/reducer/index.js";
+import { manifest, APP_VERSION } from "../game/manifest.js";
+import { reducer, simStepPatch, shouldAdvanceSimulation } from "../game/runtime/index.js";
 import { render }            from "../game/render/renderer.js";
 import { UI }                from "../game/ui/ui.js";
 import { hashString }        from "../kernel/determinism/rng.js";
-import { createLlmCommandAdapter } from "../project/llm/commandAdapter.js";
-import { assertLlmGateSync } from "../project/llm/gateSync.js";
 import { createWorldStateLog } from "./runtime/worldStateLog.js";
 import { bindBootStatusErrorHooks, setBootStatus } from "./runtime/bootStatus.js";
 
@@ -19,11 +17,9 @@ const SIM_RUNTIME_DISABLED = false;
 const TICK_RATE_MS = 1000 / 24;
 
 // ── Store ─────────────────────────────────────────────────
-assertLlmGateSync(manifest);
 const store = createStore(manifest, {
   reducer,
   simStep: simStepPatch,
-  actionAdapter: createLlmCommandAdapter(),
 });
 globalThis.__LIFEGAMELAB_STORE__ = store;
 // Initialize Log with Seed from Store
@@ -403,6 +399,177 @@ function runUiSync() {
 }
 
 publishPerfStats();
+
+function extractSelectedUnit(state) {
+  const world = state?.world;
+  const sim = state?.sim;
+  const w = Number(world?.w || state?.meta?.gridW || 0) | 0;
+  const h = Number(world?.h || state?.meta?.gridH || 0) | 0;
+  const idx = Number(sim?.selectedUnit ?? -1) | 0;
+  if (!world || idx < 0 || idx >= w * h) return null;
+  return {
+    index: idx,
+    x: idx % w,
+    y: (idx / w) | 0,
+    alive: (Number(world?.alive?.[idx] || 0) | 0) === 1,
+    lineageId: Number(world?.lineageId?.[idx] || 0) | 0,
+    energy: Number(world?.E?.[idx] || 0),
+    resource: Number(world?.R?.[idx] || 0),
+  };
+}
+
+function extractWorkers(world, maxWorkers = 12) {
+  const workerMap = world?.workers && typeof world.workers === "object" ? world.workers : {};
+  const w = Number(world?.w || 0) | 0;
+  const result = [];
+  for (const [key, worker] of Object.entries(workerMap)) {
+    if (result.length >= maxWorkers) break;
+    const payload = worker && typeof worker === "object" ? worker : {};
+    let x = Number(payload.x);
+    let y = Number(payload.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      const idx = Number(payload.idx ?? payload.index ?? -1);
+      if (Number.isFinite(idx) && idx >= 0 && w > 0) {
+        x = idx % w;
+        y = (idx / w) | 0;
+      }
+    }
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      const m = String(key).match(/(-?\d+)[,:x](-?\d+)/i);
+      if (m) {
+        x = Number(m[1]);
+        y = Number(m[2]);
+      }
+    }
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    result.push({
+      id: String(payload.id || key),
+      x: Number(x) | 0,
+      y: Number(y) | 0,
+      task: String(payload.task || payload.state || ""),
+    });
+  }
+  return result;
+}
+
+function extractRichResourceTiles(world, maxTiles = 8) {
+  const w = Number(world?.w || 0) | 0;
+  const h = Number(world?.h || 0) | 0;
+  const res = world?.R;
+  if (!res || !ArrayBuffer.isView(res) || w <= 0 || h <= 0) return [];
+  const out = [];
+  for (let i = 0; i < res.length; i++) {
+    const amount = Number(res[i] || 0);
+    if (amount < 0.45) continue;
+    out.push({
+      x: i % w,
+      y: (i / w) | 0,
+      amount: Number(amount.toFixed(3)),
+    });
+    if (out.length >= maxTiles) break;
+  }
+  return out;
+}
+
+function renderGameSnapshotText() {
+  const state = store.getState();
+  const world = state?.world || null;
+  const sim = state?.sim || {};
+  const payload = {
+    coordinateSystem: "origin top-left; x increases right; y increases down; tile units",
+    mode: String(sim.runPhase || ""),
+    tick: Number(sim.tick || 0),
+    running: !!sim.running,
+    grid: {
+      width: Number(world?.w || state?.meta?.gridW || 0) | 0,
+      height: Number(world?.h || state?.meta?.gridH || 0) | 0,
+    },
+    selectedUnit: extractSelectedUnit(state),
+    activeOrder: sim?.activeOrder
+      ? {
+          active: !!sim.activeOrder.active,
+          type: String(sim.activeOrder.type || ""),
+          fromX: Number(sim.activeOrder.fromX ?? -1),
+          fromY: Number(sim.activeOrder.fromY ?? -1),
+          targetX: Number(sim.activeOrder.targetX ?? -1),
+          targetY: Number(sim.activeOrder.targetY ?? -1),
+          progress: Number(sim.activeOrder.progress ?? 0),
+          maxProgress: Number(sim.activeOrder.maxProgress ?? 0),
+        }
+      : null,
+    workers: extractWorkers(world, 12),
+    hotspots: extractRichResourceTiles(world, 8),
+    metrics: {
+      aliveCount: Number(sim.aliveCount || 0),
+      playerAliveCount: Number(sim.playerAliveCount || 0),
+      cpuAliveCount: Number(sim.cpuAliveCount || 0),
+      playerDNA: Number(sim.playerDNA || 0),
+      totalHarvested: Number(sim.totalHarvested || 0),
+      lastAutoAction: String(sim.lastAutoAction || ""),
+      gameResult: String(sim.gameResult || ""),
+    },
+    fullscreen: !!document.fullscreenElement,
+  };
+  return JSON.stringify(payload, null, 2);
+}
+
+function stepSimulationTime(ms) {
+  const stepMs = 1000 / 60;
+  const safeMs = Number.isFinite(Number(ms)) ? Math.max(0, Number(ms)) : stepMs;
+  const steps = Math.max(1, Math.round(safeMs / stepMs));
+  let simSteps = 0;
+  for (let i = 0; i < steps; i++) {
+    if (runOneSimStep()) simSteps++;
+  }
+  runRender({
+    quality: PerfBudget.quality,
+    dprCap: PerfBudget.dprCap,
+    alpha: 1,
+    fps: PerfBudget.fpsEma,
+    frameMs: PerfBudget.frameMsEma,
+    renderMs: PerfBudget.renderMsEma,
+    targetMinFps: PerfBudget.targetMinFps,
+    targetMaxFps: PerfBudget.targetMaxFps,
+  });
+  runUiSync();
+  publishPerfStats();
+  return {
+    requestedMs: safeMs,
+    frameSteps: steps,
+    simSteps,
+    tick: Number(store.getState()?.sim?.tick || 0),
+  };
+}
+
+async function toggleFullscreen() {
+  const root = canvas?.parentElement || canvas || document.documentElement;
+  if (!document.fullscreenElement) {
+    await root?.requestFullscreen?.();
+  } else {
+    await document.exitFullscreen?.();
+  }
+  window.dispatchEvent(new Event("resize"));
+}
+
+window.renderGameSnapshotText = renderGameSnapshotText;
+window.stepSimulationTime = stepSimulationTime;
+window.toggleGameFullscreen = () => toggleFullscreen();
+window.addEventListener("keydown", (event) => {
+  const target = event.target;
+  if (target && ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName)) return;
+  if ((event.key === "f" || event.key === "F") && !event.repeat) {
+    event.preventDefault();
+    void toggleFullscreen();
+    return;
+  }
+  if (event.key === "Escape" && document.fullscreenElement) {
+    event.preventDefault();
+    void document.exitFullscreen?.();
+  }
+});
+document.addEventListener("fullscreenchange", () => {
+  window.dispatchEvent(new Event("resize"));
+});
 
 function startSimInterval() {
   if (simIntervalId !== null) return;

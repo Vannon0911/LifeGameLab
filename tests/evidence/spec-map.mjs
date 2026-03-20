@@ -1,7 +1,7 @@
 export const EVIDENCE_SCOPE = "w1";
 
 export const SOT_SOURCES = Object.freeze([
-  "src/project/contract/manifest.js",
+  "src/game/contracts/manifest.js",
   "docs/PRODUCT.md",
   "docs/ARCHITECTURE.md",
   "docs/STATUS.md",
@@ -16,7 +16,7 @@ export const CLAIM_SCENARIOS = Object.freeze([
     replayCount: 1,
     truthAnchor: "after-invalid",
     sotRefs: Object.freeze([
-      "src/project/contract/manifest.js",
+      "src/game/contracts/manifest.js",
       "docs/ARCHITECTURE.md#determinismus",
     ]),
     legacyRefs: Object.freeze([]),
@@ -71,7 +71,7 @@ export const CLAIM_SCENARIOS = Object.freeze([
     replayCount: 2,
     truthAnchor: "step-4",
     sotRefs: Object.freeze([
-      "src/project/contract/manifest.js",
+      "src/game/contracts/manifest.js",
       "docs/PRODUCT.md#main-run",
       "docs/STATUS.md",
     ]),
@@ -135,6 +135,12 @@ export const CLAIM_SUITES = Object.freeze({
 });
 
 export const REGRESSION_TEST_STATUS = Object.freeze({
+  "tests/test-active-order-runtime.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 90_000,
+    purpose: "prove extracted active-order runtime preserves abort, wait, blocked, progress, and completion branches",
+    counterProbe: "active-order branch perturbations are caught without relying only on broad replay drift",
+  }),
   "tests/test-contract-no-bypass.mjs": Object.freeze({
     status: "verified",
     budgetMs: 90_000,
@@ -284,6 +290,12 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
     budgetMs: 360_000,
     purpose: "prove mounted Map Builder controls force expertMode=true on enter and restore the prior expertMode value on exit",
     counterProbe: "expertMode drift after a builder toggle cycle is detected as regression",
+  }),
+  "tests/test-runtime-boundaries.mjs": Object.freeze({
+    status: "verified",
+    budgetMs: 90_000,
+    purpose: "prove runtime code stays isolated from deleted project/core facades and dev-only llm tooling",
+    counterProbe: "forbidden import boundary regression is detected before removed facades can quietly re-enter runtime",
   }),
 });
 

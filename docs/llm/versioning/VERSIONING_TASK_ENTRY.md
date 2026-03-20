@@ -12,7 +12,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 6. `docs/llm/TASK_ENTRY_MATRIX.json`
 7. `docs/llm/entry/TASK_GATE_INDEX.md` (VERSIONING + globale Mindest-Gates)
 8. diese Datei
-9. `src/project/contract/manifest.js`
+9. `src/game/contracts/manifest.js`
 10. `src/kernel/store/createStore.js`
 11. `src/kernel/store/applyPatches.js`
 12. `package.json`
@@ -22,10 +22,10 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Danach nur VERSIONING-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
-- `node tools/llm-preflight.mjs classify --paths package.json,src/project/contract/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md`
-- `node tools/llm-preflight.mjs entry --paths package.json,src/project/contract/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md --mode work`
-- `node tools/llm-preflight.mjs ack --paths package.json,src/project/contract/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md`
-- `node tools/llm-preflight.mjs check --paths package.json,src/project/contract/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md`
+- `node tools/llm-preflight.mjs classify --paths package.json,src/game/contracts/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md`
+- `node tools/llm-preflight.mjs entry --paths package.json,src/game/contracts/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md --mode work`
+- `node tools/llm-preflight.mjs ack --paths package.json,src/game/contracts/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md`
+- `node tools/llm-preflight.mjs check --paths package.json,src/game/contracts/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md`
 
 ## SCHREIBEN (pflicht)
 - Kein Schreiben ohne `docs/llm/ENTRY.md` + passenden Task-Entry.

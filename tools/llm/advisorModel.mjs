@@ -8,14 +8,14 @@ import {
   ZONE_ROLE,
   deriveRiskCode,
   normalizeGoalCode,
-} from "../../game/contracts/ids.js";
+} from "../../src/game/contracts/ids.js";
 import {
   DOCTRINE_BY_ID,
   TECH_TREE,
   deriveCommandScore,
   hasRequiredTechs,
   normalizeTechArray,
-} from "../../game/techTree.js";
+} from "../../src/game/techTree.js";
 
 const BOTTLENECK_ORDER = Object.freeze([
   "collapse",

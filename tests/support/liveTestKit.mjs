@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 
 import { createStore } from "../../src/kernel/store/createStore.js";
 import { createNullDriver } from "../../src/kernel/store/persistence.js";
-import { buildLlmReadModel } from "../../src/project/llm/readModel.js";
-import * as manifest from "../../src/project/project.manifest.js";
-import { reducer, simStepPatch } from "../../src/game/sim/reducer/index.js";
+import { buildLlmReadModel } from "../../tools/llm/readModel.mjs";
+import * as manifest from "../../src/game/manifest.js";
+import { reducer, simStepPatch } from "../../src/game/runtime/index.js";
 import { BRUSH_MODE } from "../../src/game/contracts/ids.js";
 import { getStartWindowRange, getWorldPreset } from "../../src/game/sim/worldPresets.js";
 

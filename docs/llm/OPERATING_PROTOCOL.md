@@ -17,7 +17,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - dann `docs/llm/entry/TASK_GATE_INDEX.md`
 - dann alle passenden Task-Entries fuer alle klassifizierten Scopes
 - dann die globalen Mindest-Gates:
-  - `src/project/contract/manifest.js`
+  - `src/game/contracts/manifest.js`
   - `src/kernel/store/createStore.js`
   - `src/kernel/store/applyPatches.js`
 

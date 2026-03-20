@@ -12,7 +12,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 6. `docs/llm/TASK_ENTRY_MATRIX.json`
 7. `docs/llm/entry/TASK_GATE_INDEX.md` (TESTING + globale Mindest-Gates)
 8. diese Datei
-9. `src/project/contract/manifest.js`
+9. `src/game/contracts/manifest.js`
 10. `src/kernel/store/createStore.js`
 11. `src/kernel/store/applyPatches.js`
 12. `tools/llm-preflight.mjs`

@@ -1,12 +1,12 @@
 # 02 Contracts
 
 ## SoT Dateien
-- src/project/contract/stateSchema.js
-- src/project/contract/actionSchema.js
-- src/project/contract/mutationMatrix.js
-- src/project/contract/simGate.js
-- src/project/contract/manifest.js
-- src/project/contract/dataflow.js
+- src/game/contracts/stateSchema.js
+- src/game/contracts/actionSchema.js
+- src/game/contracts/mutationMatrix.js
+- src/game/contracts/simGate.js
+- src/game/contracts/manifest.js
+- src/game/contracts/dataflow.js
 
 ## Kennzahlen
 - Action Schema Count: 36

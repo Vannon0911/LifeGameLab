@@ -7,8 +7,8 @@ import { createDeterministicStore } from "./support/liveTestKit.mjs";
 import { snapshotStore } from "./support/liveTestKit.mjs";
 import { createStore } from "../src/kernel/store/createStore.js";
 import { createNullDriver } from "../src/kernel/store/persistence.js";
-import * as manifest from "../src/project/project.manifest.js";
-import { reducer, simStepPatch } from "../src/game/sim/reducer/index.js";
+import * as manifest from "../src/game/manifest.js";
+import { reducer, simStepPatch } from "../src/game/runtime/index.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -40,9 +40,9 @@ const scanTargets = [
   "src/game/sim/playerActions.js",
   "src/game/sim/worldgen.js",
   "src/game/sim/worldAi.js",
-  "src/project/contract/actionSchema.js",
-  "src/project/contract/mutationMatrix.js",
-  "src/project/contract/dataflow.js",
+  "src/game/contracts/actionSchema.js",
+  "src/game/contracts/mutationMatrix.js",
+  "src/game/contracts/dataflow.js",
 ];
 
 for (const relPath of scanTargets) {
@@ -53,7 +53,7 @@ for (const relPath of scanTargets) {
 }
 
 const reducerSource = fs.readFileSync(path.join(root, "src/game/sim/reducer/index.js"), "utf8");
-const stateSchemaSource = fs.readFileSync(path.join(root, "src/project/contract/stateSchema.js"), "utf8");
+const stateSchemaSource = fs.readFileSync(path.join(root, "src/game/contracts/stateSchema.js"), "utf8");
 assert.equal(reducerSource.includes("actionLog"), false, "reducer must not reintroduce actionLog");
 assert.equal(stateSchemaSource.includes("actionLog"), false, "state schema must not register actionLog");
 

@@ -12,7 +12,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 6. `docs/llm/TASK_ENTRY_MATRIX.json`
 7. `docs/llm/entry/TASK_GATE_INDEX.md` (UI + globale Mindest-Gates)
 8. diese Datei
-9. `src/project/contract/manifest.js`
+9. `src/game/contracts/manifest.js`
 10. `src/kernel/store/createStore.js`
 11. `src/kernel/store/applyPatches.js`
 12. `src/game/ui/ui.constants.js`
@@ -27,10 +27,10 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Danach nur UI-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
-- `node tools/llm-preflight.mjs classify --paths src/app/,src/game/ui/,src/game/render/,src/project/ui.js`
-- `node tools/llm-preflight.mjs entry --paths src/app/,src/game/ui/,src/game/render/,src/project/ui.js --mode work`
-- `node tools/llm-preflight.mjs ack --paths src/app/,src/game/ui/,src/game/render/,src/project/ui.js`
-- `node tools/llm-preflight.mjs check --paths src/app/,src/game/ui/,src/game/render/,src/project/ui.js`
+- `node tools/llm-preflight.mjs classify --paths src/app/,src/game/ui/,src/game/render/,src/game/ui/ui.js`
+- `node tools/llm-preflight.mjs entry --paths src/app/,src/game/ui/,src/game/render/,src/game/ui/ui.js --mode work`
+- `node tools/llm-preflight.mjs ack --paths src/app/,src/game/ui/,src/game/render/,src/game/ui/ui.js`
+- `node tools/llm-preflight.mjs check --paths src/app/,src/game/ui/,src/game/render/,src/game/ui/ui.js`
 
 ## SCHREIBEN (pflicht)
 - Kein Schreiben ohne `docs/llm/ENTRY.md` + passenden Task-Entry.

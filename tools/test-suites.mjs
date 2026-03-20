@@ -13,6 +13,7 @@ function freezeList(list) {
 }
 
 const QUICK_REGRESSION_TEST_FILES = Object.freeze([
+  "tests/test-active-order-runtime.mjs",
   "tests/test-mapspec-function-rejection.mjs",
   "tests/test-mapspec-cycle-rejection.mjs",
   "tests/test-signature-nonserializable.mjs",

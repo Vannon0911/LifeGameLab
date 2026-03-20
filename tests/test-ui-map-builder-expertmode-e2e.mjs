@@ -60,9 +60,9 @@ try {
   const result = await page.evaluate(async () => {
     const [{ createStore }, manifestMod, logicMod, uiMod] = await Promise.all([
       import("/src/kernel/store/createStore.js"),
-      import("/src/project/project.manifest.js"),
-      import("/src/project/project.logic.js"),
-      import("/src/project/ui.js"),
+      import("/src/game/manifest.js"),
+      import("/src/game/runtime/index.js"),
+      import("/src/game/ui/ui.js"),
     ]);
 
     const app = document.getElementById("app") || document.body;

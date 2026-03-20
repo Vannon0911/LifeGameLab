@@ -174,7 +174,7 @@ try {
   assert(hooksDirClassify.includes("scope=contracts+testing"), "directory root .githooks/ must classify as testing scope");
 
   const multiClassify = runPreflight(["classify", "--paths", "src/game/ui/ui.js,src/game/sim/step.js"]);
-  assert(multiClassify.includes("scope=contracts+sim+ui"), "classify must support multi-scope dependency expansion");
+  assert(multiClassify.includes("scope=contracts+gameplay+ui"), "classify must support multi-scope dependency expansion");
 
   const entryOutput = runPreflight(["entry", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"]);
   assert(entryOutput.includes("ENTRY_OK scope=contracts+testing"), "entry must succeed for expanded testing scope");

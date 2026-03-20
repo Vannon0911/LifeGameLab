@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 
 import { createStore } from "../src/kernel/store/createStore.js";
 import { RUN_PHASE } from "../src/game/contracts/ids.js";
-import * as manifest from "../src/project/project.manifest.js";
-import { reducer, simStepPatch } from "../src/game/sim/reducer/index.js";
+import * as manifest from "../src/game/manifest.js";
+import { reducer, simStepPatch } from "../src/game/runtime/index.js";
 
 function installWebStubs() {
   const storage = new Map();

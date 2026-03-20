@@ -14,12 +14,12 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 7. `docs/llm/entry/TASK_GATE_INDEX.md` (minimales Gate-Set je Task)
 8. Passende Task-Entries fuer alle klassifizierten Scopes lesen:
    - `docs/llm/ui/UI_TASK_ENTRY.md`
-   - `docs/llm/sim/SIM_TASK_ENTRY.md`
+   - `docs/llm/gameplay/GAMEPLAY_TASK_ENTRY.md`
    - `docs/llm/contracts/CONTRACT_TASK_ENTRY.md`
    - `docs/llm/testing/TESTING_TASK_ENTRY.md`
    - `docs/llm/versioning/VERSIONING_TASK_ENTRY.md`
 9. Globale Mindest-Gates lesen:
-   - `src/project/contract/manifest.js`
+   - `src/game/contracts/manifest.js`
    - `src/kernel/store/createStore.js`
    - `src/kernel/store/applyPatches.js`
 
@@ -35,8 +35,9 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - Vor jedem Commit muessen betroffene Dokuquellen inklusive relevanter Stringmatrix-/Inventar-Dateien nachgezogen und am Ende des Arbeitsschritts erneut auf Aktualitaet geprueft werden.
 
 ## Kernel- Und Manifest-Pflichtgate (SoT)
-- Die drei Mindest-Gates aus Schritt 9 sind immer Pflicht, auch bei UI-/Testing-Tasks.
-- `manifest.js` bleibt die Contract-Truth, `createStore.js`/`applyPatches.js` bleiben die Mutations-Gates.
+- `src/game/contracts/manifest.js` ist Source of Truth fuer Felder, Actions und Contract-Kette.
+- `src/kernel/store/createStore.js` und `src/kernel/store/applyPatches.js` sind Pflichtgate fuer State-Mutationen.
+- Diese drei Dateien gehoeren in jede Pflicht-Lesereihenfolge, auch wenn der Haupttask UI/Testing ist.
 
 ## Harte Invarianten
 - State nur ueber `dispatch()` plus Patches
