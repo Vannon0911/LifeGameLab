@@ -1,19 +1,19 @@
 import assert from "node:assert/strict";
 
 import { createStore } from "../src/kernel/store/createStore.js";
-import { manifest } from "../src/project/project.manifest.js";
+import { projectManifest } from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/game/sim/reducer/index.js";
 
 const cycle = { presetId: "river_delta" };
 cycle.self = cycle;
 
 const store = createStore(
-  manifest,
+  projectManifest,
   { reducer, simStep: simStepPatch },
   {
     storageDriver: {
       load: () => ({
-        schemaVersion: manifest.SCHEMA_VERSION,
+        schemaVersion: projectManifest.SCHEMA_VERSION,
         updatedAt: 0,
         revisionCount: 0,
         state: {

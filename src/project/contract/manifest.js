@@ -8,7 +8,7 @@ import { actionLifecycle } from "./actionLifecycle.js";
 export const SCHEMA_VERSION = 2;
 export const APP_VERSION = "0.8.6";
 
-export const manifest = {
+export const contractManifest = {
   SCHEMA_VERSION,
   APP_VERSION,
   stateSchema,
@@ -18,6 +18,8 @@ export const manifest = {
   dataflow,
   actionLifecycle,
 };
+
+export { contractManifest as manifest };
 
 export {
   stateSchema,

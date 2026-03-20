@@ -3,7 +3,7 @@
 // ============================================================
 
 import { createStore }       from "../kernel/store/createStore.js";
-import { manifest, APP_VERSION } from "../project/project.manifest.js";
+import { projectManifest, APP_VERSION } from "../project/project.manifest.js";
 import { reducer, simStepPatch, shouldAdvanceSimulation } from "../game/sim/reducer/index.js";
 import { render }            from "../game/render/renderer.js";
 import { UI }                from "../game/ui/ui.js";
@@ -19,8 +19,8 @@ const SIM_RUNTIME_DISABLED = false;
 const TICK_RATE_MS = 1000 / 24;
 
 // ── Store ─────────────────────────────────────────────────
-assertLlmGateSync(manifest);
-const store = createStore(manifest, {
+assertLlmGateSync(projectManifest);
+const store = createStore(projectManifest, {
   reducer,
   simStep: simStepPatch,
   actionAdapter: createLlmCommandAdapter(),
@@ -513,4 +513,4 @@ function loop(ts) {
 startSimInterval();
 requestAnimationFrame(loop);
 
-console.log(`LifeGameLab v${APP_VERSION} gestartet (Schema v${manifest.SCHEMA_VERSION}). store ist verfuegbar.`);
+console.log(`LifeGameLab v${APP_VERSION} gestartet (Schema v${projectManifest.SCHEMA_VERSION}). store ist verfuegbar.`);

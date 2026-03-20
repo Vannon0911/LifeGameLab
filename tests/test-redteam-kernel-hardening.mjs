@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { stableStringify } from "../src/kernel/store/signature.js";
 import { createStore } from "../src/kernel/store/createStore.js";
-import { manifest } from "../src/project/project.manifest.js";
+import { projectManifest } from "../src/project/project.manifest.js";
 import { reducer, simStepPatch } from "../src/game/sim/reducer/index.js";
 import { createDeterministicStore, snapshotStore } from "./support/liveTestKit.mjs";
 
@@ -63,12 +63,12 @@ assert.throws(
 const poisoned = { presetId: "river_delta" };
 poisoned.self = poisoned;
 const bootStore = createStore(
-  manifest,
+  projectManifest,
   { reducer, simStep: simStepPatch },
   {
     storageDriver: {
       load: () => ({
-        schemaVersion: manifest.SCHEMA_VERSION,
+        schemaVersion: projectManifest.SCHEMA_VERSION,
         updatedAt: 0,
         revisionCount: 0,
         state: {

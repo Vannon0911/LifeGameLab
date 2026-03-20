@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { manifest } from "../src/project/contract/manifest.js";
+import { contractManifest } from "../src/project/contract/manifest.js";
 import { assertSimPatchesAllowed } from "../src/game/sim/gate.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -15,7 +15,7 @@ const baseState = {
   sim: {},
 };
 
-const simGate = manifest.simGate;
+const simGate = contractManifest.simGate;
 
 assert.deepEqual(
   simGate.sim.booleanKeys,
@@ -42,7 +42,7 @@ for (const invalidBooleanPatch of [
   { op: "set", path: "/sim/infrastructureUnlocked", value: 7 },
 ]) {
   assert.throws(
-    () => assertSimPatchesAllowed(manifest, baseState, "SIM_GATE_CONTRACT", [invalidBooleanPatch]),
+    () => assertSimPatchesAllowed(contractManifest, baseState, "SIM_GATE_CONTRACT", [invalidBooleanPatch]),
     /expected boolean/,
     `${invalidBooleanPatch.path} must reject numeric coercion`,
   );
@@ -83,7 +83,7 @@ for (const validPatch of [
   { op: "set", path: "/world/zoneId", value: new Uint16Array(16) },
 ]) {
   assert.doesNotThrow(
-    () => assertSimPatchesAllowed(manifest, baseState, "SIM_GATE_CONTRACT", [validPatch]),
+    () => assertSimPatchesAllowed(contractManifest, baseState, "SIM_GATE_CONTRACT", [validPatch]),
     `${validPatch.path} must accept canonical gate values`,
   );
 }
