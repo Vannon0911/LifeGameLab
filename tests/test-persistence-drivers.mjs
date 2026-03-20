@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createStore } from "../src/kernel/store/createStore.js";
 import { createMetaOnlyWebDriver, createNullDriver, createWebDriver } from "../src/kernel/store/persistence.js";
 import * as manifest from "../src/project/project.manifest.js";
-import { reducer, simStepPatch } from "../src/project/project.logic.js";
+import { reducer, simStepPatch } from "../src/game/sim/reducer/index.js";
 import { BRUSH_MODE } from "../src/game/contracts/ids.js";
 import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
 
