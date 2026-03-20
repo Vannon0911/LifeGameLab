@@ -1,0 +1,25 @@
+{
+  "defaultProvider": "openai",
+  "defaultModel": "gpt-4o",
+  "roleModels": {
+    "task-orchestrator":       { "provider": "openai",    "modelId": "gpt-4o" },
+    "arbiter-coder":           { "provider": "anthropic", "modelId": "claude-sonnet-4-20250514" },
+    "protocol-enforcer":       { "provider": "openai",    "modelId": "gpt-4o" },
+    "architecture-guardian":   { "provider": "openai",    "modelId": "gpt-4o" },
+    "documentation-auditor":   { "provider": "openai",    "modelId": "gpt-4o-mini" },
+    "scope-router":            { "provider": "openai",    "modelId": "gpt-4o-mini" },
+    "quality-reviewer":        { "provider": "openai",    "modelId": "gpt-4o" },
+    "domain-coordinator":      { "provider": "openai",    "modelId": "gpt-4o" },
+    "ui-coder":                { "provider": "anthropic", "modelId": "claude-sonnet-4-20250514" },
+    "sim-coder":               { "provider": "anthropic", "modelId": "claude-sonnet-4-20250514" },
+    "contract-coder":          { "provider": "anthropic", "modelId": "claude-sonnet-4-20250514" },
+    "test-engineer":           { "provider": "openai",    "modelId": "gpt-4o" },
+    "versioning-release":      { "provider": "openai",    "modelId": "gpt-4o-mini" },
+    "gate-compliance-checker": { "provider": "openai",    "modelId": "gpt-4o" }
+  },
+  "options": {
+    "maxTokens": 4096,
+    "temperature": 0.2,
+    "verbose": false
+  }
+}
