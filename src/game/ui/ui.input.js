@@ -22,6 +22,7 @@ export function installUiInput(UI) {
         this._builderPrevUi = {
           activeTab: String(ui.activeTab || "lage"),
           panelOpen: !!ui.panelOpen,
+          expertMode: !!ui.expertMode,
         };
       }
       const payload = entering
@@ -35,6 +36,7 @@ export function installUiInput(UI) {
             runPhase: RUN_PHASE.GENESIS_SETUP,
             panelOpen: !!this._builderPrevUi?.panelOpen,
             activeTab: String(this._builderPrevUi?.activeTab || "lage"),
+            expertMode: !!this._builderPrevUi?.expertMode,
           };
       this._dispatch({ type: "SET_UI", payload });
       if (!entering) {
