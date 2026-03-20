@@ -28,23 +28,44 @@ const forbiddenStaticStrings = [
   "force:true",
 ];
 
-const scanTargets = [
-  "src/app/main.js",
-  "src/game/ui/ui.js",
-  "tools/evidence-runner.mjs",
-  "tools/llm-preflight.mjs",
-  "tools/run-all-tests.mjs",
-  "tools/run-test-suite.mjs",
-  "src/game/sim/reducer/index.js",
-  "src/game/sim/playerActions.js",
-  "src/game/sim/worldgen.js",
-  "src/game/sim/worldAi.js",
-  "src/game/contracts/actionSchema.js",
-  "src/game/contracts/mutationMatrix.js",
-  "src/game/contracts/dataflow.js",
-];
+const scanDirExcludes = new Set([
+  ".git",
+  ".llm",
+  "coverage",
+  "dist",
+  "node_modules",
+  "output",
+  "tests",
+  "docs",
+]);
+const markerAllowlist = new Set([
+  "tools/test-suites.mjs",
+]);
+
+function collectRuntimeScanTargets(startRel = ".", out = []) {
+  const abs = path.join(root, startRel);
+  const stat = fs.statSync(abs);
+  if (stat.isDirectory()) {
+    const entries = fs.readdirSync(abs, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name.startsWith(".")) {
+        if (![".githooks"].includes(entry.name)) continue;
+      }
+      if (entry.isDirectory() && scanDirExcludes.has(entry.name)) continue;
+      collectRuntimeScanTargets(path.join(startRel, entry.name), out);
+    }
+    return out;
+  }
+  if (!/\.(m?js|cjs)$/i.test(startRel)) return out;
+  out.push(startRel.split(path.sep).join("/"));
+  return out;
+}
+
+const scanTargets = collectRuntimeScanTargets().sort();
+assert(scanTargets.length > 0, "runtime scan target list must not be empty");
 
 for (const relPath of scanTargets) {
+  if (markerAllowlist.has(relPath)) continue;
   const text = fs.readFileSync(path.join(root, relPath), "utf8");
   for (const forbidden of forbiddenStaticStrings) {
     assert(!text.includes(forbidden), `${relPath} still contains forbidden string '${forbidden}'`);

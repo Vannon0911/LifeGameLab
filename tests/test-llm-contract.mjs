@@ -4,6 +4,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
+import { buildSystemPrompt } from "../agents/orchestrator/runtime/agent.mjs";
 
 import {
   EVIDENCE_POLICY,
@@ -54,6 +55,25 @@ function runPreflight(args) {
   if (res.error) throw res.error;
   assert.equal(res.status, 0, `preflight ${args[0]} failed:\n${res.stdout}\n${res.stderr}`);
   return `${res.stdout}${res.stderr}`;
+}
+
+function runPreflightExpectFail(args, expectedPattern) {
+  const res = spawnSync(process.execPath, [path.join(root, "tools/llm-preflight.mjs"), ...args], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30000,
+  });
+  if (res.error) throw res.error;
+  assert.notEqual(res.status, 0, `preflight ${args[0]} unexpectedly succeeded:\n${res.stdout}\n${res.stderr}`);
+  const combined = `${res.stdout}${res.stderr}`;
+  if (expectedPattern) {
+    assert(
+      expectedPattern.test(combined),
+      `preflight ${args[0]} failed for unexpected reason:\n${combined}`,
+    );
+  }
+  return combined;
 }
 
 function backupPath(absPath) {
@@ -126,6 +146,25 @@ try {
       assert(script.includes(scopedPath), `${scriptName} must include ${scopedPath}`);
     }
   }
+
+  const boundaryPrompt = buildSystemPrompt({
+    roleName: "BoundaryRole",
+    scope: "contracts",
+    inputs: "paths",
+    outputs: "report",
+    guards: "no bypass",
+    baseRules: "BASE_RULES_OK",
+    reportSchema: "REPORT_SCHEMA_OK",
+    agentMd: "RAW_AGENT_MD_SHOULD_NOT_BE_IN_PROMPT",
+    skillMd: "RAW_SKILL_MD_SHOULD_NOT_BE_IN_PROMPT",
+    entryDoc: "RAW_ENTRY_DOC_SHOULD_NOT_BE_IN_PROMPT",
+    taskGateIndexDoc: "RAW_TASK_GATE_INDEX_SHOULD_NOT_BE_IN_PROMPT",
+  });
+  assert(boundaryPrompt.includes("Rollenvertrag (strukturiert)"), "prompt must use structured role contract");
+  assert(!boundaryPrompt.includes("RAW_AGENT_MD_SHOULD_NOT_BE_IN_PROMPT"), "prompt must not embed raw AGENT.md by default");
+  assert(!boundaryPrompt.includes("RAW_SKILL_MD_SHOULD_NOT_BE_IN_PROMPT"), "prompt must not embed raw SKILL.md by default");
+  assert(!boundaryPrompt.includes("RAW_ENTRY_DOC_SHOULD_NOT_BE_IN_PROMPT"), "prompt must not embed raw ENTRY.md by default");
+  assert(!boundaryPrompt.includes("RAW_TASK_GATE_INDEX_SHOULD_NOT_BE_IN_PROMPT"), "prompt must not embed raw TASK_GATE_INDEX.md by default");
   assert(
     String(packageJson.scripts?.["test:contracts"] || "") === "node tests/test-llm-contract.mjs && node tests/test-slice-a-contract-scaffold.mjs",
     "test:contracts must run the contract gate pair",
@@ -186,9 +225,11 @@ try {
   assert(ackOutput.includes("ACK_OK scope=contracts+testing"), "ack must succeed for expanded testing scope");
 
   const changedPathSet = "tests,tools/llm-preflight.mjs";
-  const checkAutoOutput = runPreflight(["check", "--paths", changedPathSet]);
-  assert(checkAutoOutput.includes("AUTO_RECLASSIFY"), "check must auto-reclassify on path drift");
-  assert(checkAutoOutput.includes("CHECK_OK"), "check must still complete after auto-reclassify");
+  const driftOutput = runPreflightExpectFail(
+    ["check", "--paths", changedPathSet],
+    /Session scope\/path drift detected/,
+  );
+  assert(driftOutput.includes("Session scope/path drift detected"), "check must fail closed on path drift");
 
   const checkOutput = runPreflight(["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
   assert(checkOutput.includes("CHECK_OK"), "check must succeed again for full testing scope");
@@ -205,7 +246,7 @@ try {
   assert.equal(typeof ack.scopes["contracts+testing"].proofHash, "string", "ack must store proof hash per scope key");
   assert(ack.scopes["contracts+testing"].proofHash.length > 20, "proof hash must be non-trivial");
 
-  console.log("LLM_CONTRACT_OK multi-scope classify+dependency expansion+auto-reclassify enabled and audit mode keeps tests unblocked");
+  console.log("LLM_CONTRACT_OK multi-scope classify+dependency expansion+fail-closed drift checks and audit mode keep tests unblocked");
 } finally {
   restorePath(llmDir, llmBackup);
 }

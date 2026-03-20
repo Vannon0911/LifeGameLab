@@ -19,8 +19,6 @@ const AGENTS_ROOT = join(REPO_ROOT, "agents", "llm-entry-sequence");
 const SHARED_DIR = join(AGENTS_ROOT, "_shared");
 const ENTRY_DOC = join(REPO_ROOT, "docs", "llm", "ENTRY.md");
 const TASK_GATE_INDEX_DOC = join(REPO_ROOT, "docs", "llm", "entry", "TASK_GATE_INDEX.md");
-let sharedDocsPromise = null;
-const roleCache = new Map();
 
 /**
  * Laedt eine Pflichtdatei und bricht hart ab, wenn sie fehlt oder leer ist.
@@ -39,23 +37,13 @@ async function readRequired(filePath, label) {
 }
 
 async function loadSharedDocs() {
-  if (!sharedDocsPromise) {
-    sharedDocsPromise = Promise.all([
-      readRequired(join(SHARED_DIR, "BASE_RULES.md"), "shared BASE_RULES.md"),
-      readRequired(join(SHARED_DIR, "REPORT_SCHEMA.md"), "shared REPORT_SCHEMA.md"),
-      readRequired(ENTRY_DOC, "docs/llm/ENTRY.md"),
-      readRequired(TASK_GATE_INDEX_DOC, "docs/llm/entry/TASK_GATE_INDEX.md"),
-    ]).then(([baseRules, reportSchema, entryDoc, taskGateIndexDoc]) => ({
-      baseRules,
-      reportSchema,
-      entryDoc,
-      taskGateIndexDoc,
-    })).catch((err) => {
-      sharedDocsPromise = null;
-      throw err;
-    });
-  }
-  return sharedDocsPromise;
+  const [baseRules, reportSchema, entryDoc, taskGateIndexDoc] = await Promise.all([
+    readRequired(join(SHARED_DIR, "BASE_RULES.md"), "shared BASE_RULES.md"),
+    readRequired(join(SHARED_DIR, "REPORT_SCHEMA.md"), "shared REPORT_SCHEMA.md"),
+    readRequired(ENTRY_DOC, "docs/llm/ENTRY.md"),
+    readRequired(TASK_GATE_INDEX_DOC, "docs/llm/entry/TASK_GATE_INDEX.md"),
+  ]);
+  return { baseRules, reportSchema, entryDoc, taskGateIndexDoc };
 }
 
 function readAgentMeta(agentMd, label, fallback = "", allowLabelSuffix = false) {
@@ -91,14 +79,7 @@ export const ROLE_PATHS = Object.freeze({
  * Rolle-Definitionen aus dem Dateisystem laden.
  */
 export async function loadRole(rolePath) {
-  const cachedRole = roleCache.get(rolePath);
-  if (cachedRole) return cachedRole;
-  const rolePromise = loadRoleUncached(rolePath).catch((err) => {
-    roleCache.delete(rolePath);
-    throw err;
-  });
-  roleCache.set(rolePath, rolePromise);
-  return rolePromise;
+  return loadRoleUncached(rolePath);
 }
 
 async function loadRoleUncached(rolePath) {
@@ -137,34 +118,33 @@ async function loadRoleUncached(rolePath) {
  * Baut den System-Prompt fuer einen Agent aus seinen Rollendefinitionen.
  */
 export function buildSystemPrompt(role, extraContext = "", options = {}) {
-  const includePolicyDocs = options.includePolicyDocs !== false;
+  const includePolicyDocs = options.includePolicyDocs === true;
   const parts = [
     `# Du bist: ${role.roleName}`,
+    "",
+    "## Rollenvertrag (strukturiert)",
+    `scope: ${role.scope || "n/a"}`,
+    `inputs: ${role.inputs || "n/a"}`,
+    `outputs: ${role.outputs || "n/a"}`,
+    `guards: ${role.guards || "n/a"}`,
     "",
     "## Basis-Regeln",
     role.baseRules,
     "",
     "## Report-Schema",
     role.reportSchema,
-    "",
-    "## Dein Rollenprofil",
-    role.agentMd,
   ];
 
-  if (role.skillMd) {
-    parts.push("", "## Deine Skill-Definition", role.skillMd);
-  }
-
   if (includePolicyDocs && role.entryDoc) {
-    parts.push("", "## Pflicht-Entry", role.entryDoc);
+    parts.push("", "## Pflicht-Entry (nur Referenz)", role.entryDoc);
   }
 
   if (includePolicyDocs && role.taskGateIndexDoc) {
-    parts.push("", "## Task-Gate-Index", role.taskGateIndexDoc);
+    parts.push("", "## Task-Gate-Index (nur Referenz)", role.taskGateIndexDoc);
   }
 
   if (extraContext) {
-    parts.push("", "## Zusaetzlicher Kontext", extraContext);
+    parts.push("", "## Zusaetzlicher Kontext (untrusted)", extraContext);
   }
 
   return parts.join("\n");
