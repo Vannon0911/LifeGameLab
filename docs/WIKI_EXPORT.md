@@ -1,4 +1,4 @@
-# Page: LifeGameLab Overview
+# LifeGameLab Wiki Export
 
 # LifeGameLab Overview
 
@@ -130,14 +130,16 @@ For further exploration, visit the child pages:
 
 ---
 
-# Page: Project Purpose and Game Design
+# Page: Home
 
-# Project Purpose and Game Design
+# LifeGameLab Wiki
 
-<details>
-<summary>Relevant source files</summary>
+Willkommen im technischen Wiki von LifeGameLab.
 
-The following files were used as context for generating this wiki page:
+## Einstieg
+- Vollstaendige Navigation: [Sidebar](./_Sidebar.md)
+- Produktbasis: [Product SoT](./Product-SoT.md)
+- Architekturbasis: [Architecture SoT](./Architecture-SoT.md)
 
 - [README.md](README.md)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
@@ -150,69 +152,11 @@ The following files were used as context for generating this wiki page:
 - [src/game/contracts/actionLifecycle.js](src/game/contracts/actionLifecycle.js)
 - [src/game/contracts/manifest.js](src/game/contracts/manifest.js)
 
-</details>
+- Ein Match beginnt mit genau einem Worker.
+- Entscheidungen entstehen aus Konsequenz statt Menuefuehrung.
+- Gleiche Seeds + gleiche Inputs liefern denselben Simulationsverlauf.
 
-
-
-LifeGameLab is a deterministic browser-based Real-Time Strategy (RTS) game built on a seed-based, reproducible simulation engine. The project emphasizes emergent complexity from simple cellular rules, where every game state transition is governed by a strict patch-based kernel to ensure mathematical consistency and replayability.
-
-## 1. Core Concept and Design Philosophy
-
-The game starts with a single worker (historically referred to as a "cell" in legacy code) [README.md:3-5](). Unlike traditional RTS games that rely on complex menus or hidden tutorials, LifeGameLab is designed to teach through consequence [docs/PRODUCT.md:10-12]().
-
-### The Core Tension: Retention vs. Binding
-The primary strategic driver is the opportunity cost of workers [README.md:9-14]().
-*   **Worker Retention:** Keeping units mobile for manual resource harvesting and rapid expansion.
-*   **Worker Binding:** Permanently committing workers into infrastructure, patterns, or automated systems [README.md:80-82]().
-
-Too much early binding leads to economic stagnation, while too much retention prevents the transition to higher technology tiers (T2/T3) [README.md:83-85]().
-
-### Determinism Invariants
-The game maintains a "Hard Truth" line through several architectural invariants [docs/ARCHITECTURE.md:10-16]():
-1.  **Seed-Based Generation:** The same seed and `MapSpec` always produce the identical world [docs/PRODUCT.md:18-20]().
-2.  **No Entropy:** `Math.random()` and `Date.now()` are strictly forbidden within the reducer or simulation step [docs/ARCHITECTURE.md:15]().
-3.  **Tick-Rate Stability:** The simulation runs at exactly 24 ticks per second [docs/PRODUCT.md:18]().
-
-## 2. Match Structure and Progression
-
-Matches are categorized by grid size, which defines the "identity" of the gameplay session rather than being a cosmetic setting [docs/PRODUCT.md:23-30]().
-
-| Mode | Grid Size | Description |
-| :--- | :--- | :--- |
-| **Blitz** | 32x32 | Rapid, small-scale skirmish. |
-| **Standard** | 64x64 | Balanced RTS experience. |
-| **Krieg** | 128x128 | Large-scale territorial control. |
-| **Custom** | Variable | Defined via the `MapBuilder` and `MapSpec`. |
-
-### Phase Progression
-The game progresses through distinct phases, beginning with **Phase 0**, which is a locked state where energy does not yet exist [docs/PRODUCT.md:47-50]().
-
-1.  **Phase 0 (Founding):** The player manually delivers five raw plants to found the first Core [docs/PRODUCT.md:15]().
-2.  **T1 (Stabilization):** Basic worker-based harvesting and energy generation [README.md:109]().
-3.  **T2 (Automation):** Introduction of production infrastructure like harvesters, sawmills, and conveyors. Conveyors consume one worker permanently [docs/PRODUCT.md:63-71]().
-4.  **T3 (Mutation):** High-level topology-based combat and specialization using the Mutator building [docs/PRODUCT.md:78-82]().
-
-## 3. Economic Pillars and Infrastructure
-
-The economy is centered around the **Core**, a 4x4 footprint building that serves as the primary resource hub [docs/PRODUCT.md:52-54]().
-
-### Resource Hierarchy
-*   **Plants:** Harvested for energy (1 energy per 120 ticks) [docs/PRODUCT.md:39-42]().
-*   **Wood:** Produced by processing reproduced trees; competes with plants for Core space [docs/PRODUCT.md:43, 74-75]().
-*   **Stone:** A high-tier physical resource becoming relevant at T3 [docs/PRODUCT.md:44]().
-
-### Automation and Patterns
-Infrastructure is not selected from a menu. Instead, functions are discovered through patterns formed by worker placement [README.md:88-95](). In T3, specific topology classes (Triangle, Square, Star, etc.) drive combat mutations [docs/PRODUCT.md:89-98]().
-
-## 4. Technical Implementation and Data Flow
-
-The game uses a "Manifest-First" design where the state schema and allowed mutations are defined in a central contract layer [docs/ARCHITECTURE.md:11, 19]().
-
-### System-to-Code Mapping: Action Lifecycle
-The transition from legacy "cell" mechanics to the new RTS "worker" mechanics is managed by `actionLifecycle.js`. This file defines the migration status of every gameplay action.
-
-**Action Mapping Diagram**
-Title: Action Migration and Reducer Routing
+## Systemueberblick
 ```mermaid
 graph TD
     subgraph "UI/Dispatch Source"
@@ -245,33 +189,92 @@ graph TD
 ```
 Sources: [src/game/contracts/actionLifecycle.js:1-6]() [src/game/contracts/manifest.js:11-20]() [docs/ARCHITECTURE.md:18-24]()
 
-### Data Flow: MapSpec to World Generation
-World generation is no longer a direct mutation but a deterministic compilation process starting from a `MapSpec`.
+## Aktueller Head (2026-03-20)
+- Slice-B-MapSpec-Baseline aktiv.
+- Slice-C-Minimal-UI aktiv.
+- Worker-Migration weit fortgeschritten.
+- Kernel-Hardening gegen nicht-serialisierbare/zyklische Inputs aktiv.
 
-**World Generation Pipeline**
-Title: Deterministic World Boot Flow
+## Source of Truth
+Fuer verbindliche Aussagen gelten:
+- `docs/PRODUCT.md`
+- `docs/ARCHITECTURE.md`
+- `docs/STATUS.md`
+- `src/project/contract/manifest.js`
+
+---
+
+# Page: Product SoT
+
+# Product SoT
+
+## Product Core
+- Deterministisches Browser-RTS.
+- Kein verstecktes Onboarding; das Spiel lehrt ueber Konsequenzen.
+- Matchstart mit einem Worker; Core-Founding in Phase 0 durch manuelle Plant-Delivery.
+
+## Deterministic Foundation
+- 24 Ticks = 1 Sekunde.
+- Seed + MapSpec bestimmen die Welt deterministisch.
+- RNG bleibt replay-safe.
+
+## Matchstruktur
+- Blitz: `32x32`
+- Standard: `64x64`
+- Krieg: `128x128`
+- Custom: ueber Map-Builder-Pipeline, weiterhin deterministisch.
+
+## Wirtschaft
+- Worker sind simultan Produktionskraft, Baukapazitaet und militaerischer Opportunitaetskostenfaktor.
+- Canonical early values:
+- Worker-Spawn: `2 energy`
+- Worker-Spawn-Zeit: `240 ticks`
+- Break-even: `480 ticks`
+- Plant-Output: `1 energy / 120 ticks`
+
+## Tiers und Progression
+- T1/T2 werden im Feld ueber Konsequenz gelernt.
+- T3 ist das einzige zusaetzliche Fenster.
+- T3 Topology Classes: `triangle`, `square`, `loop`, `star`, `spiral`, `cross`, `pentagram`, `hexagram`.
+
+Source of truth: `docs/PRODUCT.md`
+
+---
+
+# Page: Architecture SoT
+
+# Architecture SoT
+
+## Prinzipien
+- Manifest-first Design.
+- Kernel ist alleinige Write-Authority.
+- UI/Renderer sind read-only auf State.
+- State-Updates nur als Patches durch definierte Gates.
+
+## Top-Level Struktur
+- `src/kernel/` - Store, Patching, Validierung
+- `src/project/contract/` - Manifest, Schemata, Mutation Matrix, Lifecycle
+- `src/game/sim/` - Sim-Logik und Worldgen
+- `src/game/render/` - visuelle Ausgabe
+- `src/game/ui/` - Input-/Dispatch-Schicht
+- `src/app/` - Orchestrierung
+
+## Datenfluss
+1. UI dispatcht Action.
+2. Kernel validiert Action + Lifecycle + Matrix.
+3. Reducer erzeugt erlaubte Patches.
+4. Kernel commitet State.
+5. Renderer liest State.
+
+## Diagramm
 ```mermaid
-graph LR
-    subgraph "Input State"
-        MS["map.spec (MapSpec)"]
-        SEED["meta.seed"]
-    end
-
-    subgraph "Compilation (src/game/sim/mapspec.js)"
-        VAL["validateMapSpec"]
-        COM["compileMapSpec"]
-    end
-
-    subgraph "World Gen (src/game/sim/worldgen.js)"
-        GW["GEN_WORLD Action"]
-        SIM["Simulation State (TypedArrays)"]
-    end
-
-    MS --> VAL
-    VAL --> COM
-    SEED --> COM
-    COM --> GW
-    GW --> SIM
+flowchart LR
+  UI["UI Input"] --> STORE["Kernel Store"]
+  STORE --> CONTRACT["Contract Gates"]
+  CONTRACT --> REDUCER["Simulation Reducer"]
+  REDUCER --> PATCH["Allowed Patches"]
+  PATCH --> STORE
+  STORE --> RENDER["Renderer Read-Only"]
 ```
 Sources: [docs/STATUS.md:10-12]() [docs/ARCHITECTURE.md:48-52]() [src/game/contracts/actionLifecycle.js:60-64]()
 
@@ -290,10 +293,17 @@ Sources: [README.md:1-176](), [docs/PRODUCT.md:1-153](), [docs/ARCHITECTURE.md:1
 
 # Repository Structure and Module Map
 
-<details>
-<summary>Relevant source files</summary>
+## Ziel
+Diese Seite mappt die echten Modulgrenzen im aktuellen Head.
 
-The following files were used as context for generating this wiki page:
+## Top-Level Rollen
+- `src/kernel/`: deterministischer Store, Patching, Validierung, Persistenz, RNG.
+- `src/project/contract/`: Manifest, Action/State-Schema, Mutation-Matrix, Lifecycle, Dataflow.
+- `src/game/contracts/`: produktnahe Enums und IDs.
+- `src/game/sim/`: aktive Runtime- und Simulationslogik inkl. MapSpec/Worldgen.
+- `src/game/render/`: Renderer-Pfade.
+- `src/game/ui/`: UI-Adapter und Input-Dispatch.
+- `src/app/`: Boot, Runtime-Loop, Crash-Flows.
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - [docs/ARCHITECTURE_SOT.md](docs/ARCHITECTURE_SOT.md)
@@ -313,13 +323,21 @@ The following files were used as context for generating this wiki page:
 - [src/game/contracts/actionLifecycle.js](src/game/contracts/actionLifecycle.js)
 - [src/game/contracts/manifest.js](src/game/contracts/manifest.js)
 
-</details>
+## Slice-Realitaet
+- Slice B MapSpec ist aktiv.
+- Slice C Minimal UI ist aktiv.
+- Legacy-Runtime bleibt als kontrollierter Fallback vorhanden.
 
+Verbindliche Quellen:
+- `docs/ARCHITECTURE.md`
+- `docs/STATUS.md`
+- `src/project/contract/manifest.js`
 
+---
 
-The LifeGameLab repository is organized to enforce a strict separation between the deterministic gameplay kernel, the executable contract definitions, and the read-only presentation layers. This structure ensures that simulation logic remains reproducible across different environments while providing a clear migration path for evolving the game from a cellular automata sandbox into a real-time strategy (RTS) engine.
+# Page: Determinism and Contracts
 
-## Top-Level Directory Layout
+# Determinism and Contracts
 
 The repository follows a manifest-first design where the `src/game/` directory defines the "laws" of the state, and `src/kernel/` enforces them.
 
@@ -333,14 +351,11 @@ The repository follows a manifest-first design where the `src/game/` directory d
 | `tests/` | Verification suites. | Determinism, Replay, and Contract hardening tests. |
 | `tools/` | Developer and LLM tooling. | Evidence runner, Preflight system, Playwright loops. |
 
-**Sources:** [docs/ARCHITECTURE.md:82-90](), [docs/ARCHITECTURE.md:17-24]()
+## Slice-Status
+- Slice B: MapSpec-Pipeline aktiv (`SET_MAPSPEC` -> compile -> `GEN_WORLD`).
+- Slice C: Minimal UI + Worker migration aktiv.
 
-## Module Roles and Data Flow
-
-The system operates on a "Patch-Only" state update model. Data flows from the UI/Sim through a validation pipeline before being committed to the store.
-
-### Module Map Diagram
-Title: System Data Flow and Module Boundaries
+## Diagramm
 ```mermaid
 graph TD
     subgraph "Presentation Layer (Read-Only)"
@@ -376,7 +391,6 @@ graph TD
     STORE -- "7. notify" --> UI
     STORE -- "7. notify" --> RENDER
 ```
-**Sources:** [docs/sot/01_KERNEL_GATES.md:3-10](), [src/kernel/store/createStore.js:58-109](), [docs/ARCHITECTURE.md:10-16]()
 
 ## Canonical Module Definitions
 
@@ -446,14 +460,19 @@ New contributors should consult the `docs/traceability/` directory to understand
 
 ---
 
-# Page: Architecture Invariants and Design Principles
+# Page: Runtime and UI
 
-# Architecture Invariants and Design Principles
+# Runtime and UI
 
-<details>
-<summary>Relevant source files</summary>
+## Runtime
+- Tickbasierte Loop mit deterministischem Kern.
+- Sichtbare Canvas-Interaktion.
+- Builder-Panel fuer Map-Eingriffe statt blindem Toggle-only Flow.
 
-The following files were used as context for generating this wiki page:
+## UI Regeln
+- UI darf nicht direkt mutieren.
+- Jede relevante Nutzeraktion geht ueber Dispatch.
+- Bewegung und visuelle Interpolation bleiben synchron mit Tick-Modell.
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - [docs/STATUS.md](docs/STATUS.md)
@@ -1164,30 +1183,31 @@ When the `storageDriver.save()` is called, the kernel passes a `cloneDeep` copy 
 ### Code Entity Mapping: Integrity Pipeline
 ```mermaid
 flowchart LR
-    A["dispatch(action)"] --> B["cloneDeep(state)"]
-    B --> C["reducer(clonedState, action, {rng})"]
-    C -- "patches" --> D["assertPatchesAllowed()"]
-    D --> E["applyPatches()"]
-    E --> F["sanitizeBySchema()"]
-    F --> G["storageDriver.save(cloneDeep(nextDoc))"]
-    
-    subgraph "Safety Checks"
-        C -.-> H["hash32(clonedState) check"]
-        D -.-> I["mutationMatrix check"]
-    end
+  INPUT["Canvas Input"] --> DISPATCH["Dispatch"]
+  DISPATCH --> TICK["Tick Loop 24 TPS"]
+  TICK --> SIM["Sim State"]
+  SIM --> RENDER["Visual Interpolation"]
+  SIM --> SAVE["Persist meta + map"]
 ```
-**Sources:** [src/kernel/store/createStore.js:58-118](), [tests/test-dispatch-error-state-stability.mjs:109-115]()
+
+Source of truth: `docs/STATUS.md`, `src/game/ui/*`, `src/kernel/store/persistence.js`
 
 ---
 
-# Page: Contract Layer
+# Page: Testing and Evidence
 
-# Contract Layer
+# Testing and Evidence
 
-<details>
-<summary>Relevant source files</summary>
+## Testsuiten
+- `npm run test:quick`
+- `npm run test:truth`
+- `npm run test:full`
+- `npm run test:foundation:visual`
 
-The following files were used as context for generating this wiki page:
+## Evidence-Ansatz
+- Claims und Regressionen werden gegen Registry/Truth geprueft.
+- Evidence-Runner kennzeichnet Verifikation mit `registryStatus=`.
+- Longrun-Budget hat explizite Headroom-Grenze (`300_000 ms`).
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - [docs/STATUS.md](docs/STATUS.md)
@@ -5669,145 +5689,102 @@ Sources: [src/game/contracts/actionLifecycle.js:59-64](), [docs/traceability/reb
 
 # Playwright Debug Loop and Visual Testing
 
-<details>
-<summary>Relevant source files</summary>
+## Zweck
+Browsernahe Regression fuer UI/Runtime-Stabilitaet, zusaetzlich zu deterministischen Kernel-Tests.
 
-The following files were used as context for generating this wiki page:
+## Relevante Tools
+- `npm run test:foundation:visual`
+- `tools/run-foundation-visual-playwright.mjs`
 
-- [.gitignore](.gitignore)
-- [src/game/ui/ui.layout.js](src/game/ui/ui.layout.js)
-- [tests/support/liveTestKit.mjs](tests/support/liveTestKit.mjs)
-- [tests/test-deterministic-genesis.mjs](tests/test-deterministic-genesis.mjs)
-- [tests/test-kernel-replay-truth.mjs](tests/test-kernel-replay-truth.mjs)
-- [tests/test-readmodel-determinism.mjs](tests/test-readmodel-determinism.mjs)
-- [tests/test-step-chain-determinism.mjs](tests/test-step-chain-determinism.mjs)
-- [tools/run-foundation-visual-playwright.mjs](tools/run-foundation-visual-playwright.mjs)
+## Was verifiziert wird
+- UI-Baseline und sichtbare Layout-/Header-Stabilitaet.
+- Grundlegender Worldgen-Flow im Browser.
+- Canvas-Praesenz nach Interaktion.
 
-</details>
+## Artefakte
+- Output unter `output/playwright/...`.
+- Run-Logs und Screenshots zur Nachvollziehbarkeit.
 
+## Einordnung
+Visual-Tests sind Integrationssignal, nicht Ersatz fuer Contract-/Determinismus-Tests.
 
-
-This page documents the automated visual testing and debug infrastructure used to ensure the UI remains stable and the game engine initializes correctly in a real browser environment. These tools complement the deterministic kernel tests by verifying the integration between the `Store`, the `Renderer`, and the `UI` layer.
-
-## Overview of Visual Testing Tools
-
-The codebase provides two primary scripts for browser-based verification using Playwright. Both scripts utilize a local HTTP server to host the game and then automate user interactions to capture state snapshots and screenshots.
-
-1.  **Foundation Visual Playwright** (`tools/run-foundation-visual-playwright.mjs`): A regression tool that verifies the "Foundation" sequence (loading, world generation, and header stability).
-2.  **Playwright Debug Loop**: A pattern used for iterative development where the browser state is captured into `output/` for inspection.
-
-### Data Flow and Artifacts
-
-Visual tests generate structured output in the `output/` directory (which is git-ignored [/.gitignore:10-10]()).
-
-| Artifact Type | Path Pattern | Description |
-| :--- | :--- | :--- |
-| **Run Log** | `output/playwright/foundation-block/<runId>/run-log.json` | Metadata about the test run, including timestamps and step outcomes [tools/run-foundation-visual-playwright.mjs:14-14](). |
-| **Full Screenshots** | `output/playwright/foundation-block/<runId>/XX_step_name.png` | Full-page captures of the application state [tools/run-foundation-visual-playwright.mjs:75-77](). |
-| **Cropped UI Elements** | `output/playwright/foundation-block/<runId>/XX_header_crop.png` | Focused screenshots of specific DOM elements like the `.nx-minimal-header` [tools/run-foundation-visual-playwright.mjs:133-135](). |
-
-**Sources:** [tools/run-foundation-visual-playwright.mjs:11-14](), [tools/run-foundation-visual-playwright.mjs:75-77](), [/.gitignore:10-10]()
+Verbindliche Quellen:
+- `tools/run-foundation-visual-playwright.mjs`
+- `docs/STATUS.md`
+- `tests/`
 
 ---
 
-## Foundation Visual Testing
+# Page: LLM Governance and Preflight System
 
-The `run-foundation-visual-playwright.mjs` script automates the initial lifecycle of the game to detect regressions in the UI layout and basic simulation triggers.
+# LLM Governance and Preflight System
 
-### System Interaction Diagram
+## Zweck
+Das Projekt erzwingt vor kritischen Aenderungen eine feste Entry-/Preflight-Kette.
 
-This diagram maps the natural language "Visual Test" to the specific code entities involved in the execution loop.
+## Pflichtreihenfolge
+1. `docs/WORKFLOW.md`
+2. `docs/llm/ENTRY.md`
+3. `docs/llm/OPERATING_PROTOCOL.md`
+4. `docs/ARCHITECTURE.md`
+5. `docs/STATUS.md`
 
-Title: Foundation Visual Test Execution Flow
-```mermaid
-graph TD
-    subgraph "Node.js Process Space"
-        RUNNER["run-foundation-visual-playwright.mjs"]
-        SERVER["python -m http.server"]
-        LOG["run-log.json"]
-    end
+## Pflichtkette vor Writes
+1. `llm-preflight classify`
+2. `llm-preflight entry`
+3. `llm-preflight ack`
+4. `llm-preflight check`
 
-    subgraph "Browser Space (Playwright)"
-        PAGE["Page Object"]
-        DOM["DOM (.nx-minimal-shell)"]
-        CANVAS["Canvas Element"]
-    end
+## Harte Verbote
+- Kein `--no-verify`.
+- Kein Hook-/Guard-Bypass.
+- Bei Scope-Drift zuerst Matrix/Mapping korrigieren, dann Kette komplett neu laufen lassen.
 
-    RUNNER -- "spawn()" --> SERVER
-    RUNNER -- "chromium.launch()" --> PAGE
-    PAGE -- "goto(baseUrl)" --> DOM
-    RUNNER -- "locator('.nx-minimal-header').screenshot()" --> LOG
-    RUNNER -- "click('Neue Welt')" --> DOM
-    DOM -- "trigger dispatch" --> CANVAS
-    RUNNER -- "evaluate()" --> CANVAS
-```
-**Sources:** [tools/run-foundation-visual-playwright.mjs:67-73](), [tools/run-foundation-visual-playwright.mjs:123-127](), [tools/run-foundation-visual-playwright.mjs:133-135](), [tools/run-foundation-visual-playwright.mjs:153-153](), [src/game/ui/ui.layout.js:10-23]()
+## Geltung
+Diese Regeln sind Prozess-SoT und gelten vor allen Eingriffen in Contract-/Kernel-nahe Pfade.
 
-### Key Functions and Implementation
-
-*   **`startLocalServer()`**: Spawns a Python-based HTTP server on a specified port (default 8080) to serve the root directory [tools/run-foundation-visual-playwright.mjs:67-73]().
-*   **`waitForPortOpen()`**: A polling utility using `net.Socket` that ensures the server is ready before Playwright attempts to connect [tools/run-foundation-visual-playwright.mjs:42-65]().
-*   **`enforceRunRetention(maxRuns)`**: Manages disk space by keeping only the last $N$ test runs (default 3) in the `output/` directory [tools/run-foundation-visual-playwright.mjs:79-103]().
-*   **`logStep()`**: Records the timestamp, action taken, expected result, and the path to the associated screenshot in the `runLog` object [tools/run-foundation-visual-playwright.mjs:30-40]().
-
-### Verification Logic
-
-The script performs specific assertions on the UI state:
-1.  **Header Visibility**: Checks for `.nx-minimal-header` and specific text like "LifeGameLab" [tools/run-foundation-visual-playwright.mjs:133-139]().
-2.  **Interaction**: Clicks the "Neue Welt generieren" button [tools/run-foundation-visual-playwright.mjs:153-153]().
-3.  **Canvas Validation**: Uses `page.evaluate()` to check if the `<canvas>` element exists and has non-zero dimensions after world generation [tools/run-foundation-visual-playwright.mjs:159-164]().
-
-**Sources:** [tools/run-foundation-visual-playwright.mjs:30-40](), [tools/run-foundation-visual-playwright.mjs:42-73](), [tools/run-foundation-visual-playwright.mjs:79-103](), [tools/run-foundation-visual-playwright.mjs:133-164]()
+Verbindliche Quellen:
+- `RUNBOOK.md`
+- `docs/llm/ENTRY.md`
+- `docs/llm/OPERATING_PROTOCOL.md`
+- `docs/llm/TASK_ENTRY_MATRIX.json`
 
 ---
 
-## Deterministic Initialization Testing
+# Page: Workflow and Contribution
 
-While the Playwright tools test the browser, `tests/test-deterministic-genesis.mjs` provides the logic that visual tests are meant to verify. This ensures that the "Genesis" sequence (the transition from world generation to active simulation) is deterministic.
+# Workflow and Contribution
 
-### Genesis State Machine
+## Governance (Single Source)
+- Verbindliche Preflight-/Governance-Regeln stehen in [LLM Governance and Preflight System](./LLM-Governance-and-Preflight-System.md).
+- Diese Seite fokussiert auf Beitragsprozess und Maintainer-Dokumente.
 
-The visual testing infrastructure relies on the state machine defined in the kernel and simulation logic.
+## Contributor-Docs
+- `CONTRIBUTING.md`
+- `SECURITY.md`
+- `CODE_OF_CONDUCT.md`
+- `SUPPORT.md`
 
-Title: Genesis State Transitions
-```mermaid
-stateDiagram-v2
-    [*] --> genesis_setup : GEN_WORLD
-    genesis_setup --> genesis_setup : PLACE_WORKER
-    genesis_setup --> genesis_zone : CONFIRM_FOUNDATION
-    genesis_zone --> run_active : CONFIRM_CORE_ZONE
-    run_active --> run_active : SIM_STEP
-```
-**Sources:** [tests/test-deterministic-genesis.mjs:7-60](), [tests/support/liveTestKit.mjs:39-49]()
-
-### Code Entity Mapping
-
-| State/Action | Code Entity | File Reference |
-| :--- | :--- | :--- |
-| **Founder Placement** | `PLACE_WORKER` | [tests/test-deterministic-genesis.mjs:40-40]() |
-| **Eligibility Check** | `evaluateFoundationEligibility` | [tests/test-deterministic-genesis.mjs:11-11]() |
-| **Phase Transition** | `runPhase: "genesis_zone"` | [tests/test-deterministic-genesis.mjs:49-49]() |
-| **Core Activation** | `cpuBootstrapDone: 1` | [tests/test-deterministic-genesis.mjs:65-65]() |
-
-**Sources:** [tests/test-deterministic-genesis.mjs:11-65]()
+Source of truth: `RUNBOOK.md`, `docs/llm/*`
 
 ---
 
-## The "Freeze-Server" Pattern
+# Page: Roadmap
 
-Visual testing in LifeGameLab utilizes a "Freeze-Server" pattern. Because the game is deterministic, the testing tools can:
-1.  Load the application.
-2.  Dispatch a sequence of actions.
-3.  "Freeze" the state (by not calling `SIM_STEP`).
-4.  Capture a screenshot of the resulting UI.
+# Roadmap
 
-This is facilitated by `liveTestKit.mjs`, which provides the `bootstrapMainRun(store)` function. This function executes the standard sequence: `GEN_WORLD` $\rightarrow$ `SET_BRUSH` $\rightarrow$ `PLACE_WORKER` $\rightarrow$ `CONFIRM_FOUNDATION` $\rightarrow$ `CONFIRM_CORE_ZONE` [tests/support/liveTestKit.mjs:39-49]().
+## Aktueller Fokus
+1. Slice C stabil abschliessen (Worker-Flow + Gates).
+2. Render-Interpolation klar und dauerhaft sichtbar halten.
+3. Builder-Semantik nur mit Contract+Worldgen-Abdeckung ausbauen.
+4. Evidence/Truth-Linie bei jeder Slice-Aenderung gruen halten.
 
-### Replay Consistency
+## Kurzfristige technische Ziele
+- `PLACE_WORKER`-Pfad inklusive Regressionguards vollstaendig absichern.
+- Phase-0-Ersatz abschliessen und Legacy-Aktionen sauber ausphasieren.
+- Test- und Dokument-Drift zwischen SoT und Traceability weiter reduzieren.
 
-The `test-kernel-replay-truth.mjs` utility confirms that if the Playwright test re-executes a sequence of actions, the resulting state signature and read model will be identical to a Node.js-based test run [tests/test-kernel-replay-truth.mjs:61-69](). This allows developers to use visual artifacts as "truth" for the UI's appearance at specific simulation steps.
-
-**Sources:** [tests/support/liveTestKit.mjs:39-49](), [tests/test-kernel-replay-truth.mjs:61-69]()
+Primary reference: `docs/STATUS.md`
 
 ---
 
@@ -5915,7 +5892,7 @@ Sources: [docs/ARCHITECTURE.md:10-15](), [src/game/contracts/manifest.js:4-29]()
 
 ---
 
-## Domain Concepts
+# Export Notes
 
 ### Worker (formerly Cell)
 The primary unit of the game. The terminology was migrated from "Cell" to "Worker" in Slice C [docs/STATUS.md:19-20]().

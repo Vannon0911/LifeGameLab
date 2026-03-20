@@ -97,7 +97,12 @@ High-value reuse candidates:
 - New migration tests must prove scaffold actions are safe before reducer wiring lands.
 - Legacy paths may be removed only after a test proves the replacement path has assumed the responsibility.
 
-## Repo Structure
+## Repo Structure (3-Layer)
+
+### Layer 1: KERNEL (Deterministic Core)
+- `src/kernel/`: deterministic store, patching, validation, persistence, RNG.
+
+### Layer 2: AGME (Game Runtime)
 - `src/app/`: bootstrap and runtime orchestration.
 - `src/kernel/`: deterministic engine and state-write authority.
 - `src/game/`: runtime gameplay, manifest, contracts, renderer, UI and viewmodels.

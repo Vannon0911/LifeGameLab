@@ -1,7 +1,9 @@
-# Skill Definition
+# DEPRECATED Skill Wrapper
 
 skill_id: skill-documentation-sync
 linked_agent: agent-documentation-auditor
-role: Documentation-Auditor
+status: deprecated
+merged_into: versioning-release
 
-Procedure: Folge `agents/llm-entry-sequence/_shared/BASE_RULES.md` + role delta aus `AGENT.md`.
+Hinweis: Dieser Wrapper bleibt nur als Alias fuer Legacy-Aufrufe bestehen.
+Kanonische Rolle: `versioning-release` (siehe `docs/LLM_SPECIALIZATION_CONTRACT.md`).

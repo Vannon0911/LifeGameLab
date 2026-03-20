@@ -1,3 +1,5 @@
+import { isPlainObject } from "../shared/isPlainObject.js";
+
 export function sanitizeBySchema(value, schema) {
   return _sanitize(value, schema, null, "value");
 }
@@ -143,12 +145,6 @@ function cloneUnknownValue(value, path, ancestors = new WeakSet()) {
   } finally {
     ancestors.delete(value);
   }
-}
-
-function isPlainObject(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value) || ArrayBuffer.isView(value)) return false;
-  const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
 }
 
 function _assertValid(v, s, path) {
