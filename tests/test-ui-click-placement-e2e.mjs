@@ -63,16 +63,17 @@ try {
     const store = globalThis.__LIFEGAMELAB_STORE__;
     const st = store.getState();
     const idx = y * st.meta.gridW + x;
+    const playerLineageId = Number(st.meta.playerLineageId || 1) | 0;
     return {
-      founderAtTile: (Number(st.world?.founderMask?.[idx] || 0) | 0) === 1,
-      founderPlaced: Number(st.sim?.founderPlaced || 0),
+      workerAtTile:
+        (Number(st.world?.alive?.[idx] || 0) | 0) === 1 &&
+        (Number(st.world?.lineageId?.[idx] || 0) | 0) === playerLineageId,
       runPhase: String(st.sim?.runPhase || ""),
       brushMode: String(st.meta?.brushMode || ""),
     };
   }, clickTarget.target);
 
-  assert.equal(result.founderAtTile, true, "canvas click must place founder on target tile");
-  assert(result.founderPlaced >= 1, "founderPlaced must increase after click placement");
+  assert.equal(result.workerAtTile, true, "canvas click must place worker on target tile");
 
   const workerMoveResult = await page.evaluate(() => {
     const store = globalThis.__LIFEGAMELAB_STORE__;
@@ -80,8 +81,8 @@ try {
     const w = Number(st0.meta.gridW || 0) | 0;
     const h = Number(st0.meta.gridH || 0) | 0;
 
-    store.dispatch({ type: "CONFIRM_FOUNDATION", payload: {} });
-    store.dispatch({ type: "CONFIRM_CORE_ZONE", payload: {} });
+    store.dispatch({ type: "SET_UI", payload: { runPhase: "run_active" } });
+    store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
     store.dispatch({ type: "SET_PHYSICS", payload: { C_birth_base: 999 } });
 
     const st = store.getState();
@@ -155,7 +156,7 @@ try {
   assert.equal(workerMoveResult.moved24Ticks, true, `worker should move exactly 1 tile after 24 ticks (d23=${workerMoveResult.d23}, d24=${workerMoveResult.d24}, action=${workerMoveResult.lastAutoAction})`);
 
   console.log(
-    `UI_CLICK_PLACEMENT_E2E_OK runPhase=${result.runPhase} founderPlaced=${result.founderPlaced} brush=${result.brushMode}`,
+    `UI_CLICK_PLACEMENT_E2E_OK runPhase=${result.runPhase} workerPlaced=${result.workerAtTile} brush=${result.brushMode}`,
   );
 } finally {
   if (browser) {

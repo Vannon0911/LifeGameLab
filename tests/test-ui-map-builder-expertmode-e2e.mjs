@@ -55,7 +55,7 @@ try {
           expertMode: !!initialExpertMode,
           activeTab: "lage",
           panelOpen: false,
-          runPhase: "genesis_setup",
+          runPhase: "run_active",
         },
       });
       const { builderButton, exitButton } = getButtons();
@@ -94,11 +94,11 @@ try {
   assert.equal(cycleTrue.error || "", "", "builder controls must exist in mounted UI");
   assert.equal(cycleFalse.afterEnter.runPhase, "map_builder", "Map Builder toggle must enter map_builder");
   assert.equal(cycleFalse.afterEnter.expertMode, true, "Map Builder enter must force expertMode=true");
-  assert.equal(cycleFalse.afterExit.runPhase, "genesis_setup", "Map Builder toggle must exit to genesis_setup");
+  assert.equal(cycleFalse.afterExit.runPhase, "run_active", "Map Builder toggle must exit to run_active");
   assert.equal(cycleFalse.afterExit.expertMode, false, "Map Builder exit must restore false expertMode");
   assert.equal(cycleTrue.afterEnter.runPhase, "map_builder", "Map Builder toggle must enter map_builder");
   assert.equal(cycleTrue.afterEnter.expertMode, true, "Map Builder enter must keep expertMode=true");
-  assert.equal(cycleTrue.afterExit.runPhase, "genesis_setup", "Map Builder toggle must exit to genesis_setup");
+  assert.equal(cycleTrue.afterExit.runPhase, "run_active", "Map Builder toggle must exit to run_active");
   assert.equal(cycleTrue.afterExit.expertMode, true, "Map Builder exit must restore true expertMode");
 
   console.log(
