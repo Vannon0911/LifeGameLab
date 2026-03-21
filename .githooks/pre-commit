@@ -1,2 +1,3 @@
 #!/bin/sh
+node devtools/enforce-artifact-budget.mjs || exit 1
 node tools/git-llm-guard.mjs pre-commit
