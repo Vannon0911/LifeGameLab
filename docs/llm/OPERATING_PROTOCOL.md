@@ -26,6 +26,11 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 ## PRUEFEN
 - Task ueber `docs/llm/TASK_ENTRY_MATRIX.json` klassifizieren
 - Session im Chat mit `entry` beginnen; das ist Pflicht, ersetzt aber keinen CLI-Preflight
+- Harter LLM-Orchestrierungs-Gate vor jedem Datei-Scan/Parsing/Interpretationsschritt:
+  - Parent darf lesen, aber keine Annahme direkt als Fakt verwenden.
+  - Jede Annahme wird sofort an einen frischen Subagent zur aktiven Widerlegung delegiert.
+  - Subagent startet immer mit Parent-Kontext von Anfang an.
+  - Erst nach Gegenpruefung darf die Parent-LLM die Aussage weiterverwenden.
 - Bei `Entry hash drift` oder `Read-order drift` zuerst `node tools/llm-preflight.mjs update-lock`, danach `classify -> entry -> ack -> check` erneut vollstaendig.
 - technische Kette exakt einhalten:
   1. `node tools/llm-preflight.mjs classify --paths <...>`

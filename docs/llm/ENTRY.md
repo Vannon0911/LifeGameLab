@@ -7,18 +7,15 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 ## Pflicht-Lesereihenfolge (ohne Vollscan)
 1. `docs/WORKFLOW.md`
 2. `docs/llm/ENTRY.md`
-3. `docs/llm/OPERATING_PROTOCOL.md`
-4. `docs/ARCHITECTURE.md`
-5. `docs/STATUS.md`
-6. `docs/llm/TASK_ENTRY_MATRIX.json` (Task klassifizieren)
-7. `docs/llm/entry/TASK_GATE_INDEX.md` (minimales Gate-Set je Task)
-8. Passende Task-Entries fuer alle klassifizierten Scopes lesen:
+3. `docs/llm/TASK_ENTRY_MATRIX.json` (Task klassifizieren)
+4. `docs/llm/entry/TASK_GATE_INDEX.md` (minimales Gate-Set je Task)
+5. Passende Task-Entries fuer alle klassifizierten Scopes lesen:
    - `docs/llm/ui/UI_TASK_ENTRY.md`
    - `docs/llm/gameplay/GAMEPLAY_TASK_ENTRY.md`
    - `docs/llm/contracts/CONTRACT_TASK_ENTRY.md`
    - `docs/llm/testing/TESTING_TASK_ENTRY.md`
    - `docs/llm/versioning/VERSIONING_TASK_ENTRY.md`
-9. Globale Mindest-Gates lesen:
+6. Globale Mindest-Gates lesen:
    - `src/game/contracts/manifest.js`
    - `src/kernel/store/createStore.js`
    - `src/kernel/store/applyPatches.js`
@@ -60,6 +57,28 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - `output/current-truth.json`: maschinenlesbare Truth (`manifest + commit SHA`)
 - `docs/STATUS.md`: Kommentar-/Entscheidungslog fuer Gates, Bugfixes, Release- und Change-Stand
 - `docs/traceability/rebuild-string-matrix.md` und `docs/traceability/rebuild-preparation-inventory.md`: nachziehen, sobald der Task ihre Aussagen oder Referenzketten veraendert
+
+## ADVERSARIAL EXECUTION MODE
+
+- Jede Annahme → sofort 1 neuer Subagent zur Widerlegung, nie derselbe weiterverwendet
+- Nächster Punkt → neuer Subagent, keine Wiederverwendung
+- Subagent-Ergebnisse nicht auslesen bis expliziter Trigger
+- Zusammenfassung nur auf expliziten Befehl
+- Nur Ursachenanalyse — kein stiller Fix ohne Freigabe
+- Keine Codeänderung ohne explizite Freigabe pro Datei/Funktion
+- Nur bestätigte Laufpfade — keine Nebenpfade
+- Keine Wrapper- oder Scheinlösungen
+- Inkonsistenz-Format: Symptom → Root Cause → Evidence (Datei:Zeile) → Impact → Freigabebedarf
+
+## FILE-SCAN ORCHESTRATION GATE (HART)
+
+- Gilt vor jedem Dateiscannerlauf, Datei-Parsing, Datei-Interpretationsschritt und jeder semantischen Ableitung aus Dateiinhalten.
+- Parent-LLM darf Dateiinhalt lesen, aber keine unvalidierte Annahme als Fakt behandeln.
+- Jede Annahme/Hypothese/implizite Deutung wird sofort an einen frischen Subagent zur Widerlegung delegiert.
+- Subagent muss von Beginn an aus Parent-Kontext initialisiert werden (nicht optional, nicht nachtraeglich).
+- Erst nach Gegenpruefung darf die Parent-LLM Aussagen weiterverwenden.
+- Ein Punkt/Annahme = ein neuer Subagent; keine Wiederverwendung.
+- Kein Direktschluss aus Dateitext auf Intention, Struktur, Bedeutung oder Fehlerursache ohne Subagent-Gegenpruefung.
 
 ## Definition Of Done
 - Contract und Gates intakt
