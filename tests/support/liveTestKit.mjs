@@ -5,7 +5,6 @@ import { createNullDriver } from "../../src/kernel/store/persistence.js";
 import { buildLlmReadModel } from "../../tools/llm/readModel.mjs";
 import * as manifest from "../../src/game/manifest.js";
 import { reducer, simStepPatch } from "../../src/game/runtime/index.js";
-import { BRUSH_MODE } from "../../src/game/contracts/ids.js";
 import { getStartWindowRange, getWorldPreset } from "../../src/game/sim/worldPresets.js";
 
 export function sha256Text(text) {
@@ -38,13 +37,12 @@ export function getPlayerStartWindowSquare(state, size = 1) {
 
 export function bootstrapMainRun(store) {
   store.dispatch({ type: "GEN_WORLD", payload: {} });
-  store.dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
   const tiles = getPlayerStartWindowSquare(store.getState(), 1);
   for (const tile of tiles) {
     store.dispatch({ type: "PLACE_WORKER", payload: { x: tile.x, y: tile.y, remove: false } });
   }
-  store.dispatch({ type: "CONFIRM_FOUNDATION", payload: {} });
-  store.dispatch({ type: "CONFIRM_CORE_ZONE", payload: {} });
+  store.dispatch({ type: "SET_UI", payload: { runPhase: "run_active" } });
+  store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
   return tiles;
 }
 

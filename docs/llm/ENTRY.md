@@ -39,6 +39,11 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - `src/kernel/store/createStore.js` und `src/kernel/store/applyPatches.js` sind Pflichtgate fuer State-Mutationen.
 - Diese drei Dateien gehoeren in jede Pflicht-Lesereihenfolge, auch wenn der Haupttask UI/Testing ist.
 
+## Main Loop (Kernel-SoT)
+- WorldGen (seed-basiert): `GEN_WORLD` erzeugt den Startzustand deterministisch aus `meta.seed`.
+- MapBuilder (optional): `RUN_PHASE.MAP_BUILDER` fuer kontrollierte Karten-Overrides.
+- RunActive (RTS/RPG Loop): `SIM_STEP` mutiert nur bei `RUN_PHASE.RUN_ACTIVE`.
+
 ## Harte Invarianten
 - State nur ueber `dispatch()` plus Patches
 - Kernel bleibt einziger Keeper
