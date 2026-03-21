@@ -1,11 +1,9 @@
-import { RUN_PHASE } from "../contracts/ids.js";
 import { getWorldPreset, isTileInStartWindow } from "../sim/worldPresets.js";
 import { areIndicesConnected8 } from "../sim/grid/index.js";
 
 export function evaluateFoundationEligibility(state) {
   const founderBudget = Math.max(0, Number(state?.sim?.founderBudget || 0) | 0);
   const founderPlaced = Math.max(0, Number(state?.sim?.founderPlaced || 0) | 0);
-  const phaseOk = String(state?.sim?.runPhase || "") === RUN_PHASE.GENESIS_SETUP;
   const world = state?.world;
   if (!world?.alive || !world?.lineageId || !world?.founderMask) {
     return {
@@ -49,15 +47,6 @@ export function evaluateFoundationEligibility(state) {
   }
   const founderMaskCount = founderIndices.length;
 
-  if (!phaseOk) {
-    return {
-      eligible: false,
-      founderBudget,
-      founderPlaced,
-      founderMaskCount,
-      reason: "wrong_phase",
-    };
-  }
   if (founderBudget !== 1 || founderPlaced !== 1) {
     return {
       eligible: false,

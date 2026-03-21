@@ -175,7 +175,7 @@ export function handlePlaceWorker(state, action) {
   if (x < 0 || y < 0 || x >= w || y >= h) return [];
   const idx = y * w + x;
   const remove = !!action.payload?.remove;
-  const runPhase = normalizeRunPhase(state.sim.runPhase, RUN_PHASE.GENESIS_SETUP);
+  const runPhase = normalizeRunPhase(state.sim.runPhase, RUN_PHASE.RUN_ACTIVE);
   const isGenesisSetup = runPhase === RUN_PHASE.GENESIS_SETUP;
   if (runPhase === RUN_PHASE.RESULT) return [];
 

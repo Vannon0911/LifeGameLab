@@ -48,7 +48,6 @@ import { selectAreAllTilesFilled, generateMapSeed } from "../mapSeedGen.js";
 import { buildSetOverlayPatches, buildSetWinModePatches } from "./controlActions.js";
 import {
   applyPresetPhysicsOverrides,
-  getStartWindowRange,
   getWorldPreset,
   normalizeWorldPresetId,
 } from "../worldPresets.js";
@@ -72,10 +71,6 @@ import {
   isRoleMarked,
 } from "../grid/index.js";
 import {
-  canConfirmCoreZone,
-  canConfirmFoundation,
-  collectFounderIndices,
-  isGenesisSetupInStandardMode,
   isPreRunGenesisPhase,
   shouldAdvanceSimulation,
 } from "../gates/phaseGates.js";
@@ -88,7 +83,6 @@ import {
 import { processActiveOrderRuntime } from "../../runtime/processActiveOrderRuntime.js";
 import { reduceEconomyActions } from "./economy.js";
 import { reduceRunActions } from "./run.js";
-import { reduceGenesisActions } from "./genesis.js";
 import { reduceZoneActions } from "./zones.js";
 
 export { shouldAdvanceSimulation } from "../gates/phaseGates.js";
@@ -393,7 +387,7 @@ function buildWorldGenerationPatches(state, presetId) {
     makeInitialState().sim,
   );
   nextSim.running = false;
-  nextSim.runPhase = RUN_PHASE.GENESIS_SETUP;
+  nextSim.runPhase = RUN_PHASE.RUN_ACTIVE;
   nextSim.founderBudget = 1;
   nextSim.founderPlaced = 0;
   const stageState = deriveStageState(world, nextSim, {
@@ -477,7 +471,7 @@ export function makeInitialState() {
     },
     world: null,
     sim: {
-      tick: 0, running: false, runPhase: RUN_PHASE.GENESIS_SETUP, founderBudget: 1, founderPlaced: 0,
+      tick: 0, running: false, runPhase: RUN_PHASE.RUN_ACTIVE, founderBudget: 1, founderPlaced: 0,
       selectedUnit: -1,
       unitOrder: { active: false, fromX: -1, fromY: -1, targetX: -1, targetY: -1 },
       lastCommand: "",
@@ -559,11 +553,7 @@ function runWorldSimV4(world, meta, sim, rng) {
 
 export function reducer(state, action, ctx = {}) {
   const { rng } = ctx;
-  const genesisPatches = reduceGenesisActions(state, action, {
-    canConfirmFoundation,
-    RUN_PHASE,
-  });
-  if (genesisPatches) return genesisPatches;
+  if (action.type === "CONFIRM_FOUNDATION" || action.type === "CONFIRM_CORE_ZONE") return [];
 
   const zonePatches = reduceZoneActions(state, action, {
     RUN_PHASE,
@@ -604,116 +594,6 @@ export function reducer(state, action, ctx = {}) {
       const patches = buildWorldGenerationPatches(state);
       return patches;
     }
-
-    case "CONFIRM_CORE_ZONE": {
-      if (!canConfirmCoreZone(state)) return [];
-      const founderIndices = collectFounderIndices(state);
-      if (!founderIndices) return [];
-      const coreZoneMask = cloneTypedArray(state.world.coreZoneMask);
-      for (const idx of founderIndices) coreZoneMask[idx] = 1;
-      const preset = getWorldPreset(state.meta.worldPresetId);
-      const nextZoneUnlockCostEnergy = Math.max(0, Number(preset?.coreZoneUnlockCostEnergy || 0));
-      const alive = cloneTypedArray(state.world.alive);
-      const E = cloneTypedArray(state.world.E);
-      const reserve = cloneTypedArray(state.world.reserve);
-      const link = cloneTypedArray(state.world.link);
-      const lineageId = cloneTypedArray(state.world.lineageId);
-      const hue = cloneTypedArray(state.world.hue);
-      const trait = cloneTypedArray(state.world.trait);
-      const age = cloneTypedArray(state.world.age);
-      const born = cloneTypedArray(state.world.born);
-      const died = cloneTypedArray(state.world.died);
-      const W = state.world.W ? cloneTypedArray(state.world.W) : null;
-      const w = Number(state.world.w || state.meta.gridW || 0) | 0;
-      const h = Number(state.world.h || state.meta.gridH || 0) | 0;
-      const bootstrapWorld = {
-        ...state.world,
-        alive,
-        E,
-        reserve,
-        link,
-        lineageId,
-        hue,
-        trait,
-        age,
-        born,
-        died,
-        W,
-      };
-      const cpuSpawn = [];
-      if (Number(state.sim.cpuBootstrapDone || 0) === 0) {
-        const cpuWindow = preset?.startWindows?.cpu;
-        const cpuLineageId = Number(state.meta.cpuLineageId || 2) | 0;
-        if (cpuWindow) {
-          const cpuRange = getStartWindowRange(cpuWindow, w, h);
-          const cx = Number(cpuRange?.x0 ?? -1) | 0;
-          const cy = Number(cpuRange?.y0 ?? -1) | 0;
-          if (cx >= 0 && cy >= 0 && cx < w && cy < h) {
-            const cIdx = cy * w + cx;
-            if ((Number(alive[cIdx] || 0) | 0) !== 1) {
-              alive[cIdx] = 1;
-              lineageId[cIdx] = cpuLineageId;
-              E[cIdx] = Math.max(0.6, Number(E[cIdx] || 0));
-              reserve[cIdx] = Math.max(0.2, Number(reserve[cIdx] || 0));
-              link[cIdx] = 0;
-              hue[cIdx] = 8;
-              age[cIdx] = 0;
-              if (born) born[cIdx] = 1;
-              if (died) died[cIdx] = 0;
-              cpuSpawn.push(cIdx);
-            }
-          }
-        }
-      }
-      const canonicalState = buildCanonicalRuntimeState(
-        { ...state.world, coreZoneMask, alive, lineageId, link },
-        state.meta.worldPresetId,
-        Number(state.meta.playerLineageId || 1) | 0,
-      );
-      const bootstrapMetrics = deriveBootstrapSimMetrics(
-        {
-          ...bootstrapWorld,
-          coreZoneMask,
-          zoneRole: canonicalState.zoneRole,
-          zoneId: canonicalState.zoneId,
-          zoneMeta: canonicalState.zoneMeta,
-        },
-        state.meta,
-        state.sim,
-      );
-      const patches = [
-        { op: "set", path: "/world/alive", value: alive },
-        { op: "set", path: "/world/E", value: E },
-        { op: "set", path: "/world/reserve", value: reserve },
-        { op: "set", path: "/world/link", value: link },
-        { op: "set", path: "/world/lineageId", value: lineageId },
-        { op: "set", path: "/world/hue", value: hue },
-        { op: "set", path: "/world/trait", value: trait },
-        { op: "set", path: "/world/age", value: age },
-        { op: "set", path: "/world/born", value: born },
-        { op: "set", path: "/world/died", value: died },
-        { op: "set", path: "/world/W", value: W },
-        { op: "set", path: "/world/coreZoneMask", value: coreZoneMask },
-        { op: "set", path: "/sim/unlockedZoneTier", value: 1 },
-        { op: "set", path: "/sim/nextZoneUnlockKind", value: "DNA" },
-        { op: "set", path: "/sim/nextZoneUnlockCostEnergy", value: nextZoneUnlockCostEnergy },
-        { op: "set", path: "/sim/zoneUnlockProgress", value: 0 },
-        { op: "set", path: "/sim/coreEnergyStableTicks", value: 0 },
-        { op: "set", path: "/sim/zone2Unlocked", value: false },
-        { op: "set", path: "/sim/zone2PlacementBudget", value: 0 },
-        { op: "set", path: "/sim/dnaZoneCommitted", value: false },
-        { op: "set", path: "/sim/nextInfraUnlockCostDNA", value: 0 },
-        { op: "set", path: "/sim/cpuBootstrapDone", value: cpuSpawn.length ? 1 : Number(state.sim.cpuBootstrapDone || 0) },
-        { op: "set", path: "/sim/runPhase", value: RUN_PHASE.RUN_ACTIVE },
-        { op: "set", path: "/sim/running", value: true },
-        { op: "set", path: "/sim/aliveCount", value: Number(bootstrapMetrics.aliveCount || 0) },
-        { op: "set", path: "/sim/playerAliveCount", value: Number(bootstrapMetrics.playerAliveCount || 0) },
-        { op: "set", path: "/sim/cpuAliveCount", value: Number(bootstrapMetrics.cpuAliveCount || 0) },
-      ];
-      pushCanonicalRuntimePatches(patches, canonicalState);
-      return patches;
-    }
-
 
     case "TOGGLE_RUNNING": {
       const running = action.payload?.running ?? !state.sim.running;
@@ -952,7 +832,7 @@ export function reducer(state, action, ctx = {}) {
         patches.push({
           op: "set",
           path: "/sim/runPhase",
-          value: normalizeRunPhase(src.runPhase, state?.sim?.runPhase || RUN_PHASE.GENESIS_SETUP),
+          value: normalizeRunPhase(src.runPhase, state?.sim?.runPhase || RUN_PHASE.RUN_ACTIVE),
         });
       }
       return patches;
@@ -983,8 +863,6 @@ export function reducer(state, action, ctx = {}) {
 
       if (remove) {
         if (!prevCores[coreId]) return [];
-        const runPhase = normalizeRunPhase(state.sim.runPhase, RUN_PHASE.GENESIS_SETUP);
-        if (runPhase !== RUN_PHASE.GENESIS_SETUP) return [];
         const nextCores = { ...prevCores };
         delete nextCores[coreId];
         if (!world.alive || !ArrayBuffer.isView(world.alive)) return [];
@@ -1013,10 +891,6 @@ export function reducer(state, action, ctx = {}) {
       }
 
       // Placement guard: founder must be placed and we must be in genesis setup.
-      const runPhase = normalizeRunPhase(state.sim.runPhase, RUN_PHASE.GENESIS_SETUP);
-      if (runPhase !== RUN_PHASE.GENESIS_SETUP) return [];
-      const founderPlaced = Math.max(0, Number(state.sim.founderPlaced || 0) | 0);
-      if (founderPlaced < 1) return [];
       if (state.sim.phase0CorePlaced) return [];
 
       // Validate all footprint tiles are unoccupied.

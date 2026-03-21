@@ -78,6 +78,7 @@ export const BUILDING_KIND = Object.freeze({
 });
 
 export const RUN_PHASE = Object.freeze({
+  // Deprecated legacy phases kept only as aliases for compatibility during migration.
   GENESIS_SETUP: "genesis_setup",
   GENESIS_ZONE: "genesis_zone",
   DNA_ZONE_SETUP: "dna_zone_setup",
@@ -87,8 +88,6 @@ export const RUN_PHASE = Object.freeze({
 });
 
 export const RUN_PHASE_VALUES = Object.freeze([
-  RUN_PHASE.GENESIS_SETUP,
-  RUN_PHASE.GENESIS_ZONE,
   RUN_PHASE.DNA_ZONE_SETUP,
   RUN_PHASE.MAP_BUILDER,
   RUN_PHASE.RUN_ACTIVE,
@@ -231,7 +230,7 @@ export function normalizeOverlayMode(value, fallback = OVERLAY_MODE.NONE) {
   return SETS.overlay.has(v) ? v : fallback;
 }
 
-export function normalizeRunPhase(value, fallback = RUN_PHASE.GENESIS_SETUP) {
+export function normalizeRunPhase(value, fallback = RUN_PHASE.RUN_ACTIVE) {
   const v = String(value || "");
   return SETS.runPhase.has(v) ? v : fallback;
 }
