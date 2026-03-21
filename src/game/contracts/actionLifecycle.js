@@ -198,6 +198,41 @@ export const actionLifecycle = Object.freeze({
     "Map Builder tile edits compile through the same deterministic MapSpec path as full mapspec updates.",
     ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"]
   ),
+  SET_SURFACE_TILE: scaffold(
+    "slice_a",
+    "Scaffolded surface paint action; reducer wiring lands in Slice B/C map builder integration.",
+    ["/map/", "/sim/lastCommand"]
+  ),
+  SET_RESOURCE_TILE: scaffold(
+    "slice_a",
+    "Scaffolded resource paint action; reducer wiring lands in Slice B/C map builder integration.",
+    ["/map/", "/sim/lastCommand"]
+  ),
+  ERASE_TILE_CONTENT: scaffold(
+    "slice_a",
+    "Scaffolded erase action; reducer wiring lands in Slice B/C map builder integration.",
+    ["/map/", "/sim/lastCommand"]
+  ),
+  BUILDER_UNDO: scaffold(
+    "slice_a",
+    "Scaffolded builder undo action; reducer wiring lands in Slice B/C map builder history.",
+    ["/map/", "/sim/lastCommand"]
+  ),
+  BUILDER_REDO: scaffold(
+    "slice_a",
+    "Scaffolded builder redo action; reducer wiring lands in Slice B/C map builder history.",
+    ["/map/", "/sim/lastCommand"]
+  ),
+  SET_BUILDER_BRUSH_SIZE: scaffold(
+    "slice_a",
+    "Scaffolded builder brush sizing action; reducer wiring lands in Slice B/C map builder UI-state.",
+    ["/meta/ui", "/sim/lastCommand"]
+  ),
+  GENERATE_MAP_SEED: scaffold(
+    "slice_a",
+    "Scaffolded deterministic map-seed generation action; reducer wiring lands in Slice B seed tooling.",
+    ["/meta/seed", "/sim/lastCommand"]
+  ),
   SELECT_ENTITY: stable(
     "slice_c",
     "Canonical RTS entity selection action replaces SET_BRUSH for runtime input.",

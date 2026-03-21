@@ -11,6 +11,7 @@
  *   --paths <p1,p2,...>  Dateipfade (kommagetrennt)
  *   --pipeline <name>    Pipeline: default|plan|review|ui|sim|contracts|full
  *   --rounds <n>         Nur fuer red-team-v2: Anzahl Runden
+ *   --max-parallel <n>   Nur fuer red-team-v2: max. gleichzeitige Agent-Runs
  *   --model <spec>       Globales Modell-Override (z.B. "openai:gpt-4o", "anthropic:claude-sonnet-4-20250514")
  *   --provider <name>    Default-Provider: openai|anthropic|ollama
  *   --config <path>      Pfad zu einer Custom-Config-Datei
@@ -45,6 +46,7 @@ const { values: args } = parseArgs({
     "preflight-mode":{ type: "string" },
     "no-preflight":  { type: "boolean" },
     rounds:          { type: "string" },
+    "max-parallel":  { type: "string" },
     help:            { type: "boolean", short: "h" },
   },
   strict: true,
@@ -67,6 +69,7 @@ Optionen:
   --paths, -p <p1,p2,...>  Dateipfade (kommagetrennt)
   --pipeline, -P <name>    Pipeline-Name (default: "default")
   --rounds <n>             Fuer red-team-v2: Anzahl Runden (default: 1)
+  --max-parallel <n>       Fuer red-team-v2: max. gleichzeitige Agent-Runs (default: 6)
   --model, -m <spec>       Globales Modell ("provider:model")
   --provider <name>        Default-Provider (openai|anthropic|ollama)
   --config, -c <path>      Custom-Config-Datei
@@ -179,6 +182,7 @@ console.log(`   Pipeline: ${pipeline}`);
 console.log(`   Paths:    ${paths.length > 0 ? paths.join(", ") : "(keine)"}`);
 if (pipeline === "red-team-v2") {
   console.log(`   Rounds:   ${Math.max(1, Number(args.rounds || 1) | 0)}`);
+  console.log(`   MaxPar:   ${Math.max(1, Number(args["max-parallel"] || 6) | 0)}`);
 }
 console.log(`   Dry-Run:  ${config.dryRun ? "JA" : "NEIN"}`);
 console.log();
@@ -190,6 +194,7 @@ try {
     pipeline,
     paths,
     rounds: Math.max(1, Number(args.rounds || 1) | 0),
+    maxParallel: Math.max(1, Number(args["max-parallel"] || 6) | 0),
     preflight: !args["no-preflight"],
     preflightMode: args["preflight-mode"] || "work",
   });

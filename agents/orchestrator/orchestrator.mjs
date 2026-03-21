@@ -235,8 +235,28 @@ export function createOrchestrator(config = {}) {
     return blockers;
   }
 
+  async function runRoleBatch(specs, task, context, session, maxParallel) {
+    const concurrency = Math.max(1, Number(maxParallel || specs.length) | 0);
+    const out = [];
+    for (let i = 0; i < specs.length; i += concurrency) {
+      const chunk = specs.slice(i, i + concurrency);
+      const chunkResults = await Promise.all(chunk.map(async (spec) => {
+        try {
+          const response = await runAgent(spec, task, context, session);
+          return { ...spec, content: response?.content || "" };
+        } catch (err) {
+          session.addError(spec.resultKey, err);
+          return { ...spec, content: `ERROR: ${err.message}` };
+        }
+      }));
+      out.push(...chunkResults);
+    }
+    return out;
+  }
+
   async function runRedTeamV2(task, options, session) {
     const rounds = Math.max(1, Number(options.rounds || 1) | 0);
+    const maxParallel = Math.max(1, Number(options.maxParallel || 6) | 0);
     const scannerRoles = [
       { roleKey: "protocol-enforcer", resultKey: "scanner-1-protocol" },
       { roleKey: "architecture-guardian", resultKey: "scanner-2-architecture" },
@@ -250,7 +270,7 @@ export function createOrchestrator(config = {}) {
     const monitorRole = { roleKey: "gate-compliance-checker", resultKey: "monitor-gate" };
 
     for (let round = 1; round <= rounds; round++) {
-      log(`RED_TEAM_V2 round ${round}/${rounds} start`);
+      log(`RED_TEAM_V2 round ${round}/${rounds} start (maxParallel=${maxParallel})`);
 
       const scanTask = [
         task,
@@ -262,15 +282,7 @@ export function createOrchestrator(config = {}) {
       ].join("\n");
 
       const scanContext = session.buildContext();
-      const scannerResults = await Promise.all(scannerRoles.map(async (spec) => {
-        try {
-          const response = await runAgent(spec, scanTask, scanContext, session);
-          return { ...spec, content: response?.content || "" };
-        } catch (err) {
-          session.addError(spec.resultKey, err);
-          return { ...spec, content: `ERROR: ${err.message}` };
-        }
-      }));
+      const scannerResults = await runRoleBatch(scannerRoles, scanTask, scanContext, session, maxParallel);
 
       const attackTask = [
         task,
@@ -285,15 +297,7 @@ export function createOrchestrator(config = {}) {
         "Nur reale Luecken schliessen.",
       ].join("\n");
       const attackerContext = scannerResults.map((x) => `--- ${x.resultKey} ---\n${x.content}`).join("\n\n");
-      const attackerResults = await Promise.all(attackerRoles.map(async (spec) => {
-        try {
-          const response = await runAgent(spec, attackTask, attackerContext, session);
-          return { ...spec, content: response?.content || "" };
-        } catch (err) {
-          session.addError(spec.resultKey, err);
-          return { ...spec, content: `ERROR: ${err.message}` };
-        }
-      }));
+      const attackerResults = await runRoleBatch(attackerRoles, attackTask, attackerContext, session, maxParallel);
 
       const blockers = extractConfirmedBlockers(attackerResults);
       const infraBlockers = [...scannerResults, ...attackerResults]

@@ -107,3 +107,6 @@ export function getCursorForTool(toolMode, isErasing, isPanning) {
       return CURSOR_ICONS.crosshair;
   }
 }
+
+// Backward-compatible alias used by ui.js
+export const getCursorStyle = getCursorForTool;

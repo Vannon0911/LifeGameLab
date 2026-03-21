@@ -1,83 +1,47 @@
 import assert from "node:assert/strict";
-import net from "node:net";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "playwright";
+import { startLocalHttpServer } from "./support/localHttpServer.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const port = 8080;
-const baseUrl = `http://127.0.0.1:${port}`;
-
-function waitForPortOpen(host, targetPort, timeoutMs = 15_000) {
-  const started = Date.now();
-  return new Promise((resolve, reject) => {
-    const probe = () => {
-      const socket = new net.Socket();
-      socket.setTimeout(800);
-      socket.once("connect", () => {
-        socket.destroy();
-        resolve(true);
-      });
-      socket.once("timeout", () => socket.destroy());
-      socket.once("error", () => socket.destroy());
-      socket.once("close", () => {
-        if (Date.now() - started > timeoutMs) {
-          reject(new Error(`port ${targetPort} did not open within ${timeoutMs}ms`));
-        } else {
-          setTimeout(probe, 150);
-        }
-      });
-      socket.connect(targetPort, host);
-    };
-    probe();
-  });
-}
-
-function startLocalServer() {
-  const cmd = process.platform === "win32" ? "python" : "python3";
-  return spawn(cmd, ["-m", "http.server", String(port)], {
-    cwd: root,
-    stdio: "ignore",
-  });
-}
 
 let server = null;
 let browser = null;
 
 try {
-  server = startLocalServer();
-  await waitForPortOpen("127.0.0.1", port, 15_000);
+  server = await startLocalHttpServer(root);
 
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
-  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(350);
+  await page.goto(server.baseUrl, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => {
+    const store = globalThis.__LIFEGAMELAB_STORE__;
+    const ui = globalThis.__LIFEGAMELAB_UI__;
+    return !!store && !!ui;
+  }, { timeout: 5000 });
 
-  const result = await page.evaluate(async () => {
-    const [{ createStore }, manifestMod, logicMod, uiMod] = await Promise.all([
-      import("/src/kernel/store/createStore.js"),
-      import("/src/game/manifest.js"),
-      import("/src/game/runtime/index.js"),
-      import("/src/game/ui/ui.js"),
-    ]);
-
-    const app = document.getElementById("app") || document.body;
-    app.innerHTML = "";
-    const canvas = document.createElement("canvas");
-    canvas.id = "cv";
-    canvas.width = 640;
-    canvas.height = 360;
-    app.appendChild(canvas);
-
-    const store = createStore(manifestMod.manifest, { reducer: logicMod.reducer, simStep: logicMod.simStepPatch });
-    new uiMod.UI(store, canvas);
+  const result = await page.evaluate(() => {
+    const store = globalThis.__LIFEGAMELAB_STORE__;
+    const ui = globalThis.__LIFEGAMELAB_UI__;
+    if (!store || !ui) {
+      return Object.freeze({
+        cycleFalse: { initialExpertMode: false, error: "runtime_hooks_missing" },
+        cycleTrue: { initialExpertMode: true, error: "runtime_hooks_missing" },
+      });
+    }
 
     const getButtons = () => {
-      const builderButton = document.querySelector('button[aria-label="Map Builder umschalten"]');
+      const builderButton =
+        document.querySelector('button[aria-label="Builder öffnen"]') ||
+        document.querySelector('button[aria-label="Map Builder umschalten"]') ||
+        Array.from(document.querySelectorAll("button")).find((btn) => {
+          const text = String(btn.textContent || "").trim().toLowerCase();
+          return text === "bauen" || text.includes("map builder");
+        });
       const exitButton = Array.from(document.querySelectorAll("button")).find(
         (btn) => String(btn.textContent || "").trim() === "Schliessen",
       );
@@ -146,9 +110,9 @@ try {
       await browser.close();
     } catch {}
   }
-  if (server && !server.killed) {
+  if (server) {
     try {
-      server.kill("SIGTERM");
+      server.stop();
     } catch {}
   }
 }
