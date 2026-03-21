@@ -17,6 +17,11 @@ function runGit(command) {
   ).trim();
 }
 
+function failGuard(message) {
+  console.error(`[git-llm-guard] ${message}`);
+  process.exit(1);
+}
+
 function toCsv(paths) {
   return paths.map((p) => p.replace(/\\/g, "/")).join(",");
 }
@@ -26,27 +31,8 @@ function isEntryLockDrift(output) {
   return text.includes("Entry hash drift") || text.includes("Read-order drift");
 }
 
-function runUpdateLockOrFail() {
-  const res = spawnSync(process.execPath, [preflightScript, "update-lock"], {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    timeout: 30_000,
-  });
-  if (res.stdout) process.stdout.write(res.stdout);
-  if (res.stderr) process.stderr.write(res.stderr);
-  if (res.error) {
-    console.error(`[git-llm-guard] update-lock execution failed: ${res.error.message}`);
-    process.exit(1);
-  }
-  if (res.status !== 0) {
-    console.error("[git-llm-guard] blocked during update-lock.");
-    process.exit(res.status ?? 1);
-  }
-}
-
 function listChangedPathsForPreCommit() {
-  const raw = runGit("git diff --cached --name-only --diff-filter=ACMR");
+  const raw = runGit("git diff --cached --name-only --diff-filter=ACMRDT");
   if (!raw) return [];
   return raw.split(/\r?\n/g).map((v) => v.trim()).filter(Boolean);
 }
@@ -62,12 +48,14 @@ function listChangedPathsForPrePush() {
   try {
     mergeBase = runGit(`git merge-base HEAD ${upstream}`);
   } catch {
-    mergeBase = "";
+    failGuard(`blocked: cannot resolve merge-base for pre-push (upstream='${upstream || "unknown"}'). Configure upstream and retry.`);
   }
-  if (!mergeBase) return [];
+  if (!mergeBase) {
+    failGuard(`blocked: empty merge-base for pre-push (upstream='${upstream || "unknown"}').`);
+  }
   const commitsRaw = runGit(`git rev-list --reverse ${mergeBase}..HEAD`);
   if (!commitsRaw) return [];
-  return commitsRaw
+  const entries = commitsRaw
     .split(/\r?\n/g)
     .map((v) => v.trim())
     .filter(Boolean)
@@ -76,10 +64,14 @@ function listChangedPathsForPrePush() {
       paths: listPathsForCommit(commit),
     }))
     .filter((entry) => entry.paths.length > 0);
+  if (entries.length === 0) {
+    failGuard("blocked: pre-push found commits but no verifiable changed paths. Re-run with a clean index and valid upstream.");
+  }
+  return entries;
 }
 
 function listPathsForCommit(commit) {
-  const raw = runGit(`git diff-tree --no-commit-id --name-only -r --diff-filter=ACMR ${commit}`);
+  const raw = runGit(`git diff-tree --no-commit-id --name-only -r --diff-filter=ACMRDT ${commit}`);
   if (!raw) return [];
   return raw.split(/\r?\n/g).map((v) => v.trim()).filter(Boolean);
 }
@@ -100,19 +92,7 @@ function runCheck(paths) {
     process.exit(1);
   }
   if (res.status !== 0 && isEntryLockDrift(`${res.stdout || ""}\n${res.stderr || ""}`)) {
-    runUpdateLockOrFail();
-    res = spawnSync(process.execPath, [preflightScript, "check", "--paths", csvPaths], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 30_000,
-    });
-    if (res.stdout) process.stdout.write(res.stdout);
-    if (res.stderr) process.stderr.write(res.stderr);
-    if (res.error) {
-      console.error(`[git-llm-guard] preflight execution failed: ${res.error.message}`);
-      process.exit(1);
-    }
+    failGuard("blocked: entry lock drift detected during check. Run 'node tools/llm-preflight.mjs update-lock', stage the lock file, then rerun entry/ack/check.");
   }
   if (res.status !== 0) {
     console.error(
@@ -138,19 +118,7 @@ function runPreflight(command, paths, extraArgs = []) {
     process.exit(1);
   }
   if (res.status !== 0 && isEntryLockDrift(`${res.stdout || ""}\n${res.stderr || ""}`)) {
-    runUpdateLockOrFail();
-    res = spawnSync(process.execPath, [preflightScript, command, "--paths", csvPaths, ...extraArgs], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 30_000,
-    });
-    if (res.stdout) process.stdout.write(res.stdout);
-    if (res.stderr) process.stderr.write(res.stderr);
-    if (res.error) {
-      console.error(`[git-llm-guard] preflight execution failed: ${res.error.message}`);
-      process.exit(1);
-    }
+    failGuard(`blocked: entry lock drift detected during ${command}. Run 'node tools/llm-preflight.mjs update-lock', stage the lock file, then rerun entry/ack/check.`);
   }
   if (res.status !== 0) {
     console.error(

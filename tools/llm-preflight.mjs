@@ -105,7 +105,7 @@ function parseModeFlag(args) {
 }
 
 function parseScopeFlag(args) {
-  const ix = args.indexOf("--task-scope") >= 0 ? args.indexOf("--task-scope") : args.indexOf("--task");
+  const ix = args.indexOf("--task-scope");
   if (ix < 0) return [];
   const raw = String(args[ix + 1] || "").trim();
   if (!raw) return [];
@@ -495,12 +495,14 @@ function doAck(taskCtx, entryRef, requiredEntries) {
 }
 
 function doCheck(taskCtx, entryRef, requiredEntries) {
-  const session = readSessionOrFail(entryRef, taskCtx, requiredEntries, { autoReclassify: true });
+  const session = readSessionOrFail(entryRef, taskCtx, requiredEntries, { autoReclassify: false });
   const challenge = readChallengeOrFail(session, entryRef, taskCtx, requiredEntries);
-  const now = new Date().toISOString();
+  if (!fs.existsSync(ackPath)) {
+    fail("Missing ack entry. Run ack before check.");
+  }
   const ack = readAckOrInit(entryRef);
 
-  let scopeAck = ack.scopes?.[taskCtx.scopeKey];
+  const scopeAck = ack.scopes?.[taskCtx.scopeKey];
   const ackInvalid =
     !scopeAck ||
     !sameSet(scopeAck.taskScope, taskCtx.taskScope) ||
@@ -510,48 +512,11 @@ function doCheck(taskCtx, entryRef, requiredEntries) {
     String(scopeAck.proofHash || "") !== String(challenge.expectedProofHash || "");
 
   if (ackInvalid) {
-    console.warn(`[llm-preflight] AUTO_ACK_REFRESH scope=${taskCtx.scopeKey}`);
-    upsertAckScope(ack, taskCtx, requiredEntries, session, challenge, now);
-    scopeAck = ack.scopes[taskCtx.scopeKey];
+    fail(`Ack invalid for scope '${taskCtx.scopeKey}'. Re-run entry and ack for current paths.`);
   }
-
-  const rotated = writeProofChallenge(entryRef, taskCtx, requiredEntries, session.mode, challenge.rel);
-  if (fs.existsSync(challenge.abs)) {
-    fs.rmSync(challenge.abs, { force: true });
-  }
-
-  const nextSession = {
-    ...session,
-    taskScope: taskCtx.taskScope,
-    scopeKey: taskCtx.scopeKey,
-    requiredEntries,
-    classifiedPaths: taskCtx.paths,
-    challengeId: rotated.challengeId,
-    challengeFile: rotated.challengeFile,
-    lastVerifiedAt: now,
-  };
-  fs.writeFileSync(sessionPath, `${JSON.stringify(nextSession, null, 2)}\n`, "utf8");
-
-  ack.entryPath = entryRef.entryPath;
-  ack.sha256 = entryRef.sha256;
-  ack.ackedAt = now;
-  ack.scopes[taskCtx.scopeKey] = {
-    ...scopeAck,
-    taskScope: taskCtx.taskScope,
-    scopeKey: taskCtx.scopeKey,
-    requiredEntries,
-    proofHash: rotated.proofHash,
-    challengeId: rotated.challengeId,
-    challengeFile: rotated.challengeFile,
-    ackedAt: now,
-    mode: session.mode,
-    classifiedPaths: taskCtx.paths,
-  };
-  ack.tasks[taskCtx.scopeKey] = ack.scopes[taskCtx.scopeKey];
-  fs.writeFileSync(ackPath, `${JSON.stringify(ack, null, 2)}\n`, "utf8");
 
   console.log(
-    `[llm-preflight] CHECK_OK scope=${taskCtx.scopeKey} mode=${session.mode} proof=${rotated.challengeId}`,
+    `[llm-preflight] CHECK_OK scope=${taskCtx.scopeKey} mode=${session.mode} proof=${challenge.payload.challengeId}`,
   );
 }
 

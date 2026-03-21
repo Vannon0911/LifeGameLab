@@ -53,6 +53,7 @@ Pipelines definieren die Reihenfolge der Agent-Ausfuehrung. Steps koennen sequen
 | `sim` | Orchestrator → Router → SIM-Coder → [Protocol + Arch] → Gate | Simulations-Aenderungen |
 | `contracts` | Orchestrator → Router → Contract-Coder → [Protocol + Arch] → Gate | Contract-Aenderungen |
 | `full` | Orchestrator → Router → DomainCoord → Coder → [Protocol + Arch + DocAudit] → Quality → Gate | Vollstaendiger Durchlauf |
+| `red-team-v2` | Runde: [Protocol + Arch + Quality] → [Arbiter + SIM + Contract] → Gate + Blocker-Report | Red-Team Gegenbeweis-Loop |
 
 `[A + B + C]` = parallele Ausfuehrung.
 
@@ -151,6 +152,7 @@ Optionen:
   --validate               Nur Config validieren
   --preflight-mode <mode>  Preflight-Modus (work|security|audit)
   --no-preflight           Preflight ueberspringen
+  --rounds <n>             Nur fuer red-team-v2: Anzahl Runden
   --list-pipelines         Pipelines auflisten
   --list-roles             Rollen auflisten
   --help, -h               Hilfe

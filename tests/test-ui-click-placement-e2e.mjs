@@ -18,7 +18,11 @@ try {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
   await page.goto(server.baseUrl, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(500);
+  await page.waitForFunction(() => {
+    const ui = globalThis.__LIFEGAMELAB_UI__;
+    const store = globalThis.__LIFEGAMELAB_STORE__;
+    return !!store && !!ui && !!ui._rInfo;
+  }, { timeout: 5000 });
 
   const clickTarget = await page.evaluate(async () => {
     const store = globalThis.__LIFEGAMELAB_STORE__;

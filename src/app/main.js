@@ -274,6 +274,23 @@ const RenderManager = {
 const ui     = new UI(store, canvas);
 globalThis.__LIFEGAMELAB_UI__ = ui;
 
+// Prime render info once so runtime click hooks have deterministic coordinates immediately.
+try {
+  const initialRenderInfo = render(canvas, store.getState(), {
+    quality: 3,
+    dprCap: 2,
+    alpha: 1,
+    fps: 60,
+    frameMs: 16.7,
+    renderMs: 5,
+    targetMinFps: 30,
+    targetMaxFps: 60,
+  });
+  if (initialRenderInfo) ui.setRenderInfo(initialRenderInfo);
+} catch (err) {
+  console.warn("[runtime] initial render prime failed:", String(err?.message || err));
+}
+
 // ── Game Loop ────────────────────────────────────────────
 // Note: performance.now() is allowed in the Loop (outside Reducer) for pacing
 let lastTs = globalThis.performance ? globalThis.performance.now() : 0;

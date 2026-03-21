@@ -10,6 +10,8 @@
  *   --task <text>        Aufgabenbeschreibung (Pflicht)
  *   --paths <p1,p2,...>  Dateipfade (kommagetrennt)
  *   --pipeline <name>    Pipeline: default|plan|review|ui|sim|contracts|full
+ *   --rounds <n>         Nur fuer red-team-v2: Anzahl Runden
+ *   --max-parallel <n>   Nur fuer red-team-v2: max. gleichzeitige Agent-Runs
  *   --model <spec>       Globales Modell-Override (z.B. "openai:gpt-4o", "anthropic:claude-sonnet-4-20250514")
  *   --provider <name>    Default-Provider: openai|anthropic|ollama
  *   --config <path>      Pfad zu einer Custom-Config-Datei
@@ -43,6 +45,8 @@ const { values: args } = parseArgs({
     "list-roles":    { type: "boolean" },
     "preflight-mode":{ type: "string" },
     "no-preflight":  { type: "boolean" },
+    rounds:          { type: "string" },
+    "max-parallel":  { type: "string" },
     help:            { type: "boolean", short: "h" },
   },
   strict: true,
@@ -64,6 +68,8 @@ Pflicht:
 Optionen:
   --paths, -p <p1,p2,...>  Dateipfade (kommagetrennt)
   --pipeline, -P <name>    Pipeline-Name (default: "default")
+  --rounds <n>             Fuer red-team-v2: Anzahl Runden (default: 1)
+  --max-parallel <n>       Fuer red-team-v2: max. gleichzeitige Agent-Runs (default: 6)
   --model, -m <spec>       Globales Modell ("provider:model")
   --provider <name>        Default-Provider (openai|anthropic|ollama)
   --config, -c <path>      Custom-Config-Datei
@@ -95,6 +101,9 @@ Beispiele:
 
   # Nur Planung
   node agents/orchestrator/cli.mjs -t "Plan refactoring" -P plan
+
+  # Red-Team v2, 3 Scanner + 3 Angreifer in 2 Runden
+  node agents/orchestrator/cli.mjs -t "Red Team Test V2" -P red-team-v2 --rounds 2 -v
 `);
   process.exit(0);
 }
@@ -171,6 +180,10 @@ console.log(`\n🚀 Agent Orchestrator`);
 console.log(`   Task:     ${args.task}`);
 console.log(`   Pipeline: ${pipeline}`);
 console.log(`   Paths:    ${paths.length > 0 ? paths.join(", ") : "(keine)"}`);
+if (pipeline === "red-team-v2") {
+  console.log(`   Rounds:   ${Math.max(1, Number(args.rounds || 1) | 0)}`);
+  console.log(`   MaxPar:   ${Math.max(1, Number(args["max-parallel"] || 6) | 0)}`);
+}
 console.log(`   Dry-Run:  ${config.dryRun ? "JA" : "NEIN"}`);
 console.log();
 
@@ -180,6 +193,8 @@ try {
   const session = await orchestrator.run(args.task, {
     pipeline,
     paths,
+    rounds: Math.max(1, Number(args.rounds || 1) | 0),
+    maxParallel: Math.max(1, Number(args["max-parallel"] || 6) | 0),
     preflight: !args["no-preflight"],
     preflightMode: args["preflight-mode"] || "work",
   });

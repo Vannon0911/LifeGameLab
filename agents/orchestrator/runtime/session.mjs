@@ -5,9 +5,10 @@
  */
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const REPO_ROOT = new URL("../../../", import.meta.url).pathname;
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const SESSION_DIR = join(REPO_ROOT, ".llm", "orchestrator-sessions");
 
 /**

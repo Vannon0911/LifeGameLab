@@ -111,5 +111,5 @@ function assertSafePath(path) {
 }
 
 function isUnsafeSegment(seg) {
-  return seg === "__proto__" || seg === "prototype" || seg === "constructor" || seg.length === 0;
+  return seg === "__proto__" || seg === "prototype" || seg === "constructor" || seg === ".." || seg === "." || seg.length === 0;
 }

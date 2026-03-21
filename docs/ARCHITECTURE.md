@@ -45,12 +45,11 @@
 - `SET_MAPSPEC` and `SET_MAP_TILE` are now active reducer paths; the remaining RTS placeholders stay no-op until their slices land.
 - Replacement planning is machine-readable in contracts and human-readable in `docs/traceability/`.
 
-## Slice C Minimal UI Runtime
-- UI shell now runs as minimal interaction surface without panel stacks.
-- Canvas interactions now expose direct founder/worker placement and worker movement flow.
-- Legacy founder placement now dispatches `PLACE_WORKER`; `PLACE_CELL` is no longer part of the active runtime surface.
-- Movement interpolation remains renderer-only visual smoothing while simulation stays deterministic and tick-bound.
-- Map Builder now has a dedicated visible panel, tile palette, action feedback, and cursor highlight without bypassing dispatch-only state writes.
+## Slice C Minimal UI Runtime (Minimal RTS Layout)
+- UI runtime uses a modular structure: `ui.js`, `ui.input.js`, `ui.builder.js`, `ui.orders.js`, `ui.stats.js`, and `ui.constants.js`.
+- The interface is strictly divided into two areas: a minimal left sidebar for essential RTS metrics (`ui.stats.js`) and the main interaction canvas.
+- Top bars, headers, and floating panels are completely removed.
+- Interaction on the grid remains 100% canvas-based. All feedback strings are statically defined in `ui.constants.js` (`UI_STRINGS`).
 
 ## Slice C Builder Persistence
 - Default web persistence now keeps `map` alongside `meta`; `world` and `sim` still reset on reload.
