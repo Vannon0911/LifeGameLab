@@ -2,9 +2,9 @@
 
 | Action | Write Paths |
 |---|---|
-| GEN_WORLD | `/meta/worldPresetId`, `/meta/physics`, `/meta/playerLineageId`, `/meta/cpuLineageId`, `/world/`, `/world/actionMap`, `/sim/` |
+| GEN_WORLD | `/map/`, `/meta/gridW`, `/meta/gridH`, `/meta/worldPresetId`, `/meta/physics`, `/meta/playerLineageId`, `/meta/cpuLineageId`, `/world/`, `/world/actionMap`, `/sim/` |
 | CONFIRM_FOUNDATION | `/sim/runPhase`, `/sim/running` |
-| CONFIRM_CORE_ZONE | `/world/alive`, `/world/E`, `/world/reserve`, `/world/link`, `/world/lineageId`, `/world/hue`, `/world/trait`, `/world/age`, `/world/born`, `/world/died`, `/world/W`, `/world/coreZoneMask`, `/world/zoneRole`, `/world/zoneId`, `/world/zoneMeta`, `/sim/unlockedZoneTier`, `/sim/nextZoneUnlockKind`, `/sim/nextZoneUnlockCostEnergy`, `/sim/zoneUnlockProgress`, `/sim/coreEnergyStableTicks`, `/sim/zone2Unlocked`, `/sim/zone2PlacementBudget`, `/sim/dnaZoneCommitted`, `/sim/nextInfraUnlockCostDNA`, `/sim/cpuBootstrapDone`, `/sim/aliveCount`, `/sim/playerAliveCount`, `/sim/cpuAliveCount`, `/sim/runPhase`, `/sim/running` |
+| CONFIRM_CORE_ZONE | `/world/alive`, `/world/E`, `/world/reserve`, `/world/link`, `/world/lineageId`, `/world/hue`, `/world/trait`, `/world/age`, `/world/born`, `/world/died`, `/world/W`, `/world/coreZoneMask`, `/world/zoneRole`, `/world/zoneId`, `/world/zoneMeta`, `/sim/patternCatalog`, `/sim/patternBonuses`, `/sim/unlockedZoneTier`, `/sim/nextZoneUnlockKind`, `/sim/nextZoneUnlockCostEnergy`, `/sim/zoneUnlockProgress`, `/sim/coreEnergyStableTicks`, `/sim/zone2Unlocked`, `/sim/zone2PlacementBudget`, `/sim/dnaZoneCommitted`, `/sim/nextInfraUnlockCostDNA`, `/sim/cpuBootstrapDone`, `/sim/aliveCount`, `/sim/playerAliveCount`, `/sim/cpuAliveCount`, `/sim/runPhase`, `/sim/running` |
 | TOGGLE_DNA_ZONE_WORKER | `/world/dnaZoneMask`, `/sim/zone2PlacementBudget` |
 | BUILD_INFRA_PATH | `/world/infraCandidateMask` |
 | TOGGLE_RUNNING | `/sim/running` |
@@ -12,9 +12,15 @@
 | SET_SPEED | `/meta/speed` |
 | SET_SEED | `/meta/seed` |
 | SET_SIZE | `/meta/gridW`, `/meta/gridH` |
-| SET_WORLD_PRESET | `/map/`, `/meta/gridW`, `/meta/gridH`, `/meta/worldPresetId` |
 | SET_MAPSPEC | `/map/`, `/meta/gridW`, `/meta/gridH`, `/meta/worldPresetId` |
 | SET_MAP_TILE | `/map/`, `/meta/gridW`, `/meta/gridH`, `/meta/worldPresetId` |
+| SET_SURFACE_TILE | `/map/spec/surfacePlan`, `/map/spec/generatedSeed` |
+| SET_RESOURCE_TILE | `/map/spec/resourcePlan`, `/map/spec/generatedSeed` |
+| ERASE_TILE_CONTENT | `/map/spec/surfacePlan`, `/map/spec/resourcePlan`, `/map/spec/generatedSeed` |
+| BUILDER_UNDO | `/map/spec/surfacePlan`, `/map/spec/resourcePlan`, `/map/spec/generatedSeed` |
+| BUILDER_REDO | `/map/spec/surfacePlan`, `/map/spec/resourcePlan`, `/map/spec/generatedSeed` |
+| SET_BUILDER_BRUSH_SIZE | `/meta/brushRadius` |
+| GENERATE_MAP_SEED | `/map/spec/generatedSeed` |
 | SET_RENDER_MODE | `/meta/renderMode` |
 | SET_PHYSICS | `/meta/physics` |
 | SET_BRUSH | `/meta/brushMode`, `/meta/brushRadius` |
@@ -24,7 +30,6 @@
 | SET_TILE | `/world/R` |
 | SELECT_ENTITY | `/sim/selectedEntity` |
 | PLACE_WORKER | `/world/alive`, `/world/E`, `/world/reserve`, `/world/link`, `/world/lineageId`, `/world/hue`, `/world/trait`, `/world/age`, `/world/born`, `/world/died`, `/world/W`, `/world/founderMask`, `/sim/playerDNA`, `/sim/founderPlaced` |
-| ISSUE_ORDER | `/sim/selectedUnit`, `/sim/selectedEntity`, `/sim/unitOrder`, `/sim/activeOrder`, `/sim/lastCommand` |
 | ISSUE_MOVE | `/sim/selectedUnit`, `/sim/selectedEntity`, `/sim/unitOrder`, `/sim/activeOrder`, `/sim/lastCommand` |
 | PLACE_CORE | `/world/cores`, `/sim/phase0PlantsDelivered`, `/sim/phase0CorePlaced`, `/sim/lastCommand`, `/world/alive`, `/world/E`, `/world/lineageId` |
 | PLACE_BUILDING | `/world/buildings`, `/sim/lastCommand` |
@@ -40,6 +45,5 @@
 | SET_MUTATOR_PATTERN | `/sim/mutatorDraft` |
 | COMMIT_MUTATION | `/sim/mutatorDraft`, `/world/fighters`, `/sim/lastCommand` |
 | SET_WIN_MODE | `/sim/winMode` |
-| SET_OVERLAY | `/meta/activeOverlay` |
-Action Schema Count: 39
-Mutation Matrix Count: 39
+Action Schema Count: 43
+Mutation Matrix Count: 43

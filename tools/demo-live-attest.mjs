@@ -371,7 +371,7 @@ try {
     await page.mouse.click(workerA.x, workerA.y);
     await page.mouse.click(detour.x, detour.y);
     const cmdDetour = await stateCore(page);
-    if (!cmdDetour.lastCommand.startsWith("ISSUE_ORDER:")) {
+    if (!cmdDetour.lastCommand.startsWith("ISSUE_MOVE:")) {
       await failWithState(page, `ROUND_${round}_DETOUR_ORDER_NOT_ISSUED`, { lastCommand: cmdDetour.lastCommand });
     }
 
@@ -386,7 +386,7 @@ try {
     await page.mouse.click(workerB.x, workerB.y);
     await page.mouse.click(resA.x, resA.y);
     const cmdA = await stateCore(page);
-    if (!cmdA.lastCommand.startsWith("ISSUE_ORDER:")) {
+    if (!cmdA.lastCommand.startsWith("ISSUE_MOVE:")) {
       await failWithState(page, `ROUND_${round}_A_ORDER_NOT_ISSUED`, { lastCommand: cmdA.lastCommand });
     }
 
@@ -403,7 +403,7 @@ try {
     await page.mouse.click(workerC.x, workerC.y);
     await page.mouse.click(resB.x, resB.y);
     const cmdB = await stateCore(page);
-    if (!cmdB.lastCommand.startsWith("ISSUE_ORDER:")) {
+    if (!cmdB.lastCommand.startsWith("ISSUE_MOVE:")) {
       await failWithState(page, `ROUND_${round}_B_ORDER_NOT_ISSUED`, { lastCommand: cmdB.lastCommand });
     }
 

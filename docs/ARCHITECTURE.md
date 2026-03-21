@@ -1,6 +1,6 @@
 # ARCHITECTURE
 
-**APP_VERSION:** 0.8.6
+**APP_VERSION:** 0.9.0
 
 ## SoT Rule
 - `src/game/contracts/manifest.js` stays the executable contract Source of Truth.

@@ -85,20 +85,6 @@ assert.equal(invalidSnapshot.state.map.spec.gridW, 8, "invalid widths must clamp
 assert.equal(invalidSnapshot.state.map.spec.gridH, 256, "oversized heights must clamp to the maximum deterministic size");
 assert.equal(invalidSnapshot.state.map.spec.name, "", "missing names must sanitize to empty string");
 
-const legacyPresetStore = createDeterministicStore({ seed: "mapspec-legacy" });
-legacyPresetStore.dispatch({ type: "SET_WORLD_PRESET", payload: { presetId: "dry_basin" } });
-const legacyPresetSnapshot = snapshotStore(legacyPresetStore);
-assert.equal(legacyPresetSnapshot.state.map.activeSource, "legacy_preset", "SET_WORLD_PRESET must keep legacy source semantics while syncing MapSpec state");
-assert.equal(legacyPresetSnapshot.state.map.spec.presetId, "dry_basin", "SET_WORLD_PRESET must sync the legacy preset into map.spec");
-assert.equal(
-  legacyPresetSnapshot.state.world?.mapSpecSnapshot?.presetId ?? "",
-  "",
-  "SET_WORLD_PRESET must not mutate world directly before GEN_WORLD",
-);
-legacyPresetStore.dispatch({ type: "GEN_WORLD", payload: {} });
-const legacyPresetAfterGen = snapshotStore(legacyPresetStore);
-assert.equal(legacyPresetAfterGen.state.world.mapSpecSnapshot.presetId, "dry_basin", "GEN_WORLD must publish the legacy preset snapshot");
-
 console.log(
   `MAPSPEC_GEN_WORLD_OK same=${sameSeedLeft.afterGenWorld.signature}:${sameSeedLeft.afterGenWorld.signatureMaterialHash}:${sameSeedLeft.afterGenWorld.readModelHash} cross=${crossSpec.afterGenWorld.signature}:${crossSpec.afterGenWorld.signatureMaterialHash}:${crossSpec.afterGenWorld.readModelHash} invalid=${invalidSnapshot.state.map.validation.summary}`,
 );

@@ -18,7 +18,7 @@
 - `SET_MAPSPEC` now has reducer wiring and no longer behaves as a scaffold no-op.
 - `GEN_WORLD` now compiles from `map.spec` when MapSpec is active and syncs legacy preset runs into the same map snapshot.
 - `SET_MAPSPEC` and `SET_MAP_TILE` now have active UI dispatch sources and dedicated dispatch-source regression guards.
-- Builder pipeline now keeps world mutation behind `GEN_WORLD`; `SET_MAPSPEC`, `SET_MAP_TILE`, and `SET_WORLD_PRESET` only compile/sync map/meta state.
+- Builder pipeline now keeps world mutation behind `GEN_WORLD`; `SET_MAPSPEC` and `SET_MAP_TILE` only compile/sync map/meta state.
 - Slice C visual baseline upgraded to 0.9.0: Implemented minimal RTS layout. The top-bar is completely removed. A minimal sidebar (`ui.stats.js`) exclusively displays necessary RTS statistics alongside the active canvas grid.
 - String extraction retained: `UI_STRINGS` in `ui.constants.js` continues to serve all feedback messages.
 - Module separation restored: `ui.input.js`, `ui.builder.js`, `ui.stats.js` and `ui.orders.js` form a clean layer.
@@ -76,7 +76,7 @@ Both files## Slice C Minimal UI Runtime (Minimal RTS Layout)
 1. `todo.slice_b.dispatch_sources` (`done 2026-03-19`)
  Erfuellt: `SET_MAPSPEC` und `SET_MAP_TILE` haben aktive UI-Dispatch-Quellen, `dataflow` ist befuellt, Regressionstests vorhanden.
 2. `todo.slice_b.builder_pipeline` (`done 2026-03-19`)
- Erfuellt: Builder-Flow laeuft ueber `MapSpec -> compile -> GEN_WORLD`; direkte Weltmutation ist aus `SET_MAPSPEC`/`SET_MAP_TILE`/`SET_WORLD_PRESET` entfernt.
+ Erfuellt: Builder-Flow laeuft ueber `MapSpec -> compile -> GEN_WORLD`; direkte Weltmutation ist aus `SET_MAPSPEC`/`SET_MAP_TILE` entfernt.
 3. `todo.slice_c.phase0_replacement`
 Done wenn `CONFIRM_FOUNDATION`, `CONFIRM_CORE_ZONE`, `PLACE_WORKER` und `SET_BRUSH` durch den Phase-0-Ersatz technisch abgeloest sind und ihre Removal-Gates geschlossen werden koennen.
 4. `todo.truth.regression_wrap`

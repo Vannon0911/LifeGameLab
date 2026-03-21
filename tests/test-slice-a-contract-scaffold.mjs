@@ -60,8 +60,13 @@ for (const actionType of dispatchWiredActions) {
 
 assert.deepEqual(dataflow.actions.ISSUE_MOVE?.dispatchSources || [], ["src/game/ui/ui.js"], "ISSUE_MOVE must only dispatch from the live UI runtime path");
 assert.deepEqual(dataflow.actions.PLACE_WORKER?.dispatchSources || [], ["src/game/ui/ui.js"], "PLACE_WORKER must only dispatch from the live UI runtime path");
-assert.equal(actionLifecycle.ISSUE_ORDER?.status, ACTION_LIFECYCLE_STATUS.RENAME, "ISSUE_ORDER must remain a compatibility rename, not an active source of truth");
-assert.deepEqual(dataflow.actions.ISSUE_ORDER?.dispatchSources || [], [], "ISSUE_ORDER must be disarmed from active dispatch sources");
+
+for (const removedActionType of ["ISSUE_ORDER", "SET_OVERLAY"]) {
+  assert.equal(Object.prototype.hasOwnProperty.call(actionSchema, removedActionType), false, `${removedActionType} must be removed from actionSchema`);
+  assert.equal(Object.prototype.hasOwnProperty.call(mutationMatrix, removedActionType), false, `${removedActionType} must be removed from mutationMatrix`);
+  assert.equal(Object.prototype.hasOwnProperty.call(actionLifecycle, removedActionType), false, `${removedActionType} must be removed from actionLifecycle`);
+  assert.equal(Object.prototype.hasOwnProperty.call(dataflow.actions, removedActionType), false, `${removedActionType} must be removed from dataflow`);
+}
 
 for (const actionType of ["CONFIRM_FOUNDATION", "SET_BRUSH"]) {
   assert.equal(actionLifecycle[actionType]?.status, ACTION_LIFECYCLE_STATUS.DEPRECATED, `${actionType} must stay disarmed as a deprecated action`);
