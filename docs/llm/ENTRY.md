@@ -22,7 +22,7 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 
 ## Preflight-Vertrag
 - Jeder Task wird ueber `docs/llm/TASK_ENTRY_MATRIX.json` dependency-basiert als `taskScope[]` klassifiziert.
-- Die technische Pflichtkette ist immer exakt `classify -> entry -> ack -> check`.
+- Die technische Pflichtkette ist immer exakt `orchestrator(PARENT ONLY) -> classify -> entry -> ack -> check -> commit`.
 - Bei `Entry hash drift` oder `Read-order drift` zuerst `node tools/llm-preflight.mjs update-lock` ausfuehren und danach die Pflichtkette vollstaendig neu starten.
 - Bei Pfadwechsel ist Auto-Reclassify Pflicht; Scope-Erweiterung ist erlaubt und keine Ambiguitaet.
 - `entry`, `ack` und `check` blockieren Schreiboperationen; reine Read-/Analyse-/Testlaeufe bleiben erlaubt.
@@ -30,6 +30,7 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - Ein `check`-Fehler blockiert Schreiben. Testlaeufe bleiben moeglich und liefern weiterhin Wahrheit.
 - Der Chat-Trigger `entry` ist nur der menschliche Startimpuls. Die technische Wahrheit lebt ausschliesslich in `tools/llm-preflight.mjs`.
 - Vor jedem Commit muessen betroffene Dokuquellen inklusive relevanter Stringmatrix-/Inventar-Dateien nachgezogen und am Ende des Arbeitsschritts erneut auf Aktualitaet geprueft werden.
+- Nach jedem komplett abgeschlossenen Task (inklusive aller waehrenddessen aufgetretenen Nebenfixes) folgt nach `check` ein Commit; der naechste Task startet verpflichtend mit dem Orchestrator-Schritt ueber `agents/orchestrator/orchestrator.mjs` (PARENT ONLY).
 
 ## Kernel- Und Manifest-Pflichtgate (SoT)
 - `src/game/contracts/manifest.js` ist Source of Truth fuer Felder, Actions und Contract-Kette.
@@ -90,3 +91,4 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - passende Tests gruen
 - aktiver Task-Preflight gueltig und driftfrei fuer den benutzten Scope
 - Versionsregel eingehalten: pro abgeschlossenem Slice `+0.0.1`; Teilstufen `a/b/c/d` nur als Dokumentanhang
+- Wenn alle enthaltenen Schritte abgeschlossen sind, gilt verpflichtend: erst `check`, dann Commit; der Folgeablauf startet mit `agents/orchestrator/orchestrator.mjs` (PARENT ONLY).
