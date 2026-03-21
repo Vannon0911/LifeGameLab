@@ -8,6 +8,13 @@
 import { loadRole, createAgent, ROLE_PATHS } from "./runtime/agent.mjs";
 import { createSession } from "./runtime/session.mjs";
 import { runPreflightChain } from "./runtime/preflight.mjs";
+import { readFile, stat } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ORCH_FILE = fileURLToPath(import.meta.url);
+const ORCH_DIR = path.dirname(ORCH_FILE);
+const REPO_ROOT = path.resolve(ORCH_DIR, "..", "..");
 
 /**
  * Vordefinierte Pipelines.
@@ -98,6 +105,9 @@ export const PIPELINES = Object.freeze({
  */
 export function createOrchestrator(config = {}) {
   const { modelMap = {}, defaultModel, verbose = false, dryRun = false } = config;
+  const ADVERSARIAL_REBUTTAL_ROLE = "quality-reviewer";
+  const ASSUMPTION_SCAN_LIMIT = 12;
+  const MAX_SCAN_CHARS = 12_000;
 
   function log(...args) {
     if (verbose) console.log("[orchestrator]", ...args);
@@ -162,6 +172,36 @@ export function createOrchestrator(config = {}) {
     if (session.paths.length > 0) {
       agent.addContext(`Betroffene Dateipfade:\n${session.paths.join("\n")}`);
     }
+    const scanTargets = await resolveFileScanTargets(session.paths);
+    for (let idx = 0; idx < scanTargets.length; idx += 1) {
+      const target = scanTargets[idx];
+      const gateStatus = await runFileScanGate({
+        role,
+        roleKey,
+        resultKey,
+        task,
+        session,
+        parentAgent: agent,
+        scanTarget: target,
+        scanIndex: idx + 1,
+      });
+      session.addResult(`${resultKey}::scan-gate-${idx + 1}`, {
+        content: JSON.stringify(gateStatus),
+        usage: { promptTokens: 0, completionTokens: 0 },
+      });
+      if (gateStatus?.scanGate?.valid !== true) {
+        throw new Error(`invalid_scan_gate:${target.relPath}:${gateStatus?.scanGate?.invalidReason || "unknown_reason"}`);
+      }
+
+      agent.addContext([
+        `FILE_SCAN_INPUT #${idx + 1}`,
+        `path=${target.relPath}`,
+        "content:",
+        target.content,
+        "",
+        `scanGate=${JSON.stringify(gateStatus)}`,
+      ].join("\n"));
+    }
 
     const prompt = buildTaskPrompt(role, task);
     const response = await agent.send(prompt);
@@ -222,6 +262,203 @@ export function createOrchestrator(config = {}) {
   function summarizeContent(content) {
     const first = String(content || "").split(/\r?\n/).find((line) => line.trim().length > 0) || "";
     return first.slice(0, 220) || "(leer)";
+  }
+
+  function parseAssumptions(content, limit = ASSUMPTION_SCAN_LIMIT) {
+    const text = String(content || "").trim();
+    if (!text) return [];
+
+    try {
+      const parsed = JSON.parse(text);
+      const list = Array.isArray(parsed)
+        ? parsed
+        : (Array.isArray(parsed?.assumptions) ? parsed.assumptions : []);
+      return list
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+        .slice(0, limit);
+    } catch {}
+
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^[-*\d.)\s]+/, "").trim())
+      .filter(Boolean);
+    return lines.slice(0, limit);
+  }
+
+  function truncateScanContent(text) {
+    const raw = String(text || "");
+    if (raw.length <= MAX_SCAN_CHARS) return raw;
+    return `${raw.slice(0, MAX_SCAN_CHARS)}\n\n...[truncated ${raw.length - MAX_SCAN_CHARS} chars]`;
+  }
+
+  async function resolveFileScanTargets(paths) {
+    const targets = [];
+    for (const rawPath of paths || []) {
+      const relPath = String(rawPath || "").trim();
+      if (!relPath) continue;
+      const absPath = path.resolve(REPO_ROOT, relPath);
+      let st;
+      try {
+        st = await stat(absPath);
+      } catch {
+        continue;
+      }
+      if (!st.isFile()) continue;
+      let content = "";
+      try {
+        content = await readFile(absPath, "utf8");
+      } catch {
+        continue;
+      }
+      targets.push({
+        relPath: relPath.replaceAll("\\", "/"),
+        absPath,
+        content: truncateScanContent(content),
+      });
+    }
+    return targets;
+  }
+
+  function serializeParentHistory(history) {
+    const entries = Array.isArray(history) ? history : [];
+    return entries
+      .map((entry, idx) => {
+        const role = String(entry?.role || "unknown");
+        const content = String(entry?.content || "");
+        return `#${idx + 1} role=${role}\n${content}`;
+      })
+      .join("\n\n");
+  }
+
+  function hasMarker(text, markers) {
+    const lower = String(text || "").toLowerCase();
+    return markers.some((marker) => lower.includes(marker));
+  }
+
+  function isRebuttalSufficient(content) {
+    const text = String(content || "").trim();
+    if (!text) return false;
+    if (text.length < 40) return false;
+    if (/^\(?leer\)?$/i.test(text) || /^n\/a$/i.test(text) || /^none$/i.test(text)) return false;
+
+    const hasCounterReading = hasMarker(text, ["gegenlesart", "counter-reading", "counter reading", "gegenargument", "einwand"]);
+    const hasUncertainty = hasMarker(text, ["unsicher", "unklar", "uncertain", "unknown", "nicht belegt", "nicht gesichert"]);
+    const hasAlternative = hasMarker(text, ["alternative", "alternativ", "other explanation", "alternative erklaerung", "alternative erklärung"]);
+    const hasConcreteObjection = hasMarker(text, ["widerlegt", "widerlegung", "does not follow", "folgt nicht", "nicht zwingend", "gegenbeweis"]);
+    return hasCounterReading || hasUncertainty || hasAlternative || hasConcreteObjection;
+  }
+
+  async function runFileScanGate({
+    role,
+    roleKey,
+    resultKey,
+    task,
+    session,
+    parentAgent,
+    scanTarget,
+    scanIndex,
+  }) {
+    const status = {
+      scanPath: scanTarget.relPath,
+      scanGate: {
+        required: true,
+        assumptionsExtracted: false,
+        rebuttalsComplete: false,
+        valid: false,
+        invalidReason: null,
+      },
+    };
+
+    const parentHistory = serializeParentHistory(parentAgent?.history || []);
+    const model = getModel(roleKey);
+    const assumptionProbe = createAgent(role, model);
+    assumptionProbe.addContext([
+      "PARENT_CONTEXT_FULL",
+      parentHistory || "(empty-parent-history)",
+    ].join("\n"));
+    assumptionProbe.addContext([
+      `FILE_SCAN_TARGET #${scanIndex}`,
+      `path=${scanTarget.relPath}`,
+      "content:",
+      scanTarget.content,
+    ].join("\n"));
+
+    const assumptionPrompt = [
+      "ADVERSARIAL FILE-SCAN GATE (REQUIRED)",
+      "Extrahiere nur Annahmen aus diesem Datei-Scan, die spaeter als Fakt missbraucht werden koennten.",
+      "Regeln:",
+      "- Ausgabe strikt als JSON: {\"assumptions\":[\"...\"]}",
+      "- Keine Loesung, keine Entscheidung.",
+      `- Maximal ${ASSUMPTION_SCAN_LIMIT} Annahmen.`,
+      "",
+      "Task:",
+      task,
+    ].join("\n");
+    const assumptionResponse = await assumptionProbe.send(assumptionPrompt);
+    const assumptions = parseAssumptions(assumptionResponse?.content || "");
+    session.addResult(`${resultKey}::scan-${scanIndex}::assumption-scan`, {
+      content: assumptionResponse?.content || "",
+      usage: assumptionResponse?.usage || { promptTokens: 0, completionTokens: 0 },
+    });
+
+    if (assumptions.length === 0) {
+      status.scanGate.invalidReason = "invalid_scan_gate:no_explicit_assumptions_extracted";
+      return status;
+    }
+    status.scanGate.assumptionsExtracted = true;
+
+    const rebuttalRolePath = ROLE_PATHS[ADVERSARIAL_REBUTTAL_ROLE];
+    if (!rebuttalRolePath) {
+      status.scanGate.invalidReason = `invalid_scan_gate:missing_rebuttal_role:${ADVERSARIAL_REBUTTAL_ROLE}`;
+      return status;
+    }
+
+    const rebuttalRole = await loadRole(rebuttalRolePath);
+    const rebuttalModel = getModel(ADVERSARIAL_REBUTTAL_ROLE);
+    for (let i = 0; i < assumptions.length; i += 1) {
+      const assumption = assumptions[i];
+      const rebuttalAgent = createAgent(rebuttalRole, rebuttalModel);
+      rebuttalAgent.addContext([
+        "PARENT_CONTEXT_FULL",
+        parentHistory || "(empty-parent-history)",
+      ].join("\n"));
+      rebuttalAgent.addContext([
+        `FILE_SCAN_TARGET #${scanIndex}`,
+        `path=${scanTarget.relPath}`,
+        "content:",
+        scanTarget.content,
+      ].join("\n"));
+
+      const rebuttalPrompt = [
+        "ADVERSARIAL EXECUTION MODE (HARD / FAIL-CLOSED)",
+        "Widerlege exakt diese eine Parent-Annahme.",
+        "Pflicht:",
+        "- aktive Widerlegung",
+        "- Gegenlesart oder Unsicherheitsmarker oder alternative Erklaerung oder konkreter Einwand",
+        "- keine Implementierung, kein Fix",
+        "",
+        `Annahme #${i + 1}: ${assumption}`,
+        "",
+        "Format:",
+        "Symptom -> Root Cause -> Evidence (Datei:Zeile) -> Impact -> Freigabebedarf",
+      ].join("\n");
+      const rebuttalResponse = await rebuttalAgent.send(rebuttalPrompt);
+      const rebuttalContent = String(rebuttalResponse?.content || "").trim();
+      session.addResult(`${resultKey}::scan-${scanIndex}::rebuttal-${i + 1}`, {
+        content: rebuttalContent,
+        usage: rebuttalResponse?.usage || { promptTokens: 0, completionTokens: 0 },
+      });
+
+      if (!isRebuttalSufficient(rebuttalContent)) {
+        status.scanGate.invalidReason = `invalid_scan_gate:insufficient_rebuttal:${i + 1}`;
+        return status;
+      }
+    }
+
+    status.scanGate.rebuttalsComplete = true;
+    status.scanGate.valid = true;
+    return status;
   }
 
   function extractConfirmedBlockers(attackerOutputs) {
