@@ -39,6 +39,10 @@ const runtimeForbidden = [
   "../project/",
   "/tools/llm/",
   "../tools/llm/",
+  "/docs/llm/",
+  "../docs/llm/",
+  "/agents/orchestrator/",
+  "../agents/orchestrator/",
   "/src/core/",
   "../core/",
   "/.llm/",
@@ -62,6 +66,13 @@ for (const relPath of kernelFiles) {
     false,
     `${relPath} must not depend on core facade paths`,
   );
+  for (const needle of ["/tools/llm/", "../tools/llm/", "/docs/llm/", "../docs/llm/", "/agents/orchestrator/", "../agents/orchestrator/", "/.llm/"]) {
+    assert.equal(
+      text.includes(needle),
+      false,
+      `${relPath} must not reference llm/orchestrator boundary '${needle}'`,
+    );
+  }
 }
 
 assert.equal(fs.existsSync(path.join(root, "src", "project")), false, "src/project must be removed after canonical game migration");
