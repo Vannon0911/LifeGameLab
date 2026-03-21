@@ -35,7 +35,7 @@ export function installUiInput(UI) {
             expertMode: true,
           }
         : {
-            runPhase: RUN_PHASE.GENESIS_SETUP,
+            runPhase: RUN_PHASE.RUN_ACTIVE,
             panelOpen: !!this._builderPrevUi?.panelOpen,
             activeTab: String(this._builderPrevUi?.activeTab || "lage"),
             expertMode: !!this._builderPrevUi?.expertMode,
@@ -71,23 +71,6 @@ export function installUiInput(UI) {
     const togglePlay = () => {
       const state = this._store.getState();
       const runPhase = String(state?.sim?.runPhase || "");
-      if (runPhase === RUN_PHASE.GENESIS_SETUP) {
-        const founderTarget = Math.max(1, Number(state?.sim?.founderBudget || 1) | 0);
-        this._setActionFeedback({
-          ok: false,
-          message: "Genesis-Setup aktiv: erst Founder setzen und Gründung bestätigen.",
-          hint: `Tool: Founder Place · Ziel: ${founderTarget}/${founderTarget} im Startfenster.`,
-        });
-        return;
-      }
-      if (runPhase === RUN_PHASE.GENESIS_ZONE) {
-        this._setActionFeedback({
-          ok: false,
-          message: "Genesis-Zone aktiv: erst Energiekern bestaetigen.",
-          hint: "Founder sind fixiert. Bestaetige jetzt den Energiekern, erst danach startet der Run.",
-        });
-        return;
-      }
       if (runPhase === RUN_PHASE.DNA_ZONE_SETUP) {
         this._setActionFeedback({
           ok: false,
@@ -118,23 +101,6 @@ export function installUiInput(UI) {
     this._btnStep?.addEventListener("click", () => {
       const state = this._store.getState();
       const runPhase = String(state?.sim?.runPhase || "");
-      if (runPhase === RUN_PHASE.GENESIS_SETUP) {
-        const founderTarget = Math.max(1, Number(state?.sim?.founderBudget || 1) | 0);
-        this._setActionFeedback({
-          ok: false,
-          message: "Step ist im Genesis-Setup gesperrt.",
-          hint: `Setze ${founderTarget} Founder und bestätige die Gründung.`,
-        });
-        return;
-      }
-      if (runPhase === RUN_PHASE.GENESIS_ZONE) {
-        this._setActionFeedback({
-          ok: false,
-          message: "Step ist in der Genesis-Zone gesperrt.",
-          hint: "Ohne bestaetigten Energiekern gibt es keinen aktiven Lauf.",
-        });
-        return;
-      }
       if (runPhase === RUN_PHASE.DNA_ZONE_SETUP) {
         this._setActionFeedback({
           ok: false,
@@ -315,22 +281,9 @@ export function installUiInput(UI) {
       (Number(state.world?.lineageId?.[idx] || 0) | 0) === playerLineageId;
     const isOwnFounder =
       isOwnAliveTile &&
-      (Number(state.world?.founderMask?.[idx] || 0) | 0) === 1 &&
-      runPhase === RUN_PHASE.GENESIS_SETUP;
+      (Number(state.world?.founderMask?.[idx] || 0) | 0) === 1;
     const resourceValue = Number(state.world?.R?.[idx] || 0);
     const isResourceTile = resourceValue > 0.05;
-
-    if (start && runPhase === RUN_PHASE.GENESIS_SETUP) {
-      const placed = this._placeWorker({ x: wx, y: wy, remove: shiftRemove || isOwnFounder });
-      this._setActionFeedback({
-        ok: !!placed,
-        message: placed
-          ? ((shiftRemove || isOwnFounder) ? "Founder entfernt." : "Founder platziert.")
-          : "Founder-Aktion blockiert.",
-        hint: placed ? "" : "Genesis: Startkachel anklicken, dann bestaetigen.",
-      });
-      return;
-    }
 
     if (this._isLabOnlyBrushMode(mode) && !this._isLaborPanelActive(state)) {
       this._ensureLabBrushIsolation(this._activeContext || "lage", state);
@@ -471,17 +424,14 @@ export function installUiInput(UI) {
       const isOwnFounder =
         (Number(state.world?.alive?.[idx] || 0) | 0) === 1 &&
         (Number(state.world?.lineageId?.[idx] || 0) | 0) === playerLineageId &&
-        (Number(state.world?.founderMask?.[idx] || 0) | 0) === 1 &&
-        String(state.sim?.runPhase || "") === "genesis_setup";
+        (Number(state.world?.founderMask?.[idx] || 0) | 0) === 1;
       const placed = this._placeWorker({ x: wx, y: wy, remove: isOwnFounder });
       this._setActionFeedback({
         ok: !!placed,
         message: placed
           ? (isOwnFounder ? "Founder entfernt." : "Founder platziert.")
           : "Founder-Aktion blockiert.",
-        hint: placed
-          ? ""
-          : `Nur im Startfenster, maximal ${Math.max(1, Number(state.sim?.founderBudget || 1) | 0)} Founder, vor Bestaetigung entfernbar.`,
+        hint: placed ? "" : "Setzen auf freie Kacheln, erneuter Klick entfernt.",
       });
       return;
     }

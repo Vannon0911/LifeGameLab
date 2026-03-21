@@ -244,7 +244,7 @@ export class UI {
       this._builderPanel.setAttribute("aria-hidden", isBuilder ? "false" : "true");
     }
     if (this._builderPanelState) {
-      this._builderPanelState.textContent = isBuilder ? `Phase: ${String(state?.sim?.runPhase || "").replace("_", " ")}` : "Phase: inaktiv";
+      this._builderPanelState.textContent = isBuilder ? `Phase: ${String(state?.sim?.runPhase || "").replace(/_/g, " ")}` : "Phase: inaktiv";
     }
     if (this._builderPanelMode) {
       this._builderPanelMode.textContent = `Aktives Werkzeug: ${modeLabel}`;
