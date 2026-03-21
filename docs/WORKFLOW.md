@@ -32,10 +32,12 @@ Hinweis: `docs/llm/OPERATING_PROTOCOL.md`, `docs/ARCHITECTURE.md` und `docs/STAT
   1. `node tools/llm-preflight.mjs update-lock`
   2. Pflichtkette danach vollstaendig neu starten
 - Danach technisch exakt in dieser Reihenfolge erzwingen:
-  1. `node tools/llm-preflight.mjs classify --paths <paths>`
-  2. `node tools/llm-preflight.mjs entry --paths <paths> --mode work|security`
-  3. `node tools/llm-preflight.mjs ack --paths <paths>`
-  4. `node tools/llm-preflight.mjs check --paths <paths>`
+  1. `agents/orchestrator/orchestrator.mjs` ausfuehren (PARENT ONLY)
+  2. `node tools/llm-preflight.mjs classify --paths <paths>`
+  3. `node tools/llm-preflight.mjs entry --paths <paths> --mode work|security`
+  4. `node tools/llm-preflight.mjs ack --paths <paths>`
+  5. `node tools/llm-preflight.mjs check --paths <paths>`
+  6. Commit ausfuehren (nur bei abgeschlossenem Task inkl. Nebenfixes)
 - `classify` arbeitet multi-scope-faehig und dependency-basiert; Ergebnis ist `taskScope[]`, nicht mehr ein einzelner Scope.
 - Bei Pfadwechsel gilt Auto-Reclassify als Pflichtverhalten; Scope-Erweiterung ist erlaubt und wird nicht als Ambiguitaet blockiert.
 - Git-Guards aktivieren (einmal pro Clone): `npm run hooks:install`
@@ -45,6 +47,7 @@ Hinweis: `docs/llm/OPERATING_PROTOCOL.md`, `docs/ARCHITECTURE.md` und `docs/STAT
 - Preflight (`entry/ack/check`) blockiert nur Schreiboperationen.
 - Reine Lese-/Analyse-/Testlaeufe bleiben immer erlaubt; dafuer `node tools/llm-preflight.mjs audit --paths <paths>` als Warnsignal nutzen.
 - Vor jedem Commit muessen betroffene Dokuquellen auf aktuellen Stand nachgezogen werden. Das gilt auch fuer Stringmatrix-/Inventar-Quellen wie `docs/traceability/rebuild-string-matrix.md` und `docs/traceability/rebuild-preparation-inventory.md`, sobald der Task deren Aussagen beruehrt.
+- Pro abgeschlossenem Task gilt strikt: nach erfolgreichem `check` wird commitet; der nachfolgende Task beginnt mit dem Orchestrator-Schritt (PARENT ONLY), inklusive aller im Task mitgefixten Nebenbefunde.
 
 ### DOKU
 - Nur diese vier Top-Level-Dateien sind kanonische Produkt-/Projekt-Doku.
