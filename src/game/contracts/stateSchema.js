@@ -101,12 +101,7 @@ export const stateSchema = {
         tick: { type: "number", default: 0 },
         running: { type: "boolean", default: false },
         runPhase: { type: "string", default: RUN_PHASE.RUN_ACTIVE },
-        phase0PlantsDelivered: { type: "number", default: 0 },
-        phase0CorePlaced: { type: "boolean", default: false },
         queuedWorkerCount: { type: "number", default: 0 },
-        deprecatedActionMode: { type: "boolean", default: true },
-        founderBudget: { type: "number", default: 1 },
-        founderPlaced: { type: "number", default: 0 },
         selectedUnit: { type: "number", default: -1 },
         selectedEntity: {
           type: "object",

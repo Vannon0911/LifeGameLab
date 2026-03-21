@@ -18,11 +18,10 @@ import {
   normalizeTechArray,
 } from "../techTree.js";
 import {
-  BRUSH_MODE,
   RUN_PHASE,
   normalizeRunPhase,
 } from "../contracts/ids.js";
-import { getStartWindowRange, getWorldPreset, isTileInStartWindow } from "./worldPresets.js";
+import { getWorldPreset } from "./worldPresets.js";
 
 function cloneJson(x) {
   return JSON.parse(JSON.stringify(x));
@@ -176,7 +175,6 @@ export function handlePlaceWorker(state, action) {
   const idx = y * w + x;
   const remove = !!action.payload?.remove;
   const runPhase = normalizeRunPhase(state.sim.runPhase, RUN_PHASE.RUN_ACTIVE);
-  const isGenesisSetup = runPhase === RUN_PHASE.GENESIS_SETUP;
   if (runPhase === RUN_PHASE.RESULT) return [];
 
   const alive = cloneTypedArray(world.alive);
@@ -195,97 +193,6 @@ export function handlePlaceWorker(state, action) {
   const playerDNA = Number(state.sim.playerDNA || 0);
   const cost = 0.5;
   const costEnabled = !!state.meta.placementCostEnabled;
-  const founderMaskSrc = world.founderMask && ArrayBuffer.isView(world.founderMask)
-    ? world.founderMask
-    : new Uint8Array(w * h);
-  const founderMask = cloneTypedArray(founderMaskSrc);
-
-  if (isGenesisSetup) {
-    if (String(state.meta.brushMode || BRUSH_MODE.OBSERVE) !== BRUSH_MODE.FOUNDER_PLACE) return [];
-    const founderBudget = Math.max(0, Number(state.sim.founderBudget || 0) | 0);
-    const founderPlaced = Math.max(0, Number(state.sim.founderPlaced || 0) | 0);
-    const preset = getWorldPreset(state.meta.worldPresetId);
-    const playerWindow = preset?.startWindows?.player;
-    const playerRange = playerWindow ? getStartWindowRange(playerWindow, w, h) : null;
-    const fixedStartX = Number(playerRange?.x0 ?? -1) | 0;
-    const fixedStartY = Number(playerRange?.y0 ?? -1) | 0;
-
-    if (remove) {
-      if (alive[idx] !== 1) return [];
-      if (currentLineage !== playerLineageId) return [];
-      if ((Number(founderMask[idx]) | 0) !== 1) return [];
-      alive[idx] = 0;
-      if (born) born[idx] = 0;
-      if (died) died[idx] = 1;
-      if (E) E[idx] = 0;
-      if (reserve) reserve[idx] = 0;
-      if (link) link[idx] = 0;
-      if (lineageId) lineageId[idx] = 0;
-      if (hue) hue[idx] = 0;
-      if (age) age[idx] = 0;
-      if (trait) {
-        const o = idx * TRAIT_COUNT;
-        for (let t = 0; t < TRAIT_COUNT; t++) trait[o + t] = TRAIT_DEFAULT[t];
-      }
-      founderMask[idx] = 0;
-      const patches = [
-        { op: "set", path: "/world/alive", value: alive },
-        { op: "set", path: "/world/E", value: E },
-        { op: "set", path: "/world/reserve", value: reserve },
-        { op: "set", path: "/world/link", value: link },
-        { op: "set", path: "/world/lineageId", value: lineageId },
-        { op: "set", path: "/world/hue", value: hue },
-        { op: "set", path: "/world/trait", value: trait },
-        { op: "set", path: "/world/age", value: age },
-        { op: "set", path: "/world/born", value: born },
-        { op: "set", path: "/world/died", value: died },
-        { op: "set", path: "/world/founderMask", value: founderMask },
-        { op: "set", path: "/sim/founderPlaced", value: Math.max(0, founderPlaced - 1) },
-      ];
-      if (W) patches.push({ op: "set", path: "/world/W", value: W });
-      return patches;
-    }
-
-    if (alive[idx] === 1) return [];
-    if (!playerWindow || !isTileInStartWindow(x, y, w, h, playerWindow)) return [];
-    if (x !== fixedStartX || y !== fixedStartY) return [];
-    if (founderPlaced >= founderBudget) return [];
-    if (!populatePlayerCell({
-      idx,
-      tick: state.sim.tick,
-      playerLineageId,
-      alive,
-      E,
-      reserve,
-      link,
-      lineageId,
-      hue,
-      trait,
-      age,
-      born,
-      died,
-      W,
-      w,
-      h,
-    })) return [];
-    founderMask[idx] = 1;
-    const patches = [
-      { op: "set", path: "/world/alive", value: alive },
-      { op: "set", path: "/world/E", value: E },
-      { op: "set", path: "/world/reserve", value: reserve },
-      { op: "set", path: "/world/link", value: link },
-      { op: "set", path: "/world/lineageId", value: lineageId },
-      { op: "set", path: "/world/hue", value: hue },
-      { op: "set", path: "/world/trait", value: trait },
-      { op: "set", path: "/world/age", value: age },
-      { op: "set", path: "/world/born", value: born },
-      { op: "set", path: "/world/died", value: died },
-      { op: "set", path: "/world/founderMask", value: founderMask },
-      { op: "set", path: "/sim/founderPlaced", value: founderPlaced + 1 },
-    ];
-    if (W) patches.push({ op: "set", path: "/world/W", value: W });
-    return patches;
-  }
 
   if (remove) {
     if (alive[idx] !== 1 || currentLineage !== playerLineageId) return [];

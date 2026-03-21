@@ -1,7 +1,5 @@
 const SIM_BOOLEAN_KEYS = Object.freeze([
   "running",
-  "phase0CorePlaced",
-  "deprecatedActionMode",
   "zone2Unlocked",
   "dnaZoneCommitted",
   "infrastructureUnlocked",
@@ -86,14 +84,13 @@ export const simGate = {
       coreZoneMask: { type: "ta", ctor: "Uint8Array", len: "N" },
       dnaZoneMask: { type: "ta", ctor: "Uint8Array", len: "N" },
       infraCandidateMask: { type: "ta", ctor: "Uint8Array", len: "N" },
-      founderMask: { type: "ta", ctor: "Uint8Array", len: "N" },
       visibility: { type: "ta", ctor: "Uint8Array", len: "N" },
       explored: { type: "ta", ctor: "Uint8Array", len: "N" },
     },
   },
   sim: {
     keys: [
-      "tick", "running", "runPhase", "phase0PlantsDelivered", "phase0CorePlaced", "queuedWorkerCount", "deprecatedActionMode", "founderBudget", "founderPlaced", "selectedUnit", "selectedEntity", "unitOrder", "activeOrder", "mutatorDraft", "lastCommand", "lastAutoAction", "unlockedZoneTier", "nextZoneUnlockKind", "nextZoneUnlockCostEnergy", "zoneUnlockProgress", "coreEnergyStableTicks", "zone2Unlocked", "zone2PlacementBudget", "dnaZoneCommitted", "nextInfraUnlockCostDNA", "infrastructureUnlocked", "infraBuildMode", "infraBuildCostEnergy", "infraBuildCostDNA", "cpuBootstrapDone", "patternCatalog", "patternBonuses", "aliveCount", "aliveRatio", "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
+      "tick", "running", "runPhase", "queuedWorkerCount", "selectedUnit", "selectedEntity", "unitOrder", "activeOrder", "mutatorDraft", "lastCommand", "lastAutoAction", "unlockedZoneTier", "nextZoneUnlockKind", "nextZoneUnlockCostEnergy", "zoneUnlockProgress", "coreEnergyStableTicks", "zone2Unlocked", "zone2PlacementBudget", "dnaZoneCommitted", "nextInfraUnlockCostDNA", "infrastructureUnlocked", "infraBuildMode", "infraBuildCostEnergy", "infraBuildCostDNA", "cpuBootstrapDone", "patternCatalog", "patternBonuses", "aliveCount", "aliveRatio", "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
       "meanNutrientField", "meanToxinField", "meanSaturationField", "meanPlantField", "meanBiochargeField", "meanWaterField",
       "plantTileRatio", "dominantHueRatio", "lineageDiversity", "evolutionStageMean", "evolutionStageMax",
       "networkRatio", "clusterRatio", "birthsLastStep", "deathsLastStep", "mutationsLastStep",

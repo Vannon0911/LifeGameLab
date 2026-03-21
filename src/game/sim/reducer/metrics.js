@@ -26,17 +26,16 @@ export const WORLD_KEYS = [
   "zoneRole",
   "zoneId",
   "zoneMeta",
-  "founderMask",
   "visibility",
   "explored",
 ];
 
 export const WORLD_SIM_STEP_KEYS = WORLD_KEYS.filter(
-  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "coreZoneMask" && k !== "dnaZoneMask" && k !== "infraCandidateMask" && k !== "zoneRole" && k !== "zoneId" && k !== "zoneMeta" && k !== "superId" && k !== "actionMap" && k !== "founderMask" && k !== "visibility" && k !== "explored"
+  (k) => k !== "baseSat" && k !== "water" && k !== "biomeId" && k !== "zoneMap" && k !== "coreZoneMask" && k !== "dnaZoneMask" && k !== "infraCandidateMask" && k !== "zoneRole" && k !== "zoneId" && k !== "zoneMeta" && k !== "superId" && k !== "actionMap" && k !== "visibility" && k !== "explored"
 );
 
 export const SIM_KEYS = [
-  "tick", "running", "runPhase", "founderBudget", "founderPlaced", "selectedUnit", "unitOrder", "activeOrder", "lastCommand", "lastAutoAction", "unlockedZoneTier", "nextZoneUnlockKind", "nextZoneUnlockCostEnergy", "zoneUnlockProgress", "coreEnergyStableTicks", "zone2Unlocked", "zone2PlacementBudget", "dnaZoneCommitted", "nextInfraUnlockCostDNA", "infrastructureUnlocked", "infraBuildMode", "infraBuildCostEnergy", "infraBuildCostDNA", "cpuBootstrapDone",
+  "tick", "running", "runPhase", "selectedUnit", "unitOrder", "activeOrder", "lastCommand", "lastAutoAction", "unlockedZoneTier", "nextZoneUnlockKind", "nextZoneUnlockCostEnergy", "zoneUnlockProgress", "coreEnergyStableTicks", "zone2Unlocked", "zone2PlacementBudget", "dnaZoneCommitted", "nextInfraUnlockCostDNA", "infrastructureUnlocked", "infraBuildMode", "infraBuildCostEnergy", "infraBuildCostDNA", "cpuBootstrapDone",
   "aliveCount", "aliveRatio",
   "meanLAlive", "meanEnergyAlive", "meanReserveAlive",
   "meanNutrientField", "meanToxinField", "meanSaturationField", "meanPlantField", "meanBiochargeField",

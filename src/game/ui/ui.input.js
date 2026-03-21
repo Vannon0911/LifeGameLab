@@ -70,15 +70,6 @@ export function installUiInput(UI) {
 
     const togglePlay = () => {
       const state = this._store.getState();
-      const runPhase = String(state?.sim?.runPhase || "");
-      if (runPhase === RUN_PHASE.DNA_ZONE_SETUP) {
-        this._setActionFeedback({
-          ok: false,
-          message: "DNA-Zone-Setup aktiv: erst DNA-Zone bestaetigen.",
-          hint: "Waehle bis zu vier gueltige DNA-Kacheln und bestaetige dann Zone 2.",
-        });
-        return;
-      }
       const running = !!state.sim.running;
       this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:!running } });
     };
@@ -99,16 +90,6 @@ export function installUiInput(UI) {
 
     this._btnPlay?.addEventListener("click", togglePlay);
     this._btnStep?.addEventListener("click", () => {
-      const state = this._store.getState();
-      const runPhase = String(state?.sim?.runPhase || "");
-      if (runPhase === RUN_PHASE.DNA_ZONE_SETUP) {
-        this._setActionFeedback({
-          ok: false,
-          message: "Step ist im DNA-Zone-Setup gesperrt.",
-          hint: "Zone 2 wird erst nach bestaetigter DNA-Zone wieder aktiv fortgesetzt.",
-        });
-        return;
-      }
       if (this._store.getState().sim.running)
         this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:false } });
       this._dispatch({ type:"SIM_STEP", payload:{} });
@@ -279,9 +260,6 @@ export function installUiInput(UI) {
     const isOwnAliveTile =
       (Number(state.world?.alive?.[idx] || 0) | 0) === 1 &&
       (Number(state.world?.lineageId?.[idx] || 0) | 0) === playerLineageId;
-    const isOwnFounder =
-      isOwnAliveTile &&
-      (Number(state.world?.founderMask?.[idx] || 0) | 0) === 1;
     const resourceValue = Number(state.world?.R?.[idx] || 0);
     const isResourceTile = resourceValue > 0.05;
 
@@ -294,20 +272,6 @@ export function installUiInput(UI) {
           hint: "Wechsle in Labor fuer Legacy-Brushes oder nutze Main-Run-Eingriffe.",
         });
       }
-      return;
-    }
-    if (String(state.sim?.infraBuildMode || "") === "path") {
-      if (!start) return;
-      const idx = wy * state.meta.gridW + wx;
-      const isSelected = (Number(state.world?.infraCandidateMask?.[idx] || 0) | 0) === 1;
-      this._dispatch(
-        { type: "BUILD_INFRA_PATH", payload: { x: wx, y: wy, remove: isSelected } },
-        {
-          ok: isSelected ? "Infrastrukturkachel entfernt." : "Infrastrukturkachel vorgemerkt.",
-          blocked: "Infrastrukturpfad blockiert.",
-          hint: "Pfad muss zusammenhaengend bleiben und an Kern, DNA-Zone oder committete Infrastruktur anschliessen.",
-        }
-      );
       return;
     }
     if (mode === BRUSH_MODE.OBSERVE) {
@@ -414,38 +378,6 @@ export function installUiInput(UI) {
       this._dispatch(
         { type:"PLACE_SPLIT_CLUSTER", payload:{ x:wx, y:wy } },
         { ok: "Split-Seed gesetzt.", blocked: "Split-Seed blockiert.", hint: "Nächster Schritt: Split-Tech, Command-Score und freie 4x4-Zone prüfen." }
-      );
-      return;
-    }
-    if (mode === BRUSH_MODE.FOUNDER_PLACE) {
-      if (!start) return;
-      const idx = wy * state.meta.gridW + wx;
-      const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-      const isOwnFounder =
-        (Number(state.world?.alive?.[idx] || 0) | 0) === 1 &&
-        (Number(state.world?.lineageId?.[idx] || 0) | 0) === playerLineageId &&
-        (Number(state.world?.founderMask?.[idx] || 0) | 0) === 1;
-      const placed = this._placeWorker({ x: wx, y: wy, remove: isOwnFounder });
-      this._setActionFeedback({
-        ok: !!placed,
-        message: placed
-          ? (isOwnFounder ? "Founder entfernt." : "Founder platziert.")
-          : "Founder-Aktion blockiert.",
-        hint: placed ? "" : "Setzen auf freie Kacheln, erneuter Klick entfernt.",
-      });
-      return;
-    }
-    if (String(state.sim?.runPhase || "") === RUN_PHASE.DNA_ZONE_SETUP) {
-      if (!start) return;
-      const idx = wy * state.meta.gridW + wx;
-      const isSelected = (Number(state.world?.dnaZoneMask?.[idx] || 0) | 0) === 1;
-      this._dispatch(
-        { type: "TOGGLE_DNA_ZONE_WORKER", payload: { x: wx, y: wy, remove: isSelected } },
-        {
-          ok: isSelected ? "DNA-Kachel entfernt." : "DNA-Kachel gesetzt.",
-          blocked: "DNA-Kachel blockiert.",
-          hint: "Nur lebende eigene Kacheln, nicht im Energiekern, angrenzend an Kern oder DNA-Zone.",
-        }
       );
       return;
     }

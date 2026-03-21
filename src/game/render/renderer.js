@@ -756,7 +756,7 @@ function drawHarvestProgress(ctx, world, sim, offX, offY, tilePx) {
 }
 function drawTileObjectPlaceholders(ctx, world, offX, offY, tilePx) {
   if (tilePx < 8) return;
-  const { w, h, zoneRole, founderMask, R } = world;
+  const { w, h, zoneRole, R } = world;
   if (w <= 0 || h <= 0) return;
   const step = tilePx < 12 ? 2 : 1;
   ctx.save();
@@ -767,13 +767,11 @@ function drawTileObjectPlaceholders(ctx, world, offX, offY, tilePx) {
     for (let x = 0; x < w; x += step) {
       const i = y * w + x;
       const role = Number(zoneRole?.[i] || 0) | 0;
-      const founder = (Number(founderMask?.[i] || 0) | 0) === 1;
       const resource = clamp01(R?.[i] || 0);
       let glyph = "";
       if (role === ZONE_ROLE.CORE) glyph = "🏠";
       else if (role === ZONE_ROLE.DNA) glyph = "🧬";
       else if (role === ZONE_ROLE.INFRA) glyph = "🔌";
-      else if (founder) glyph = "🧱";
       else if (resource > 0.86) glyph = "⛏️";
       if (!glyph) continue;
       const fog = getTileFogState(world, i);

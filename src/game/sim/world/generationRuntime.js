@@ -200,7 +200,7 @@ export function seedDeterministicBootstrapCluster(world, seedStr, windowDef, lin
 
 export function applyMapSpecOverrides(world, spec) {
   if (!world || !spec || !spec.tilePlan || typeof spec.tilePlan !== "object") return;
-  const { w, h, L, R, W, Sat, zoneRole, founderMask } = world;
+  const { w, h, L, R, W, Sat, zoneRole } = world;
   const tilePlan = spec.tilePlan;
   for (const key of Object.keys(tilePlan)) {
     const idx = Number(key) | 0;
@@ -217,7 +217,6 @@ export function applyMapSpecOverrides(world, spec) {
       case "core": if (zoneRole) zoneRole[idx] = 1; break;
       case "dna": if (zoneRole) zoneRole[idx] = 2; break;
       case "infra": if (zoneRole) zoneRole[idx] = 3; break;
-      case "founder": if (founderMask) founderMask[idx] = 1; break;
     }
   }
 }
@@ -261,7 +260,6 @@ export function generateWorld(w, h, seedStr, phy, presetId = "river_delta") {
     coreZoneMask: new Uint8Array(N),
     dnaZoneMask: new Uint8Array(N),
     infraCandidateMask: new Uint8Array(N),
-    founderMask: new Uint8Array(N),
     visibility: new Uint8Array(N),
     explored: new Uint8Array(N),
     biomeId: new Int8Array(N),

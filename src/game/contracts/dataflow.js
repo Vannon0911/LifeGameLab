@@ -4,10 +4,6 @@ import { actionLifecycle } from "./actionLifecycle.js";
 
 const DISPATCH_SOURCES = Object.freeze({
   GEN_WORLD: ["src/app/main.js", "src/game/ui/ui.input.js", "src/game/ui/ui.js", "src/game/ui/ui.overlay.js"],
-  CONFIRM_FOUNDATION: [],
-  CONFIRM_CORE_ZONE: [],
-  TOGGLE_DNA_ZONE_WORKER: ["src/game/ui/ui.input.js"],
-  BUILD_INFRA_PATH: ["src/game/ui/ui.input.js"],
   TOGGLE_RUNNING: ["src/app/main.js", "src/game/ui/ui.input.js", "src/game/ui/ui.overlay.js"],
   SIM_STEP: ["src/app/main.js", "src/game/ui/ui.input.js"],
   SET_SPEED: ["src/app/main.js"],
@@ -24,7 +20,6 @@ const DISPATCH_SOURCES = Object.freeze({
   SET_TILE: ["src/game/ui/ui.input.js"],
   SELECT_ENTITY: [],
   ISSUE_MOVE: ["src/game/ui/ui.js"],
-  PLACE_CORE: [],
   PLACE_WORKER: ["src/game/ui/ui.js"],
   PLACE_BUILDING: [],
   PLACE_BELT_SEGMENT: [],

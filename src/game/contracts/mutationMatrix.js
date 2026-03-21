@@ -1,14 +1,5 @@
 export const mutationMatrix = {
   GEN_WORLD: ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId", "/meta/physics", "/meta/playerLineageId", "/meta/cpuLineageId", "/world/", "/world/actionMap", "/sim/"],
-  CONFIRM_FOUNDATION: [],
-  CONFIRM_CORE_ZONE: [],
-  TOGGLE_DNA_ZONE_WORKER: [
-    "/world/dnaZoneMask",
-    "/sim/zone2PlacementBudget",
-  ],
-  BUILD_INFRA_PATH: [
-    "/world/infraCandidateMask",
-  ],
   TOGGLE_RUNNING: ["/sim/running"],
   SIM_STEP: ["/meta/globalLearning", "/meta/gridW", "/meta/gridH", "/meta/simStepCount", "/sim/runSummary", "/world/", "/sim/"],
   SET_SPEED: ["/meta/speed"],
@@ -31,9 +22,8 @@ export const mutationMatrix = {
   RESET_GLOBAL_LEARNING: ["/meta/globalLearning", "/world/globalLearning", "/world/lineageMemory"],
   SET_TILE: ["/world/R"],
   SELECT_ENTITY: ["/sim/selectedEntity"],
-  PLACE_WORKER: ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/world/founderMask", "/sim/playerDNA", "/sim/founderPlaced"],
+  PLACE_WORKER: ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/sim/playerDNA"],
   ISSUE_MOVE: ["/sim/selectedUnit", "/sim/selectedEntity", "/sim/unitOrder", "/sim/activeOrder", "/sim/lastCommand"],
-  PLACE_CORE: ["/world/cores", "/sim/phase0PlantsDelivered", "/sim/phase0CorePlaced", "/sim/lastCommand", "/world/alive", "/world/E", "/world/lineageId"],
   PLACE_BUILDING: ["/world/buildings", "/sim/lastCommand"],
   PLACE_BELT_SEGMENT: ["/world/belts", "/sim/lastCommand"],
   PLACE_LINE_SEGMENT: ["/world/powerLines", "/sim/lastCommand"],

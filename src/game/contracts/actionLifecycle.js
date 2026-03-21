@@ -63,30 +63,6 @@ const actionLifecycleDraft = Object.freeze({
     "Canonical deterministic world boot entrypoint remains active.",
     ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId", "/meta/physics", "/world/", "/sim/"]
   ),
-  CONFIRM_FOUNDATION: deprecated(
-    "PLACE_CORE",
-    "slice_c",
-    "Founder confirmation is superseded by Phase 0 core placement.",
-    ["/world/", "/sim/runPhase", "/sim/phase0CorePlaced", "/sim/phase0PlantsDelivered"]
-  ),
-  CONFIRM_CORE_ZONE: deprecated(
-    "PLACE_CORE",
-    "slice_c",
-    "Legacy core-zone confirmation collapses into direct core placement.",
-    ["/world/cores", "/sim/runPhase", "/sim/phase0CorePlaced"]
-  ),
-  TOGGLE_DNA_ZONE_WORKER: rename(
-    "PLACE_BUILDING",
-    "slice_f",
-    "DNA zone editing remains as transitional compat path until direct building placement fully replaces the flow.",
-    ["/world/buildings", "/sim/lastCommand"]
-  ),
-  BUILD_INFRA_PATH: rename(
-    "PLACE_LINE_SEGMENT",
-    "slice_f",
-    "Infra path painting remains as transitional compat path until direct line-segment placement fully replaces the flow.",
-    ["/world/powerLines", "/sim/lastCommand"]
-  ),
   TOGGLE_RUNNING: stable(
     "foundation",
     "Runtime on/off remains canonical.",
@@ -226,15 +202,10 @@ const actionLifecycleDraft = Object.freeze({
     "Entity-based worker movement is the canonical live runtime order path.",
     ["/sim/selectedUnit", "/sim/selectedEntity", "/sim/unitOrder", "/sim/activeOrder", "/sim/lastCommand"]
   ),
-  PLACE_CORE: stable(
-    "slice_c",
-    "Phase 0 core placement action replaces CONFIRM_FOUNDATION and CONFIRM_CORE_ZONE.",
-    ["/world/cores", "/sim/phase0PlantsDelivered", "/sim/phase0CorePlaced", "/sim/lastCommand", "/world/alive", "/world/E", "/world/lineageId"]
-  ),
   PLACE_WORKER: stable(
     "slice_c",
-    "Worker placement is the canonical live runtime path for founder and worker commits.",
-    ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/world/founderMask", "/sim/playerDNA", "/sim/founderPlaced"]
+    "Worker placement is the canonical live runtime path.",
+    ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/sim/playerDNA"]
   ),
   PLACE_BUILDING: scaffold(
     "slice_a",

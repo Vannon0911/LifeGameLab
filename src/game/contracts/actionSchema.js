@@ -1,9 +1,5 @@
 export const actionSchema = {
   GEN_WORLD: { type: "object", shape: {} },
-  CONFIRM_FOUNDATION: { type: "object", shape: {} },
-  CONFIRM_CORE_ZONE: { type: "object", shape: {} },
-  TOGGLE_DNA_ZONE_WORKER: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, remove: { type: "boolean" } } },
-  BUILD_INFRA_PATH: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, remove: { type: "boolean" } } },
   TOGGLE_RUNNING: { type: "object", shape: { running: { type: "boolean" } } },
   SIM_STEP: { type: "object", shape: {} },
   SET_SPEED: { type: "object", shape: { speed: { type: "number" } } },
@@ -78,7 +74,6 @@ export const actionSchema = {
   SELECT_ENTITY: { type: "object", shape: { entityKind: { type: "string" }, entityId: { type: "string" } } },
   PLACE_WORKER: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, remove: { type: "boolean" } } },
   ISSUE_MOVE: { type: "object", shape: { entityId: { type: "string" }, targetX: { type: "number" }, targetY: { type: "number" } } },
-  PLACE_CORE: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, remove: { type: "boolean" } } },
   PLACE_BUILDING: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, buildingKind: { type: "string" }, facing: { type: "string" } } },
   PLACE_BELT_SEGMENT: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, direction: { type: "string" }, remove: { type: "boolean" } } },
   PLACE_LINE_SEGMENT: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, remove: { type: "boolean" } } },

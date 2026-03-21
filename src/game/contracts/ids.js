@@ -78,17 +78,12 @@ export const BUILDING_KIND = Object.freeze({
 });
 
 export const RUN_PHASE = Object.freeze({
-  // Deprecated legacy phases kept only as aliases for compatibility during migration.
-  GENESIS_SETUP: "genesis_setup",
-  GENESIS_ZONE: "genesis_zone",
-  DNA_ZONE_SETUP: "dna_zone_setup",
   MAP_BUILDER: "map_builder",
   RUN_ACTIVE: "run_active",
   RESULT: "result",
 });
 
 export const RUN_PHASE_VALUES = Object.freeze([
-  RUN_PHASE.DNA_ZONE_SETUP,
   RUN_PHASE.MAP_BUILDER,
   RUN_PHASE.RUN_ACTIVE,
   RUN_PHASE.RESULT,
@@ -116,7 +111,6 @@ export const OVERLAY_MODE_VALUES = Object.freeze([
 
 export const BRUSH_MODE = Object.freeze({
   OBSERVE: "observe",
-  FOUNDER_PLACE: "founder_place",
   SPLIT_PLACE: "split_place",
   WORKER_HARVEST: "worker_harvest",
   ZONE_PAINT: "zone_paint",
@@ -135,7 +129,6 @@ export const BRUSH_MODE = Object.freeze({
 
 export const BRUSH_MODE_VALUES = Object.freeze([
   BRUSH_MODE.OBSERVE,
-  BRUSH_MODE.FOUNDER_PLACE,
   BRUSH_MODE.SPLIT_PLACE,
   BRUSH_MODE.WORKER_HARVEST,
   BRUSH_MODE.ZONE_PAINT,
