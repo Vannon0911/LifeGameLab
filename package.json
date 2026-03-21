@@ -12,6 +12,7 @@
     "llm:pipeline:check": "node tools/check-llm-pipeline.mjs",
     "test": "node devtools/run-all-tests.mjs",
     "test:quick": "node devtools/run-test-suite.mjs quick",
+    "test:determinism:matrix": "node devtools/determinism-seed-matrix.mjs",
     "test:truth": "node devtools/run-test-suite.mjs truth",
     "test:contracts": "node tests/test-llm-contract.mjs && node tests/test-slice-a-contract-scaffold.mjs",
     "test:full": "node devtools/run-all-tests.mjs",

@@ -64,12 +64,12 @@ export const CLAIM_SCENARIOS = Object.freeze([
     ]),
   }),
   Object.freeze({
-    id: "claim.w1.mainline_deterministic",
+    id: "claim.w1.rts_mainline_deterministic",
     status: "verified",
     budgetMs: 120_000,
     surface: "dispatch",
     replayCount: 2,
-    truthAnchor: "step-4",
+    truthAnchor: "after-worldgen",
     sotRefs: Object.freeze([
       "src/game/contracts/manifest.js",
       "docs/PRODUCT.md#main-run",
@@ -92,6 +92,7 @@ export const CLAIM_SCENARIOS = Object.freeze([
     }),
     steps: Object.freeze([
       Object.freeze({ id: "gen-world", kind: "dispatch", action: { type: "GEN_WORLD", payload: {} } }),
+      Object.freeze({ id: "capture-after-worldgen", kind: "captureState", snapshot: "after-worldgen" }),
       Object.freeze({ id: "set-run-active", kind: "dispatch", action: { type: "SET_UI", payload: { runPhase: "run_active" } } }),
       Object.freeze({ id: "toggle-running", kind: "dispatch", action: { type: "TOGGLE_RUNNING", payload: { running: true } } }),
       Object.freeze({ id: "after-bootstrap", kind: "captureState", snapshot: "after-bootstrap" }),
@@ -103,6 +104,8 @@ export const CLAIM_SCENARIOS = Object.freeze([
       Object.freeze({ id: "capture-step-4", kind: "captureState", snapshot: "step-4" }),
     ]),
     assertions: Object.freeze([
+      Object.freeze({ id: "worldgen-run-active", kind: "statePathEquals", snapshot: "after-worldgen", path: "sim.runPhase", expected: "run_active" }),
+      Object.freeze({ id: "worldgen-not-running", kind: "statePathEquals", snapshot: "after-worldgen", path: "sim.running", expected: false }),
       Object.freeze({ id: "run-active", kind: "statePathEquals", snapshot: "after-bootstrap", path: "sim.runPhase", expected: "run_active" }),
       Object.freeze({ id: "running", kind: "statePathEquals", snapshot: "after-bootstrap", path: "sim.running", expected: true }),
       Object.freeze({ id: "alive-has-energy-shape", kind: "sameLength", snapshot: "step-4", leftPath: "world.alive", rightPath: "world.E" }),
@@ -110,6 +113,9 @@ export const CLAIM_SCENARIOS = Object.freeze([
       Object.freeze({ id: "step-signature-moved", kind: "signatureChanged", fromSnapshot: "after-bootstrap", toSnapshot: "step-4" }),
     ]),
     requiredArtifacts: Object.freeze([
+      "after-worldgen.state",
+      "after-worldgen.read-model",
+      "after-worldgen.signature-material",
       "after-bootstrap.state",
       "step-1.state",
       "step-1.read-model",
@@ -151,7 +157,7 @@ export const REGRESSION_TEST_STATUS = Object.freeze({
   "tests/test-deterministic-genesis.mjs": Object.freeze({
     status: "verified",
     budgetMs: 120_000,
-    purpose: "prove same-seed replay and cross-seed divergence with after-core, step-1, and step-4 hash anchors",
+    purpose: "prove same-seed replay and cross-seed divergence for worldgen, tick1, and tick4 replay anchors",
     counterProbe: "cross-seed perturbation must diverge while same-seed replay remains identical",
   }),
   "tests/test-readmodel-determinism.mjs": Object.freeze({

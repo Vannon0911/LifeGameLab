@@ -18,7 +18,7 @@
 - Erst danach darf `unverified -> verified` in `spec-map` gesetzt werden.
 
 ## Aktueller Verifikationsstand
-- Claims: `claim.w1.no_bypass_surface`, `claim.w1.genesis_mainline_deterministic` -> `verified`
+- Claims: `claim.w1.no_bypass_surface`, `claim.w1.rts_mainline_deterministic` -> `verified`
 - Regression: alle Eintraege in `REGRESSION_TEST_STATUS` -> `verified`
 
 ## Test/Guard SoT
