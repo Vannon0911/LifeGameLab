@@ -76,6 +76,29 @@ function runPreflightExpectFail(args, expectedPattern) {
   return combined;
 }
 
+function runGuard(args) {
+  return spawnSync(process.execPath, [path.join(root, "tools/git-llm-guard.mjs"), ...args], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30000,
+  });
+}
+
+function runGuardExpectFail(args, expectedPattern) {
+  const res = runGuard(args);
+  if (res.error) throw res.error;
+  assert.notEqual(res.status, 0, `guard ${args.join(" ")} unexpectedly succeeded:\n${res.stdout}\n${res.stderr}`);
+  const combined = `${res.stdout}${res.stderr}`;
+  if (expectedPattern) {
+    assert(
+      expectedPattern.test(combined),
+      `guard ${args.join(" ")} failed for unexpected reason:\n${combined}`,
+    );
+  }
+  return combined;
+}
+
 function backupPath(absPath) {
   if (!fs.existsSync(absPath)) return null;
   const stats = fs.statSync(absPath);
@@ -233,6 +256,35 @@ try {
 
   const checkOutput = runPreflight(["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
   assert(checkOutput.includes("CHECK_OK"), "check must succeed again for full testing scope");
+
+  const lockBackup = fs.readFileSync(path.join(root, "docs/llm/entry/LLM_ENTRY_LOCK.json"), "utf8");
+  const tempProbe = path.join(root, "tmp-guard-precommit-probe.txt");
+  try {
+    fs.writeFileSync(tempProbe, "probe\n", "utf8");
+    const addRes = spawnSync("git", ["add", "tmp-guard-precommit-probe.txt"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 30_000,
+    });
+    assert.equal(addRes.status, 0, `git add failed:\n${addRes.stdout}\n${addRes.stderr}`);
+
+    const driftedLock = JSON.parse(lockBackup);
+    driftedLock.sha256 = "deadbeef";
+    fs.writeFileSync(path.join(root, "docs/llm/entry/LLM_ENTRY_LOCK.json"), `${JSON.stringify(driftedLock, null, 2)}\n`, "utf8");
+
+    const guardDriftOutput = runGuardExpectFail(["pre-commit"], /entry lock drift detected/i);
+    assert(guardDriftOutput.includes("entry lock drift detected"), "guard must fail closed on lock drift");
+  } finally {
+    fs.writeFileSync(path.join(root, "docs/llm/entry/LLM_ENTRY_LOCK.json"), lockBackup, "utf8");
+    if (fs.existsSync(tempProbe)) fs.rmSync(tempProbe, { force: true });
+    spawnSync("git", ["reset", "HEAD", "--", "tmp-guard-precommit-probe.txt"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 30_000,
+    });
+  }
 
   const auditOutput = runPreflight(["audit", "--paths", "src/unknown/not-in-matrix.js"]);
   assert(auditOutput.includes("AUDIT_OK"), "audit must never block the caller");
