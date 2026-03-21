@@ -59,6 +59,7 @@
       "contracts"
     ],
     "triggerPrefixes": [
+      ".vscode/",
       ".trae/",
       ".gitignore",
       "agents/llm-entry-sequence/",
