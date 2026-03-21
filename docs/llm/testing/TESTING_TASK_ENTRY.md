@@ -16,8 +16,8 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 10. `src/kernel/store/createStore.js`
 11. `src/kernel/store/applyPatches.js`
 12. `tools/llm-preflight.mjs`
-13. `tools/run-test-suite.mjs`
-14. `tools/run-all-tests.mjs`
+13. `devtools/run-test-suite.mjs`
+14. `devtools/run-all-tests.mjs`
 15. `tests/test-llm-contract.mjs`
 16. `tests/support/liveTestKit.mjs`
 
@@ -27,12 +27,12 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 
 ## PRUEFEN
 - Vor Schreiben (pflicht):
-- `node tools/llm-preflight.mjs classify --paths tests,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs`
-- `node tools/llm-preflight.mjs entry --paths tests,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs --mode work`
-- `node tools/llm-preflight.mjs ack --paths tests,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs`
-- `node tools/llm-preflight.mjs check --paths tests,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs`
+- `node tools/llm-preflight.mjs classify --paths tests,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs`
+- `node tools/llm-preflight.mjs entry --paths tests,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs --mode work`
+- `node tools/llm-preflight.mjs ack --paths tests,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs`
+- `node tools/llm-preflight.mjs check --paths tests,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs`
 - Vor reinem Testlauf (optional, warn-only):
-- `node tools/llm-preflight.mjs audit --paths tests,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs`
+- `node tools/llm-preflight.mjs audit --paths tests,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs`
 
 ## SCHREIBEN (pflicht)
 - Kein Schreiben ohne `docs/llm/ENTRY.md` + passenden Task-Entry.
@@ -51,5 +51,5 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Am Ende jedes Arbeitsschritts ist zu pruefen, dass Tests, Evidence-Registry, Gates und Doku denselben Stand abbilden.
 
 ## Taskregel
-Offizielle Truth laeuft dispatch-basiert ueber `tools/evidence-runner.mjs`; globale Browser-Hooks oder Live-Client-Sonderpfade sind keine erlaubte Testsurface mehr.
+Offizielle Truth laeuft dispatch-basiert ueber `devtools/evidence-runner.mjs`; globale Browser-Hooks oder Live-Client-Sonderpfade sind keine erlaubte Testsurface mehr.
 - Pro abgeschlossenem Slice ist die Version um `0.0.1` zu erhoehen; Teilstufen `a/b/c/d` werden nur als Dokumentanhang gefuehrt.

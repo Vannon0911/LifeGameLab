@@ -37,9 +37,9 @@ Für die Suche nach möglichem Legacy-/Backcompat-Code wurden im Repository folg
 
 ## Treffer mit mittlerer Relevanz
 
-- `tools/test-suites.mjs`
+- `devtools/test-suites.mjs`
   - Führt weiterhin einen `legacy-node-test` als separaten Evidenz-Surface.
-- `tools/evidence-runner.mjs`
+- `devtools/evidence-runner.mjs`
   - Referenziert den Legacy-Surface weiterhin explizit für Nachweisläufe.
 
 **Einschätzung:** Eher Resilienz/Fallback als „Legacy“, aber potenziell Backcompat-nah.

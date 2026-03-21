@@ -14,7 +14,7 @@ import {
   TESTING_PREFLIGHT_PATHS,
   TESTING_PREFLIGHT_PATHS_ARG,
   isKnownSuite,
-} from "../tools/test-suites.mjs";
+} from "../devtools/test-suites.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -34,8 +34,8 @@ const llmDir = path.join(root, ".llm");
 
 const testingGateFiles = [
   "tools/llm-preflight.mjs",
-  "tools/run-test-suite.mjs",
-  "tools/run-all-tests.mjs",
+  "devtools/run-test-suite.mjs",
+  "devtools/run-all-tests.mjs",
   "tests/test-llm-contract.mjs",
   "tests/support/liveTestKit.mjs",
 ];
@@ -150,17 +150,17 @@ try {
   }
 
   const triggerPrefixes = Array.isArray(testingConfig.triggerPrefixes) ? testingConfig.triggerPrefixes : [];
-  for (const scopedPath of ["tests/", "tools/llm-preflight.mjs", "tools/run-test-suite.mjs", "tools/run-all-tests.mjs", "tools/test-suites.mjs", "tools/evidence-runner.mjs", "docs/llm/testing/"]) {
+  for (const scopedPath of ["tests/", "tools/llm-preflight.mjs", "devtools/run-test-suite.mjs", "devtools/run-all-tests.mjs", "devtools/test-suites.mjs", "devtools/evidence-runner.mjs", "docs/llm/testing/"]) {
     assert(triggerPrefixes.includes(scopedPath), `testing triggerPrefixes must include ${scopedPath}`);
   }
 
   const testingPreflightPaths = [
     "tests/",
     "tools/llm-preflight.mjs",
-    "tools/run-test-suite.mjs",
-    "tools/run-all-tests.mjs",
-    "tools/test-suites.mjs",
-    "tools/evidence-runner.mjs",
+    "devtools/run-test-suite.mjs",
+    "devtools/run-all-tests.mjs",
+    "devtools/test-suites.mjs",
+    "devtools/evidence-runner.mjs",
   ];
   for (const scriptName of ["llm:preflight:start", "llm:preflight:ack", "llm:preflight:check"]) {
     const script = String(packageJson.scripts?.[scriptName] || "");

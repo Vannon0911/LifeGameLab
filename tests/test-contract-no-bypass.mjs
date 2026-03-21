@@ -39,7 +39,7 @@ const scanDirExcludes = new Set([
   "docs",
 ]);
 const markerAllowlist = new Set([
-  "tools/test-suites.mjs",
+  "devtools/test-suites.mjs",
 ]);
 
 function collectRuntimeScanTargets(startRel = ".", out = []) {

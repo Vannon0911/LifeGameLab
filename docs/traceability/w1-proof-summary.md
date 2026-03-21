@@ -5,7 +5,7 @@ This file is the minimal durable proof for the current deterministic W1 scope.
 It replaces raw run dumps and screenshot archives with a small text summary.
 
 ## Source
-- command: `node tools/run-all-tests.mjs --full`
+- command: `node devtools/run-all-tests.mjs --full`
 - run date: `2026-03-16`
 - proof scope: `w1`
 - manifest: `output/evidence/2026-03-16T20-29-41-219Z-full-9ceb4c82/manifest.json`

@@ -5,18 +5,18 @@
   "type": "module",
   "scripts": {
     "serve": "python3 -m http.server 8080",
-    "hooks:install": "node tools/install-git-hooks.mjs",
-    "llm:preflight:start": "node tools/llm-preflight.mjs entry --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs --mode work",
-    "llm:preflight:ack": "node tools/llm-preflight.mjs ack --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs",
-    "llm:preflight:check": "node tools/llm-preflight.mjs check --paths tests/,tools/llm-preflight.mjs,tools/run-test-suite.mjs,tools/run-all-tests.mjs,tools/test-suites.mjs,tools/evidence-runner.mjs",
+    "hooks:install": "node devtools/install-git-hooks.mjs",
+    "llm:preflight:start": "node tools/llm-preflight.mjs entry --paths tests/,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs --mode work",
+    "llm:preflight:ack": "node tools/llm-preflight.mjs ack --paths tests/,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs",
+    "llm:preflight:check": "node tools/llm-preflight.mjs check --paths tests/,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs",
     "llm:pipeline:check": "node tools/check-llm-pipeline.mjs",
-    "test": "node tools/run-all-tests.mjs",
-    "test:quick": "node tools/run-test-suite.mjs quick",
-    "test:truth": "node tools/run-test-suite.mjs truth",
+    "test": "node devtools/run-all-tests.mjs",
+    "test:quick": "node devtools/run-test-suite.mjs quick",
+    "test:truth": "node devtools/run-test-suite.mjs truth",
     "test:contracts": "node tests/test-llm-contract.mjs && node tests/test-slice-a-contract-scaffold.mjs",
-    "test:full": "node tools/run-all-tests.mjs",
-    "test:session": "node tools/run-verification-session.mjs",
-    "test:foundation:visual": "node tools/run-foundation-visual-playwright.mjs"
+    "test:full": "node devtools/run-all-tests.mjs",
+    "test:session": "node devtools/run-verification-session.mjs",
+    "test:foundation:visual": "node devtools/run-foundation-visual-playwright.mjs"
   },
   "devDependencies": {
     "playwright": "^1.58.2"

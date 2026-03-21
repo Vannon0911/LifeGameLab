@@ -114,7 +114,7 @@ async function main() {
     try {
       ({ chromium } = await import("playwright"));
     } catch {
-      throw new Error("Missing playwright package. Run with: npx --yes -p playwright node tools/run-foundation-visual-playwright.mjs");
+      throw new Error("Missing playwright package. Run with: npx --yes -p playwright node devtools/run-foundation-visual-playwright.mjs");
     }
 
     server = startLocalServer();

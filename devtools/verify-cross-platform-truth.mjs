@@ -16,7 +16,7 @@ function canonical(value) {
 function main() {
   const args = process.argv.slice(2);
   if (args.length < 2) {
-    throw new Error("Usage: node tools/verify-cross-platform-truth.mjs <fileA> <fileB> [fileC...]");
+    throw new Error("Usage: node devtools/verify-cross-platform-truth.mjs <fileA> <fileB> [fileC...]");
   }
   const docs = args.map((rel) => {
     const abs = path.resolve(root, rel);

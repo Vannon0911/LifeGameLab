@@ -38,8 +38,8 @@ Danach werden alle Task-Sets fuer alle klassifizierten Scopes gelesen, nicht nur
 
 ## TESTING Task
 1. `tools/llm-preflight.mjs`
-2. `tools/run-test-suite.mjs`
-3. `tools/run-all-tests.mjs`
+2. `devtools/run-test-suite.mjs`
+3. `devtools/run-all-tests.mjs`
 4. `tests/test-llm-contract.mjs`
 5. `tests/support/liveTestKit.mjs`
 

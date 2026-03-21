@@ -31,10 +31,10 @@ export const EVIDENCE_SURFACES = Object.freeze({
 export const TESTING_PREFLIGHT_PATHS = Object.freeze([
   "tests",
   "tools/llm-preflight.mjs",
-  "tools/run-test-suite.mjs",
-  "tools/run-all-tests.mjs",
-  "tools/test-suites.mjs",
-  "tools/evidence-runner.mjs",
+  "devtools/run-test-suite.mjs",
+  "devtools/run-all-tests.mjs",
+  "devtools/test-suites.mjs",
+  "devtools/evidence-runner.mjs",
 ]);
 
 export const TESTING_PREFLIGHT_PATHS_ARG = TESTING_PREFLIGHT_PATHS.join(",");

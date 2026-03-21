@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 
-const DEFAULT_PRIVATE_KEY_PATH = path.join(root, "tools", "keys", "evidence-attestation-private.pem");
-const DEFAULT_PUBLIC_KEY_PATH = path.join(root, "tools", "keys", "evidence-attestation-public.pem");
+const DEFAULT_PRIVATE_KEY_PATH = path.join(root, "devtools", "keys", "evidence-attestation-private.pem");
+const DEFAULT_PUBLIC_KEY_PATH = path.join(root, "devtools", "keys", "evidence-attestation-public.pem");
 const DEFAULT_ALGO = "ed25519";
 
 function canonicalStringify(value) {

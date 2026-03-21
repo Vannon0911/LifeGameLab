@@ -8,7 +8,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const suiteName = resolveSuiteName(process.argv[2] || "claims");
 const preflightScript = path.join(root, "tools", "llm-preflight.mjs");
-const evidenceRunner = path.join(root, "tools", "evidence-runner.mjs");
+const evidenceRunner = path.join(root, "devtools", "evidence-runner.mjs");
 
 if (!isKnownSuite(suiteName)) {
   console.error(`Unknown suite '${process.argv[2] || "claims"}'. Use claims, regression, or full.`);

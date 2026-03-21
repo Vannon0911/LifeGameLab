@@ -6,7 +6,7 @@ import { TESTING_PREFLIGHT_PATHS_ARG } from "./test-suites.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const preflightScript = path.join(root, "tools", "llm-preflight.mjs");
-const evidenceRunner = path.join(root, "tools", "evidence-runner.mjs");
+const evidenceRunner = path.join(root, "devtools", "evidence-runner.mjs");
 
 function runPreflightAudit() {
   const res = spawnSync(process.execPath, [preflightScript, "audit", "--paths", TESTING_PREFLIGHT_PATHS_ARG], {

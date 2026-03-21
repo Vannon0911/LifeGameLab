@@ -439,7 +439,7 @@ graph LR
         S_PROT --> SCH_VAL["src/kernel/validation/validateState.js"]
         S_PROT --> DOM_GATE["src/kernel/validation/assertDomainPatchesAllowed.js"]
         
-        D_REPLAY --> EVID_RUN["tools/evidence-runner.mjs"]
+        D_REPLAY --> EVID_RUN["devtools/evidence-runner.mjs"]
         D_REPLAY --> REPLAY_F["src/kernel/store/replay.js"]
     end
 ```
@@ -3184,7 +3184,7 @@ The following files were used as context for generating this wiki page:
 - [tests/test-kernel-replay-truth.mjs](tests/test-kernel-replay-truth.mjs)
 - [tests/test-readmodel-determinism.mjs](tests/test-readmodel-determinism.mjs)
 - [tests/test-step-chain-determinism.mjs](tests/test-step-chain-determinism.mjs)
-- [tools/run-foundation-visual-playwright.mjs](tools/run-foundation-visual-playwright.mjs)
+- [devtools/run-foundation-visual-playwright.mjs](devtools/run-foundation-visual-playwright.mjs)
 
 </details>
 
@@ -3745,8 +3745,8 @@ The following files were used as context for generating this wiki page:
 - [tests/test-mapspec-builder-pipeline.mjs](tests/test-mapspec-builder-pipeline.mjs)
 - [tests/test-mapspec-gen-world.mjs](tests/test-mapspec-gen-world.mjs)
 - [tests/test-redteam-kernel-hardening.mjs](tests/test-redteam-kernel-hardening.mjs)
-- [tools/evidence-runner.mjs](tools/evidence-runner.mjs)
-- [tools/test-suites.mjs](tools/test-suites.mjs)
+- [devtools/evidence-runner.mjs](devtools/evidence-runner.mjs)
+- [devtools/test-suites.mjs](devtools/test-suites.mjs)
 
 </details>
 
@@ -3761,7 +3761,7 @@ The framework is organized into four distinct layers, each increasing in rigor a
 | Layer | Focus | Key Tool/File |
 |:---|:---|:---|
 | **Unit/Functional** | Component logic and API surface. | `tests/*.mjs` |
-| **Evidence Claims** | High-level behavioral invariants (e.g., "No Bypass"). | `tools/evidence-runner.mjs` |
+| **Evidence Claims** | High-level behavioral invariants (e.g., "No Bypass"). | `devtools/evidence-runner.mjs` |
 | **Red-Team** | Kernel hardening and payload rejection. | `tests/test-redteam-kernel-hardening.mjs` |
 | **Regression** | Determinism stability and drift detection. | `tests/evidence/spec-map.mjs` |
 
@@ -3787,7 +3787,7 @@ graph TD
     style A stroke-dasharray: 5 5
     style B stroke-dasharray: 5 5
 ```
-**Sources:** [tests/evidence/spec-map.mjs:1-127](), [tools/test-suites.mjs:24-77](), [docs/sot/06_TESTS_EVIDENCE_GOVERNANCE.md:1-18]()
+**Sources:** [tests/evidence/spec-map.mjs:1-127](), [devtools/test-suites.mjs:24-77](), [docs/sot/06_TESTS_EVIDENCE_GOVERNANCE.md:1-18]()
 
 ---
 
@@ -3798,7 +3798,7 @@ Every scenario defines a `truthAnchor` (a known-good state) and a `counterProbe`
 
 For details, see [Evidence Runner and Claim Scenarios](#6.1).
 
-**Sources:** [tools/evidence-runner.mjs:165-216](), [tests/evidence/spec-map.mjs:10-65](), [docs/sot/06_TESTS_EVIDENCE_GOVERNANCE.md:10-15]()
+**Sources:** [devtools/evidence-runner.mjs:165-216](), [tests/evidence/spec-map.mjs:10-65](), [docs/sot/06_TESTS_EVIDENCE_GOVERNANCE.md:10-15]()
 
 ---
 
@@ -3822,7 +3822,7 @@ Determinism is verified through long-running simulation chains and interaction r
 
 For details, see [Determinism and Regression Tests](#6.3).
 
-**Sources:** [tests/evidence/spec-map.mjs:137-145](), [tools/test-suites.mjs:54-59](), [docs/sot/06_TESTS_EVIDENCE_GOVERNANCE.md:33-39]()
+**Sources:** [tests/evidence/spec-map.mjs:137-145](), [devtools/test-suites.mjs:54-59](), [docs/sot/06_TESTS_EVIDENCE_GOVERNANCE.md:33-39]()
 
 ---
 
@@ -3835,7 +3835,7 @@ The testing ecosystem is supported by a variety of specialized tools:
 
 For details, see [Test Infrastructure and Tooling](#6.4).
 
-**Sources:** [tools/test-suites.mjs:41-52](), [tests/support/liveTestKit.mjs:1-60](), [tools/run-foundation-visual-playwright.mjs:1-50]()
+**Sources:** [devtools/test-suites.mjs:41-52](), [tests/support/liveTestKit.mjs:1-60](), [devtools/run-foundation-visual-playwright.mjs:1-50]()
 
 ---
 
@@ -3873,7 +3873,7 @@ graph LR
     KRT -- "Exercises" --> DPG
 ```
 
-**Sources:** [docs/sot/01_KERNEL_GATES.md:1-18](), [docs/sot/06_TESTS_EVIDENCE_GOVERNANCE.md:24-32](), [tools/evidence-runner.mjs:7-26]()
+**Sources:** [docs/sot/01_KERNEL_GATES.md:1-18](), [docs/sot/06_TESTS_EVIDENCE_GOVERNANCE.md:24-32](), [devtools/evidence-runner.mjs:7-26]()
 
 ---
 
@@ -3891,13 +3891,13 @@ The following files were used as context for generating this wiki page:
 - [tests/test-mapspec-builder-pipeline.mjs](tests/test-mapspec-builder-pipeline.mjs)
 - [tests/test-mapspec-gen-world.mjs](tests/test-mapspec-gen-world.mjs)
 - [tests/test-redteam-kernel-hardening.mjs](tests/test-redteam-kernel-hardening.mjs)
-- [tools/demo-live-attest.mjs](tools/demo-live-attest.mjs)
-- [tools/evidence-attestation.mjs](tools/evidence-attestation.mjs)
-- [tools/evidence-runner.mjs](tools/evidence-runner.mjs)
-- [tools/keys/evidence-attestation-private.pem](tools/keys/evidence-attestation-private.pem)
-- [tools/keys/evidence-attestation-public.pem](tools/keys/evidence-attestation-public.pem)
-- [tools/run-verification-session.mjs](tools/run-verification-session.mjs)
-- [tools/test-suites.mjs](tools/test-suites.mjs)
+- [devtools/demo-live-attest.mjs](devtools/demo-live-attest.mjs)
+- [devtools/evidence-attestation.mjs](devtools/evidence-attestation.mjs)
+- [devtools/evidence-runner.mjs](devtools/evidence-runner.mjs)
+- [devtools/keys/evidence-attestation-private.pem](devtools/keys/evidence-attestation-private.pem)
+- [devtools/keys/evidence-attestation-public.pem](devtools/keys/evidence-attestation-public.pem)
+- [devtools/run-verification-session.mjs](devtools/run-verification-session.mjs)
+- [devtools/test-suites.mjs](devtools/test-suites.mjs)
 
 </details>
 
@@ -3910,13 +3910,13 @@ The Evidence Runner is the core engine for verifying the deterministic integrity
 The `evidence-runner.mjs` script implements a multi-stage pipeline that transitions from environment preflight to the generation of signed verification artifacts.
 
 ### 1. Preflight and Registry Validation
-Before execution, the runner validates the internal consistency of the test suite. It performs drift detection on the regression test inventory and ensures every scenario in `CLAIM_REGISTRY` follows the required schema [tools/evidence-runner.mjs:120-139]().
+Before execution, the runner validates the internal consistency of the test suite. It performs drift detection on the regression test inventory and ensures every scenario in `CLAIM_REGISTRY` follows the required schema [devtools/evidence-runner.mjs:120-139]().
 
 ### 2. Harness Initialization
-The runner initializes a headless `createStore` instance using a `createNullDriver` to prevent side effects on local persistence [tools/evidence-runner.mjs:7-8](). It loads the project `manifest`, `reducer`, and `simStepPatch` to create a canonical execution environment [tools/evidence-runner.mjs:10-11]().
+The runner initializes a headless `createStore` instance using a `createNullDriver` to prevent side effects on local persistence [devtools/evidence-runner.mjs:7-8](). It loads the project `manifest`, `reducer`, and `simStepPatch` to create a canonical execution environment [devtools/evidence-runner.mjs:10-11]().
 
 ### 3. Step Execution and Journaling
-Scenarios consist of discrete `steps`. The runner iterates through these, appending each result to an `EvidenceJournal` which maintains a SHA-256 hash chain of all events [tools/evidence-runner.mjs:165-189]().
+Scenarios consist of discrete `steps`. The runner iterates through these, appending each result to an `EvidenceJournal` which maintains a SHA-256 hash chain of all events [devtools/evidence-runner.mjs:165-189]().
 *   **Dispatch**: Executes a standard kernel action.
 *   **DispatchExpectError**: Verifies that invalid actions (e.g., poisoned payloads) are rejected by the kernel with the correct error message [tests/evidence/spec-map.mjs:44-45]().
 *   **CaptureState**: Serializes the current store state into an artifact for later assertion.
@@ -3925,7 +3925,7 @@ Scenarios consist of discrete `steps`. The runner iterates through these, append
 To prove determinism, scenarios can specify a `replayCount` (e.g., 2). The runner executes the entire sequence multiple times and compares the `truthAnchor` snapshot across attempts to ensure bit-identical results [tests/evidence/spec-map.mjs:71-72](), [tests/evidence/spec-map.mjs:85-92]().
 
 ### 5. Attestation and Manifesting
-Upon completion, the runner generates a `manifest.json` containing the outcome of all assertions and references to generated artifacts. This manifest is then signed using an Ed25519 private key to produce an attestation [tools/evidence-attestation.mjs:39-65]().
+Upon completion, the runner generates a `manifest.json` containing the outcome of all assertions and references to generated artifacts. This manifest is then signed using an Ed25519 private key to produce an attestation [devtools/evidence-attestation.mjs:39-65]().
 
 ### Evidence Data Flow
 The following diagram illustrates the flow from scenario definition to signed attestation.
@@ -3968,7 +3968,7 @@ graph TD
     KEY --> SIGN
     SIGN --> ATT["attestation.json"]
 ```
-Sources: `tools/evidence-runner.mjs`, `tools/evidence-attestation.mjs`, `tests/evidence/spec-map.mjs`
+Sources: `devtools/evidence-runner.mjs`, `devtools/evidence-attestation.mjs`, `tests/evidence/spec-map.mjs`
 
 ## CLAIM_SCENARIOS Structure
 
@@ -4012,34 +4012,34 @@ graph LR
     AS -- "kind: signatureStable" --> SIG
     RUN -- "outputs" --> ATT
 ```
-Sources: `tests/evidence/spec-map.mjs`, `tools/evidence-runner.mjs`, `src/kernel/store/createStore.js`
+Sources: `tests/evidence/spec-map.mjs`, `devtools/evidence-runner.mjs`, `src/kernel/store/createStore.js`
 
 ## Artifact Types
 
 The runner produces a standardized set of artifacts for every scenario run, stored in `output/evidence/`.
 
-*   **`.state`**: A full JSON serialization of the kernel store. TypedArrays are converted to standard arrays via `toSerializable` [tools/evidence-runner.mjs:82-89]().
-*   **`.read-model`**: A simplified projection of the state generated by `buildLlmReadModel`, designed for LLM consumption and high-level verification [tools/evidence-runner.mjs:12]().
+*   **`.state`**: A full JSON serialization of the kernel store. TypedArrays are converted to standard arrays via `toSerializable` [devtools/evidence-runner.mjs:82-89]().
+*   **`.read-model`**: A simplified projection of the state generated by `buildLlmReadModel`, designed for LLM consumption and high-level verification [devtools/evidence-runner.mjs:12]().
 *   **`.signature-material`**: The raw data used to generate the FNV-1a state signature, allowing for deep audit of what triggered a signature change [tests/evidence/spec-map.mjs:121]().
-*   **`manifest.json`**: The summary of the run, including `commitSha`, `runId`, and the pass/fail status of every assertion [tools/evidence-runner.mjs:218-223]().
+*   **`manifest.json`**: The summary of the run, including `commitSha`, `runId`, and the pass/fail status of every assertion [devtools/evidence-runner.mjs:218-223]().
 
 ## EVIDENCE_POLICY
 
-The `EVIDENCE_POLICY` in `test-suites.mjs` defines the global constraints for what constitutes a valid proof of correctness [tools/test-suites.mjs:61-77]().
+The `EVIDENCE_POLICY` in `test-suites.mjs` defines the global constraints for what constitutes a valid proof of correctness [devtools/test-suites.mjs:61-77]().
 
-1.  **Scope**: Currently locked to `w1` (Slice A/B transition) [tools/test-suites.mjs:62]().
-2.  **Trusted Sources**: Only specific files like `manifest.js` and `ARCHITECTURE.md` are allowed as SoT references [tools/test-suites.mjs:63]().
-3.  **Forbidden Paths**: Explicitly lists strings and code patterns that must never appear in valid evidence or be accessible via dispatch, such as `direct reducer()`, `patch injection`, or `LAB_AUTORUN` [tools/test-suites.mjs:64-74]().
-4.  **Official Suites**: Defines `claims` and `full` as the only suites capable of generating an "Official" attestation [tools/test-suites.mjs:75]().
+1.  **Scope**: Currently locked to `w1` (Slice A/B transition) [devtools/test-suites.mjs:62]().
+2.  **Trusted Sources**: Only specific files like `manifest.js` and `ARCHITECTURE.md` are allowed as SoT references [devtools/test-suites.mjs:63]().
+3.  **Forbidden Paths**: Explicitly lists strings and code patterns that must never appear in valid evidence or be accessible via dispatch, such as `direct reducer()`, `patch injection`, or `LAB_AUTORUN` [devtools/test-suites.mjs:64-74]().
+4.  **Official Suites**: Defines `claims` and `full` as the only suites capable of generating an "Official" attestation [devtools/test-suites.mjs:75]().
 
 ### Verification Session Flow
 A full verification session (`run-verification-session.mjs`) orchestrates the entire process:
-1.  Runs `test:quick` for immediate regression feedback [tools/run-verification-session.mjs:67]().
-2.  Runs `test:truth` to execute all `CLAIM_SCENARIOS` [tools/run-verification-session.mjs:68]().
-3.  Runs `test:full` to generate the final signed manifest [tools/run-verification-session.mjs:69]().
-4.  Calls `verifyEvidenceAttestation` to cryptographically confirm the result matches the public key in `docs/sot/` [tools/run-verification-session.mjs:70](), [tools/evidence-attestation.mjs:67-101]().
+1.  Runs `test:quick` for immediate regression feedback [devtools/run-verification-session.mjs:67]().
+2.  Runs `test:truth` to execute all `CLAIM_SCENARIOS` [devtools/run-verification-session.mjs:68]().
+3.  Runs `test:full` to generate the final signed manifest [devtools/run-verification-session.mjs:69]().
+4.  Calls `verifyEvidenceAttestation` to cryptographically confirm the result matches the public key in `docs/sot/` [devtools/run-verification-session.mjs:70](), [devtools/evidence-attestation.mjs:67-101]().
 
-Sources: `tools/test-suites.mjs`, `tools/run-verification-session.mjs`, `tools/evidence-attestation.mjs`
+Sources: `devtools/test-suites.mjs`, `devtools/run-verification-session.mjs`, `devtools/evidence-attestation.mjs`
 
 ---
 
@@ -4065,8 +4065,8 @@ The following files were used as context for generating this wiki page:
 - [tests/test-mapspec-builder-pipeline.mjs](tests/test-mapspec-builder-pipeline.mjs)
 - [tests/test-mapspec-gen-world.mjs](tests/test-mapspec-gen-world.mjs)
 - [tests/test-redteam-kernel-hardening.mjs](tests/test-redteam-kernel-hardening.mjs)
-- [tools/evidence-runner.mjs](tools/evidence-runner.mjs)
-- [tools/test-suites.mjs](tools/test-suites.mjs)
+- [devtools/evidence-runner.mjs](devtools/evidence-runner.mjs)
+- [devtools/test-suites.mjs](devtools/test-suites.mjs)
 
 </details>
 
@@ -4185,7 +4185,7 @@ Hardening is part of the "w1" evidence scope. The `claim.w1.no_bypass_surface` s
 2.  **blocked-force**: Verifies that `SIM_STEP` with a `force: true` payload is rejected [tests/evidence/spec-map.mjs:45]().
 3.  **signature-stable**: Ensures that the `before-invalid` signature matches the `after-invalid` signature exactly [tests/evidence/spec-map.mjs:51]().
 
-Sources: `[tests/evidence/spec-map.mjs:10-65]()`, `[tools/test-suites.mjs:15-22]()`
+Sources: `[tests/evidence/spec-map.mjs:10-65]()`, `[devtools/test-suites.mjs:15-22]()`
 
 ---
 
@@ -4204,7 +4204,7 @@ The following files were used as context for generating this wiki page:
 - [tests/test-kernel-replay-truth.mjs](tests/test-kernel-replay-truth.mjs)
 - [tests/test-readmodel-determinism.mjs](tests/test-readmodel-determinism.mjs)
 - [tests/test-step-chain-determinism.mjs](tests/test-step-chain-determinism.mjs)
-- [tools/run-foundation-visual-playwright.mjs](tools/run-foundation-visual-playwright.mjs)
+- [devtools/run-foundation-visual-playwright.mjs](devtools/run-foundation-visual-playwright.mjs)
 
 </details>
 
@@ -4295,13 +4295,13 @@ The system tracks test health via a conceptual `REGRESSION_TEST_STATUS` registry
 To maintain developer velocity, tests are categorized by execution cost:
 *   **Quick/Unit**: Minimal steps, verified in milliseconds (e.g., `test-deterministic-genesis`).
 *   **Claims/Regression**: Deep simulation runs (e.g., `test-step-chain-determinism` with 4+ steps) [tests/test-step-chain-determinism.mjs:22-24]().
-*   **Visual Regression**: Playwright-based tests that capture screenshots and compare UI stability [tools/run-foundation-visual-playwright.mjs:123-151]().
+*   **Visual Regression**: Playwright-based tests that capture screenshots and compare UI stability [devtools/run-foundation-visual-playwright.mjs:123-151]().
 
 ### Visual Regression (Playwright)
 The `run-foundation-visual-playwright.mjs` tool provides a bridge between the deterministic kernel and the DOM. It:
-1.  Starts a local server and launches a headless Chromium instance [tools/run-foundation-visual-playwright.mjs:120-123]().
-2.  Captures screenshots of specific UI components like `.nx-minimal-header` [tools/run-foundation-visual-playwright.mjs:133-135]().
-3.  Logs the outcome to a JSON file for automated analysis [tools/run-foundation-visual-playwright.mjs:18-24]().
+1.  Starts a local server and launches a headless Chromium instance [devtools/run-foundation-visual-playwright.mjs:120-123]().
+2.  Captures screenshots of specific UI components like `.nx-minimal-header` [devtools/run-foundation-visual-playwright.mjs:133-135]().
+3.  Logs the outcome to a JSON file for automated analysis [devtools/run-foundation-visual-playwright.mjs:18-24]().
 
 ---
 
@@ -4315,7 +4315,7 @@ The `run-foundation-visual-playwright.mjs` tool provides a bridge between the de
 | `replayActions` | `replay.js` | Iteratively dispatches actions to a store, returning a history of signatures [tests/test-kernel-replay-truth.mjs:3-3]() (import). |
 | `evaluateFoundationEligibility` | `foundationEligibility.js` | Logic used by tests to verify if a simulation is ready to start [tests/test-deterministic-genesis.mjs:4-4]() (import). |
 
-**Sources:** [tests/support/liveTestKit.mjs:1-72](), [tests/test-kernel-replay-truth.mjs:1-10](), [tools/run-foundation-visual-playwright.mjs:1-40]()
+**Sources:** [tests/support/liveTestKit.mjs:1-72](), [tests/test-kernel-replay-truth.mjs:1-10](), [devtools/run-foundation-visual-playwright.mjs:1-40]()
 
 ---
 
@@ -4336,9 +4336,9 @@ The following files were used as context for generating this wiki page:
 - [tests/test-kernel-replay-truth.mjs](tests/test-kernel-replay-truth.mjs)
 - [tests/test-readmodel-determinism.mjs](tests/test-readmodel-determinism.mjs)
 - [tests/test-step-chain-determinism.mjs](tests/test-step-chain-determinism.mjs)
-- [tools/run-all-tests.mjs](tools/run-all-tests.mjs)
-- [tools/run-foundation-visual-playwright.mjs](tools/run-foundation-visual-playwright.mjs)
-- [tools/run-test-suite.mjs](tools/run-test-suite.mjs)
+- [devtools/run-all-tests.mjs](devtools/run-all-tests.mjs)
+- [devtools/run-foundation-visual-playwright.mjs](devtools/run-foundation-visual-playwright.mjs)
+- [devtools/run-test-suite.mjs](devtools/run-test-suite.mjs)
 
 </details>
 
@@ -4351,15 +4351,15 @@ The LifeGameLab test infrastructure provides a multi-layered verification pipeli
 The testing lifecycle is managed by two primary entry points that orchestrate the execution of test suites defined in the project manifest.
 
 ### run-all-tests.mjs and run-test-suite.mjs
-`run-all-tests.mjs` serves as the primary CI entry point. It defaults to the `claims` suite but can be elevated to the `full` suite via the `--full` flag or the `npm run test:full` lifecycle event [tools/run-all-tests.mjs:26-28](). `run-test-suite.mjs` allows for targeted execution of specific suites such as `quick`, `claims`, `regression`, or `full` [tools/run-test-suite.mjs:9-15]().
+`run-all-tests.mjs` serves as the primary CI entry point. It defaults to the `claims` suite but can be elevated to the `full` suite via the `--full` flag or the `npm run test:full` lifecycle event [devtools/run-all-tests.mjs:26-28](). `run-test-suite.mjs` allows for targeted execution of specific suites such as `quick`, `claims`, `regression`, or `full` [devtools/run-test-suite.mjs:9-15]().
 
 ### LLM Preflight Integration
-Both runners enforce a mandatory `runPreflightAudit()` before any tests are executed [tools/run-all-tests.mjs:11-24](), [tools/run-test-suite.mjs:18-31](). This audit uses `llm-preflight.mjs` to verify that the current development session is authorized, the `ENTRY.md` hashes match the lockfile, and that a task-specific acknowledgment (Ack) exists for the files being modified [docs/llm/entry/ENTRY_ENFORCEMENT.md:8-19]().
+Both runners enforce a mandatory `runPreflightAudit()` before any tests are executed [devtools/run-all-tests.mjs:11-24](), [devtools/run-test-suite.mjs:18-31](). This audit uses `llm-preflight.mjs` to verify that the current development session is authorized, the `ENTRY.md` hashes match the lockfile, and that a task-specific acknowledgment (Ack) exists for the files being modified [docs/llm/entry/ENTRY_ENFORCEMENT.md:8-19]().
 
 ### Evidence Runner Pipeline
-The actual execution of gameplay logic tests is delegated to `evidence-runner.mjs`. This tool processes `CLAIM_SCENARIOS` by initializing a harness, executing simulation steps, and performing deterministic replay to attest that the state signatures remain stable across runs [tools/run-all-tests.mjs:28-33]().
+The actual execution of gameplay logic tests is delegated to `evidence-runner.mjs`. This tool processes `CLAIM_SCENARIOS` by initializing a harness, executing simulation steps, and performing deterministic replay to attest that the state signatures remain stable across runs [devtools/run-all-tests.mjs:28-33]().
 
-**Sources:** [tools/run-all-tests.mjs:1-38](), [tools/run-test-suite.mjs:1-44](), [docs/llm/entry/ENTRY_ENFORCEMENT.md:1-35]()
+**Sources:** [devtools/run-all-tests.mjs:1-38](), [devtools/run-test-suite.mjs:1-44](), [docs/llm/entry/ENTRY_ENFORCEMENT.md:1-35]()
 
 ## Deterministic Testing Kit (liveTestKit.mjs)
 
@@ -4407,12 +4407,12 @@ To support browser-based tests, `startLocalHttpServer` spawns a Python-based `ht
 
 ### run-foundation-visual-playwright.mjs
 This script performs "Foundation Block" testing, verifying that the UI remains functional during the critical genesis phase.
-1.  **Environment Setup**: Starts the local server and launches a headless Chromium instance [tools/run-foundation-visual-playwright.mjs:120-125]().
-2.  **Visual Capture**: Takes full-page and element-specific screenshots (e.g., of `.nx-minimal-header`) to verify layout integrity [tools/run-foundation-visual-playwright.mjs:131-135]().
-3.  **State Assertion**: Uses `page.evaluate` to check for the presence and dimensions of the `canvas` element [tools/run-foundation-visual-playwright.mjs:159-164]().
-4.  **Log Retention**: Maintains a JSON-based `run-log.json` and enforces a retention policy, keeping only the last 3 runs [tools/run-foundation-visual-playwright.mjs:79-103]().
+1.  **Environment Setup**: Starts the local server and launches a headless Chromium instance [devtools/run-foundation-visual-playwright.mjs:120-125]().
+2.  **Visual Capture**: Takes full-page and element-specific screenshots (e.g., of `.nx-minimal-header`) to verify layout integrity [devtools/run-foundation-visual-playwright.mjs:131-135]().
+3.  **State Assertion**: Uses `page.evaluate` to check for the presence and dimensions of the `canvas` element [devtools/run-foundation-visual-playwright.mjs:159-164]().
+4.  **Log Retention**: Maintains a JSON-based `run-log.json` and enforces a retention policy, keeping only the last 3 runs [devtools/run-foundation-visual-playwright.mjs:79-103]().
 
-**Sources:** [tests/support/localHttpServer.mjs:1-81](), [tools/run-foundation-visual-playwright.mjs:1-189](), [src/game/ui/ui.layout.js:23-36]()
+**Sources:** [tests/support/localHttpServer.mjs:1-81](), [devtools/run-foundation-visual-playwright.mjs:1-189](), [src/game/ui/ui.layout.js:23-36]()
 
 ## Determinism Regression Suites
 
@@ -5346,7 +5346,7 @@ This diagram shows how the developer's local tools interact with the core reposi
 ```mermaid
 graph LR
     subgraph "Developer Tools"
-        T1["npm run test"] -- "Executes" --> T2["tools/run-all-tests.mjs"]
+        T1["npm run test"] -- "Executes" --> T2["devtools/run-all-tests.mjs"]
         T3["Playwright"] -- "Drives" --> T4["tools/playwright-debug-loop.mjs"]
         T5["Git Hooks"] -- "Triggers" --> T6["tools/git-llm-guard.mjs"]
     end
@@ -5393,9 +5393,9 @@ The project uses `npm` scripts as the primary interface for testing, environment
 
 | Script | Command | Purpose |
 | :--- | :--- | :--- |
-| `test` | `node tools/run-all-tests.mjs` | Executes the full test suite including kernel hardening and determinism checks. |
+| `test` | `node devtools/run-all-tests.mjs` | Executes the full test suite including kernel hardening and determinism checks. |
 | `llm:preflight:start` | `node tools/llm-preflight.mjs` | Entry point for the mandatory LLM governance chain. |
-| `hooks:install` | `node tools/install-git-hooks.mjs` | Installs project-specific hooks from `.githooks/` into `.git/hooks/`. |
+| `hooks:install` | `node devtools/install-git-hooks.mjs` | Installs project-specific hooks from `.githooks/` into `.git/hooks/`. |
 
 ### LLM Preflight Chain
 The `llm-preflight.mjs` tool manages the technical state machine required for any code modification. It ensures that the LLM has read the required Source of Truth (SoT) files before allowing writes.
@@ -5694,7 +5694,7 @@ Browsernahe Regression fuer UI/Runtime-Stabilitaet, zusaetzlich zu deterministis
 
 ## Relevante Tools
 - `npm run test:foundation:visual`
-- `tools/run-foundation-visual-playwright.mjs`
+- `devtools/run-foundation-visual-playwright.mjs`
 
 ## Was verifiziert wird
 - UI-Baseline und sichtbare Layout-/Header-Stabilitaet.
@@ -5709,7 +5709,7 @@ Browsernahe Regression fuer UI/Runtime-Stabilitaet, zusaetzlich zu deterministis
 Visual-Tests sind Integrationssignal, nicht Ersatz fuer Contract-/Determinismus-Tests.
 
 Verbindliche Quellen:
-- `tools/run-foundation-visual-playwright.mjs`
+- `devtools/run-foundation-visual-playwright.mjs`
 - `docs/STATUS.md`
 - `tests/`
 
@@ -5838,8 +5838,8 @@ The following files were used as context for generating this wiki page:
 - [tests/test-mapspec-gen-world.mjs](tests/test-mapspec-gen-world.mjs)
 - [tests/test-redteam-kernel-hardening.mjs](tests/test-redteam-kernel-hardening.mjs)
 - [tests/test-slice-a-contract-scaffold.mjs](tests/test-slice-a-contract-scaffold.mjs)
-- [tools/evidence-runner.mjs](tools/evidence-runner.mjs)
-- [tools/test-suites.mjs](tools/test-suites.mjs)
+- [devtools/evidence-runner.mjs](devtools/evidence-runner.mjs)
+- [devtools/test-suites.mjs](devtools/test-suites.mjs)
 
 </details>
 

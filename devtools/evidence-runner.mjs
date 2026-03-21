@@ -153,7 +153,7 @@ function writeCurrentTruth({ manifestPath, runId, suite, finishedAt }) {
   ensureDir(path.dirname(currentTruthPath));
   const payload = {
     updatedAt: finishedAt,
-    source: "tools/evidence-runner.mjs",
+    source: "devtools/evidence-runner.mjs",
     commitSha: resolveHeadSha(),
     runId,
     suite,

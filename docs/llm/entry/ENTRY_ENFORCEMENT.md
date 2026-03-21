@@ -16,8 +16,8 @@
   - Hash des task-spezifischen Entry im Ack
   - Ack fuer exakt den aktiv klassifizierten Task
   - Pflichtstruktur aus `docs/llm/entry/TASK_GATE_INDEX.md` als Mindestzugriff ohne Vollscan
-- `tools/run-all-tests.mjs` fuehrt einen globalen `check` aus und bricht bei Fehler hart ab.
-- `tools/run-test-suite.mjs` fuehrt `check` auf Suite-Ebene und zusaetzlich vor jedem atomaren Testfile aus.
+- `devtools/run-all-tests.mjs` fuehrt einen globalen `check` aus und bricht bei Fehler hart ab.
+- `devtools/run-test-suite.mjs` fuehrt `check` auf Suite-Ebene und zusaetzlich vor jedem atomaren Testfile aus.
 - Damit gilt LLM-Entry-Pflicht nicht nur je Suite, sondern je atomarem Task (Testfile).
 - Git-Hooks (`.githooks/pre-commit`, `.githooks/pre-push`) blocken Commit/Push bei fehlendem Check.
 

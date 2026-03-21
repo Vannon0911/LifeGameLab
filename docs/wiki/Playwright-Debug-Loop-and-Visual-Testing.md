@@ -5,7 +5,7 @@ Browsernahe Regression fuer UI/Runtime-Stabilitaet, zusaetzlich zu deterministis
 
 ## Relevante Tools
 - `npm run test:foundation:visual`
-- `tools/run-foundation-visual-playwright.mjs`
+- `devtools/run-foundation-visual-playwright.mjs`
 
 ## Was verifiziert wird
 - UI-Baseline und sichtbare Layout-/Header-Stabilitaet.
@@ -20,6 +20,6 @@ Browsernahe Regression fuer UI/Runtime-Stabilitaet, zusaetzlich zu deterministis
 Visual-Tests sind Integrationssignal, nicht Ersatz fuer Contract-/Determinismus-Tests.
 
 Verbindliche Quellen:
-- `tools/run-foundation-visual-playwright.mjs`
+- `devtools/run-foundation-visual-playwright.mjs`
 - `docs/STATUS.md`
 - `tests/`

@@ -42,5 +42,5 @@ Each deprecated action or module must satisfy all of the following before deleti
 4. Replacement wiring is live.
 
 ## Residual Cleanup
-- `tools/demo-live-attest.mjs`
-- `tools/evidence-runner.mjs`
+- `devtools/demo-live-attest.mjs`
+- `devtools/evidence-runner.mjs`
