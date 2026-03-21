@@ -40,22 +40,6 @@ assert.notEqual(
   "GEN_WORLD must publish a new world mapSpecSnapshot after MapSpec changes",
 );
 
-store.dispatch({ type: "SET_WORLD_PRESET", payload: { presetId: "dry_basin" } });
-const afterSetWorldPreset = snapshotStore(store);
-assert.equal(afterSetWorldPreset.state.map.activeSource, "legacy_preset", "SET_WORLD_PRESET must stay legacy map source");
-assert.equal(afterSetWorldPreset.state.world.w, afterMapSpecGen.state.world.w, "SET_WORLD_PRESET must not rebuild world width directly");
-assert.equal(afterSetWorldPreset.state.world.h, afterMapSpecGen.state.world.h, "SET_WORLD_PRESET must not rebuild world height directly");
-const beforeLegacyGenSnapshot = afterSetWorldPreset.state.world.mapSpecSnapshot?.compiledHash || "";
-
-store.dispatch({ type: "GEN_WORLD", payload: {} });
-const afterLegacyGen = snapshotStore(store);
-assert.equal(afterLegacyGen.state.meta.worldPresetId, "dry_basin", "GEN_WORLD must sync legacy preset id");
-assert.notEqual(
-  afterLegacyGen.state.world.mapSpecSnapshot?.compiledHash || "",
-  beforeLegacyGenSnapshot,
-  "GEN_WORLD must refresh mapSpecSnapshot after legacy preset changes",
-);
-
 console.log(
-  `MAPSPEC_BUILDER_PIPELINE_OK baseline=${baselineWorldHash} map=${afterMapSpecGen.state.world.mapSpecSnapshot?.compiledHash || ""} legacy=${afterLegacyGen.state.world.mapSpecSnapshot?.compiledHash || ""}`,
+  `MAPSPEC_BUILDER_PIPELINE_OK baseline=${baselineWorldHash} map=${afterMapSpecGen.state.world.mapSpecSnapshot?.compiledHash || ""}`,
 );

@@ -13,7 +13,6 @@ const DISPATCH_SOURCES = Object.freeze({
   SET_SPEED: ["src/app/main.js"],
   SET_SEED: ["src/game/ui/ui.overlay.js"],
   SET_SIZE: [],
-  SET_WORLD_PRESET: [],
   SET_MAPSPEC: ["src/game/ui/ui.js"],
   SET_MAP_TILE: ["src/game/ui/ui.input.js"],
   SET_RENDER_MODE: ["src/app/main.js"],
@@ -24,7 +23,6 @@ const DISPATCH_SOURCES = Object.freeze({
   RESET_GLOBAL_LEARNING: [],
   SET_TILE: ["src/game/ui/ui.input.js"],
   SELECT_ENTITY: [],
-  ISSUE_ORDER: [],
   ISSUE_MOVE: ["src/game/ui/ui.js"],
   PLACE_CORE: [],
   PLACE_WORKER: ["src/game/ui/ui.js"],
@@ -41,7 +39,6 @@ const DISPATCH_SOURCES = Object.freeze({
   SET_MUTATOR_PATTERN: [],
   COMMIT_MUTATION: [],
   SET_WIN_MODE: [],
-  SET_OVERLAY: [],
 });
 
 export const dataflow = {

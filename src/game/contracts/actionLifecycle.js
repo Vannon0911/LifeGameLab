@@ -4,6 +4,7 @@ export const ACTION_LIFECYCLE_STATUS = Object.freeze({
   DEPRECATED: "deprecated",
   NEW_SLICE_A: "new_slice_a",
 });
+import { mutationMatrix } from "./mutationMatrix.js";
 
 const REPLACEMENT_GATES = Object.freeze([
   "dispatch_sources_removed",
@@ -56,7 +57,7 @@ function scaffold(slice, notes, plannedWrites = []) {
   };
 }
 
-export const actionLifecycle = Object.freeze({
+const actionLifecycleDraft = Object.freeze({
   GEN_WORLD: stable(
     "foundation",
     "Canonical deterministic world boot entrypoint remains active.",
@@ -111,12 +112,6 @@ export const actionLifecycle = Object.freeze({
     "Grid size remains canonical deterministic world dimension input.",
     ["/meta/gridW", "/meta/gridH"]
   ),
-  SET_WORLD_PRESET: rename(
-    "SET_MAPSPEC",
-    "slice_b",
-    "Preset-based boot will be replaced by MapSpec compilation.",
-    ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"]
-  ),
   SET_RENDER_MODE: stable(
     "foundation",
     "Render mode remains active until the new UI flow replaces it.",
@@ -153,12 +148,6 @@ export const actionLifecycle = Object.freeze({
     "Tile editing stays available for the internal Map Builder.",
     ["/world/R"]
   ),
-  ISSUE_ORDER: rename(
-    "ISSUE_MOVE",
-    "slice_c",
-    "Worker orders remain as compatibility input while entity-based move is canonical.",
-    ["/sim/selectedUnit", "/sim/selectedEntity", "/sim/unitOrder", "/sim/activeOrder", "/sim/lastCommand"]
-  ),
   PLACE_SPLIT_CLUSTER: rename(
     "PLACE_BUILDING",
     "slice_f",
@@ -181,12 +170,6 @@ export const actionLifecycle = Object.freeze({
     "slice_i",
     "Selectable win modes remain canonical and map to the new RTS metrics.",
     ["/sim/winMode"]
-  ),
-  SET_OVERLAY: rename(
-    "SET_UI",
-    "slice_a",
-    "Overlay choice survives only if the post-migration UI keeps overlays.",
-    ["/meta/activeOverlay"]
   ),
   SET_MAPSPEC: stable(
     "slice_b",
@@ -299,3 +282,12 @@ export const actionLifecycle = Object.freeze({
     ["/sim/mutatorDraft", "/world/fighters", "/sim/lastCommand"]
   ),
 });
+
+export const actionLifecycle = Object.freeze(
+  Object.fromEntries(
+    Object.entries(actionLifecycleDraft).map(([type, lifecycle]) => {
+      const plannedWrites = Array.isArray(mutationMatrix[type]) ? [...mutationMatrix[type]] : [];
+      return [type, { ...lifecycle, plannedWrites }];
+    })
+  )
+);

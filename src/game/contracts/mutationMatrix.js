@@ -47,7 +47,6 @@ export const mutationMatrix = {
   SET_SPEED: ["/meta/speed"],
   SET_SEED: ["/meta/seed"],
   SET_SIZE: ["/meta/gridW", "/meta/gridH"],
-  SET_WORLD_PRESET: ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"],
   SET_MAPSPEC: ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"],
   SET_MAP_TILE: ["/map/", "/meta/gridW", "/meta/gridH", "/meta/worldPresetId"],
   SET_SURFACE_TILE: ["/map/spec/surfacePlan", "/map/spec/generatedSeed"],
@@ -66,7 +65,6 @@ export const mutationMatrix = {
   SET_TILE: ["/world/R"],
   SELECT_ENTITY: ["/sim/selectedEntity"],
   PLACE_WORKER: ["/world/alive", "/world/E", "/world/reserve", "/world/link", "/world/lineageId", "/world/hue", "/world/trait", "/world/age", "/world/born", "/world/died", "/world/W", "/world/founderMask", "/sim/playerDNA", "/sim/founderPlaced"],
-  ISSUE_ORDER: ["/sim/selectedUnit", "/sim/selectedEntity", "/sim/unitOrder", "/sim/activeOrder", "/sim/lastCommand"],
   ISSUE_MOVE: ["/sim/selectedUnit", "/sim/selectedEntity", "/sim/unitOrder", "/sim/activeOrder", "/sim/lastCommand"],
   PLACE_CORE: ["/world/cores", "/sim/phase0PlantsDelivered", "/sim/phase0CorePlaced", "/sim/lastCommand", "/world/alive", "/world/E", "/world/lineageId"],
   PLACE_BUILDING: ["/world/buildings", "/sim/lastCommand"],
@@ -82,5 +80,4 @@ export const mutationMatrix = {
   SET_MUTATOR_PATTERN: ["/sim/mutatorDraft"],
   COMMIT_MUTATION: ["/sim/mutatorDraft", "/world/fighters", "/sim/lastCommand"],
   SET_WIN_MODE: ["/sim/winMode"],
-  SET_OVERLAY: ["/meta/activeOverlay"],
 };

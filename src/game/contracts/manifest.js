@@ -4,6 +4,7 @@ import { mutationMatrix } from "./mutationMatrix.js";
 import { simGate } from "./simGate.js";
 import { dataflow } from "./dataflow.js";
 import { actionLifecycle } from "./actionLifecycle.js";
+import { LEGACY_ACTIONS, LEGACY_ACTION_REPLACEMENTS } from "./legacyActions.js";
 
 export const SCHEMA_VERSION = 2;
 export const APP_VERSION = "0.9.0";
@@ -17,6 +18,8 @@ export const contractManifest = {
   simGate,
   dataflow,
   actionLifecycle,
+  LEGACY_ACTIONS,
+  LEGACY_ACTION_REPLACEMENTS,
 };
 
 export { contractManifest as manifest };
@@ -28,5 +31,7 @@ export {
   simGate,
   dataflow,
   actionLifecycle,
+  LEGACY_ACTIONS,
+  LEGACY_ACTION_REPLACEMENTS,
 };
 

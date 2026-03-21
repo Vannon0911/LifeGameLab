@@ -52,7 +52,7 @@ import {
   getWorldPreset,
   normalizeWorldPresetId,
 } from "../worldPresets.js";
-import { compileMapSpec, compileStateMapSpec, createLegacyPresetMapSpec } from "../mapspec.js";
+import { compileMapSpec, compileStateMapSpec } from "../mapspec.js";
 import { deriveStageState } from "./progression.js";
 import { deriveCanonicalZoneState } from "../canonicalZones.js";
 import { derivePatternBonuses, derivePatternCatalog } from "../patterns.js";
@@ -747,22 +747,6 @@ export function reducer(state, action, ctx = {}) {
         { op: "set", path: "/meta/gridW", value: Math.trunc(action.payload.w) },
         { op: "set", path: "/meta/gridH", value: Math.trunc(action.payload.h) }
       ];
-
-    case "SET_WORLD_PRESET": {
-      const compiledMap = compileStateMapSpec(state, {
-        presetId: normalizeWorldPresetId(action.payload?.presetId),
-      });
-      const legacySpec = createLegacyPresetMapSpec({
-        presetId: compiledMap.presetId,
-        gridW: compiledMap.gridW,
-        gridH: compiledMap.gridH,
-      });
-      const normalizedCompiledMap = {
-        ...compiledMap,
-        spec: legacySpec,
-      };
-      return buildMapSpecCompilePatches(normalizedCompiledMap);
-    }
 
     case "SET_MAPSPEC": {
       const compiledMap = compileMapSpec(action.payload?.mapSpec, {

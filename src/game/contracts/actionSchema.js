@@ -9,7 +9,6 @@ export const actionSchema = {
   SET_SPEED: { type: "object", shape: { speed: { type: "number" } } },
   SET_SEED: { type: "object", shape: { seed: { type: "string" } } },
   SET_SIZE: { type: "object", shape: { w: { type: "number" }, h: { type: "number" } } },
-  SET_WORLD_PRESET: { type: "object", shape: { presetId: { type: "string" } } },
   SET_MAPSPEC: {
     type: "object",
     shape: {
@@ -78,7 +77,6 @@ export const actionSchema = {
   SET_TILE: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, radius: { type: "number" }, value: { type: "number" }, clear: { type: "boolean" }, mode: { type: "string" } }, allowUnknown: true },
   SELECT_ENTITY: { type: "object", shape: { entityKind: { type: "string" }, entityId: { type: "string" } } },
   PLACE_WORKER: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, remove: { type: "boolean" } } },
-  ISSUE_ORDER: { type: "object", shape: { fromX: { type: "number" }, fromY: { type: "number" }, targetX: { type: "number" }, targetY: { type: "number" } } },
   ISSUE_MOVE: { type: "object", shape: { entityId: { type: "string" }, targetX: { type: "number" }, targetY: { type: "number" } } },
   PLACE_CORE: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, remove: { type: "boolean" } } },
   PLACE_BUILDING: { type: "object", shape: { x: { type: "number" }, y: { type: "number" }, buildingKind: { type: "string" }, facing: { type: "string" } } },
@@ -94,5 +92,4 @@ export const actionSchema = {
   SET_MUTATOR_PATTERN: { type: "object", shape: { mutatorId: { type: "string" } }, allowUnknown: true },
   COMMIT_MUTATION: { type: "object", shape: { mutatorId: { type: "string" }, topologyClass: { type: "string" } }, allowUnknown: true },
   SET_WIN_MODE: { type: "object", shape: { winMode: { type: "string" } } },
-  SET_OVERLAY: { type: "string" },
 };
