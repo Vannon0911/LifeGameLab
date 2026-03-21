@@ -60,6 +60,8 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 
 ## ADVERSARIAL EXECUTION MODE
 
+- Default ist immer: explizite Widerlegungs-Subagents AN.
+- Ausschalten nur bei ausdruecklichem User-Opt-out (`no subagents`); Schweigen ist niemals Opt-out.
 - Jede Annahme → sofort 1 neuer Subagent zur Widerlegung, nie derselbe weiterverwendet
 - Nächster Punkt → neuer Subagent, keine Wiederverwendung
 - Subagent-Ergebnisse nicht auslesen bis expliziter Trigger

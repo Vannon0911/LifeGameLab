@@ -127,6 +127,9 @@ Der Orchestrator integriert die bestehende Preflight-Kette (`tools/llm-preflight
 3. **ack** — Regeln bestaetigen
 4. **check** — Schreibberechtigung pruefen
 
+Zusatzregel (Default): Rebuttal-Subagents sind verpflichtend **an** und werden pro Task/File-Scan/Analyse neu erzeugt und nach Task-Ende explizit geschlossen.
+Ein Deaktivieren ist nur per explizitem User-Opt-out erlaubt (`--no-subagents`).
+
 Preflight wird automatisch ausgefuehrt wenn `--paths` angegeben sind. Deaktivierung:
 
 ```bash
@@ -152,6 +155,7 @@ Optionen:
   --validate               Nur Config validieren
   --preflight-mode <mode>  Preflight-Modus (work|security|audit)
   --no-preflight           Preflight ueberspringen
+  --no-subagents           Explizites Opt-out fuer Rebuttal-Subagents
   --rounds <n>             Nur fuer red-team-v2: Anzahl Runden
   --list-pipelines         Pipelines auflisten
   --list-roles             Rollen auflisten

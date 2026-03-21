@@ -108,6 +108,7 @@ export function createOrchestrator(config = {}) {
   const ADVERSARIAL_REBUTTAL_ROLE = "quality-reviewer";
   const ASSUMPTION_SCAN_LIMIT = 12;
   const MAX_SCAN_CHARS = 12_000;
+  const MIN_REBUTTAL_CONTENT_CHARS = 40;
 
   function log(...args) {
     if (verbose) console.log("[orchestrator]", ...args);
@@ -139,7 +140,7 @@ export function createOrchestrator(config = {}) {
   /**
    * Fuehrt einen einzelnen Agent-Step aus.
    */
-  async function runAgent(roleRef, task, contextFromPrevious, session) {
+  async function runAgent(roleRef, task, contextFromPrevious, session, subagentController) {
     const { roleKey, resultKey } = toRoleRunSpec(roleRef);
     log(`Starting agent: ${resultKey} (${roleKey})`);
 
@@ -162,6 +163,16 @@ export function createOrchestrator(config = {}) {
     }
 
     const agent = createAgent(role, model);
+    if (subagentController?.enabled) {
+      await subagentController.spawnRebuttal({
+        parentRoleKey: roleKey,
+        resultKey,
+        task,
+        purpose: "task-start-analysis",
+        context: contextFromPrevious || "",
+        strict: true,
+      });
+    }
 
     // Kontext von vorherigen Agents hinzufuegen
     if (contextFromPrevious) {
@@ -181,6 +192,7 @@ export function createOrchestrator(config = {}) {
         resultKey,
         task,
         session,
+        subagentController,
         parentAgent: agent,
         scanTarget: target,
         scanIndex: idx + 1,
@@ -286,6 +298,13 @@ export function createOrchestrator(config = {}) {
     return lines.slice(0, limit);
   }
 
+  function sanitizeSegment(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "item";
+  }
+
   function truncateScanContent(text) {
     const raw = String(text || "");
     if (raw.length <= MAX_SCAN_CHARS) return raw;
@@ -339,7 +358,7 @@ export function createOrchestrator(config = {}) {
   function isRebuttalSufficient(content) {
     const text = String(content || "").trim();
     if (!text) return false;
-    if (text.length < 40) return false;
+    if (text.length < MIN_REBUTTAL_CONTENT_CHARS) return false;
     if (/^\(?leer\)?$/i.test(text) || /^n\/a$/i.test(text) || /^none$/i.test(text)) return false;
 
     const hasCounterReading = hasMarker(text, ["gegenlesart", "counter-reading", "counter reading", "gegenargument", "einwand"]);
@@ -349,12 +368,158 @@ export function createOrchestrator(config = {}) {
     return hasCounterReading || hasUncertainty || hasAlternative || hasConcreteObjection;
   }
 
+  function createSubagentController(session, options = {}) {
+    const optOutExplicit = options?.subagentsOptOutExplicit === true;
+    const enabled = optOutExplicit ? false : true;
+    const records = [];
+    const active = new Map();
+    const taskNonce = `${session.id}-${Date.now()}`;
+
+    session.subagentPolicy = {
+      enabled,
+      optOutExplicit,
+      taskNonce,
+      records,
+      invalidReason: null,
+    };
+
+    function markInvalid(reason) {
+      session.subagentPolicy.invalidReason = String(reason || "unknown_subagent_policy_error");
+    }
+
+    function registerCreate(record) {
+      records.push(record);
+      active.set(record.id, record);
+    }
+
+    function closeRecord(record, reason = "task_cleanup") {
+      if (!record || record.closedAt) return;
+      try {
+        record.agent?.close?.();
+      } catch {}
+      record.closedAt = new Date().toISOString();
+      record.closeReason = String(reason || "task_cleanup");
+      active.delete(record.id);
+    }
+
+    async function spawnRebuttal({
+      parentRoleKey = "unknown",
+      resultKey = "unknown",
+      task = "",
+      purpose = "",
+      context = "",
+      strict = true,
+    }) {
+      if (!enabled) {
+        return { skipped: true, reason: "explicit_user_opt_out" };
+      }
+      const rebuttalRolePath = ROLE_PATHS[ADVERSARIAL_REBUTTAL_ROLE];
+      if (!rebuttalRolePath) {
+        const reason = `missing_rebuttal_role:${ADVERSARIAL_REBUTTAL_ROLE}`;
+        markInvalid(reason);
+        throw new Error(`invalid_subagent_policy:${reason}`);
+      }
+      const rebuttalRole = await loadRole(rebuttalRolePath);
+      const rebuttalModel = dryRun ? null : getModel(ADVERSARIAL_REBUTTAL_ROLE);
+      const rebuttalAgent = dryRun ? {
+        addContext() {},
+        async send() {
+          return {
+            content: "Gegenlesart: Dry-Run Rebuttal aktiv. Unsicherheitsmarker: keine Laufzeitvalidierung.",
+            usage: { promptTokens: 0, completionTokens: 0 },
+          };
+        },
+        close() {},
+      } : createAgent(rebuttalRole, rebuttalModel);
+      const subagentId = [
+        "rebuttal",
+        taskNonce,
+        parentRoleKey,
+        resultKey,
+        sanitizeSegment(purpose || "purpose"),
+        String(records.length + 1),
+      ].join(":");
+      const record = {
+        id: subagentId,
+        createdAt: new Date().toISOString(),
+        taskNonce,
+        parentRoleKey,
+        resultKey,
+        purpose,
+        strict,
+        closedAt: null,
+        closeReason: null,
+        valid: false,
+        agent: rebuttalAgent,
+      };
+      registerCreate(record);
+
+      let response;
+      try {
+        rebuttalAgent.addContext(`PARENT_ROLE=${parentRoleKey}\nRESULT_KEY=${resultKey}\nPURPOSE=${purpose}`);
+        if (context) rebuttalAgent.addContext(context);
+        const prompt = [
+          "REBUTTAL SUBAGENT (MANDATORY / FAIL-CLOSED)",
+          "Pflicht: aktive Widerlegung der Parent-Annahme/Analyse.",
+          "Format: Symptom -> Root Cause -> Evidence (Datei:Zeile) -> Impact -> Freigabebedarf",
+          "",
+          `Task: ${task}`,
+          `Purpose: ${purpose}`,
+        ].join("\n");
+        response = await rebuttalAgent.send(prompt);
+        const content = String(response?.content || "").trim();
+        record.valid = isRebuttalSufficient(content);
+        if (strict && !record.valid) {
+          const reason = `insufficient_rebuttal:${subagentId}`;
+          markInvalid(reason);
+          throw new Error(`invalid_subagent_policy:${reason}`);
+        }
+        session.addResult(`${resultKey}::subagent::${sanitizeSegment(purpose)}::${records.length}`, {
+          content,
+          usage: response?.usage || { promptTokens: 0, completionTokens: 0 },
+        });
+        return { id: subagentId, content, valid: record.valid };
+      } finally {
+        closeRecord(record, "post_rebuttal");
+      }
+    }
+
+    async function cleanupAll() {
+      for (const record of records) {
+        if (!record.closedAt) closeRecord(record, "task_finalize");
+      }
+      if (enabled) {
+        const createdCount = records.length;
+        const closedCount = records.filter((r) => Boolean(r.closedAt)).length;
+        if (createdCount === 0) {
+          const reason = "missing_required_rebuttal_subagents";
+          markInvalid(reason);
+          throw new Error(`invalid_subagent_policy:${reason}`);
+        }
+        if (createdCount !== closedCount) {
+          const reason = `subagent_cleanup_incomplete:${closedCount}/${createdCount}`;
+          markInvalid(reason);
+          throw new Error(`invalid_subagent_policy:${reason}`);
+        }
+      }
+    }
+
+    return {
+      enabled,
+      optOutExplicit,
+      spawnRebuttal,
+      cleanupAll,
+      markInvalid,
+    };
+  }
+
   async function runFileScanGate({
     role,
     roleKey,
     resultKey,
     task,
     session,
+    subagentController,
     parentAgent,
     scanTarget,
     scanIndex,
@@ -371,6 +536,25 @@ export function createOrchestrator(config = {}) {
     };
 
     const parentHistory = serializeParentHistory(parentAgent?.history || []);
+    if (subagentController?.enabled) {
+      await subagentController.spawnRebuttal({
+        parentRoleKey: roleKey,
+        resultKey,
+        task,
+        purpose: `file-scan-${scanIndex}`,
+        context: [
+          "PARENT_CONTEXT_FULL",
+          parentHistory || "(empty-parent-history)",
+          "",
+          `FILE_SCAN_TARGET #${scanIndex}`,
+          `path=${scanTarget.relPath}`,
+          "content:",
+          scanTarget.content,
+        ].join("\n"),
+        strict: true,
+      });
+    }
+
     const model = getModel(roleKey);
     const assumptionProbe = createAgent(role, model);
     assumptionProbe.addContext([
@@ -408,49 +592,33 @@ export function createOrchestrator(config = {}) {
     }
     status.scanGate.assumptionsExtracted = true;
 
-    const rebuttalRolePath = ROLE_PATHS[ADVERSARIAL_REBUTTAL_ROLE];
-    if (!rebuttalRolePath) {
-      status.scanGate.invalidReason = `invalid_scan_gate:missing_rebuttal_role:${ADVERSARIAL_REBUTTAL_ROLE}`;
+    if (!subagentController?.enabled) {
+      status.scanGate.invalidReason = "invalid_scan_gate:rebuttal_subagent_required";
       return status;
     }
-
-    const rebuttalRole = await loadRole(rebuttalRolePath);
-    const rebuttalModel = getModel(ADVERSARIAL_REBUTTAL_ROLE);
     for (let i = 0; i < assumptions.length; i += 1) {
       const assumption = assumptions[i];
-      const rebuttalAgent = createAgent(rebuttalRole, rebuttalModel);
-      rebuttalAgent.addContext([
-        "PARENT_CONTEXT_FULL",
-        parentHistory || "(empty-parent-history)",
-      ].join("\n"));
-      rebuttalAgent.addContext([
-        `FILE_SCAN_TARGET #${scanIndex}`,
-        `path=${scanTarget.relPath}`,
-        "content:",
-        scanTarget.content,
-      ].join("\n"));
-
-      const rebuttalPrompt = [
-        "ADVERSARIAL EXECUTION MODE (HARD / FAIL-CLOSED)",
-        "Widerlege exakt diese eine Parent-Annahme.",
-        "Pflicht:",
-        "- aktive Widerlegung",
-        "- Gegenlesart oder Unsicherheitsmarker oder alternative Erklaerung oder konkreter Einwand",
-        "- keine Implementierung, kein Fix",
-        "",
-        `Annahme #${i + 1}: ${assumption}`,
-        "",
-        "Format:",
-        "Symptom -> Root Cause -> Evidence (Datei:Zeile) -> Impact -> Freigabebedarf",
-      ].join("\n");
-      const rebuttalResponse = await rebuttalAgent.send(rebuttalPrompt);
-      const rebuttalContent = String(rebuttalResponse?.content || "").trim();
-      session.addResult(`${resultKey}::scan-${scanIndex}::rebuttal-${i + 1}`, {
-        content: rebuttalContent,
-        usage: rebuttalResponse?.usage || { promptTokens: 0, completionTokens: 0 },
+      const rebuttalRun = await subagentController.spawnRebuttal({
+        parentRoleKey: roleKey,
+        resultKey,
+        task,
+        purpose: `assumption-${scanIndex}-${i + 1}`,
+        context: [
+          "PARENT_CONTEXT_FULL",
+          parentHistory || "(empty-parent-history)",
+          "",
+          `FILE_SCAN_TARGET #${scanIndex}`,
+          `path=${scanTarget.relPath}`,
+          "content:",
+          scanTarget.content,
+          "",
+          `ASSUMPTION #${i + 1}`,
+          assumption,
+        ].join("\n"),
+        strict: true,
       });
 
-      if (!isRebuttalSufficient(rebuttalContent)) {
+      if (!rebuttalRun?.valid) {
         status.scanGate.invalidReason = `invalid_scan_gate:insufficient_rebuttal:${i + 1}`;
         return status;
       }
@@ -472,14 +640,14 @@ export function createOrchestrator(config = {}) {
     return blockers;
   }
 
-  async function runRoleBatch(specs, task, context, session, maxParallel) {
+  async function runRoleBatch(specs, task, context, session, maxParallel, subagentController) {
     const concurrency = Math.max(1, Number(maxParallel || specs.length) | 0);
     const out = [];
     for (let i = 0; i < specs.length; i += concurrency) {
       const chunk = specs.slice(i, i + concurrency);
       const chunkResults = await Promise.all(chunk.map(async (spec) => {
         try {
-          const response = await runAgent(spec, task, context, session);
+          const response = await runAgent(spec, task, context, session, subagentController);
           return { ...spec, content: response?.content || "" };
         } catch (err) {
           session.addError(spec.resultKey, err);
@@ -491,7 +659,7 @@ export function createOrchestrator(config = {}) {
     return out;
   }
 
-  async function runRedTeamV2(task, options, session) {
+  async function runRedTeamV2(task, options, session, subagentController) {
     const rounds = Math.max(1, Number(options.rounds || 1) | 0);
     const maxParallel = Math.max(1, Number(options.maxParallel || 6) | 0);
     const scannerRoles = [
@@ -519,7 +687,7 @@ export function createOrchestrator(config = {}) {
       ].join("\n");
 
       const scanContext = session.buildContext();
-      const scannerResults = await runRoleBatch(scannerRoles, scanTask, scanContext, session, maxParallel);
+      const scannerResults = await runRoleBatch(scannerRoles, scanTask, scanContext, session, maxParallel, subagentController);
 
       const attackTask = [
         task,
@@ -534,7 +702,7 @@ export function createOrchestrator(config = {}) {
         "Nur reale Luecken schliessen.",
       ].join("\n");
       const attackerContext = scannerResults.map((x) => `--- ${x.resultKey} ---\n${x.content}`).join("\n\n");
-      const attackerResults = await runRoleBatch(attackerRoles, attackTask, attackerContext, session, maxParallel);
+      const attackerResults = await runRoleBatch(attackerRoles, attackTask, attackerContext, session, maxParallel, subagentController);
 
       const blockers = extractConfirmedBlockers(attackerResults);
       const infraBlockers = [...scannerResults, ...attackerResults]
@@ -576,10 +744,10 @@ export function createOrchestrator(config = {}) {
           "Angreifer-Ausgaben:",
           attackerResults.map((x) => `--- ${x.resultKey} ---\n${x.content}`).join("\n\n"),
         ].join("\n\n");
-        await runAgent({ roleKey: "arbiter-coder", resultKey: `fixer-round-${round}` }, fixTask, fixContext, session);
-        await runAgent(monitorRole, `${task}\n\nRUNDE ${round}: Pruefe, ob Blocker geschlossen sind.`, session.buildContext(), session);
+        await runAgent({ roleKey: "arbiter-coder", resultKey: `fixer-round-${round}` }, fixTask, fixContext, session, subagentController);
+        await runAgent(monitorRole, `${task}\n\nRUNDE ${round}: Pruefe, ob Blocker geschlossen sind.`, session.buildContext(), session, subagentController);
       } else {
-        await runAgent(monitorRole, `${task}\n\nRUNDE ${round}: Keine Blocker, finale Freigabe pruefen.`, session.buildContext(), session);
+        await runAgent(monitorRole, `${task}\n\nRUNDE ${round}: Keine Blocker, finale Freigabe pruefen.`, session.buildContext(), session, subagentController);
         log(`RED_TEAM_V2 round ${round} completed without blockers`);
         break;
       }
@@ -604,96 +772,112 @@ export function createOrchestrator(config = {}) {
       pipeline: pipelineName,
       paths: options.paths || [],
     });
+    const subagentController = createSubagentController(session, {
+      subagentsOptOutExplicit: options.subagentsOptOutExplicit === true,
+    });
     session.status = "running";
 
     log(`Session ${session.id} started`);
     log(`Pipeline: ${pipelineName}`);
     log(`Task: ${task}`);
 
-    // Preflight ausfuehren wenn Pfade angegeben
-    if (options.preflight !== false && session.paths.length > 0) {
-      log("Running preflight chain...");
-      if (!dryRun) {
-        const preflightResult = await runPreflightChain(session.paths, {
-          mode: options.preflightMode || "work",
+    try {
+      if (subagentController.enabled) {
+        await subagentController.spawnRebuttal({
+          parentRoleKey: "orchestrator",
+          resultKey: "task-start-gate",
+          task,
+          purpose: "task-start",
+          context: session.paths.length > 0 ? `TASK_PATHS\n${session.paths.join("\n")}` : "TASK_PATHS\n(none)",
+          strict: true,
         });
-        session.preflight = preflightResult;
-        if (!preflightResult.ok) {
-          log(`Preflight failed: ${preflightResult.error}`);
-          session.status = "failed";
-          session.addError("preflight", new Error(preflightResult.error));
-          await session.save();
-          return session;
-        }
-        log("Preflight passed");
-      } else {
-        log("[dry-run] Preflight skipped");
-        session.preflight = { ok: true, steps: [], dryRun: true };
       }
-    }
 
-    // Spezialmodus: Red Team v2
-    if (pipelineName === "red-team-v2") {
-      try {
-        await runRedTeamV2(task, options, session);
-      } catch (err) {
-        session.addError("red-team-v2", err);
-        session.status = "failed";
+      // Preflight ausfuehren wenn Pfade angegeben
+      if (options.preflight !== false && session.paths.length > 0) {
+        log("Running preflight chain...");
+        if (!dryRun) {
+          const preflightResult = await runPreflightChain(session.paths, {
+            mode: options.preflightMode || "work",
+          });
+          session.preflight = preflightResult;
+          if (!preflightResult.ok) {
+            log(`Preflight failed: ${preflightResult.error}`);
+            session.status = "failed";
+            session.addError("preflight", new Error(preflightResult.error));
+            return session;
+          }
+          log("Preflight passed");
+        } else {
+          log("[dry-run] Preflight skipped");
+          session.preflight = { ok: true, steps: [], dryRun: true };
+        }
       }
+
+      // Spezialmodus: Red Team v2
+      if (pipelineName === "red-team-v2") {
+        try {
+          await runRedTeamV2(task, options, session, subagentController);
+        } catch (err) {
+          session.addError("red-team-v2", err);
+          session.status = "failed";
+        }
+        if (session.status === "running") {
+          session.status = session.errors.length > 0 ? "failed" : "completed";
+        }
+        return session;
+      }
+
+      // Pipeline ausfuehren
+      for (const step of pipeline) {
+        try {
+          if (Array.isArray(step)) {
+            // Parallele Ausfuehrung
+            log(`Parallel step: [${step.join(", ")}]`);
+            const context = session.buildContext();
+            const results = await Promise.all(
+              step.map((agentKey) =>
+                runAgent(agentKey, task, context, session, subagentController).catch((err) => {
+                  session.addError(agentKey, err);
+                  log(`  ERROR in ${agentKey}: ${err.message}`);
+                  return null;
+                })
+              )
+            );
+
+            // Wenn alle parallel-Agents fehlschlagen, abbrechen
+            if (results.every((r) => r === null)) {
+              session.status = "failed";
+              break;
+            }
+          } else {
+            // Sequentielle Ausfuehrung
+            const context = session.buildContext();
+            await runAgent(step, task, context, session, subagentController);
+          }
+        } catch (err) {
+          session.addError(step, err);
+          log(`ERROR in step ${JSON.stringify(step)}: ${err.message}`);
+          session.status = "failed";
+          break;
+        }
+      }
+
       if (session.status === "running") {
-        session.status = session.errors.length > 0 ? "failed" : "completed";
+        session.status = "completed";
+      }
+      return session;
+    } finally {
+      try {
+        await subagentController.cleanupAll();
+      } catch (cleanupErr) {
+        session.addError("subagent-cleanup", cleanupErr);
+        session.status = "failed";
       }
       const savedPath = await session.save();
       log(`Session saved to ${savedPath}`);
       log(`Status: ${session.status}`);
-      return session;
     }
-
-    // Pipeline ausfuehren
-    for (const step of pipeline) {
-      try {
-        if (Array.isArray(step)) {
-          // Parallele Ausfuehrung
-          log(`Parallel step: [${step.join(", ")}]`);
-          const context = session.buildContext();
-          const results = await Promise.all(
-            step.map((agentKey) =>
-              runAgent(agentKey, task, context, session).catch((err) => {
-                session.addError(agentKey, err);
-                log(`  ERROR in ${agentKey}: ${err.message}`);
-                return null;
-              })
-            )
-          );
-
-          // Wenn alle parallel-Agents fehlschlagen, abbrechen
-          if (results.every((r) => r === null)) {
-            session.status = "failed";
-            break;
-          }
-        } else {
-          // Sequentielle Ausfuehrung
-          const context = session.buildContext();
-          await runAgent(step, task, context, session);
-        }
-      } catch (err) {
-        session.addError(step, err);
-        log(`ERROR in step ${JSON.stringify(step)}: ${err.message}`);
-        session.status = "failed";
-        break;
-      }
-    }
-
-    if (session.status === "running") {
-      session.status = "completed";
-    }
-
-    // Session speichern
-    const savedPath = await session.save();
-    log(`Session saved to ${savedPath}`);
-    log(`Status: ${session.status}`);
-
-    return session;
   }
 
   return {

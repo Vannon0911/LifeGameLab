@@ -18,6 +18,7 @@
  *   --dry-run            Simulation ohne echte LLM-Aufrufe
  *   --verbose            Detaillierte Ausgabe
  *   --validate           Nur Config validieren, nicht ausfuehren
+ *   --no-subagents       Explizites Opt-out fuer Rebuttal-Subagents
  *   --list-pipelines     Verfuegbare Pipelines auflisten
  *   --list-roles         Verfuegbare Rollen auflisten
  *   --help               Hilfe anzeigen
@@ -45,6 +46,7 @@ const { values: args } = parseArgs({
     "list-roles":    { type: "boolean" },
     "preflight-mode":{ type: "string" },
     "no-preflight":  { type: "boolean" },
+    "no-subagents":  { type: "boolean" },
     rounds:          { type: "string" },
     "max-parallel":  { type: "string" },
     help:            { type: "boolean", short: "h" },
@@ -78,6 +80,7 @@ Optionen:
   --validate               Nur Config validieren
   --preflight-mode <mode>  Preflight-Modus (work|security|audit)
   --no-preflight           Preflight ueberspringen
+  --no-subagents           Explizites Opt-out fuer Rebuttal-Subagents
   --list-pipelines         Pipelines auflisten
   --list-roles             Rollen auflisten
   --help, -h               Diese Hilfe
@@ -185,6 +188,7 @@ if (pipeline === "red-team-v2") {
   console.log(`   MaxPar:   ${Math.max(1, Number(args["max-parallel"] || 6) | 0)}`);
 }
 console.log(`   Dry-Run:  ${config.dryRun ? "JA" : "NEIN"}`);
+console.log(`   Subagents:${args["no-subagents"] ? " EXPLIZIT AUS" : " AN (DEFAULT)"}`);
 console.log();
 
 const orchestrator = createOrchestrator(config);
@@ -197,6 +201,7 @@ try {
     maxParallel: Math.max(1, Number(args["max-parallel"] || 6) | 0),
     preflight: !args["no-preflight"],
     preflightMode: args["preflight-mode"] || "work",
+    subagentsOptOutExplicit: args["no-subagents"] === true,
   });
 
   // Ergebnis ausgeben

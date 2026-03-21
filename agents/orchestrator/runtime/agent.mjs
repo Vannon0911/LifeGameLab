@@ -165,6 +165,7 @@ function normalizeRoleKey(value) {
  */
 export function createAgent(role, model) {
   const systemPrompt = buildSystemPrompt(role);
+  let isClosed = false;
 
   return {
     role,
@@ -175,6 +176,9 @@ export function createAgent(role, model) {
      * Sendet eine Nachricht an den Agent und bekommt eine Antwort.
      */
     async send(userMessage, options = {}) {
+      if (isClosed) {
+        throw new Error(`Agent '${role.roleName}' is closed`);
+      }
       this.history.push({ role: "user", content: userMessage });
       const response = await model.chat(this.history, options);
       this.history.push({ role: "assistant", content: response.content });
@@ -185,6 +189,9 @@ export function createAgent(role, model) {
      * Fuegt Kontext hinzu ohne eine Antwort zu erwarten.
      */
     addContext(content) {
+      if (isClosed) {
+        throw new Error(`Agent '${role.roleName}' is closed`);
+      }
       this.history.push({ role: "user", content: `[KONTEXT]\n${content}` });
     },
 
@@ -192,7 +199,17 @@ export function createAgent(role, model) {
      * Setzt die Konversation zurueck (behaelt System-Prompt).
      */
     reset() {
+      if (isClosed) return;
       this.history = [{ role: "system", content: systemPrompt }];
+    },
+
+    /**
+     * Schließt den Agent explizit und macht ihn unbenutzbar.
+     */
+    close() {
+      if (isClosed) return;
+      this.history = [];
+      isClosed = true;
     },
 
     toString() {
