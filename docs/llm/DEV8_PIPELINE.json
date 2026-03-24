@@ -1,0 +1,139 @@
+{
+  "version": "1.0.0",
+  "layers": [
+    {
+      "id": "kernel",
+      "name": "Deterministic Kernel",
+      "owns": [
+        "src/kernel/",
+        "src/game/contracts/",
+        "src/game/manifest.js"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "gameplay",
+      "name": "Game Logic",
+      "owns": [
+        "src/game/",
+        "src/game/runtime/index.js",
+        "src/app/main.js"
+      ],
+      "dependsOn": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "llm_ops",
+      "name": "LLM Guidelines, Gates, Tools",
+      "owns": [
+        "docs/llm/",
+        ".llm/",
+        "tools/llm/",
+        "tools/llm-preflight.mjs",
+        "tools/check-llm-pipeline.mjs"
+      ],
+      "dependsOn": [
+        "kernel",
+        "gameplay"
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "id": "DEV1_KERNEL_GUARD",
+      "layer": "kernel",
+      "ownedScopes": [
+        "src/kernel/store/",
+        "src/kernel/validation/"
+      ]
+    },
+    {
+      "id": "DEV2_CONTRACT_GUARD",
+      "layer": "kernel",
+      "ownedScopes": [
+        "src/game/contracts/"
+      ]
+    },
+    {
+      "id": "DEV3_GAMEPLAY_CORE",
+      "layer": "gameplay",
+      "ownedScopes": [
+        "src/game/sim/reducer/",
+        "src/game/sim/worldgen.js"
+      ]
+    },
+    {
+      "id": "DEV4_GAMEPLAY_RUNTIME",
+      "layer": "gameplay",
+      "ownedScopes": [
+        "src/app/main.js",
+        "src/game/ui/",
+        "src/game/render/"
+      ]
+    },
+    {
+      "id": "DEV5_LLM_GATEKEEPER",
+      "layer": "llm_ops",
+      "ownedScopes": [
+        "docs/llm/ENTRY.md",
+        "docs/llm/OPERATING_PROTOCOL.md",
+        "docs/llm/TASK_ENTRY_MATRIX.json"
+      ]
+    },
+    {
+      "id": "DEV6_LLM_TOOLING",
+      "layer": "llm_ops",
+      "ownedScopes": [
+        "tools/llm-preflight.mjs",
+        "tools/check-llm-pipeline.mjs"
+      ]
+    },
+    {
+      "id": "DEV7_QA_DETERMINISM",
+      "layer": "kernel",
+      "ownedScopes": [
+        "tests/test-step-chain-determinism.mjs",
+        "tests/test-kernel-replay-truth.mjs",
+        "tests/test-contract-no-bypass.mjs"
+      ]
+    },
+    {
+      "id": "DEV8_RELEASE_TRACEABILITY",
+      "layer": "llm_ops",
+      "ownedScopes": [
+        "docs/STATUS.md",
+        "docs/ARCHITECTURE.md",
+        "docs/traceability/"
+      ]
+    }
+  ],
+  "readOrder": [
+    "docs/WORKFLOW.md",
+    "docs/llm/ENTRY.md",
+    "docs/llm/OPERATING_PROTOCOL.md",
+    "docs/ARCHITECTURE.md",
+    "docs/STATUS.md",
+    "docs/llm/TASK_ENTRY_MATRIX.json",
+    "docs/llm/entry/TASK_GATE_INDEX.md",
+    "docs/llm/contracts/CONTRACT_TASK_ENTRY.md",
+    "docs/llm/gameplay/GAMEPLAY_TASK_ENTRY.md",
+    "docs/llm/ui/UI_TASK_ENTRY.md",
+    "docs/llm/testing/TESTING_TASK_ENTRY.md",
+    "docs/llm/versioning/VERSIONING_TASK_ENTRY.md",
+    "src/game/contracts/manifest.js",
+    "src/game/manifest.js",
+    "src/kernel/store/createStore.js",
+    "src/kernel/store/applyPatches.js"
+  ],
+  "handoffOrder": [
+    "DEV5_LLM_GATEKEEPER",
+    "DEV2_CONTRACT_GUARD",
+    "DEV1_KERNEL_GUARD",
+    "DEV3_GAMEPLAY_CORE",
+    "DEV4_GAMEPLAY_RUNTIME",
+    "DEV6_LLM_TOOLING",
+    "DEV7_QA_DETERMINISM",
+    "DEV8_RELEASE_TRACEABILITY"
+  ]
+}

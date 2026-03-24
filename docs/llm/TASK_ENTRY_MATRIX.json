@@ -1,0 +1,84 @@
+{
+  "ui": {
+    "dependsOn": [
+      "gameplay",
+      "contracts"
+    ],
+    "triggerPrefixes": [
+      "src/app/",
+      "src/game/ui/",
+      "src/game/render/",
+      "docs/llm/ui/"
+    ],
+    "requiredEntry": "docs/llm/ui/UI_TASK_ENTRY.md"
+  },
+  "gameplay": {
+    "dependsOn": [
+      "contracts"
+    ],
+    "triggerPrefixes": [
+      "src/game/runtime/",
+      "src/game/sim/",
+      "src/game/plugin/",
+      "docs/llm/sim/"
+    ],
+    "requiredEntry": "docs/llm/gameplay/GAMEPLAY_TASK_ENTRY.md"
+  },
+  "contracts": {
+    "dependsOn": [],
+    "triggerPrefixes": [
+      "src/game/contracts/",
+      "src/game/manifest.js",
+      "src/kernel/",
+      "tools/llm/",
+      "docs/llm/contracts/"
+    ],
+    "requiredEntry": "docs/llm/contracts/CONTRACT_TASK_ENTRY.md"
+  },
+  "testing": {
+    "dependsOn": [
+      "contracts"
+    ],
+    "triggerPrefixes": [
+      "tests/",
+      "tools/llm-preflight.mjs",
+      "devtools/run-test-suite.mjs",
+      "devtools/run-all-tests.mjs",
+      "devtools/run-foundation-visual-playwright.mjs",
+      "devtools/test-suites.mjs",
+      "devtools/evidence-runner.mjs",
+      "tools/git-llm-guard.mjs",
+      "devtools/install-git-hooks.mjs",
+      ".githooks/",
+      "docs/llm/testing/"
+    ],
+    "requiredEntry": "docs/llm/testing/TESTING_TASK_ENTRY.md"
+  },
+  "versioning": {
+    "dependsOn": [
+      "contracts"
+    ],
+    "triggerPrefixes": [
+      ".vscode/",
+      ".trae/",
+      ".gitignore",
+      "agents/llm-entry-sequence/",
+      "agents/orchestrator/",
+      "README.md",
+      "RUNBOOK.md",
+      "package.json",
+      "src/game/contracts/manifest.js",
+      "docs/WORKFLOW.md",
+      "docs/PRODUCT.md",
+      "docs/ARCHITECTURE.md",
+      "docs/STATUS.md",
+      "docs/traceability/",
+      "docs/llm/TASK_ENTRY_MATRIX.json",
+      "docs/llm/ENTRY.md",
+      "docs/llm/OPERATING_PROTOCOL.md",
+      "docs/llm/entry/",
+      "docs/llm/versioning/"
+    ],
+    "requiredEntry": "docs/llm/versioning/VERSIONING_TASK_ENTRY.md"
+  }
+}

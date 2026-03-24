@@ -1,0 +1,40 @@
+/* LifeGameLab — Pixel Art Canvas */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:ui-sans-serif, system-ui, sans-serif;}
+#app { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+#rts-hub-bar {
+  height: 36px;
+  flex-shrink: 0;
+  background: #060c12;
+  border-bottom: 1px solid #1a202c;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 1.5rem;
+  font-size: 0.75rem;
+  color: #a0aec0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.hub-group { display: flex; gap: 1rem; align-items: center; border-right: 1px solid #2d3748; padding-right: 1.5rem; }
+.hub-group:last-child { border-right: none; }
+.stat-item { display: flex; gap: 0.35rem; }
+.stat-label { color: #cbd5e0; }
+.stat-val { color: #4fd1c5; font-family: monospace; font-weight: bold; }
+
+#cv { flex: 1; display: block; background: #000; width: 100%; min-height: 0; object-fit: contain; }
+
+#rts-status-bar {
+  height: 28px;
+  flex-shrink: 0;
+  background: #060c12;
+  border-top: 1px solid #1a202c;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  font-size: 0.75rem;
+  gap: 1rem;
+}
+.status-msg { font-weight: bold; }
+.status-hint { color: #718096; }

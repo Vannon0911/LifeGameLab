@@ -1,0 +1,10 @@
+.codex/
+.llm/
+node_modules/
+package-lock.json
+Thumbs.db
+.DS_Store
+*.zip
+
+# Generated runtime/debug artifacts
+output/

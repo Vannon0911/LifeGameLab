@@ -1,0 +1,23 @@
+name: Feature Request
+description: Schlage eine neue Funktion oder Verbesserung vor
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Welches Problem loest das?
+      description: Beschreibe den konkreten Pain Point.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Loesungsvorschlag
+      description: Was genau soll hinzugefuegt oder geaendert werden?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativen
+      description: Welche Optionen wurden schon betrachtet?
