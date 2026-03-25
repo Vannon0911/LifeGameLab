@@ -11,6 +11,7 @@ Head: `691817e`
 - [06 Tests Evidence Governance](./06_TESTS_EVIDENCE_GOVERNANCE.md)
 - [90 Action Write Matrix](./90_ACTION_WRITE_MATRIX.md)
 - [99 Function Matrix](./99_FUNCTION_MATRIX.md)
+- [Conflicts Register](./CONFLICTS.md)
 
 ## Risikohinweis
 - Modularisierung ist dokumentarisch (kein Laufzeitpfad geaendert).

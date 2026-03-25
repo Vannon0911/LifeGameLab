@@ -42,6 +42,7 @@
     "triggerPrefixes": [
       "tests/",
       "tools/llm-preflight.mjs",
+      "tools/check-llm-pipeline.mjs",
       "devtools/run-test-suite.mjs",
       "devtools/run-all-tests.mjs",
       "devtools/run-foundation-visual-playwright.mjs",

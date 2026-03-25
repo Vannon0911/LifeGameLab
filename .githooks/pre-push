@@ -1,2 +1,2 @@
 #!/bin/sh
-node tools/git-llm-guard.mjs pre-push
+npm run gate:blocking
