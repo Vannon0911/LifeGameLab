@@ -5,6 +5,13 @@
 - advisor model: tools/llm/advisorModel.mjs
 - read model: tools/llm/readModel.mjs
 - gate sync: tools/llm/gateSync.mjs
+- policy mirror: tools/llm/policy.mjs
+
+## Consent Gate
+- Subagent-Muster-Fortsetzung ist nur nach expliziter User-Bestaetigung erlaubt.
+- Pflichtfrage vor Fortsetzung:
+  - `Soll ich mit diesem Subagent-Muster genauso weiterarbeiten wie bisher?`
+- Ohne Bestaetigung gilt fail-closed fuer den Subagent-Orchestrierungsmodus.
 
 ## Funktionale Matrix
 | File | Line | Symbol | Kind |

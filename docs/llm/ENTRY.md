@@ -22,7 +22,7 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 
 ## Preflight-Vertrag
 - Jeder Task wird ueber `docs/llm/TASK_ENTRY_MATRIX.json` dependency-basiert als `taskScope[]` klassifiziert.
-- Die technische Pflichtkette ist immer exakt `orchestrator(PARENT ONLY) -> classify -> entry -> ack -> check -> commit`.
+- Die technische Pflichtkette ist immer exakt `orchestrator(PARENT ONLY) -> classify -> spawn-proof -> entry -> ack -> check -> cache-sync -> commit`.
 - Bei `Entry hash drift` oder `Read-order drift` zuerst `node tools/llm-preflight.mjs update-lock` ausfuehren und danach die Pflichtkette vollstaendig neu starten.
 - Bei Pfadwechsel ist Auto-Reclassify Pflicht; Scope-Erweiterung ist erlaubt und keine Ambiguitaet.
 - `entry`, `ack` und `check` blockieren Schreiboperationen; reine Read-/Analyse-/Testlaeufe bleiben erlaubt.
@@ -30,7 +30,10 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - Ein `check`-Fehler blockiert Schreiben. Testlaeufe bleiben moeglich und liefern weiterhin Wahrheit.
 - Der Chat-Trigger `entry` ist nur der menschliche Startimpuls. Die technische Wahrheit lebt ausschliesslich in `tools/llm-preflight.mjs`.
 - Vor jedem Commit muessen betroffene Dokuquellen inklusive relevanter Stringmatrix-/Inventar-Dateien nachgezogen und am Ende des Arbeitsschritts erneut auf Aktualitaet geprueft werden.
-- Nach jedem komplett abgeschlossenen Task (inklusive aller waehrenddessen aufgetretenen Nebenfixes) folgt nach `check` ein Commit; der naechste Task startet verpflichtend mit dem Orchestrator-Schritt ueber `agents/orchestrator/orchestrator.mjs` (PARENT ONLY).
+- Nach jedem komplett abgeschlossenen Task (inklusive aller waehrenddessen aufgetretenen Nebenfixes) folgt nach `check` zuerst `cache-sync`, dann Commit; der naechste Task startet verpflichtend mit `cache-validate`, danach dem Orchestrator-Schritt ueber `agents/orchestrator/orchestrator.mjs` (PARENT ONLY).
+- `entry` ist ab jetzt fail-closed: ohne gueltigen `spawn-proof` fuer dieselben Pfade/Scopes/Entry-Hashes kein Cycle-Start.
+- Ein neuer Write-Cycle ist ab jetzt fail-closed: wenn fuer den vorherigen gruenen Cycle kein `cache-sync` plus `cache-validate` vorliegt, blockiert `entry`.
+- Initialer Bootstrap ohne Cache-Validator ist nur erlaubt, wenn noch keinerlei `.llm`-Cycle-Artefakte existieren.
 
 ## Kernel- Und Manifest-Pflichtgate (SoT)
 - `src/game/contracts/manifest.js` ist Source of Truth fuer Felder, Actions und Contract-Kette.
@@ -49,7 +52,7 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - kein `Math.random()` oder `Date.now()` in Reducer oder SimStep
 - neue Felder und Actions zuerst im Manifest und Contract
 - UMGEHUNG IST STRENG VERBOTEN OHNE VORHERIGE RUECKSPRACHE. Das gilt insbesondere fuer direkte State-/Patch-Injektion in Tests oder Runtime-Flows.
-- kein `--no-verify`, kein Hook-Bypass, kein Guard-Bypass (`SKIP`, `HUSKY=0` oder aehnlich). Bei Blockade gilt: Scope-/Matrix-Regeln korrigieren, dann erneut `classify -> entry -> ack -> check`.
+- kein `--no-verify`, kein Hook-Bypass, kein Guard-Bypass (`SKIP`, `HUSKY=0` oder aehnlich). Bei Blockade gilt: Scope-/Matrix-Regeln korrigieren, dann erneut `classify -> spawn-proof -> entry -> ack -> check -> cache-sync`.
 - Terminologie: Produkt- und UI-Texte nutzen `worker` als kanonische Einheit; Legacy-`cell` Strings bleiben nur fuer kompatible Action-IDs bis zur vollstaendigen Ablösung.
 
 ## Globale Pflichtquellen
@@ -72,6 +75,15 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - Nur bestätigte Laufpfade — keine Nebenpfade
 - Keine Wrapper- oder Scheinlösungen
 - Inkonsistenz-Format: Symptom → Root Cause → Evidence (Datei:Zeile) → Impact → Freigabebedarf
+
+## SUBAGENT PATTERN CONSENT GATE (HART)
+
+- Bevor ein bestehendes Subagent-Muster weitergefuehrt wird, muss die Parent-LLM den User aktiv fragen:
+  - `Soll ich mit diesem Subagent-Muster genauso weiterarbeiten wie bisher?`
+- Ohne explizite User-Bestaetigung gilt fail-closed:
+  - keine Fortsetzung des alten Subagent-Orchestrierungsmodus
+  - nur read-only Planung/Status bis zur Bestaetigung
+- Die Bestaetigung ist session-gebunden und muss bei unklarer Lage erneut eingeholt werden.
 
 ## FILE-SCAN ORCHESTRATION GATE (HART)
 

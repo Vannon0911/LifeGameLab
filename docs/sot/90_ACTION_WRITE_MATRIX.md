@@ -3,10 +3,6 @@
 | Action | Write Paths |
 |---|---|
 | GEN_WORLD | `/map/`, `/meta/gridW`, `/meta/gridH`, `/meta/worldPresetId`, `/meta/physics`, `/meta/playerLineageId`, `/meta/cpuLineageId`, `/world/`, `/world/actionMap`, `/sim/` |
-| CONFIRM_FOUNDATION | `/sim/runPhase`, `/sim/running` |
-| CONFIRM_CORE_ZONE | `/world/alive`, `/world/E`, `/world/reserve`, `/world/link`, `/world/lineageId`, `/world/hue`, `/world/trait`, `/world/age`, `/world/born`, `/world/died`, `/world/W`, `/world/coreZoneMask`, `/world/zoneRole`, `/world/zoneId`, `/world/zoneMeta`, `/sim/patternCatalog`, `/sim/patternBonuses`, `/sim/unlockedZoneTier`, `/sim/nextZoneUnlockKind`, `/sim/nextZoneUnlockCostEnergy`, `/sim/zoneUnlockProgress`, `/sim/coreEnergyStableTicks`, `/sim/zone2Unlocked`, `/sim/zone2PlacementBudget`, `/sim/dnaZoneCommitted`, `/sim/nextInfraUnlockCostDNA`, `/sim/cpuBootstrapDone`, `/sim/aliveCount`, `/sim/playerAliveCount`, `/sim/cpuAliveCount`, `/sim/runPhase`, `/sim/running` |
-| TOGGLE_DNA_ZONE_WORKER | `/world/dnaZoneMask`, `/sim/zone2PlacementBudget` |
-| BUILD_INFRA_PATH | `/world/infraCandidateMask` |
 | TOGGLE_RUNNING | `/sim/running` |
 | SIM_STEP | `/meta/globalLearning`, `/meta/gridW`, `/meta/gridH`, `/meta/simStepCount`, `/sim/runSummary`, `/world/`, `/sim/` |
 | SET_SPEED | `/meta/speed` |
@@ -29,9 +25,8 @@
 | RESET_GLOBAL_LEARNING | `/meta/globalLearning`, `/world/globalLearning`, `/world/lineageMemory` |
 | SET_TILE | `/world/R` |
 | SELECT_ENTITY | `/sim/selectedEntity` |
-| PLACE_WORKER | `/world/alive`, `/world/E`, `/world/reserve`, `/world/link`, `/world/lineageId`, `/world/hue`, `/world/trait`, `/world/age`, `/world/born`, `/world/died`, `/world/W`, `/world/founderMask`, `/sim/playerDNA`, `/sim/founderPlaced` |
+| PLACE_WORKER | `/world/alive`, `/world/E`, `/world/reserve`, `/world/link`, `/world/lineageId`, `/world/hue`, `/world/trait`, `/world/age`, `/world/born`, `/world/died`, `/world/W`, `/sim/playerDNA` |
 | ISSUE_MOVE | `/sim/selectedUnit`, `/sim/selectedEntity`, `/sim/unitOrder`, `/sim/activeOrder`, `/sim/lastCommand` |
-| PLACE_CORE | `/world/cores`, `/sim/phase0PlantsDelivered`, `/sim/phase0CorePlaced`, `/sim/lastCommand`, `/world/alive`, `/world/E`, `/world/lineageId` |
 | PLACE_BUILDING | `/world/buildings`, `/sim/lastCommand` |
 | PLACE_BELT_SEGMENT | `/world/belts`, `/sim/lastCommand` |
 | PLACE_LINE_SEGMENT | `/world/powerLines`, `/sim/lastCommand` |
@@ -45,5 +40,11 @@
 | SET_MUTATOR_PATTERN | `/sim/mutatorDraft` |
 | COMMIT_MUTATION | `/sim/mutatorDraft`, `/world/fighters`, `/sim/lastCommand` |
 | SET_WIN_MODE | `/sim/winMode` |
-Action Schema Count: 43
-Mutation Matrix Count: 43
+Action Schema Count: 38
+Mutation Matrix Count: 38
+
+## Alignment Audit (2026-03-25)
+- `aligned`: action schema, mutation matrix, lifecycle, and dataflow all expose 38 actions with no missing keys.
+- `drifted`: 13 actions have lifecycle `plannedWrites` that differ from current `mutationMatrix` writes (`GEN_WORLD`, `SIM_STEP`, builder tile actions, and compatibility actions such as `SET_ZONE`).
+- `duplicate`: compatibility gate entry points remain intentionally duplicated (`assertPluginDomainPatchesAllowed`, `assertSimPatchesAllowed`, `assertDomainPatchesAllowed`) and should stay synced.
+- `ambiguous_naming`: compatibility action names (`PLACE_SPLIT_CLUSTER`, `HARVEST_WORKER`, `SET_ZONE`, `SET_BRUSH`) remain semantically mixed with RTS naming and require follow-up cleanup before deprecation removal.

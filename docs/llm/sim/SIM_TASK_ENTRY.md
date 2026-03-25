@@ -29,16 +29,20 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Danach nur SIM-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
+- `node tools/llm-preflight.mjs cache-validate`
 - `node tools/llm-preflight.mjs classify --paths src/game/sim/,src/game/runtime/index.js`
+- `node tools/llm-preflight.mjs spawn-proof --paths src/game/sim/,src/game/runtime/index.js --mode work`
 - `node tools/llm-preflight.mjs entry --paths src/game/sim/,src/game/runtime/index.js --mode work`
 - `node tools/llm-preflight.mjs ack --paths src/game/sim/,src/game/runtime/index.js`
 - `node tools/llm-preflight.mjs check --paths src/game/sim/,src/game/runtime/index.js`
+- `node tools/llm-preflight.mjs cache-sync --paths src/game/sim/,src/game/runtime/index.js`
 
 ## SCHREIBEN (pflicht)
 - Kein Schreiben ohne `docs/llm/ENTRY.md` + passenden Task-Entry.
 - Kein Schreiben ohne vollstaendige Pflicht-Lesereihenfolge.
 - Kein Test ohne passendes Ack.
 - Kein Taskwechsel ohne neue Klassifikation + neues Ack.
+- Nach gruenem `check` ist `cache-sync` Pflicht; ohne `cache-validate` startet kein Folge-Cycle.
 - Nur SIM-/Reducer-Scope.
 - Bei Multi-Scope alle passenden Task-Entries lesen und einen gemeinsamen Preflight fahren.
 - Vor jedem Commit muessen SIM-Doku, betroffene Top-Level-Doku und relevante Stringmatrix-/Inventar-Dateien nachgezogen werden.
@@ -51,3 +55,4 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 ## Taskregel
 Deterministische Reihenfolge und Patch-only Contract bleiben unveraendert.
 - Pro abgeschlossenem Slice ist die Version um `0.0.1` zu erhoehen; Teilstufen `a/b/c/d` werden nur als Dokumentanhang gefuehrt.
+

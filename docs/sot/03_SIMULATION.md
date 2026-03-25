@@ -7,6 +7,13 @@
 - worldgen: src/game/sim/worldgen.js
 - presets: src/game/sim/worldPresets.js
 
+## Current Freeze (Session 2026-03-25)
+- Phase 0 overview is fixed to 10s (240 ticks at 24 TPS) before mainline run play.
+- Tutorial is OFF.
+- Systems not directly supporting the first 30s Builder/Movement/Nahrung loop are removal candidates.
+- Exception: pattern scan remains allowed as future-critical path.
+- Light may remain only as a visual layer; no new simulation coupling.
+
 ## Aktiv/Inaktiv Hinweise
 - auto_cell_death: inactive_config (autoCellDeathEnabled=false)
 - remote_cluster_attacks: implemented_not_wired

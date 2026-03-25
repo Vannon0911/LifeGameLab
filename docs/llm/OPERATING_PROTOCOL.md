@@ -31,27 +31,35 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
   - Jede Annahme wird sofort an einen frischen Subagent zur aktiven Widerlegung delegiert.
   - Subagent startet immer mit Parent-Kontext von Anfang an.
   - Erst nach Gegenpruefung darf die Parent-LLM die Aussage weiterverwenden.
-- Bei `Entry hash drift` oder `Read-order drift` zuerst `node tools/llm-preflight.mjs update-lock`, danach `classify -> entry -> ack -> check` erneut vollstaendig.
+- Bei `Entry hash drift` oder `Read-order drift` zuerst `node tools/llm-preflight.mjs update-lock`, danach `classify -> spawn-proof -> entry -> ack -> check -> cache-sync` erneut vollstaendig.
 - technische Kette exakt einhalten:
   1. `node tools/llm-preflight.mjs classify --paths <...>`
-  2. `node tools/llm-preflight.mjs entry --paths <...> --mode work|security`
-  3. `node tools/llm-preflight.mjs ack --paths <...>`
-  4. `node tools/llm-preflight.mjs check --paths <...>`
+  2. `node tools/llm-preflight.mjs spawn-proof --paths <...> --mode work|security`
+  3. `node tools/llm-preflight.mjs entry --paths <...> --mode work|security`
+  4. `node tools/llm-preflight.mjs ack --paths <...>`
+  5. `node tools/llm-preflight.mjs check --paths <...>`
+  6. `node tools/llm-preflight.mjs cache-sync --paths <...>`
 - Klassifikation ist dependency-basiert und liefert `taskScope[]`; Mehrfach-Scope ist erlaubt.
 - Bei Pfadabweichung wird Scope automatisch neu klassifiziert (Auto-Reclassify).
+- `entry` blockiert fail-closed ohne gueltigen `spawn-proof` fuer dieselben Pfade/Scopes/Entry-Hashes.
+- Vor jedem neuen Write-Cycle ist `node tools/llm-preflight.mjs cache-validate` Pflicht; ohne gruene Cache-Validierung des vorherigen Cycles blockiert `entry`.
 - Vor Schreiben ein gruener `check`; fuer Tests reicht `audit` als Warnsignal.
 - vor Commit Scope immer isolieren (`git restore --staged .`, dann nur Zielpfade stagen)
 - Preflight darf Multi-Scope umfassen, wenn die Pfadmenge real mehrere Bereiche betrifft.
 - Hook-Guards einmal aktivieren: `npm run hooks:install`
 - Vor jedem Commit betroffene Dokuquellen, Stringmatrix und Inventar nachziehen; am Ende jedes Arbeitsschritts Aktualitaet explizit gegen Code und Gates gegenpruefen.
+- Subagent-Muster-Fortsetzung braucht aktive User-Bestaetigung in Klartext:
+  - `Soll ich mit diesem Subagent-Muster genauso weiterarbeiten wie bisher?`
+- Ohne diese Bestaetigung: kein Weiterbetrieb des gleichen Subagent-Orchestrierungsmodus (fail-closed, read-only erlaubt).
 
 ## SCHREIBEN
 - kein Schreiben ohne gelesenen LLM-Entry plus passendem Task-Entry
 - Commits bleiben moeglichst klein, aber Multi-Scope ist zulaessig wenn kausal gekoppelt.
 - task-spezifische Doku vor globaler Statuspflege
 - kein Weiterarbeiten nach `check`-Rot; erst neuen Scope-Preflight aufbauen
+- kein Task-Abschluss ohne `cache-sync`; kein Folge-Cycle ohne `cache-validate`
 - kein `--no-verify`, kein Hook-Bypass, kein Guard-Bypass (`SKIP`, `HUSKY=0` oder aehnlich) bei Commit/Push
-- bei unklassifizierten Pfaden zuerst `docs/llm/TASK_ENTRY_MATRIX.json` erweitern und dann regulaer `classify -> entry -> ack -> check`
+- bei unklassifizierten Pfaden zuerst `docs/llm/TASK_ENTRY_MATRIX.json` erweitern und dann regulaer `classify -> spawn-proof -> entry -> ack -> check -> cache-sync`
 - UMGEHUNG (z. B. direkte State-/Patch-Injektion zur Abkuerzung von Flows) ist nur mit expliziter Ruecksprache erlaubt.
 - Slice-Versionierung ist Pflicht: jeder abgeschlossene Slice erhoeht die Version um `0.0.1`; Teilschritte werden nur als Anhang `a/b/c/d` dokumentiert und zaehlen nicht als eigener Versionssprung.
 

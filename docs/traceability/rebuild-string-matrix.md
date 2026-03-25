@@ -7,15 +7,20 @@ This file is a migration map, not canonical truth.
 | Current string | Type | Target status | Replacement | Removal condition |
 | --- | --- | --- | --- | --- |
 | `GEN_WORLD` | action | keep | `GEN_WORLD` | none |
-| `CONFIRM_FOUNDATION` | action | deprecated | `PLACE_CORE` | no dispatch, no reducer, tests migrated, replacement wired |
-| `CONFIRM_CORE_ZONE` | action | deprecated | `PLACE_CORE` | no dispatch, no reducer, tests migrated, replacement wired |
+| `CONFIRM_FOUNDATION` | action | dead_line_removed | none | removed from active contracts, no dispatch, no reducer, tests migrated |
+| `CONFIRM_CORE_ZONE` | action | dead_line_removed | none | removed from active contracts, no dispatch, no reducer, tests migrated |
 | `TOGGLE_DNA_ZONE_WORKER` | action | rename | `PLACE_BUILDING` | no dispatch, no reducer, tests migrated, replacement wired |
 | `BUILD_INFRA_PATH` | action | rename | `PLACE_LINE_SEGMENT` | no dispatch, no reducer, tests migrated, replacement wired |
 | `PLACE_WORKER` | action | keep | `PLACE_WORKER` | none |
-| `PLACE_SPLIT_CLUSTER` | action | rename | `PLACE_BUILDING` | no dispatch, no reducer, tests migrated, replacement wired |
-| `HARVEST_WORKER` | action | rename | `QUEUE_WORKER` | no dispatch, no reducer, tests migrated, replacement wired |
-| `SET_ZONE` | action | rename | `PLACE_BUILDING` | no dispatch, no reducer, tests migrated, replacement wired |
-| `SET_BRUSH` | action | deprecated | `SELECT_ENTITY` | no dispatch, no reducer, tests migrated, replacement wired |
+| `PLACE_SPLIT_CLUSTER` | action | compat_active | `PLACE_BUILDING` | dispatch removed from `ui.input`, compat reducer case removed, replacement route contract-tested |
+| `HARVEST_WORKER` | action | compat_active | `QUEUE_WORKER` | dispatch removed from `ui.input`, compat reducer case removed, replacement route contract-tested |
+| `SET_ZONE` | action | compat_active | `PLACE_BUILDING` | dispatch removed from `ui.input`, compat reducer case removed, replacement route contract-tested |
+| `SET_BRUSH` | action | deprecated | `SELECT_ENTITY` | no live UI dispatch, no reducer dependency, replacement input flow contract-tested |
+
+### Verification Notes (2026-03-24)
+- `HARVEST_WORKER`, `SET_ZONE`, and `PLACE_SPLIT_CLUSTER` remain compatibility-active runtime actions.
+- Their rename targets (`QUEUE_WORKER`, `PLACE_BUILDING`) are still scaffold-level and intentionally schema-guarded for legacy payloads.
+- `SET_BRUSH` now has no live UI dispatch and remains deprecated until full replacement cleanup is completed.
 
 ## New RTS Strings
 | Current string | Type | Target status | Replacement | Removal condition |
@@ -24,7 +29,7 @@ This file is a migration map, not canonical truth.
 | `SET_MAP_TILE` | action | keep | `SET_MAP_TILE` | none |
 | `SELECT_ENTITY` | action | keep | `SELECT_ENTITY` | none |
 | `ISSUE_MOVE` | action | keep | `ISSUE_MOVE` | none |
-| `PLACE_CORE` | action | keep | `PLACE_CORE` | none |
+| `PLACE_CORE` | action | dead_line_removed | none | removed from active contracts, no dispatch, no reducer, tests migrated |
 | `PLACE_WORKER` | action | keep | `PLACE_WORKER` | none |
 | `PLACE_BUILDING` | action | keep | `PLACE_BUILDING` | none |
 | `PLACE_BELT_SEGMENT` | action | keep | `PLACE_BELT_SEGMENT` | none |
@@ -61,3 +66,22 @@ This file is a migration map, not canonical truth.
 | `cluster` | doc term | drop in product language | topology, logistics or formation | replacement wired |
 | `evolution` | doc term | drop in product language | mutation | replacement wired |
 | `preset` | doc term | rename | `MapSpec` | replacement wired |
+
+## SoT Alignment Snapshot (2026-03-25)
+
+Concrete categorization against current contracts and write matrix:
+- `aligned`: the matrix still matches all 38 action identifiers in `actionSchema`, `mutationMatrix`, and `actionLifecycle`.
+- `drifted`: lifecycle `plannedWrites` diverge from live writes for 13 actions (notably `GEN_WORLD`, `SIM_STEP`, builder tile actions, and compatibility actions).
+- `duplicate`: compatibility aliases remain intentionally duplicated (`PLACE_SPLIT_CLUSTER`/`SET_ZONE`/`HARVEST_WORKER` alongside RTS replacements).
+- `ambiguous naming`: product terms still mix old and new conceptual lanes (`founder`, `lineage`, `cluster`, `evolution`) and require consistent replacement phrasing.
+
+Action notes:
+1. Keep compatibility strings until dispatch and reducer removal gates are complete.
+2. Treat `SET_BRUSH` as deprecated-only and prevent new UI routes from reintroducing it.
+3. Keep this matrix and `docs/sot/90_ACTION_WRITE_MATRIX.md` synchronized whenever action writes or names move.
+
+Summary counts:
+- `aligned`: 1
+- `drifted`: 1
+- `duplicate`: 1
+- `ambiguous naming`: 1

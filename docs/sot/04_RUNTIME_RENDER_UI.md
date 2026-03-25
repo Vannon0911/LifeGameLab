@@ -4,6 +4,11 @@
 - Sim-Treiber: setInterval(1000/24)
 - Render-Treiber: requestAnimationFrame
 - alpha interpolation: elapsedSinceStep / TICK_RATE_MS
+- Tick contract is hard-frozen at 24 TPS for mainline runtime.
+
+## UI Mainline Modes (Frozen)
+- Mainline modes: Build + Play.
+- Inspect mode is currently removed from canonical MVP behavior.
 
 ## Funktionale Matrix
 | File | Line | Symbol | Kind |

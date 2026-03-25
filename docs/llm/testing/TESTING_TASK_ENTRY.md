@@ -27,10 +27,13 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 
 ## PRUEFEN
 - Vor Schreiben (pflicht):
+- `node tools/llm-preflight.mjs cache-validate`
 - `node tools/llm-preflight.mjs classify --paths tests,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs`
+- `node tools/llm-preflight.mjs spawn-proof --paths tests,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs --mode work`
 - `node tools/llm-preflight.mjs entry --paths tests,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs --mode work`
 - `node tools/llm-preflight.mjs ack --paths tests,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs`
 - `node tools/llm-preflight.mjs check --paths tests,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs`
+- `node tools/llm-preflight.mjs cache-sync --paths tests,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs`
 - Vor reinem Testlauf (optional, warn-only):
 - `node tools/llm-preflight.mjs audit --paths tests,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs`
 
@@ -39,6 +42,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Kein Schreiben ohne vollstaendige Pflicht-Lesereihenfolge.
 - Testlaeufe bleiben immer erlaubt; Preflight-Verstoesse warnen dort nur.
 - Taskwechsel/Pfadwechsel erzwingt Auto-Reclassify; Scope kann erweitert werden.
+- Nach gruenem `check` ist `cache-sync` Pflicht; ohne `cache-validate` startet kein Folge-Cycle.
 - Bei Multi-Scope alle passenden Task-Entries lesen und einen gemeinsamen Preflight fahren.
 - Umgehung (direkte State-/Patch-Injektion als Abkuerzung) ist untersagt, ausser nach expliziter Ruecksprache.
 - Vor jedem Commit muessen Test-Doku, Registry-Belege und betroffene Stringmatrix-/Inventar-Dateien aktuell sein.
@@ -53,3 +57,4 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 ## Taskregel
 Offizielle Truth laeuft dispatch-basiert ueber `devtools/evidence-runner.mjs`; globale Browser-Hooks oder Live-Client-Sonderpfade sind keine erlaubte Testsurface mehr.
 - Pro abgeschlossenem Slice ist die Version um `0.0.1` zu erhoehen; Teilstufen `a/b/c/d` werden nur als Dokumentanhang gefuehrt.
+
