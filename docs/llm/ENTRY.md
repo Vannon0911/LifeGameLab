@@ -73,6 +73,15 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - Keine Wrapper- oder Scheinlösungen
 - Inkonsistenz-Format: Symptom → Root Cause → Evidence (Datei:Zeile) → Impact → Freigabebedarf
 
+## SUBAGENT PATTERN CONSENT GATE (HART)
+
+- Bevor ein bestehendes Subagent-Muster weitergefuehrt wird, muss die Parent-LLM den User aktiv fragen:
+  - `Soll ich mit diesem Subagent-Muster genauso weiterarbeiten wie bisher?`
+- Ohne explizite User-Bestaetigung gilt fail-closed:
+  - keine Fortsetzung des alten Subagent-Orchestrierungsmodus
+  - nur read-only Planung/Status bis zur Bestaetigung
+- Die Bestaetigung ist session-gebunden und muss bei unklarer Lage erneut eingeholt werden.
+
 ## FILE-SCAN ORCHESTRATION GATE (HART)
 
 - Gilt vor jedem Dateiscannerlauf, Datei-Parsing, Datei-Interpretationsschritt und jeder semantischen Ableitung aus Dateiinhalten.

@@ -44,6 +44,9 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Preflight darf Multi-Scope umfassen, wenn die Pfadmenge real mehrere Bereiche betrifft.
 - Hook-Guards einmal aktivieren: `npm run hooks:install`
 - Vor jedem Commit betroffene Dokuquellen, Stringmatrix und Inventar nachziehen; am Ende jedes Arbeitsschritts Aktualitaet explizit gegen Code und Gates gegenpruefen.
+- Subagent-Muster-Fortsetzung braucht aktive User-Bestaetigung in Klartext:
+  - `Soll ich mit diesem Subagent-Muster genauso weiterarbeiten wie bisher?`
+- Ohne diese Bestaetigung: kein Weiterbetrieb des gleichen Subagent-Orchestrierungsmodus (fail-closed, read-only erlaubt).
 
 ## SCHREIBEN
 - kein Schreiben ohne gelesenen LLM-Entry plus passendem Task-Entry

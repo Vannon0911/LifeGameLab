@@ -15,10 +15,20 @@
 
 ## Mainline-Phasenvertrag
 - `GEN_WORLD` erzeugt die Welt deterministisch aus `meta.seed`.
-- Startphase nach `GEN_WORLD`: `RUN_ACTIVE`.
+- Startphase nach `GEN_WORLD`: `PHASE_0_OVERVIEW` fuer `10s` (`240` ticks bei `24 TPS`).
+- Danach ist Mainline-Startphase: `RUN_ACTIVE`.
 - `MAP_BUILDER` bleibt optionaler Override-Pfad.
 - `SIM_STEP` darf nur unter `RUN_ACTIVE` mutieren.
+
+## Sprachregel (MVP)
+- Der alte Produktbegriff `Energy` wird als `Nahrung` gefuehrt.
+- Solange Runtime-Felder noch technisch `energy` heissen, gilt:
+  - Produktsprache/Dokumentation: `Nahrung`
+  - Technische Feldnamen: bis Umstellung unveraendert
 
 ## Kennzahlen
 - Sim Gate maxPatches: 5000
 - Sim Gate maxTiles: 250000
+- Default test map size: 96x96
+- Core footprint: 4x4
+- Largest object target: up to 8x8
