@@ -11,8 +11,8 @@ const tileIdx = tile.y * Number(baseline.state.meta.gridW || 0) + tile.x;
 
 assert.equal(
   baseline.state.sim.runPhase,
-  RUN_PHASE.GENESIS_SETUP,
-  "initial run phase must stay genesis_setup before any builder toggle",
+  RUN_PHASE.RUN_ACTIVE,
+  "initial run phase must stay run_active before any builder toggle",
 );
 
 store.dispatch({ type: "SET_MAP_TILE", payload: { ...tile, remove: false } });
@@ -56,8 +56,8 @@ store.dispatch({ type: "GEN_WORLD", payload: {} });
 const afterGen = snapshotStore(store);
 assert.equal(
   afterGen.state.sim.runPhase,
-  RUN_PHASE.GENESIS_SETUP,
-  "GEN_WORLD must reset the run phase back to genesis_setup",
+  RUN_PHASE.RUN_ACTIVE,
+  "GEN_WORLD must reset the run phase back to run_active",
 );
 assert(
   Math.abs(Number(afterGen.state.world.L?.[tileIdx] ?? NaN) - 0.37) < 1e-6,

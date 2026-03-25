@@ -7,35 +7,59 @@ import { reducer, simStepPatch } from "../src/game/runtime/index.js";
 const cycle = { presetId: "river_delta" };
 cycle.self = cycle;
 
-const store = createStore(
-  manifest,
-  { reducer, simStep: simStepPatch },
-  {
-    storageDriver: {
-      load: () => ({
-        schemaVersion: manifest.SCHEMA_VERSION,
-        updatedAt: 0,
-        revisionCount: 0,
-        state: {
-          meta: {},
-          map: {
-            activeSource: "mapspec",
-            compiledHash: "",
-            spec: cycle,
-            validation: {},
+assert.throws(
+  () => createStore(
+    manifest,
+    { reducer, simStep: simStepPatch },
+    {
+      storageDriver: {
+        load: () => ({
+          schemaVersion: manifest.SCHEMA_VERSION,
+          updatedAt: 0,
+          revisionCount: 0,
+          state: {
+            meta: {},
+            map: {
+              activeSource: "mapspec",
+              compiledHash: "",
+              spec: cycle,
+              validation: {},
+            },
+            world: {},
+            sim: {},
           },
-          world: {},
-          sim: {},
-        },
-      }),
-      save: () => {},
+        }),
+        save: () => {},
+      },
     },
-  },
+  ),
+  /Persisted state failed schema sanitization/,
+  "poisoned persistence must hard-fail instead of downgrading to defaults",
 );
 
-const state = store.getState();
-assert.equal(state.meta.seed, "life-light", "poisoned persistence must fall back to default state");
-assert.equal(state.map.activeSource, "legacy_preset", "poisoned persistence must not preserve invalid map activation");
-assert.equal(state.map.spec.version, "gdd_v1_1", "poisoned persistence must recover a safe default map spec");
+assert.throws(
+  () => createStore(
+    manifest,
+    { reducer, simStep: simStepPatch },
+    {
+      storageDriver: {
+        load: () => ({
+          schemaVersion: manifest.SCHEMA_VERSION - 1,
+          updatedAt: 0,
+          revisionCount: 0,
+          state: {
+            meta: {},
+            map: {},
+            world: {},
+            sim: {},
+          },
+        }),
+        save: () => {},
+      },
+    },
+  ),
+  /schemaVersion mismatch/,
+  "schema mismatches must hard-fail instead of silently resetting state",
+);
 
-console.log("PERSISTENCE_CYCLE_BOOT_OK fallback=default_state");
+console.log("PERSISTENCE_CYCLE_BOOT_OK fail-closed=schema+sanitize");

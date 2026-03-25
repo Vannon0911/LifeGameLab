@@ -2,59 +2,9 @@ import assert from "node:assert/strict";
 
 import { createStore } from "../src/kernel/store/createStore.js";
 import { RUN_PHASE } from "../src/game/contracts/ids.js";
-import * as manifest from "../src/game/manifest.js";
+import { manifest } from "../src/game/manifest.js";
 import { reducer, simStepPatch } from "../src/game/runtime/index.js";
-
-function installWebStubs() {
-  const storage = new Map();
-  const localStorage = {
-    getItem(key) {
-      return storage.has(key) ? storage.get(key) : null;
-    },
-    setItem(key, value) {
-      storage.set(key, String(value));
-    },
-    removeItem(key) {
-      storage.delete(key);
-    },
-  };
-  const document = {
-    createElement() {
-      return {
-        set href(_value) {},
-        set download(_value) {},
-        click() {},
-      };
-    },
-    body: {
-      appendChild() {},
-      removeChild() {},
-    },
-  };
-  const URL = {
-    createObjectURL() {
-      return "blob:test";
-    },
-    revokeObjectURL() {},
-  };
-  const prev = {
-    localStorage: globalThis.localStorage,
-    document: globalThis.document,
-    URL: globalThis.URL,
-  };
-  Object.assign(globalThis, { localStorage, document, URL });
-  return {
-    storage,
-    restore() {
-      if (prev.localStorage === undefined) delete globalThis.localStorage;
-      else globalThis.localStorage = prev.localStorage;
-      if (prev.document === undefined) delete globalThis.document;
-      else globalThis.document = prev.document;
-      if (prev.URL === undefined) delete globalThis.URL;
-      else globalThis.URL = prev.URL;
-    },
-  };
-}
+import { installWebStubs } from "./support/installWebStubs.mjs";
 
 const storageKey = "llm_kernel_meta_v1";
 const stubs = installWebStubs();
