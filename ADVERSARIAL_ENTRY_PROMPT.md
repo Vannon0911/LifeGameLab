@@ -21,5 +21,5 @@ Regeln für diese Session:
    - Rebuttal muss READONLY sein.
 6. Input abwarten vor weiter
 
-Preflight-Standard: --no-preflight NICHT verwenden.
+Preflight-Standard: Preflight ist immer aktiv; kein Opt-out-Flag.
 Subagents-Standard: --no-subagents NICHT verwenden.

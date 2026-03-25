@@ -115,7 +115,7 @@ export function installUiInput(UI) {
     // Builder tool dropdown
     this._builderToolDropdown?.addEventListener("change", (e) => {
       const mode = e.target.value;
-      this._dispatch({ type: "SET_BRUSH", payload: { brushMode: mode } });
+      this._setBuilderMode?.(mode, false);
       const opt = (this._builderToolOptions || []).find((o) => o.mode === mode);
       this._setActionFeedback({ ok: true, message: `Werkzeug: ${opt?.label || mode}`, hint: opt?.hint || "" });
     });

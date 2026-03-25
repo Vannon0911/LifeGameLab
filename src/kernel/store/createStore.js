@@ -8,9 +8,21 @@ import { runWithDeterminismGuard, deepFreeze } from "../determinism/runtimeGuard
 import { getDefaultDriver } from "./persistence.js";
 import { isPlainObject } from "../shared/isPlainObject.js";
 
-export function createStore(manifest, project, options = {}) {
-  const { SCHEMA_VERSION, stateSchema, actionSchema, mutationMatrix } = manifest;
-  assertManifestContracts(manifest);
+const NOT_IMPLEMENTED_ACTIONS = new Set([
+  "PLACE_BUILDING",
+  "PLACE_BELT_SEGMENT",
+  "PLACE_LINE_SEGMENT",
+  "SET_CORE_ROUTING",
+  "QUEUE_WORKER",
+  "SPAWN_FIGHTER",
+  "ASSIGN_REPAIR",
+  "SET_MUTATOR_PATTERN",
+  "COMMIT_MUTATION",
+]);
+
+export function createStore(runtimeManifest, project, options = {}) {
+  const { SCHEMA_VERSION, stateSchema, actionSchema, mutationMatrix } = runtimeManifest;
+  assertManifestContracts(runtimeManifest);
   const driver = options.storageDriver || getDefaultDriver();
   const adaptAction = typeof options.actionAdapter === "function"
     ? options.actionAdapter
@@ -28,29 +40,44 @@ export function createStore(manifest, project, options = {}) {
   }
 
   function migrateIfNeeded(rawDoc) {
-    if (!rawDoc || typeof rawDoc !== "object") return makeInitialDoc();
-    if (rawDoc.schemaVersion === SCHEMA_VERSION) {
-      return {
-        ...rawDoc,
-        revisionCount: Number.isFinite(rawDoc.revisionCount) ? (rawDoc.revisionCount | 0) : (rawDoc.updatedAt | 0)
-      };
+    if (rawDoc == null) return makeInitialDoc();
+    if (!isPlainObject(rawDoc)) {
+      throw createPersistenceError("Persisted document must be a plain object");
     }
-    return makeInitialDoc();
+    if (rawDoc.schemaVersion !== SCHEMA_VERSION) {
+      throw createPersistenceError(`Persisted schemaVersion mismatch: expected ${SCHEMA_VERSION}, got ${String(rawDoc.schemaVersion)}`);
+    }
+    if (!Object.prototype.hasOwnProperty.call(rawDoc, "state") || !isPlainObject(rawDoc.state)) {
+      throw createPersistenceError("Persisted document state must be a plain object");
+    }
+    return {
+      ...rawDoc,
+      revisionCount: Number.isFinite(rawDoc.revisionCount) ? (rawDoc.revisionCount | 0) : (rawDoc.updatedAt | 0)
+    };
   }
 
-  let _rawDoc; try { _rawDoc = driver.load(); } catch { _rawDoc = null; }
-  let doc = migrateIfNeeded(_rawDoc);
-  try { doc.state = sanitizeBySchema(doc.state, stateSchema); } catch { doc = makeInitialDoc(); doc.state = sanitizeBySchema(doc.state, stateSchema); }
+  let rawDoc;
+  try {
+    rawDoc = driver.load();
+  } catch (error) {
+    throw createPersistenceError("Persistence load failed", error);
+  }
+  let doc = migrateIfNeeded(rawDoc);
+  try {
+    doc.state = sanitizeBySchema(doc.state, stateSchema);
+  } catch (error) {
+    throw createPersistenceError("Persisted state failed schema sanitization", error);
+  }
 
   function docSignature(d) {
-    return hash32(stableStringify({ schemaVersion: d.schemaVersion, state: d.state }));
+    return hash32(getDocAttestationMaterial(d));
   }
 
   function getState() { return cloneDeep(doc.state); }
   function getDoc() { return deepFreeze(cloneDeep(doc)); }
   function getSignature() { return docSignature(doc); }
   function getSignatureMaterial() {
-    return stableStringify({ schemaVersion: doc.schemaVersion, state: doc.state });
+    return getDocAttestationMaterial(doc);
   }
 
   function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
@@ -59,6 +86,9 @@ export function createStore(manifest, project, options = {}) {
   function dispatch(action) {
     const adapted = adaptAction(action);
     const clean = validateActionAgainstSchema(actionSchema, adapted);
+    if (NOT_IMPLEMENTED_ACTIONS.has(clean.type)) {
+      throw createActionNotImplementedError(clean.type);
+    }
     const actionAllowed = mutationMatrix[clean.type];
     if (!Array.isArray(actionAllowed)) throw new Error(`Missing mutationMatrix contract: ${clean.type}`);
 
@@ -76,7 +106,12 @@ export function createStore(manifest, project, options = {}) {
 
     if (!Array.isArray(patches)) throw new Error("Reducer must return patches array");
     assertPatchesAllowed(safePatches, actionAllowed);
-    assertDomainPatchesAllowed(manifest, doc.state, clean.type, safePatches);
+    assertDomainPatchesAllowed({
+      manifest: runtimeManifest,
+      state: doc.state,
+      actionType: clean.type,
+      patches: safePatches,
+    });
 
     let nextState = applyPatches(doc.state, safePatches);
     nextState = sanitizeBySchema(nextState, stateSchema);
@@ -95,7 +130,12 @@ export function createStore(manifest, project, options = {}) {
       if (!Array.isArray(simPatches)) throw new Error("simStep must return patches array");
       const safeSimPatches = clonePatches(simPatches);
       assertPatchesAllowed(safeSimPatches, mutationMatrix.SIM_STEP);
-      assertDomainPatchesAllowed(manifest, nextState, "SIM_STEP", safeSimPatches);
+      assertDomainPatchesAllowed({
+        manifest: runtimeManifest,
+        state: nextState,
+        actionType: "SIM_STEP",
+        patches: safeSimPatches,
+      });
       if (safeSimPatches.length) {
         nextState = applyPatches(nextState, safeSimPatches);
         nextState = sanitizeBySchema(nextState, stateSchema);
@@ -122,8 +162,32 @@ export function createStore(manifest, project, options = {}) {
   return { getState, getDoc, getSignature, getSignatureMaterial, subscribe, dispatch };
 }
 
+function getDocAttestationMaterial(doc) {
+  return stableStringify({
+    schemaVersion: doc.schemaVersion,
+    revisionCount: doc.revisionCount | 0,
+    state: doc.state
+  });
+}
+
+function createPersistenceError(message, cause) {
+  const error = new Error(message);
+  if (cause !== undefined) error.cause = cause;
+  return error;
+}
+
+function createActionNotImplementedError(actionType) {
+  const error = new Error(`Action '${actionType}' is scaffolded and not implemented`);
+  error.code = "ERR_ACTION_NOT_IMPLEMENTED";
+  error.actionType = actionType;
+  return error;
+}
+
 function assertManifestContracts(manifest) {
   if (!manifest?.actionSchema || !manifest?.mutationMatrix) throw new Error("Manifest invalid");
+  if (manifest?.simGate && typeof manifest?.domainPatchGate !== "function") {
+    throw new Error("Manifest invalid: runtime manifest with simGate requires domainPatchGate");
+  }
 }
 
 function cloneDeep(value) {

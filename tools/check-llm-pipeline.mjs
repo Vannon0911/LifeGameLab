@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -10,6 +12,9 @@ const matrixPath = path.join(root, "docs", "llm", "TASK_ENTRY_MATRIX.json");
 const statusPath = path.join(root, "docs", "STATUS.md");
 const stateSchemaPath = path.join(root, "src", "game", "contracts", "stateSchema.js");
 const simGatePath = path.join(root, "src", "game", "contracts", "simGate.js");
+const orchestratorSessionDir = path.join(root, ".llm", "orchestrator-sessions");
+const cacheStatePath = path.join(root, ".llm", "cache-state.json");
+const cacheValidatorPath = path.join(root, ".llm", "cache-validator.json");
 
 function fail(message) {
   console.error(`[llm-pipeline-check] FAIL ${message}`);
@@ -30,6 +35,10 @@ function readText(absPath) {
   } catch (err) {
     fail(`Cannot read file ${path.relative(root, absPath)}: ${err.message}`);
   }
+}
+
+function sha256Text(text) {
+  return createHash("sha256").update(String(text), "utf8").digest("hex");
 }
 
 function assertUnique(items, label) {
@@ -157,6 +166,82 @@ function checkDeterminism() {
   }
 }
 
+function buildCacheStateMaterial(cacheState) {
+  return [
+    `challengeId=${String(cacheState.challengeId || "")}`,
+    `entryPath=${String(cacheState.entryPath || "")}`,
+    `entrySha256=${String(cacheState.entrySha256 || "")}`,
+    `scopeKey=${String(cacheState.scopeKey || "")}`,
+    `taskScope=${Array.isArray(cacheState.taskScope) ? cacheState.taskScope.join("|") : ""}`,
+    `classifiedPaths=${Array.isArray(cacheState.classifiedPaths) ? cacheState.classifiedPaths.slice().sort().join("|") : ""}`,
+    `mode=${String(cacheState.mode || "")}`,
+    `proofHash=${String(cacheState.proofHash || "")}`,
+    `requiredEntries=${JSON.stringify(
+      Object.fromEntries(
+        Object.entries(cacheState.requiredEntries || {}).map(([scope, ref]) => [
+          scope,
+          String(ref?.requiredEntrySha256 || ""),
+        ]),
+      ),
+    )}`,
+  ].join("\n---\n");
+}
+
+function checkCycleGateArtifacts() {
+  const hasCacheState = fs.existsSync(cacheStatePath);
+  const hasCacheValidator = fs.existsSync(cacheValidatorPath);
+  if (hasCacheState !== hasCacheValidator) {
+    fail("Cycle gate artifacts are incomplete: cache-state and cache-validator must either both exist or both be absent.");
+  }
+  if (!hasCacheState) return;
+
+  const cacheState = readJson(cacheStatePath);
+  const cacheValidator = readJson(cacheValidatorPath);
+  const expectedCacheHash = sha256Text(buildCacheStateMaterial(cacheState));
+  if (String(cacheState.cacheHash || "") !== expectedCacheHash) {
+    fail("cache-state.json hash drift detected.");
+  }
+  if (String(cacheValidator.cacheHash || "") !== expectedCacheHash) {
+    fail("cache-validator.json does not match cache-state.json.");
+  }
+  if (String(cacheValidator.challengeId || "") !== String(cacheState.challengeId || "")) {
+    fail("cache-validator.json challengeId does not match cache-state.json.");
+  }
+}
+
+function checkOrchestratorBypassAudit() {
+  if (!fs.existsSync(orchestratorSessionDir)) return;
+  const files = fs.readdirSync(orchestratorSessionDir).filter((name) => name.endsWith(".json"));
+  const violations = [];
+  for (const fileName of files) {
+    const abs = path.join(orchestratorSessionDir, fileName);
+    const session = readJson(abs);
+    if (Array.isArray(session?.paths) && session.paths.length > 0 && session?.preflight?.dryRun === true) {
+      violations.push(`${fileName} recorded preflight dryRun/skip`);
+    }
+    if (Array.isArray(session?.paths) && session.paths.length > 0 && !session.preflight) {
+      violations.push(`${fileName} missing preflight block`);
+    }
+  }
+  if (violations.length) {
+    fail(`Orchestrator preflight bypass evidence detected: ${violations.join("; ")}`);
+  }
+}
+
+function checkWholeRepoDispatchTruth() {
+  const testPath = path.join(root, "tests", "test-whole-repo-dispatch-truth.mjs");
+  const res = spawnSync(process.execPath, [testPath], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 60_000,
+  });
+  if (res.stdout) process.stdout.write(res.stdout);
+  if (res.stderr) process.stderr.write(res.stderr);
+  if (res.error) fail(`whole-repo dispatch truth check failed to run: ${res.error.message}`);
+  if (res.status !== 0) fail("whole-repo dispatch truth check failed");
+}
+
 const pipeline = readJson(pipelinePath);
 const matrix = readJson(matrixPath);
 
@@ -164,5 +249,8 @@ checkPipelineShape(pipeline);
 checkTaskMatrix(matrix);
 checkStatusContradictions();
 checkDeterminism();
+checkCycleGateArtifacts();
+checkOrchestratorBypassAudit();
+checkWholeRepoDispatchTruth();
 
 console.log("[llm-pipeline-check] OK layers=3 roles=8 deterministic-kernel=true contradictions=none");

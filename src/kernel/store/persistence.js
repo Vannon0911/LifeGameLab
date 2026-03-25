@@ -19,14 +19,12 @@ export const createNullDriver = () => ({
  */
 export const createWebDriver = (key = "llm_kernel_state") => ({
   load: () => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw == null) return null;
-      return JSON.parse(raw);
-    } catch { return null; }
+    const raw = localStorage.getItem(key);
+    if (raw == null) return null;
+    return JSON.parse(raw);
   },
   save: (doc) => {
-    try { localStorage.setItem(key, JSON.stringify(doc)); } catch {}
+    localStorage.setItem(key, JSON.stringify(doc));
   },
   export: (doc) => {
     const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" });
@@ -55,36 +53,32 @@ export const createWebDriver = (key = "llm_kernel_state") => ({
  */
 export const createMetaOnlyWebDriver = (key = "llm_kernel_meta_v1") => ({
   load: () => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw == null) return null;
-      const doc = JSON.parse(raw);
-      // Re-inject empty world/sim so sanitizeBySchema fills in defaults.
-      if (doc && doc.state) {
-        if (!doc.state.map || typeof doc.state.map !== "object" || Array.isArray(doc.state.map)) {
-          doc.state.map = {};
-        }
-        doc.state.world = {};
-        doc.state.sim   = {};
+    const raw = localStorage.getItem(key);
+    if (raw == null) return null;
+    const doc = JSON.parse(raw);
+    // Re-inject empty world/sim so sanitizeBySchema fills in defaults.
+    if (doc && doc.state) {
+      if (!doc.state.map || typeof doc.state.map !== "object" || Array.isArray(doc.state.map)) {
+        doc.state.map = {};
       }
-      return doc;
-    } catch { return null; }
+      doc.state.world = {};
+      doc.state.sim = {};
+    }
+    return doc;
   },
   save: (doc) => {
-    try {
-      const slim = {
-        schemaVersion: doc.schemaVersion,
-        updatedAt:     doc.updatedAt,
-        revisionCount: doc.revisionCount,
-        state: {
-          meta: doc.state.meta,
-          map: doc.state.map || {},
-          world: {},
-          sim: {},
-        },
-      };
-      localStorage.setItem(key, JSON.stringify(slim));
-    } catch {}
+    const slim = {
+      schemaVersion: doc.schemaVersion,
+      updatedAt: doc.updatedAt,
+      revisionCount: doc.revisionCount,
+      state: {
+        meta: doc.state.meta,
+        map: doc.state.map || {},
+        world: {},
+        sim: {},
+      },
+    };
+    localStorage.setItem(key, JSON.stringify(slim));
   },
   export: createWebDriver().export,
 });

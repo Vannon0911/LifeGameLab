@@ -3,7 +3,7 @@
 // ============================================================
 
 import { createStore }       from "../kernel/store/createStore.js";
-import { manifest, APP_VERSION } from "../game/manifest.js";
+import { runtimeManifest, APP_VERSION } from "../game/manifest.js";
 import { reducer, simStepPatch, shouldAdvanceSimulation } from "../game/runtime/index.js";
 import { render }            from "../game/render/renderer.js";
 import { UI }                from "../game/ui/ui.js";
@@ -12,12 +12,58 @@ import { createWorldStateLog } from "./runtime/worldStateLog.js";
 import { bindBootStatusErrorHooks, setBootStatus } from "./runtime/bootStatus.js";
 
 bindBootStatusErrorHooks();
+const DEBUG_MODE = new URLSearchParams(globalThis.location?.search || "").get("debug") === "1";
 const WorldStateLog = createWorldStateLog(hashString);
 const SIM_RUNTIME_DISABLED = false;
 const TICK_RATE_MS = 1000 / 24;
 
+const DebugRuntime = {
+  enabled: DEBUG_MODE,
+  maxLines: 80,
+  lines: [],
+  panel: null,
+  pre: null,
+  write(line) {
+    if (!this.enabled) return;
+    const stamp = new Date().toISOString().slice(11, 19);
+    this.lines.push(`[${stamp}] ${line}`);
+    if (this.lines.length > this.maxLines) this.lines.splice(0, this.lines.length - this.maxLines);
+    if (this.pre) this.pre.textContent = this.lines.join("\n");
+  },
+  installPanel() {
+    if (!this.enabled || this.panel) return;
+    const panel = document.createElement("div");
+    panel.id = "nx-debug-panel";
+    panel.style.cssText = [
+      "position:fixed",
+      "right:10px",
+      "bottom:10px",
+      "width:min(560px,95vw)",
+      "max-height:42vh",
+      "z-index:99999",
+      "background:rgba(8,8,10,0.92)",
+      "color:#d9ffe0",
+      "border:1px solid rgba(170,255,190,0.35)",
+      "border-radius:8px",
+      "padding:8px",
+      "font:12px/1.35 ui-monospace,Consolas,monospace",
+      "box-shadow:0 8px 24px rgba(0,0,0,0.35)",
+    ].join(";");
+    const title = document.createElement("div");
+    title.textContent = "LIVE DEBUG (?debug=1)";
+    title.style.cssText = "font-weight:700;margin-bottom:6px;color:#b8ffca";
+    const pre = document.createElement("pre");
+    pre.style.cssText = "margin:0;white-space:pre-wrap;overflow:auto;max-height:34vh";
+    panel.append(title, pre);
+    document.body.appendChild(panel);
+    this.panel = panel;
+    this.pre = pre;
+    this.write("debug panel active");
+  },
+};
+
 // ── Store ─────────────────────────────────────────────────
-const store = createStore(manifest, {
+const store = createStore(runtimeManifest, {
   reducer,
   simStep: simStepPatch,
 });
@@ -34,7 +80,21 @@ store.dispatch = (action) => {
   const nextAction = (SIM_RUNTIME_DISABLED && t === "TOGGLE_RUNNING")
     ? { ...action, payload: { ...(action?.payload || {}), running: false } }
     : action;
-  const result = _dispatchRaw(nextAction);
+  const payload = nextAction?.payload;
+  const payloadShort = payload && typeof payload === "object"
+    ? `{${Object.keys(payload).slice(0, 6).join(",")}${Object.keys(payload).length > 6 ? ",..." : ""}}`
+    : String(payload ?? "");
+  let result;
+  try {
+    result = _dispatchRaw(nextAction);
+  } catch (err) {
+    DebugRuntime.write(`ERR dispatch ${t} -> ${String(err?.message || err)}`);
+    throw err;
+  }
+  const st = store.getState();
+  DebugRuntime.write(
+    `dispatch ${t} ${payloadShort} | phase=${String(st?.sim?.runPhase || "")} tick=${Number(st?.sim?.tick || 0)} cmd=${String(st?.sim?.lastCommand || "")}`,
+  );
   if (t && t !== "SIM_STEP") RuntimeHooks.onStructuralChange?.(t, action);
   return result;
 };
@@ -273,6 +333,14 @@ const RenderManager = {
 
 const ui     = new UI(store, canvas);
 globalThis.__LIFEGAMELAB_UI__ = ui;
+DebugRuntime.installPanel();
+window.addEventListener("error", (ev) => {
+  DebugRuntime.write(`ERR window ${String(ev?.message || ev?.error || "unknown")}`);
+});
+window.addEventListener("unhandledrejection", (ev) => {
+  const reason = ev?.reason;
+  DebugRuntime.write(`ERR promise ${String(reason?.message || reason || "unknown")}`);
+});
 
 // Prime render info once so runtime click hooks have deterministic coordinates immediately.
 try {
@@ -697,4 +765,4 @@ function loop(ts) {
 startSimInterval();
 requestAnimationFrame(loop);
 
-console.log(`LifeGameLab v${APP_VERSION} gestartet (Schema v${manifest.SCHEMA_VERSION}). store ist verfuegbar.`);
+console.log(`LifeGameLab v${APP_VERSION} gestartet (Schema v${runtimeManifest.SCHEMA_VERSION}). store ist verfuegbar.`);
