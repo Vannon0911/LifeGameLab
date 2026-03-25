@@ -1,6 +1,4 @@
-function isPlainObject(v) {
-  return !!v && typeof v === "object" && !Array.isArray(v) && !ArrayBuffer.isView(v);
-}
+import { isPlainObject } from "../../kernel/shared/isPlainObject.js";
 
 function getCtorName(v) {
   return v && v.constructor && typeof v.constructor.name === "string" ? v.constructor.name : "";
@@ -101,12 +99,5 @@ export function assertPluginDomainPatchesAllowed({ manifest, state, actionType, 
   }
 }
 
-// Backward-compatible alias for existing manifest imports.
-export function assertDomainPatchesAllowed(args) {
-  assertPluginDomainPatchesAllowed(args);
-}
-
-// Backward-compatible export for tests and transitional imports.
-export function assertSimPatchesAllowed(manifest, state, actionType, patches) {
-  assertPluginDomainPatchesAllowed({ manifest, state, actionType, patches });
-}
+// Canonical runtime gate entrypoint used by runtime manifest + kernel bridge.
+export const assertDomainPatchGate = assertPluginDomainPatchesAllowed;

@@ -4,7 +4,6 @@ export const ACTION_LIFECYCLE_STATUS = Object.freeze({
   DEPRECATED: "deprecated",
   NEW_SLICE_A: "new_slice_a",
 });
-import { mutationMatrix } from "./mutationMatrix.js";
 
 const REPLACEMENT_GATES = Object.freeze([
   "dispatch_sources_removed",
@@ -254,11 +253,10 @@ const actionLifecycleDraft = Object.freeze({
   ),
 });
 
-export const actionLifecycle = Object.freeze(
-  Object.fromEntries(
-    Object.entries(actionLifecycleDraft).map(([type, lifecycle]) => {
-      const plannedWrites = Array.isArray(mutationMatrix[type]) ? [...mutationMatrix[type]] : [];
-      return [type, { ...lifecycle, plannedWrites }];
-    })
-  )
-);
+export const ACTION_DEAD_LINES = Object.freeze([
+  "PLACE_CORE",
+  "CONFIRM_FOUNDATION",
+  "CONFIRM_CORE_ZONE",
+]);
+
+export const actionLifecycle = actionLifecycleDraft;

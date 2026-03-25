@@ -9,7 +9,7 @@ import {
   actionLifecycle,
   manifest as contractManifest,
 } from "./contracts/manifest.js";
-import { assertDomainPatchesAllowed } from "./plugin/gates.js";
+import { assertDomainPatchGate } from "./plugin/gates.js";
 
 export {
   SCHEMA_VERSION,
@@ -20,10 +20,12 @@ export {
   simGate,
   dataflow,
   actionLifecycle,
-  assertDomainPatchesAllowed as domainPatchGate,
 };
 
-export const manifest = {
+export const runtimeManifest = {
   ...contractManifest,
-  domainPatchGate: assertDomainPatchesAllowed,
+  // Runtime-only gate hook for kernel patch validation.
+  domainPatchGate: assertDomainPatchGate,
 };
+
+export const manifest = runtimeManifest;

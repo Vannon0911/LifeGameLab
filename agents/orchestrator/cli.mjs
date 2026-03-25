@@ -30,6 +30,8 @@ import { createOrchestrator, PIPELINES } from "./orchestrator.mjs";
 import { ROLE_PATHS, loadAllRoles } from "./runtime/agent.mjs";
 import { listProviders } from "./models/index.mjs";
 
+const VALID_PREFLIGHT_MODES = new Set(["work", "security"]);
+
 // ── Argument Parsing ──────────────────────────────────────
 const { values: args } = parseArgs({
   options: {
@@ -45,7 +47,6 @@ const { values: args } = parseArgs({
     "list-pipelines":{ type: "boolean" },
     "list-roles":    { type: "boolean" },
     "preflight-mode":{ type: "string" },
-    "no-preflight":  { type: "boolean" },
     "no-subagents":  { type: "boolean" },
     rounds:          { type: "string" },
     "max-parallel":  { type: "string" },
@@ -78,8 +79,7 @@ Optionen:
   --dry-run, -d            Simulation ohne LLM-Aufrufe
   --verbose, -v            Detaillierte Ausgabe
   --validate               Nur Config validieren
-  --preflight-mode <mode>  Preflight-Modus (work|security|audit)
-  --no-preflight           Preflight ueberspringen
+  --preflight-mode <mode>  Preflight-Modus (work|security)
   --no-subagents           Explizites Opt-out fuer Rebuttal-Subagents
   --list-pipelines         Pipelines auflisten
   --list-roles             Rollen auflisten
@@ -176,8 +176,19 @@ if (args.validate) {
 }
 
 // ── Ausfuehrung ───────────────────────────────────────────
-const paths = args.paths ? args.paths.split(",").map((p) => p.trim()) : [];
+const paths = args.paths ? args.paths.split(",").map((p) => p.trim()).filter(Boolean) : [];
 const pipeline = args.pipeline || "default";
+const preflightMode = args["preflight-mode"] || "work";
+
+if (paths.length === 0) {
+  console.error("Fehler: --paths ist Pflicht. Gib mindestens eine Datei/einen Scope an.");
+  process.exit(1);
+}
+
+if (!VALID_PREFLIGHT_MODES.has(preflightMode)) {
+  console.error(`Fehler: --preflight-mode muss 'work' oder 'security' sein, erhalten: '${preflightMode}'.`);
+  process.exit(1);
+}
 
 console.log(`\n🚀 Agent Orchestrator`);
 console.log(`   Task:     ${args.task}`);
@@ -199,8 +210,8 @@ try {
     paths,
     rounds: Math.max(1, Number(args.rounds || 1) | 0),
     maxParallel: Math.max(1, Number(args["max-parallel"] || 6) | 0),
-    preflight: !args["no-preflight"],
-    preflightMode: args["preflight-mode"] || "work",
+    preflight: true,
+    preflightMode,
     subagentsOptOutExplicit: args["no-subagents"] === true,
   });
 

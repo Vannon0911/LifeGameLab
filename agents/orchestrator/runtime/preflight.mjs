@@ -44,7 +44,7 @@ function runPreflight(args) {
  * Fuehrt die vollstaendige Preflight-Kette aus.
  *
  * @param {string[]} paths - Dateipfade die bearbeitet werden sollen
- * @param {object} options - { mode: "work"|"security"|"audit", verbose: boolean }
+ * @param {object} options - { mode: "work"|"security", verbose: boolean }
  * @returns {Promise<{ ok: boolean, steps: object[], error?: string }>}
  */
 export async function runPreflightChain(paths, options = {}) {

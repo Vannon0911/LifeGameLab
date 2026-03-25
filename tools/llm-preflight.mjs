@@ -11,7 +11,12 @@ const matrixPath = path.join(root, "docs", "llm", "TASK_ENTRY_MATRIX.json");
 const ackPath = path.join(root, ".llm", "entry-ack.json");
 const sessionPath = path.join(root, ".llm", "entry-session.json");
 const proofDir = path.join(root, ".llm", "entry-proof");
+const spawnProofPath = path.join(root, ".llm", "spawn-proof.json");
+const cacheStatePath = path.join(root, ".llm", "cache-state.json");
+const cacheValidatorPath = path.join(root, ".llm", "cache-validator.json");
 const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+const SPAWN_PROOF_MAX_AGE_MS = 30 * 60 * 1000;
+const CACHE_VALIDATOR_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 function fail(message) {
   console.error(`[llm-preflight] ${message}`);
@@ -24,6 +29,11 @@ function readJson(absPath) {
   } catch (err) {
     fail(`Cannot read JSON '${path.relative(root, absPath)}': ${err.message}`);
   }
+}
+
+function readJsonIfExists(absPath) {
+  if (!fs.existsSync(absPath)) return null;
+  return readJson(absPath);
 }
 
 function sha256File(absPath) {
@@ -263,6 +273,10 @@ function ensureProofDir() {
   fs.mkdirSync(proofDir, { recursive: true });
 }
 
+function ensureLlmDir() {
+  fs.mkdirSync(path.join(root, ".llm"), { recursive: true });
+}
+
 function relativize(absPath) {
   return path.relative(root, absPath).split(path.sep).join("/");
 }
@@ -271,6 +285,28 @@ function taskEntryHashes(requiredEntries) {
   return Object.fromEntries(
     Object.entries(requiredEntries).map(([scope, ref]) => [scope, ref.requiredEntrySha256]),
   );
+}
+
+function parseIsoTimestampOrFail(value, label) {
+  const parsed = Date.parse(String(value || ""));
+  if (!Number.isFinite(parsed)) {
+    fail(`${label} missing/invalid.`);
+  }
+  return parsed;
+}
+
+function buildCacheStateMaterial(cacheState) {
+  return [
+    `challengeId=${String(cacheState.challengeId || "")}`,
+    `entryPath=${String(cacheState.entryPath || "")}`,
+    `entrySha256=${String(cacheState.entrySha256 || "")}`,
+    `scopeKey=${String(cacheState.scopeKey || "")}`,
+    `taskScope=${Array.isArray(cacheState.taskScope) ? cacheState.taskScope.join("|") : ""}`,
+    `classifiedPaths=${Array.isArray(cacheState.classifiedPaths) ? cacheState.classifiedPaths.slice().sort().join("|") : ""}`,
+    `mode=${String(cacheState.mode || "")}`,
+    `proofHash=${String(cacheState.proofHash || "")}`,
+    `requiredEntries=${JSON.stringify(taskEntryHashes(cacheState.requiredEntries || {}))}`,
+  ].join("\n---\n");
 }
 
 function buildProofMaterial(entryRef, taskCtx, requiredEntries, mode, nonce) {
@@ -319,6 +355,139 @@ function writeProofChallenge(entryRef, taskCtx, requiredEntries, mode, previousF
     challengeFile: rel,
     proofHash: sha256Text(buildProofMaterial(entryRef, taskCtx, requiredEntries, mode, nonce)),
   };
+}
+
+function writeSpawnProof(entryRef, taskCtx, requiredEntries, mode) {
+  ensureLlmDir();
+  const nonce = crypto.randomBytes(32).toString("hex");
+  const payload = {
+    proofId: crypto.randomBytes(12).toString("hex"),
+    nonce,
+    entryPath: entryRef.entryPath,
+    entrySha256: entryRef.sha256,
+    taskScope: taskCtx.taskScope,
+    scopeKey: taskCtx.scopeKey,
+    mode,
+    requiredEntries,
+    classifiedPaths: taskCtx.paths,
+    createdAt: new Date().toISOString(),
+    consumedAt: null,
+  };
+  payload.proofHash = sha256Text(buildProofMaterial(entryRef, taskCtx, requiredEntries, mode, nonce));
+  fs.writeFileSync(spawnProofPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  return payload;
+}
+
+function isFirstCycleBootstrap() {
+  return (
+    !fs.existsSync(cacheStatePath) &&
+    !fs.existsSync(cacheValidatorPath) &&
+    !fs.existsSync(sessionPath) &&
+    !fs.existsSync(ackPath)
+  );
+}
+
+function readSpawnProofOrFail(entryRef, taskCtx, requiredEntries, mode) {
+  const proof = readJsonIfExists(spawnProofPath);
+  if (!proof) {
+    fail(
+      `Missing spawn proof. Run: node tools/llm-preflight.mjs spawn-proof --paths ${taskCtx.paths.join(",")} --mode ${mode}`,
+    );
+  }
+  parseIsoTimestampOrFail(proof.createdAt, "Spawn proof createdAt");
+  if (Date.now() - Date.parse(proof.createdAt) > SPAWN_PROOF_MAX_AGE_MS) {
+    fail("Spawn proof expired. Re-run spawn-proof.");
+  }
+  if (proof.consumedAt) {
+    fail("Spawn proof already consumed. Re-run spawn-proof.");
+  }
+  if (proof.entryPath !== entryRef.entryPath || proof.entrySha256 !== entryRef.sha256) {
+    fail("Spawn proof entry drift. Re-run spawn-proof.");
+  }
+  if (!sameSet(proof.taskScope, taskCtx.taskScope)) {
+    fail("Spawn proof scope drift. Re-run spawn-proof.");
+  }
+  if (!sameSet(proof.classifiedPaths, taskCtx.paths)) {
+    fail("Spawn proof path drift. Re-run spawn-proof.");
+  }
+  if (!sameEntryHashes(proof.requiredEntries, requiredEntries)) {
+    fail("Spawn proof entry-hash drift. Re-run spawn-proof.");
+  }
+  if (String(proof.mode || "") !== String(mode || "")) {
+    fail("Spawn proof mode drift. Re-run spawn-proof.");
+  }
+  const expectedProofHash = sha256Text(buildProofMaterial(entryRef, taskCtx, requiredEntries, mode, proof.nonce));
+  if (String(proof.proofHash || "") !== String(expectedProofHash || "")) {
+    fail("Spawn proof hash drift. Re-run spawn-proof.");
+  }
+  return proof;
+}
+
+function consumeSpawnProof(proof, challengeId) {
+  if (!proof) return;
+  const next = {
+    ...proof,
+    consumedAt: new Date().toISOString(),
+    consumedByChallengeId: challengeId,
+  };
+  fs.writeFileSync(spawnProofPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+}
+
+function readCacheStateOrFail() {
+  const cacheState = readJsonIfExists(cacheStatePath);
+  if (!cacheState) {
+    fail("Missing cache sync state. Run cache-sync after a green check before starting the next cycle.");
+  }
+  const expectedHash = sha256Text(buildCacheStateMaterial(cacheState));
+  if (String(cacheState.cacheHash || "") !== String(expectedHash || "")) {
+    fail("Cache sync state drift. Re-run cache-sync.");
+  }
+  return cacheState;
+}
+
+function readCacheValidatorOrFail(cacheState) {
+  const validator = readJsonIfExists(cacheValidatorPath);
+  if (!validator) {
+    fail("Missing cache validator. Run cache-validate before starting the next cycle.");
+  }
+  parseIsoTimestampOrFail(validator.validatedAt, "Cache validator validatedAt");
+  if (Date.now() - Date.parse(validator.validatedAt) > CACHE_VALIDATOR_MAX_AGE_MS) {
+    fail("Cache validator expired. Re-run cache-validate.");
+  }
+  if (validator.consumedAt) {
+    fail("Cache validator already consumed. Re-run cache-validate.");
+  }
+  const syncedAtMs = parseIsoTimestampOrFail(cacheState.syncedAt, "Cache sync syncedAt");
+  const validatedAtMs = Date.parse(String(validator.validatedAt || ""));
+  if (validatedAtMs < syncedAtMs) {
+    fail("Cache validator older than cache sync. Re-run cache-validate.");
+  }
+  if (String(validator.challengeId || "") !== String(cacheState.challengeId || "")) {
+    fail("Cache validator challenge drift. Re-run cache-validate.");
+  }
+  if (String(validator.cacheHash || "") !== String(cacheState.cacheHash || "")) {
+    fail("Cache validator hash drift. Re-run cache-validate.");
+  }
+  return validator;
+}
+
+function validateCycleOpenGateOrFail() {
+  if (isFirstCycleBootstrap()) {
+    return null;
+  }
+  const cacheState = readCacheStateOrFail();
+  const cacheValidator = readCacheValidatorOrFail(cacheState);
+  return { cacheState, cacheValidator };
+}
+
+function consumeCacheValidator(cacheValidator, nextChallengeId) {
+  if (!cacheValidator) return;
+  const next = {
+    ...cacheValidator,
+    consumedAt: new Date().toISOString(),
+    consumedByChallengeId: nextChallengeId,
+  };
+  fs.writeFileSync(cacheValidatorPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
 }
 
 function sameSet(left, right) {
@@ -454,7 +623,39 @@ function upsertAckScope(ack, taskCtx, requiredEntries, session, challenge, nowIs
   ack.tasks[taskCtx.scopeKey] = payload;
 }
 
+function getCheckedStateOrFail(taskCtx, entryRef, requiredEntries) {
+  const session = readSessionOrFail(entryRef, taskCtx, requiredEntries, { autoReclassify: false });
+  const challenge = readChallengeOrFail(session, entryRef, taskCtx, requiredEntries);
+  if (!fs.existsSync(ackPath)) {
+    fail("Missing ack entry. Run ack before check.");
+  }
+  const ack = readAckOrInit(entryRef);
+  const scopeAck = ack.scopes?.[taskCtx.scopeKey];
+  const ackInvalid =
+    !scopeAck ||
+    !sameSet(scopeAck.taskScope, taskCtx.taskScope) ||
+    !sameSet(scopeAck.classifiedPaths, taskCtx.paths) ||
+    !sameEntryHashes(scopeAck.requiredEntries, requiredEntries) ||
+    String(scopeAck.mode || "") !== String(session.mode || "") ||
+    String(scopeAck.proofHash || "") !== String(challenge.expectedProofHash || "");
+
+  if (ackInvalid) {
+    fail(`Ack invalid for scope '${taskCtx.scopeKey}'. Re-run entry and ack for current paths.`);
+  }
+
+  return { session, challenge, ack, scopeAck };
+}
+
+function doSpawnProof(taskCtx, entryRef, requiredEntries, mode) {
+  const payload = writeSpawnProof(entryRef, taskCtx, requiredEntries, mode);
+  console.log(
+    `[llm-preflight] SPAWN_PROOF_OK scope=${taskCtx.scopeKey} mode=${mode} proof=${payload.proofId}`,
+  );
+}
+
 function doEntry(taskCtx, entryRef, requiredEntries, mode) {
+  const spawnProof = readSpawnProofOrFail(entryRef, taskCtx, requiredEntries, mode);
+  const cycleGate = validateCycleOpenGateOrFail();
   const dir = path.dirname(sessionPath);
   fs.mkdirSync(dir, { recursive: true });
   const challenge = writeProofChallenge(entryRef, taskCtx, requiredEntries, mode);
@@ -472,6 +673,8 @@ function doEntry(taskCtx, entryRef, requiredEntries, mode) {
     startedAt: now,
   };
   fs.writeFileSync(sessionPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  consumeSpawnProof(spawnProof, challenge.challengeId);
+  consumeCacheValidator(cycleGate?.cacheValidator, challenge.challengeId);
   console.log(
     `[llm-preflight] ENTRY_OK scope=${taskCtx.scopeKey} mode=${mode} entries=${taskCtx.taskScope.length} proof=${challenge.challengeId}`,
   );
@@ -495,29 +698,48 @@ function doAck(taskCtx, entryRef, requiredEntries) {
 }
 
 function doCheck(taskCtx, entryRef, requiredEntries) {
-  const session = readSessionOrFail(entryRef, taskCtx, requiredEntries, { autoReclassify: false });
-  const challenge = readChallengeOrFail(session, entryRef, taskCtx, requiredEntries);
-  if (!fs.existsSync(ackPath)) {
-    fail("Missing ack entry. Run ack before check.");
-  }
-  const ack = readAckOrInit(entryRef);
-
-  const scopeAck = ack.scopes?.[taskCtx.scopeKey];
-  const ackInvalid =
-    !scopeAck ||
-    !sameSet(scopeAck.taskScope, taskCtx.taskScope) ||
-    !sameSet(scopeAck.classifiedPaths, taskCtx.paths) ||
-    !sameEntryHashes(scopeAck.requiredEntries, requiredEntries) ||
-    String(scopeAck.mode || "") !== String(session.mode || "") ||
-    String(scopeAck.proofHash || "") !== String(challenge.expectedProofHash || "");
-
-  if (ackInvalid) {
-    fail(`Ack invalid for scope '${taskCtx.scopeKey}'. Re-run entry and ack for current paths.`);
-  }
+  const { session, challenge } = getCheckedStateOrFail(taskCtx, entryRef, requiredEntries);
 
   console.log(
     `[llm-preflight] CHECK_OK scope=${taskCtx.scopeKey} mode=${session.mode} proof=${challenge.payload.challengeId}`,
   );
+}
+
+function doCacheSync(taskCtx, entryRef, requiredEntries) {
+  const { session, challenge } = getCheckedStateOrFail(taskCtx, entryRef, requiredEntries);
+  ensureLlmDir();
+  const payload = {
+    challengeId: challenge.payload.challengeId,
+    challengeFile: challenge.rel,
+    entryPath: entryRef.entryPath,
+    entrySha256: entryRef.sha256,
+    taskScope: taskCtx.taskScope,
+    scopeKey: taskCtx.scopeKey,
+    mode: session.mode,
+    requiredEntries,
+    classifiedPaths: taskCtx.paths,
+    proofHash: challenge.expectedProofHash,
+    syncedAt: new Date().toISOString(),
+  };
+  payload.cacheHash = sha256Text(buildCacheStateMaterial(payload));
+  fs.writeFileSync(cacheStatePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  console.log(
+    `[llm-preflight] CACHE_SYNC_OK scope=${taskCtx.scopeKey} mode=${session.mode} cycle=${challenge.payload.challengeId}`,
+  );
+}
+
+function doCacheValidate() {
+  const cacheState = readCacheStateOrFail();
+  ensureLlmDir();
+  const payload = {
+    validatorId: crypto.randomBytes(12).toString("hex"),
+    challengeId: cacheState.challengeId,
+    cacheHash: cacheState.cacheHash,
+    validatedAt: new Date().toISOString(),
+    consumedAt: null,
+  };
+  fs.writeFileSync(cacheValidatorPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  console.log(`[llm-preflight] CACHE_VALIDATE_OK cycle=${cacheState.challengeId} validator=${payload.validatorId}`);
 }
 
 function doAudit(args, matrix, lock) {
@@ -612,6 +834,14 @@ if (command === "classify") {
   process.exit(0);
 }
 
+if (command === "spawn-proof") {
+  const ctx = resolveTaskContext(args, matrix, { requirePaths: true });
+  const requiredEntries = ensureTaskEntries(matrix, ctx.taskScope);
+  const mode = parseModeFlag(args);
+  doSpawnProof(ctx, entryRef, requiredEntries, mode);
+  process.exit(0);
+}
+
 if (command === "entry") {
   const ctx = resolveTaskContext(args, matrix, { requirePaths: true });
   const requiredEntries = ensureTaskEntries(matrix, ctx.taskScope);
@@ -634,4 +864,16 @@ if (command === "check") {
   process.exit(0);
 }
 
-fail(`Unknown command '${command}'. Use: classify | entry | ack | check | audit | update-lock`);
+if (command === "cache-sync") {
+  const ctx = resolveTaskContext(args, matrix, { requirePaths: true });
+  const requiredEntries = ensureTaskEntries(matrix, ctx.taskScope);
+  doCacheSync(ctx, entryRef, requiredEntries);
+  process.exit(0);
+}
+
+if (command === "cache-validate") {
+  doCacheValidate();
+  process.exit(0);
+}
+
+fail(`Unknown command '${command}'. Use: classify | spawn-proof | entry | ack | check | cache-sync | cache-validate | audit | update-lock`);

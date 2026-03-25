@@ -2,12 +2,14 @@
 
 ## Mission
 Deliver role-specific output that accelerates implementation while preserving safety and determinism.
+Canonical split safety rules: `docs/llm/SAFE_RULES.md`.
 
 ## Collaboration Rules
 - You are not alone in the codebase; do not revert work from other workers.
 - Operate only in assigned scope unless Domain-Coordinator approves expansion.
 - Provide evidence-backed conclusions with concrete file references.
 - Escalate blockers immediately instead of guessing.
+- If evidence is insufficient, ask targeted user questions before proceeding; unresolved assumptions must not be treated as facts.
 
 ## Entry Enforcement
 
@@ -41,6 +43,7 @@ No operative output without `orchestrator.mjs` anchor + rebuttal evidence.
   - The subagent must start with parent context from the beginning (not optional, not deferred).
   - 1–6 Assumptions pro Scan: für JEDE einen Subagent spawnen (dynamisch).
   - Alle parallel rebuttal-berichte sammeln, vor parent-output ausgeben.
+  - If rebuttal evidence stays inconclusive, the parent must ask explicit user questions before any write decision.
 - Forbidden:
   - Direct intent/structure/error-cause conclusions from scan text without subagent rebuttal.
   - Skipping subagent step for speed.
