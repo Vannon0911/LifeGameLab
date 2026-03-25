@@ -99,6 +99,17 @@ function runGuardExpectFail(args, expectedPattern) {
   return combined;
 }
 
+function runCli(args) {
+  const res = spawnSync(process.execPath, [path.join(root, "agents/orchestrator/cli.mjs"), ...args], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30000,
+  });
+  if (res.error) throw res.error;
+  return res;
+}
+
 function backupPath(absPath) {
   if (!fs.existsSync(absPath)) return null;
   const stats = fs.statSync(absPath);
@@ -308,6 +319,23 @@ try {
   assert.deepEqual((session.classifiedPaths || []).slice().sort(), testingScopePaths.slice().sort(), "session classified paths must match current testing scope");
   assert.equal(typeof ack.scopes["contracts+testing"].proofHash, "string", "ack must store proof hash per scope key");
   assert(ack.scopes["contracts+testing"].proofHash.length > 20, "proof hash must be non-trivial");
+
+  const cliAuditMode = runCli(["--task", "audit mode probe", "--paths", "package.json", "--dry-run", "--preflight-mode", "audit"]);
+  assert.notEqual(cliAuditMode.status, 0, "cli must reject audit as preflight mode");
+  assert(
+    `${cliAuditMode.stdout}${cliAuditMode.stderr}`.includes("--preflight-mode muss 'work' oder 'security' sein"),
+    "cli must explain the allowed preflight modes",
+  );
+
+  const cliMissingTarget = runCli(["--task", "missing target probe", "--paths", "agents/orchestrator/DOES_NOT_EXIST.md", "--dry-run"]);
+  assert.notEqual(cliMissingTarget.status, 0, "cli/orchestrator must fail closed on unresolved scan targets");
+  assert(
+    `${cliMissingTarget.stdout}${cliMissingTarget.stderr}`.includes("no_scan_targets:agents/orchestrator/DOES_NOT_EXIST.md"),
+    "missing scan targets must surface an explicit fail-closed error",
+  );
+
+  const cliDirectoryScope = runCli(["--task", "directory scope probe", "--paths", "tests/", "--dry-run"]);
+  assert.equal(cliDirectoryScope.status, 0, "directory scope paths must still run when they resolve to files");
 
   console.log("LLM_CONTRACT_OK multi-scope classify+dependency expansion+fail-closed drift checks and audit mode keep tests unblocked");
 } finally {

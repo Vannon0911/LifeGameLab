@@ -8,7 +8,7 @@
 import { loadRole, createAgent, ROLE_PATHS } from "./runtime/agent.mjs";
 import { createSession } from "./runtime/session.mjs";
 import { runPreflightChain } from "./runtime/preflight.mjs";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -151,6 +151,10 @@ export function createOrchestrator(config = {}) {
 
     const role = await loadRole(rolePath);
     const model = getModel(roleKey);
+    const scanTargets = await resolveFileScanTargets(session.paths);
+    if (scanTargets.length === 0) {
+      throw new Error(`no_scan_targets:${session.paths.join(",")}`);
+    }
 
     if (dryRun) {
       const dryResult = {
@@ -183,7 +187,6 @@ export function createOrchestrator(config = {}) {
     if (session.paths.length > 0) {
       agent.addContext(`Betroffene Dateipfade:\n${session.paths.join("\n")}`);
     }
-    const scanTargets = await resolveFileScanTargets(session.paths);
     for (let idx = 0; idx < scanTargets.length; idx += 1) {
       const target = scanTargets[idx];
       const gateStatus = await runFileScanGate({
@@ -311,30 +314,43 @@ export function createOrchestrator(config = {}) {
     return `${raw.slice(0, MAX_SCAN_CHARS)}\n\n...[truncated ${raw.length - MAX_SCAN_CHARS} chars]`;
   }
 
+  async function collectFileTargets(relPath, absPath) {
+    const st = await stat(absPath);
+    if (st.isDirectory()) {
+      const entries = await readdir(absPath, { withFileTypes: true });
+      const nestedTargets = await Promise.all(
+        entries.map((entry) => {
+          const childRelPath = path.posix.join(relPath.replaceAll("\\", "/"), entry.name);
+          const childAbsPath = path.join(absPath, entry.name);
+          return collectFileTargets(childRelPath, childAbsPath);
+        }),
+      );
+      return nestedTargets.flat();
+    }
+    if (!st.isFile()) {
+      return [];
+    }
+
+    const content = await readFile(absPath, "utf8");
+    return [{
+      relPath: relPath.replaceAll("\\", "/"),
+      absPath,
+      content: truncateScanContent(content),
+    }];
+  }
+
   async function resolveFileScanTargets(paths) {
     const targets = [];
     for (const rawPath of paths || []) {
       const relPath = String(rawPath || "").trim();
       if (!relPath) continue;
       const absPath = path.resolve(REPO_ROOT, relPath);
-      let st;
       try {
-        st = await stat(absPath);
+        const resolvedTargets = await collectFileTargets(relPath, absPath);
+        targets.push(...resolvedTargets);
       } catch {
         continue;
       }
-      if (!st.isFile()) continue;
-      let content = "";
-      try {
-        content = await readFile(absPath, "utf8");
-      } catch {
-        continue;
-      }
-      targets.push({
-        relPath: relPath.replaceAll("\\", "/"),
-        absPath,
-        content: truncateScanContent(content),
-      });
     }
     return targets;
   }
@@ -758,7 +774,7 @@ export function createOrchestrator(config = {}) {
    * Fuehrt eine Pipeline aus.
    *
    * @param {string} task - Aufgabenbeschreibung
-   * @param {object} options - { pipeline, paths, preflight }
+   * @param {object} options - { pipeline, paths, preflightMode }
    */
   async function run(task, options = {}) {
     const pipelineName = options.pipeline || "default";

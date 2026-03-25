@@ -150,7 +150,7 @@ Optionen:
   --dry-run, -d            Simulation ohne LLM-Aufrufe
   --verbose, -v            Detaillierte Ausgabe
   --validate               Nur Config validieren
-  --preflight-mode <mode>  Preflight-Modus (work|security|audit)
+  --preflight-mode <mode>  Preflight-Modus (work|security)
   --no-subagents           Explizites Opt-out fuer Rebuttal-Subagents
   --rounds <n>             Nur fuer red-team-v2: Anzahl Runden
   --list-pipelines         Pipelines auflisten
