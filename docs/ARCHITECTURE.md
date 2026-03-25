@@ -39,7 +39,9 @@
 - Founder connectivity checks are now consolidated in `src/game/sim/grid/index.js` (`areIndicesConnected8`) and consumed by both runtime foundation eligibility and phase gates, removing duplicate 8-neighbor connectivity logic.
 
 ## Slice B MapSpec Baseline
-- Legacy worker-RTS runtime is still present and remains bootable.
+- Legacy compatibility routes may still exist in code, but they are non-target and scheduled for removal from active runtime truth.
+- Legacy `PLACE_CORE` line remains non-mainline.
+- Canonical mainline now uses a fixed 10s Phase-0 overview before `RUN_ACTIVE`.
 - MapSpec compile wiring is now active without deleting live legacy flows.
 - Action lifecycle metadata now marks every action as `stable`, `rename`, `deprecated` or `new_slice_a`.
 - `SET_MAPSPEC` and `SET_MAP_TILE` are now active reducer paths; the remaining RTS placeholders stay no-op until their slices land.
@@ -50,6 +52,7 @@
 - The interface is strictly divided into two areas: a minimal left sidebar for essential RTS metrics (`ui.stats.js`) and the main interaction canvas.
 - Top bars, headers, and floating panels are completely removed.
 - Interaction on the grid remains 100% canvas-based. All feedback strings are statically defined in `ui.constants.js` (`UI_STRINGS`).
+- Inspect mode is not part of canonical MVP mainline.
 
 ## Slice C Builder Persistence
 - Default web persistence now keeps `map` alongside `meta`; `world` and `sim` still reset on reload.

@@ -12,6 +12,7 @@
 - Sim-layer dedupe cleanup landed: duplicate founder 8-neighbor connectivity logic was consolidated into `src/game/sim/grid/index.js` and reused by both foundation eligibility and phase-gate checks.
 - Slice B MapSpec wiring is now active.
 - Kernel input hardening now blocks non-serializable `SET_MAPSPEC` payloads, rejects cyclic map inputs fail-closed, and keeps invalid `SET_SIZE` dimensions out of committed state.
+- Kernel manifest validation now fails closed when a `simGate` manifest is passed without `domainPatchGate`, preventing contract-manifest miswiring on runtime store boot.
 - Product SoT was moved to the v1.1 RTS basis in `docs/PRODUCT.md`.
 - Architecture SoT now states the dual rule: contracts and product docs stay truth, traceability stays derived.
 - Action lifecycle metadata exists for every contract action.
@@ -23,20 +24,25 @@
 - String extraction retained: `UI_STRINGS` in `ui.constants.js` continues to serve all feedback messages.
 - Module separation restored: `ui.input.js`, `ui.builder.js`, `ui.stats.js` and `ui.orders.js` form a clean layer.
 - Version bump to 0.9.0 finalized.
-- Slice A contract scaffold test was added and passes.
+- Slice A contract scaffold test exists but is currently being migrated to enforce the DROP_LINE policy for Phase-0/PLACE_CORE removal.
 - Slice B MapSpec test was added for deterministic compile + world boot.
 - Longrun evidence budget now has explicit headroom at `300_000 ms`.
 - Evidence runner now logs verification registry state as `registryStatus=` instead of the ambiguous `status=`.
 - LLM-Gates verlangen ab jetzt vor jedem Commit aktualisierte Doku inklusive betroffener Stringmatrix-/Inventar-Dateien sowie eine explizite Endpruefung auf Gesamtaktualitaet.
 - Slice-Versionierung ist ab jetzt strikt: jeder abgeschlossene Slice erhoeht die Version um `0.0.1`; Teilstufen `a/b/c/d` bleiben reine Dokument-Anhaenge.
-- Legacy runtime still remains active and intentionally untouched as live fallback.
+- Legacy compatibility code may remain in isolated facades, but it is no longer treated as a target runtime path.
+- Dispatch contract hardening update (2026-03-24): premature UI rewires (`WORKER_HARVEST -> QUEUE_WORKER`, `ZONE_PAINT/SPLIT_PLACE -> PLACE_BUILDING`) were rolled back to schema-valid actions (`HARVEST_WORKER`, `SET_ZONE`, `PLACE_SPLIT_CLUSTER`) to remove silent dispatch failures.
+- Deprecated `SET_BRUSH` is no longer emitted by the builder dropdown; builder tool changes stay local in UI mode state.
+- `src/game/contracts/dataflow.js` dispatch sources now match live runtime paths (including builder actions), removed stale `ui.overlay` entries, and track `ISSUE_MOVE` via `src/game/ui/ui.orders.js`.
+- `devtools/evidence-runner.mjs` now boots stores with the runtime manifest object (not module namespace), restoring fail-closed kernel compatibility in evidence runs.
+- Evidence registry inventory was synchronized for active tests `tests/test-legacy-zone-compat-routing.mjs` and `tests/test-whole-repo-dispatch-truth.mjs`; `npm run test:quick` and `npm test` now pass with `AUDIT_OK ... warnings=0`.
 
 ## Verified Current Truth
 - `src/game/contracts/manifest.js` exports `actionLifecycle` alongside schema, matrix, gate and dataflow.
 - `src/game/runtime/index.js` is now the canonical reducer/sim-step entry instead of `src/project/project.logic.js`.
 - `src/game/contracts/actionSchema.js` now hardens `SET_MAPSPEC` to an explicit JSON-safe field set instead of `allowUnknown`.
 - `src/kernel/store/signature.js`, `src/kernel/store/createStore.js`, and `src/kernel/validation/validateState.js` now fail closed on non-serializable or circular values instead of collapsing them to `null`.
-- `src/game/manifest.js` now exposes `domainPatchGate` as a named export so module-namespace callers hit the same gate path as the app runtime.
+- `src/game/manifest.js` now binds gate validation through `runtimeManifest.domainPatchGate`; module-namespace named gate exports are no longer the authority path.
 - `src/game/contracts/dataflow.js` exposes lifecycle metadata and planned writes per action.
 - `src/game/contracts/actionSchema.js` now contains Slice A RTS scaffold actions plus the live `SET_MAP_TILE` builder action.
 - `src/game/contracts/mutationMatrix.js` now allows `GEN_WORLD` to synchronize `map` state, grid dimensions, lineage ids, physics, and the world/sim payload.
@@ -77,7 +83,7 @@ Both files## Slice C Minimal UI Runtime (Minimal RTS Layout)
  Erfuellt: `SET_MAPSPEC` und `SET_MAP_TILE` haben aktive UI-Dispatch-Quellen, `dataflow` ist befuellt, Regressionstests vorhanden.
 2. `todo.slice_b.builder_pipeline` (`done 2026-03-19`)
  Erfuellt: Builder-Flow laeuft ueber `MapSpec -> compile -> GEN_WORLD`; direkte Weltmutation ist aus `SET_MAPSPEC`/`SET_MAP_TILE` entfernt.
-3. `todo.slice_c.phase0_replacement`
-Done wenn `CONFIRM_FOUNDATION`, `CONFIRM_CORE_ZONE`, `PLACE_WORKER` und `SET_BRUSH` durch den Phase-0-Ersatz technisch abgeloest sind und ihre Removal-Gates geschlossen werden koennen.
+3. `todo.slice_c.phase0_replacement` (`in progress`)
+Done wenn die tote Phase-0/PLACE_CORE-Linie aus aktiven Tests, Devtools und SoT-/Traceability-Doku entfernt ist und nur noch als historische Migration referenziert wird.
 4. `todo.truth.regression_wrap`
 Done wenn nach jedem Slice der wrapped Regression-Run wieder `evidence_match` liefert und `output/current-truth.json` auf denselben Slice zeigt.

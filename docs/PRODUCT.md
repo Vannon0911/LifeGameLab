@@ -49,7 +49,8 @@ This file is the product Source of Truth.
 ### 1.3 UI Frame: World Before Report
 - Map is the primary product surface.
 - UI sends orders and context; it does not replace world truth.
-- Modes: `Build`, `Play`, `Inspect`.
+- Mainline modes: `Build`, `Play`.
+- `Inspect` is currently cut from canonical MVP scope.
 
 ### 1.4 T3 Experience: The Item-Room Moment
 - T3 is not just another tech tier; it is the run's synergy core.
@@ -68,8 +69,9 @@ This file is the product Source of Truth.
 ### 2.1 Chamber Structure
 - Logical tile basis: `24x24`.
 - Visible tile size: `48x48 px` (`x2` integer scaling).
-- Typical chamber dimensions: `32x32` and `64x64`.
-- No `128x128` endless-map behavior in canonical rogue-lite chamber mode.
+- Builder map size is selectable by the player.
+- Default playable test map size: `96x96`.
+- Additional recommended bands: `64x64` (small), `128x128` (extended RTS/economy tests).
 - Chamber exits unlock only after CPU presence is cleared.
 
 ### 2.2 Time and Speeds
@@ -80,10 +82,17 @@ This file is the product Source of Truth.
 
 ### 2.3 Economy and Core
 - Phase 0 lock: first core requires 5 raw plants.
-- Energy does not exist before the first core runs.
+- `Nahrung` (design term, formerly "Energy") does not exist before the first core runs.
 - Core footprint: `4x4`.
+- Largest object target footprint: up to `8x8`.
 - Core death ends the run.
-- Between chambers, only limited resources/energy plus T3 mutations carry over; buildings do not.
+- Between chambers, only limited resources/Nahrung plus T3 mutations carry over; buildings do not.
+
+### 2.9 Opening Contract (Frozen)
+- Phase 0 duration: `10s` exactly.
+- At `24 ticks = 1s`, Phase 0 spans ticks `0..239`.
+- Mainline transition to runtime play occurs at tick `240`.
+- Tutorial is OFF by default (no mandatory onboarding flow).
 
 ### 2.4 Conveyors and Logistics
 - Conveyor segment cost: 1 worker permanently consumed.
@@ -202,7 +211,7 @@ Result:
 - Integer scaling lock
 - Hard terrain with visual interpolation only on moving entities
 - Canonical layer system
-- Chamber-based run flow
+- Phase-0-first opening flow (`10s`) before runtime play
 - Phase 0 + core economy + conveyor logistics
 - T1/T2 field systems and T3 mutator foundation
 - Deterministic CPU scaffold
@@ -233,13 +242,13 @@ Result:
 13. Conveyor normal speed is `6 ticks per tile`.
 14. Conveyor fast speed is `4 ticks per tile`.
 15. Auto-tiling may derive visuals, never gameplay truth.
-16. Debug is secondary in normal mode and full in inspect mode.
+16. Debug is secondary in normal mode; no canonical inspect mode in current MVP.
 
 ---
 
 ## Open Decisions (Reduced, Real)
 1. Final stone extraction model (field, deposits, hybrid).
-2. Exact mutator cost profile (workers/resources/energy split).
+2. Exact mutator cost profile (workers/resources/Nahrung split).
 3. Exact splitter cost profile.
 4. Fertilization economics (resource, time, or hybrid).
 5. Accelerator strength formula.
