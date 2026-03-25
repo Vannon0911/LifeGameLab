@@ -34,6 +34,11 @@ Die kompakten, aufgeteilten Hard-Rules stehen in `docs/llm/SAFE_RULES.md` und si
 - Vor jedem Commit muessen betroffene Dokuquellen inklusive relevanter Stringmatrix-/Inventar-Dateien nachgezogen und am Ende des Arbeitsschritts erneut auf Aktualitaet geprueft werden.
 - Nach jedem komplett abgeschlossenen Task (inklusive aller waehrenddessen aufgetretenen Nebenfixes) folgt nach `check` ein Commit; der naechste Task startet verpflichtend mit dem Orchestrator-Schritt ueber `agents/orchestrator/orchestrator.mjs` (PARENT ONLY).
 
+## Red-Team Evidence
+- Open bypass/conflict points (API preflight off-switch, dry-run preflight skip, empty paths, fail-open scan resolution, rebuttal opt-out) and the need for bypass regression tests are captured by the documented subagent runs; see consolidated findings `RT-01`..`RT-07` in `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:115`‑`140` for exact evidence links.
+- Security conflict between the hard Preflight chain requirement and the runtime skips, plus the Rebuttal opt-out gap, is detailed under `RT-01`..`RT-05` with per-agent commands/evidence at `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:20`‑`112`.
+- Prioritized remediation steps S1..S6 map directly to the consolidated TODO list in `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:143`‑`150`.
+
 ## Kernel- Und Manifest-Pflichtgate (SoT)
 - `src/game/contracts/manifest.js` ist Source of Truth fuer Felder, Actions und Contract-Kette.
 - `src/kernel/store/createStore.js` und `src/kernel/store/applyPatches.js` sind Pflichtgate fuer State-Mutationen.
