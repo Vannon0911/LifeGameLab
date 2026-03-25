@@ -38,6 +38,10 @@ npm run test:determinism:matrix
 npm test
 ```
 
+## Governance & Evidence
+- LLM-spezifische Gates und Nachweise leben in `docs/llm/LLM_PLAN_SUMMARY.md` (Plan + Roadmap), `docs/llm/CHANGELOG.md`, `docs/llm reports/REPORT_CACHE_STATUS.md` und dem Red-Team-Report (`docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md`).
+- Vor jedem Write gilt: Cache-Sync + Rebuttal-PASS (vgl. `docs/llm/ENTRY.md:37-49`). Die Changelog dokumentiert die letzten Red-Team-/Doc-Updates, der Plan fasst D/MVP-Slices zusammen, und der Report-Cache liefert den Belegübersichtsstatus.
+
 ## Kernel v1.5 Determinism Proof (App 0.9.0)
 Version-Quelle:
 - App-Version und Schema kommen aus `src/game/contracts/manifest.js` (`APP_VERSION = "0.9.0"`, `SCHEMA_VERSION = 2`).
