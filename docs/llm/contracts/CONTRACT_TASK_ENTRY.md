@@ -2,24 +2,22 @@
 
 ## Pflichtzyklus
 LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
+Globale Hard-Rules: `docs/llm/SAFE_RULES.md`.
 
 ## LESEN (pflicht)
 1. `docs/WORKFLOW.md`
 2. `docs/llm/ENTRY.md`
-3. `docs/llm/OPERATING_PROTOCOL.md`
-4. `docs/ARCHITECTURE.md`
-5. `docs/STATUS.md`
-6. `docs/llm/TASK_ENTRY_MATRIX.json`
-7. `docs/llm/entry/TASK_GATE_INDEX.md` (CONTRACTS + globale Mindest-Gates)
-8. diese Datei
-9. `src/game/contracts/manifest.js`
-10. `src/kernel/store/createStore.js`
-11. `src/kernel/store/applyPatches.js`
-12. `src/game/contracts/stateSchema.js`
-13. `src/game/contracts/actionSchema.js`
-14. `src/game/contracts/mutationMatrix.js`
-15. `src/game/contracts/simGate.js`
-16. `src/game/contracts/dataflow.js`
+3. `docs/llm/TASK_ENTRY_MATRIX.json`
+4. `docs/llm/entry/TASK_GATE_INDEX.md` (CONTRACTS + globale Mindest-Gates)
+5. diese Datei
+6. `src/game/contracts/manifest.js`
+7. `src/kernel/store/createStore.js`
+8. `src/kernel/store/applyPatches.js`
+9. `src/game/contracts/stateSchema.js`
+10. `src/game/contracts/actionSchema.js`
+11. `src/game/contracts/mutationMatrix.js`
+12. `src/game/contracts/simGate.js`
+13. `src/game/contracts/dataflow.js`
 
 ## Minimalzugriff Ohne Vollscan
 - Immer zuerst globale Mindest-Gates aus `TASK_GATE_INDEX.md` laden.
@@ -38,6 +36,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Kein Taskwechsel ohne neue Klassifikation + neues Ack.
 - Nur Contract-/Kernel-Contract-Scope.
 - Bei Multi-Scope alle passenden Task-Entries lesen und einen gemeinsamen Preflight fahren.
+- Wenn eine Annahme nicht hart belegt ist: aktive User-Rueckfrage vor `GO`; ohne Antwort kein Schreiben/Commit.
 - Vor jedem Commit muessen Contract-Doku, betroffene Top-Level-Doku sowie relevante Stringmatrix-/Inventar-Dateien nachgezogen werden.
 
 ## DOKU (pflicht)

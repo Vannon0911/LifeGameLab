@@ -45,7 +45,6 @@ const { values: args } = parseArgs({
     "list-pipelines":{ type: "boolean" },
     "list-roles":    { type: "boolean" },
     "preflight-mode":{ type: "string" },
-    "no-preflight":  { type: "boolean" },
     "no-subagents":  { type: "boolean" },
     rounds:          { type: "string" },
     "max-parallel":  { type: "string" },
@@ -79,7 +78,6 @@ Optionen:
   --verbose, -v            Detaillierte Ausgabe
   --validate               Nur Config validieren
   --preflight-mode <mode>  Preflight-Modus (work|security|audit)
-  --no-preflight           Preflight ueberspringen
   --no-subagents           Explizites Opt-out fuer Rebuttal-Subagents
   --list-pipelines         Pipelines auflisten
   --list-roles             Rollen auflisten
@@ -199,7 +197,7 @@ try {
     paths,
     rounds: Math.max(1, Number(args.rounds || 1) | 0),
     maxParallel: Math.max(1, Number(args["max-parallel"] || 6) | 0),
-    preflight: !args["no-preflight"],
+    preflight: true,
     preflightMode: args["preflight-mode"] || "work",
     subagentsOptOutExplicit: args["no-subagents"] === true,
   });

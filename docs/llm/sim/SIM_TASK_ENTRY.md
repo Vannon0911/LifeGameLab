@@ -5,24 +5,22 @@
 
 ## Pflichtzyklus
 LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
+Globale Hard-Rules: `docs/llm/SAFE_RULES.md`.
 
 ## LESEN (pflicht)
 1. `docs/WORKFLOW.md`
 2. `docs/llm/ENTRY.md`
-3. `docs/llm/OPERATING_PROTOCOL.md`
-4. `docs/ARCHITECTURE.md`
-5. `docs/STATUS.md`
-6. `docs/llm/TASK_ENTRY_MATRIX.json`
-7. `docs/llm/entry/TASK_GATE_INDEX.md` (SIM + globale Mindest-Gates)
-8. diese Datei
-9. `src/game/contracts/manifest.js`
-10. `src/kernel/store/createStore.js`
-11. `src/kernel/store/applyPatches.js`
-12. `src/game/sim/reducer/index.js`
-13. `src/game/sim/worldgen.js`
-14. `src/game/sim/step.js`
-15. `src/game/sim/stepPhases.js`
-16. `src/game/sim/stepRuntime.js`
+3. `docs/llm/TASK_ENTRY_MATRIX.json`
+4. `docs/llm/entry/TASK_GATE_INDEX.md` (SIM + globale Mindest-Gates)
+5. diese Datei
+6. `src/game/contracts/manifest.js`
+7. `src/kernel/store/createStore.js`
+8. `src/kernel/store/applyPatches.js`
+9. `src/game/sim/reducer/index.js`
+10. `src/game/sim/worldgen.js`
+11. `src/game/sim/step.js`
+12. `src/game/sim/stepPhases.js`
+13. `src/game/sim/stepRuntime.js`
 
 ## Minimalzugriff Ohne Vollscan
 - Immer zuerst globale Mindest-Gates aus `TASK_GATE_INDEX.md` laden.
@@ -41,6 +39,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Kein Taskwechsel ohne neue Klassifikation + neues Ack.
 - Nur SIM-/Reducer-Scope.
 - Bei Multi-Scope alle passenden Task-Entries lesen und einen gemeinsamen Preflight fahren.
+- Wenn eine Annahme nicht hart belegt ist: aktive User-Rueckfrage vor `GO`; ohne Antwort kein Schreiben/Commit.
 - Vor jedem Commit muessen SIM-Doku, betroffene Top-Level-Doku und relevante Stringmatrix-/Inventar-Dateien nachgezogen werden.
 
 ## DOKU (pflicht)

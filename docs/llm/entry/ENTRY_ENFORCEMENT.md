@@ -29,6 +29,7 @@
 - Session verfällt nach 12h; danach `entry` neu setzen.
 - Wenn `docs/llm/ENTRY.md` oder task-spezifischer Entry geaendert wurde: Ack neu setzen.
 - Wenn Pfade mehreren Tasks zugeordnet werden: in Subtasks splitten, je Subtask eigener Zyklus.
+- Wenn eine Annahme nicht hart belegt ist: vor `GO` aktive Rueckfrage an den User; ohne Antwort kein Schreiben/Commit.
 - Kernel- und Manifest-Pflichtgate gilt immer:
   - `src/game/contracts/manifest.js` ist SoT
   - `src/kernel/store/createStore.js` und `src/kernel/store/applyPatches.js` bleiben Pflichtreferenzen

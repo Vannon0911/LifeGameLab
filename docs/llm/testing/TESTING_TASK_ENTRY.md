@@ -2,24 +2,22 @@
 
 ## Pflichtzyklus
 LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
+Globale Hard-Rules: `docs/llm/SAFE_RULES.md`.
 
 ## LESEN (pflicht)
 1. `docs/WORKFLOW.md`
 2. `docs/llm/ENTRY.md`
-3. `docs/llm/OPERATING_PROTOCOL.md`
-4. `docs/ARCHITECTURE.md`
-5. `docs/STATUS.md`
-6. `docs/llm/TASK_ENTRY_MATRIX.json`
-7. `docs/llm/entry/TASK_GATE_INDEX.md` (TESTING + globale Mindest-Gates)
-8. diese Datei
-9. `src/game/contracts/manifest.js`
-10. `src/kernel/store/createStore.js`
-11. `src/kernel/store/applyPatches.js`
-12. `tools/llm-preflight.mjs`
-13. `devtools/run-test-suite.mjs`
-14. `devtools/run-all-tests.mjs`
-15. `tests/test-llm-contract.mjs`
-16. `tests/support/liveTestKit.mjs`
+3. `docs/llm/TASK_ENTRY_MATRIX.json`
+4. `docs/llm/entry/TASK_GATE_INDEX.md` (TESTING + globale Mindest-Gates)
+5. diese Datei
+6. `src/game/contracts/manifest.js`
+7. `src/kernel/store/createStore.js`
+8. `src/kernel/store/applyPatches.js`
+9. `tools/llm-preflight.mjs`
+10. `devtools/run-test-suite.mjs`
+11. `devtools/run-all-tests.mjs`
+12. `tests/test-llm-contract.mjs`
+13. `tests/support/liveTestKit.mjs`
 
 ## Minimalzugriff Ohne Vollscan
 - Immer zuerst globale Mindest-Gates aus `TASK_GATE_INDEX.md` laden.
@@ -41,6 +39,7 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Taskwechsel/Pfadwechsel erzwingt Auto-Reclassify; Scope kann erweitert werden.
 - Bei Multi-Scope alle passenden Task-Entries lesen und einen gemeinsamen Preflight fahren.
 - Umgehung (direkte State-/Patch-Injektion als Abkuerzung) ist untersagt, ausser nach expliziter Ruecksprache.
+- Wenn eine Annahme nicht hart belegt ist: aktive User-Rueckfrage vor `GO`; ohne Antwort kein Schreiben/Commit.
 - Vor jedem Commit muessen Test-Doku, Registry-Belege und betroffene Stringmatrix-/Inventar-Dateien aktuell sein.
 
 ## DOKU (pflicht)

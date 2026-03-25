@@ -3,6 +3,7 @@
 ## Zweck
 Dieser Einstieg ist der Pflicht-Dispatcher fuer jede LLM-Arbeit.
 Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollscan noetig ist.
+Die kompakten, aufgeteilten Hard-Rules stehen in `docs/llm/SAFE_RULES.md` und sind verbindlich.
 
 ## Pflicht-Lesereihenfolge (ohne Vollscan)
 1. `docs/WORKFLOW.md`
@@ -25,6 +26,7 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - Die technische Pflichtkette ist immer exakt `orchestrator(PARENT ONLY) -> classify -> entry -> ack -> check -> commit`.
 - Bei `Entry hash drift` oder `Read-order drift` zuerst `node tools/llm-preflight.mjs update-lock` ausfuehren und danach die Pflichtkette vollstaendig neu starten.
 - Bei Pfadwechsel ist Auto-Reclassify Pflicht; Scope-Erweiterung ist erlaubt und keine Ambiguitaet.
+- Wenn Evidenz fuer eine Annahme unklar bleibt, ist vor `GO` eine aktive Rueckfrage an den User Pflicht.
 - `entry`, `ack` und `check` blockieren Schreiboperationen; reine Read-/Analyse-/Testlaeufe bleiben erlaubt.
 - Commits werden aus isoliertem Stage gebaut; Multi-Scope-Commits sind erlaubt, wenn die Pfade kausal gekoppelt sind.
 - Ein `check`-Fehler blockiert Schreiben. Testlaeufe bleiben moeglich und liefern weiterhin Wahrheit.
@@ -91,6 +93,15 @@ Er legt fest, wo die task-spezifischen Daten liegen, damit kein globaler Vollsca
 - Erst nach Gegenpruefung darf die Parent-LLM Aussagen weiterverwenden.
 - Ein Punkt/Annahme = ein neuer Subagent; keine Wiederverwendung.
 - Kein Direktschluss aus Dateitext auf Intention, Struktur, Bedeutung oder Fehlerursache ohne Subagent-Gegenpruefung.
+
+## AKTIVE RUECKFRAGEPFLICHT FUER ANNAHMEN (HART)
+
+- Subagent-Widerlegung ersetzt keine aktive User-Rueckfrage, wenn die Evidenz danach weiter uneindeutig bleibt.
+- Fuer jede offene Annahme muss die Parent-LLM die Rueckfrage explizit formulieren:
+  - `Annahme: <kurz und testbar>`
+  - `Evidenzluecke: <Datei/Quelle oder "keine harte Evidenz">`
+  - `Rueckfrage: <konkrete Ja/Nein- oder Entweder/Oder-Frage>`
+- Ohne beantwortete Rueckfrage: kein `GO`, kein Schreiben, kein Commit.
 
 ## Definition Of Done
 - Contract und Gates intakt

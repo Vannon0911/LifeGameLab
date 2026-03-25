@@ -10,6 +10,7 @@ Top-Level-Doku bleibt absichtlich klein:
 4. `docs/STATUS.md`
 
 LLM-spezifische Regeln leben getrennt unter `docs/llm/`.
+Kanonische Sicherheitsaufteilung fuer LLM-Arbeit: `docs/llm/SAFE_RULES.md`.
 
 ## Pflichtfolge Fuer LLM-Arbeit
 
@@ -24,7 +25,7 @@ LLM-spezifische Regeln leben getrennt unter `docs/llm/`.
    - `src/kernel/store/createStore.js`
    - `src/kernel/store/applyPatches.js`
 
-Hinweis: `docs/llm/OPERATING_PROTOCOL.md`, `docs/ARCHITECTURE.md` und `docs/STATUS.md` sind keine globalen Pflichtstamm-Dateien und werden nur bei Bedarf scope-spezifisch gelesen.
+Hinweis: `docs/llm/OPERATING_PROTOCOL.md`, `docs/ARCHITECTURE.md` und `docs/STATUS.md` sind keine globalen Pflichtstamm-Dateien und werden nur bei Bedarf scope-spezifisch gelesen. Die Lesereihenfolge in `docs/llm/ENTRY.md`, `docs/llm/OPERATING_PROTOCOL.md` und `docs/llm/entry/TASK_GATE_INDEX.md` muss identisch bleiben.
 
 ### PRUEFEN
 - Session-Start im Chat mit `entry` ist Pflicht, aber nur als menschlicher Handshake. Der Chat-Trigger ersetzt keinen technischen Preflight.
@@ -40,6 +41,12 @@ Hinweis: `docs/llm/OPERATING_PROTOCOL.md`, `docs/ARCHITECTURE.md` und `docs/STAT
   6. Commit ausfuehren (nur bei abgeschlossenem Task inkl. Nebenfixes)
 - `classify` arbeitet multi-scope-faehig und dependency-basiert; Ergebnis ist `taskScope[]`, nicht mehr ein einzelner Scope.
 - Bei Pfadwechsel gilt Auto-Reclassify als Pflichtverhalten; Scope-Erweiterung ist erlaubt und wird nicht als Ambiguitaet blockiert.
+- Wenn Evidenz fuer eine Annahme nicht eindeutig ist, muss die Parent-LLM vor jedem `GO` eine aktive Rueckfrage an den User stellen.
+- Rueckfragepflicht pro offener Annahme:
+  - `Annahme: <kurz und testbar>`
+  - `Evidenzluecke: <Datei/Quelle oder "keine harte Evidenz">`
+  - `Rueckfrage: <konkrete Ja/Nein- oder Entweder/Oder-Frage>`
+- Ohne beantwortete Rueckfrage gilt fail-closed fuer Schreiben und Commit; read-only Analyse bleibt erlaubt.
 - Git-Guards aktivieren (einmal pro Clone): `npm run hooks:install`
 
 ### SCHREIBEN

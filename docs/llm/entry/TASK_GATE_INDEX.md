@@ -2,7 +2,8 @@
 
 ## Zweck
 Minimale Pflicht-Leselisten pro Task, damit LLMs ohne Repo-Vollscan gate-konform arbeiten koennen.
-Reihenfolge: diese Datei kommt erst nach `docs/WORKFLOW.md`, `docs/llm/ENTRY.md`, `docs/llm/OPERATING_PROTOCOL.md`, `docs/ARCHITECTURE.md`, `docs/STATUS.md` und `docs/llm/TASK_ENTRY_MATRIX.json`.
+Globale Hard-Rules sind komprimiert und aufgeteilt in `docs/llm/SAFE_RULES.md`.
+Reihenfolge: diese Datei kommt erst nach `docs/WORKFLOW.md`, `docs/llm/ENTRY.md` und `docs/llm/TASK_ENTRY_MATRIX.json`.
 Danach werden alle Task-Sets fuer alle klassifizierten Scopes gelesen, nicht nur eins.
 
 ## Globale Mindest-Gates (immer)
@@ -14,6 +15,7 @@ Danach werden alle Task-Sets fuer alle klassifizierten Scopes gelesen, nicht nur
 1. Vor jedem Commit betroffene Dokuquellen, Stringmatrix und Inventar auf aktuellen Stand nachziehen.
 2. Am Ende jedes Arbeitsschritts Aktualitaet von Code, Gates, Doku und Traceability explizit pruefen.
 3. Jeder abgeschlossene Slice erhoeht die Version um `0.0.1`; Teilstufen `a/b/c/d` bleiben nur Dokument-Anhaenge.
+4. Offene Annahmen muessen vor `GO` aktiv beim User rueckgefragt werden; ohne Antwort kein Schreiben.
 
 ## UI Task
 1. `src/game/ui/ui.js`

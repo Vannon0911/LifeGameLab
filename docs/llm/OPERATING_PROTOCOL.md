@@ -3,25 +3,18 @@
 ## Pflichtzyklus
 LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 
+Kanonische Sicherheitsaufteilung: `docs/llm/SAFE_RULES.md`.
+
 ## LESEN
 - zuerst `docs/WORKFLOW.md`
 - dann `docs/llm/ENTRY.md`
-- dann `docs/llm/OPERATING_PROTOCOL.md`
-<!-- Selbstreferenz intentional: Dieses Dokument wird im laufenden Zyklus gelesen,
-     damit der Pflichtzyklus (LESEN→PRUEFEN→SCHREIBEN→DOKU) bekannt ist, bevor
-     Entscheidungen getroffen werden. Änderungen an diesem Dokument wirken erst
-     im nächsten Zyklus. Autoritätskonflikt → SoT-Hierarchie in README.md. -->
-- dann `docs/ARCHITECTURE.md`
-- dann `docs/STATUS.md`
-- dann `docs/llm/TASK_ENTRY_MATRIX.json`
-- dann `docs/llm/entry/TASK_GATE_INDEX.md`
+- dann Task ueber `docs/llm/TASK_ENTRY_MATRIX.json` klassifizieren
+- dann `docs/llm/entry/TASK_GATE_INDEX.md` fuer minimales Gate-Set lesen
 - dann alle passenden Task-Entries fuer alle klassifizierten Scopes
 - dann die globalen Mindest-Gates:
   - `src/game/contracts/manifest.js`
   - `src/kernel/store/createStore.js`
   - `src/kernel/store/applyPatches.js`
-
-<!-- Bei Autoritätskonflikt zwischen Quellen dieser Liste gilt die SoT-Conflict-Resolution-Regel in agents/llm-entry-sequence/README.md#SoT-Conflict-Resolution. -->
 
 ## PRUEFEN
 - Task ueber `docs/llm/TASK_ENTRY_MATRIX.json` klassifizieren
@@ -31,6 +24,12 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
   - Jede Annahme wird sofort an einen frischen Subagent zur aktiven Widerlegung delegiert.
   - Subagent startet immer mit Parent-Kontext von Anfang an.
   - Erst nach Gegenpruefung darf die Parent-LLM die Aussage weiterverwenden.
+- Wenn Evidenz danach weiter uneindeutig ist: aktive User-Rueckfrage ist Pflicht vor `GO`.
+- Rueckfrageformat pro offener Annahme:
+  - `Annahme: <kurz und testbar>`
+  - `Evidenzluecke: <Datei/Quelle oder "keine harte Evidenz">`
+  - `Rueckfrage: <konkrete Ja/Nein- oder Entweder/Oder-Frage>`
+- Ohne beantwortete Rueckfrage gilt fail-closed fuer Schreiben und Commit.
 - Bei `Entry hash drift` oder `Read-order drift` zuerst `node tools/llm-preflight.mjs update-lock`, danach `classify -> entry -> ack -> check` erneut vollstaendig.
 - technische Kette exakt einhalten:
   1. `node tools/llm-preflight.mjs classify --paths <...>`
