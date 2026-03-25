@@ -174,8 +174,13 @@ if (args.validate) {
 }
 
 // ── Ausfuehrung ───────────────────────────────────────────
-const paths = args.paths ? args.paths.split(",").map((p) => p.trim()) : [];
+const paths = args.paths ? args.paths.split(",").map((p) => p.trim()).filter(Boolean) : [];
 const pipeline = args.pipeline || "default";
+
+if (paths.length === 0) {
+  console.error("Fehler: --paths ist Pflicht. Gib mindestens eine Datei/einen Scope an.");
+  process.exit(1);
+}
 
 console.log(`\n🚀 Agent Orchestrator`);
 console.log(`   Task:     ${args.task}`);

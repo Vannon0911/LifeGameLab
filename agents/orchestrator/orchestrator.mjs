@@ -793,26 +793,26 @@ export function createOrchestrator(config = {}) {
         });
       }
 
-      // Preflight ausfuehren wenn Pfade angegeben
-      if (options.preflight !== false && session.paths.length > 0) {
-        log("Running preflight chain...");
-        if (!dryRun) {
-          const preflightResult = await runPreflightChain(session.paths, {
-            mode: options.preflightMode || "work",
-          });
-          session.preflight = preflightResult;
-          if (!preflightResult.ok) {
-            log(`Preflight failed: ${preflightResult.error}`);
-            session.status = "failed";
-            session.addError("preflight", new Error(preflightResult.error));
-            return session;
-          }
-          log("Preflight passed");
-        } else {
-          log("[dry-run] Preflight skipped");
-          session.preflight = { ok: true, steps: [], dryRun: true };
-        }
+      if (session.paths.length === 0) {
+        const err = new Error("At least one path is required for an orchestrator run.");
+        session.addError("paths", err);
+        session.status = "failed";
+        log("Session failed: no paths provided");
+        return session;
       }
+
+      log("Running preflight chain...");
+      const preflightResult = await runPreflightChain(session.paths, {
+        mode: options.preflightMode || "work",
+      });
+      session.preflight = { ...preflightResult, dryRun };
+      if (!preflightResult.ok) {
+        log(`Preflight failed: ${preflightResult.error}`);
+        session.status = "failed";
+        session.addError("preflight", new Error(preflightResult.error));
+        return session;
+      }
+      log("Preflight passed");
 
       // Spezialmodus: Red Team v2
       if (pipelineName === "red-team-v2") {

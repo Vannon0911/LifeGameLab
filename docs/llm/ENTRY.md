@@ -33,6 +33,8 @@ Die kompakten, aufgeteilten Hard-Rules stehen in `docs/llm/SAFE_RULES.md` und si
 - Der Chat-Trigger `entry` ist nur der menschliche Startimpuls. Die technische Wahrheit lebt ausschliesslich in `tools/llm-preflight.mjs`.
 - Vor jedem Commit muessen betroffene Dokuquellen inklusive relevanter Stringmatrix-/Inventar-Dateien nachgezogen und am Ende des Arbeitsschritts erneut auf Aktualitaet geprueft werden.
 - Nach jedem komplett abgeschlossenen Task (inklusive aller waehrenddessen aufgetretenen Nebenfixes) folgt nach `check` ein Commit; der naechste Task startet verpflichtend mit dem Orchestrator-Schritt ueber `agents/orchestrator/orchestrator.mjs` (PARENT ONLY).
+- Paths sind verpflichtend. Jeder Orchestrator-Run bricht sofort mit `paths.length === 0` ab und schickt einen klaren Fehler ins Log (`agents/orchestrator/orchestrator.mjs:793`ff.), damit keine pathlosen Bypässe existieren.
+- Die Preflight-Kette wird immer ausgeführt, unabhängig von `--dry-run`; das setzt `session.preflight` mit dem Echtlauf und markiert `dryRun: true`, schlussendlich bleibt Preflight unverhandelbar (`agents/orchestrator/orchestrator.mjs:794`ff.).
 
 ## Red-Team Evidence
 - **OPEN-POINT-REFERENZEN**: Die konsolidierten Findings `RT-01`..`RT-07` in `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:115`‑`140` belegen die folgenden bisherigen Blocker:
