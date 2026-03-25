@@ -1,3 +1,7 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import {
   CLAIM_SCENARIOS,
   CLAIM_SCENARIOS_BY_ID,
@@ -12,8 +16,34 @@ function freezeList(list) {
   return Object.freeze([...list]);
 }
 
+function uniqueList(list, label) {
+  const seen = new Set();
+  const out = [];
+  for (const item of list) {
+    const key = String(item || "").trim();
+    if (!key) continue;
+    if (seen.has(key)) {
+      throw new Error(`Duplicate ${label}: ${key}`);
+    }
+    seen.add(key);
+    out.push(key);
+  }
+  return Object.freeze(out);
+}
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, "..");
+const taskMatrixPath = path.join(root, "docs", "llm", "TASK_ENTRY_MATRIX.json");
+
+function readTestingPreflightPaths() {
+  const matrix = JSON.parse(fs.readFileSync(taskMatrixPath, "utf8"));
+  const triggerPrefixes = Array.isArray(matrix?.testing?.triggerPrefixes) ? matrix.testing.triggerPrefixes : [];
+  return uniqueList(triggerPrefixes, "testing trigger prefix");
+}
+
 const QUICK_REGRESSION_TEST_FILES = Object.freeze([
   "tests/test-active-order-runtime.mjs",
+  "tests/test-whole-repo-dispatch-truth.mjs",
   "tests/test-mapspec-function-rejection.mjs",
   "tests/test-mapspec-cycle-rejection.mjs",
   "tests/test-signature-nonserializable.mjs",
@@ -28,14 +58,7 @@ export const EVIDENCE_SURFACES = Object.freeze({
   legacyNodeTest: "legacy-node-test",
 });
 
-export const TESTING_PREFLIGHT_PATHS = Object.freeze([
-  "tests",
-  "tools/llm-preflight.mjs",
-  "devtools/run-test-suite.mjs",
-  "devtools/run-all-tests.mjs",
-  "devtools/test-suites.mjs",
-  "devtools/evidence-runner.mjs",
-]);
+export const TESTING_PREFLIGHT_PATHS = readTestingPreflightPaths();
 
 export const TESTING_PREFLIGHT_PATHS_ARG = TESTING_PREFLIGHT_PATHS.join(",");
 

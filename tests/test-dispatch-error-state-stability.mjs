@@ -3,12 +3,16 @@ import assert from "node:assert/strict";
 import { createDeterministicStore, snapshotStore } from "./support/liveTestKit.mjs";
 import { createStore } from "../src/kernel/store/createStore.js";
 import { createNullDriver } from "../src/kernel/store/persistence.js";
-import * as manifest from "../src/game/manifest.js";
+import { manifest } from "../src/game/manifest.js";
+import { manifest as contractManifest } from "../src/game/contracts/manifest.js";
 import { reducer, simStepPatch } from "../src/game/runtime/index.js";
 
 const failingDispatchCases = [
   { label: "gen-world-extra-payload", action: { type: "GEN_WORLD", payload: { gameMode: "lab_autorun" } }, expectedMessage: "is not allowed" },
   { label: "sim-step-force", action: { type: "SIM_STEP", payload: { force: true } }, expectedMessage: "is not allowed" },
+  { label: "place-building-zone-legacy-payload", action: { type: "PLACE_BUILDING", payload: { x: 2, y: 2, radius: 2, zoneType: 1 } }, expectedMessage: "is not allowed" },
+  { label: "queue-worker-legacy-harvest-payload", action: { type: "QUEUE_WORKER", payload: { x: 2, y: 2 } }, expectedMessage: "is not allowed" },
+  { label: "queue-worker-scaffolded-fail-closed", action: { type: "QUEUE_WORKER", payload: { coreId: "core-1", count: 1 } }, expectedMessage: "not implemented" },
   { label: "unknown-action", action: { type: "RUN_BENCHMARK", payload: {} }, expectedMessage: "Unknown action type: RUN_BENCHMARK" },
 ];
 
@@ -113,6 +117,35 @@ assert.equal(savedDocSeen.state.meta.seed, "MUTATED_BY_DRIVER", "counterprobe mu
 
 console.log("DRIVER_COPY_ISOLATION_OK mutation-contained=true");
 
+const failingSaveStore = createStore(
+  manifest,
+  { reducer, simStep: simStepPatch },
+  {
+    storageDriver: {
+      load: () => null,
+      save: () => {
+        throw new Error("disk-full");
+      },
+    },
+  },
+);
+const failingSaveBefore = snapshotStore(failingSaveStore);
+assert.throws(
+  () => failingSaveStore.dispatch({ type: "SET_SEED", payload: { seed: "p0-save-fail" } }),
+  /disk-full/,
+  "save failures must surface to caller",
+);
+const failingSaveAfter = snapshotStore(failingSaveStore);
+assert.equal(failingSaveAfter.signature, failingSaveBefore.signature, "save failures must not commit signature");
+assert.equal(
+  failingSaveAfter.signatureMaterialHash,
+  failingSaveBefore.signatureMaterialHash,
+  "save failures must not commit attestation material",
+);
+assert.equal(failingSaveAfter.revisionCount, failingSaveBefore.revisionCount, "save failures must not commit revisionCount");
+
+console.log("SAVE_FAILURE_ATOMICITY_OK commit-blocked=true");
+
 const refLeakManifest = {
   SCHEMA_VERSION: 1,
   stateSchema: {
@@ -156,3 +189,11 @@ assert.equal(
 );
 
 console.log("PATCH_VALUE_REF_ISOLATION_OK leak-blocked=true");
+
+assert.throws(
+  () => createStore(contractManifest, { reducer, simStep: simStepPatch }, { storageDriver: createNullDriver() }),
+  /domainPatchGate/,
+  "contract manifest must not be accepted as runtime store manifest",
+);
+
+console.log("RUNTIME_MANIFEST_AUTHORITY_OK contract-manifest boot is fail-closed");

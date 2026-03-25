@@ -5,6 +5,7 @@ import { createStore } from "../src/kernel/store/createStore.js";
 import { manifest } from "../src/game/manifest.js";
 import { reducer, simStepPatch } from "../src/game/runtime/index.js";
 import { createDeterministicStore, snapshotStore } from "./support/liveTestKit.mjs";
+import { assertNoopDispatchRevisionBump } from "./support/assertNoopRevisionBump.mjs";
 
 const store = createDeterministicStore({ seed: "redteam-kernel-hardening" });
 const before = snapshotStore(store);
@@ -44,10 +45,11 @@ store.dispatch({ type: "SET_SIZE", payload: { w: -3, h: 16 } });
 store.dispatch({ type: "SET_SIZE", payload: { w: 0, h: 0 } });
 
 const afterAttacks = snapshotStore(store);
-assert.equal(afterAttacks.signature, before.signature, "blocked red-team attacks must keep signature stable");
-assert.equal(afterAttacks.signatureMaterialHash, before.signatureMaterialHash, "blocked red-team attacks must keep signature material stable");
+assert.equal(stableStringify(afterAttacks.state), stableStringify(before.state), "blocked red-team attacks must keep state stable");
 assert.equal(afterAttacks.state.meta.gridW, before.state.meta.gridW, "blocked red-team attacks must not change gridW");
 assert.equal(afterAttacks.state.meta.gridH, before.state.meta.gridH, "blocked red-team attacks must not change gridH");
+assert.equal(afterAttacks.readModelHash, before.readModelHash, "blocked red-team attacks must keep read model stable");
+assertNoopDispatchRevisionBump(before, afterAttacks, "invalid SET_SIZE");
 
 assert.throws(
   () => stableStringify({ evil: () => "boom" }),
@@ -62,35 +64,35 @@ assert.throws(
 
 const poisoned = { presetId: "river_delta" };
 poisoned.self = poisoned;
-const bootStore = createStore(
-  manifest,
-  { reducer, simStep: simStepPatch },
-  {
-    storageDriver: {
-      load: () => ({
-        schemaVersion: manifest.SCHEMA_VERSION,
-        updatedAt: 0,
-        revisionCount: 0,
-        state: {
-          meta: {},
-          map: {
-            activeSource: "mapspec",
-            compiledHash: "",
-            spec: poisoned,
-            validation: {},
+assert.throws(
+  () => createStore(
+    manifest,
+    { reducer, simStep: simStepPatch },
+    {
+      storageDriver: {
+        load: () => ({
+          schemaVersion: manifest.SCHEMA_VERSION,
+          updatedAt: 0,
+          revisionCount: 0,
+          state: {
+            meta: {},
+            map: {
+              activeSource: "mapspec",
+              compiledHash: "",
+              spec: poisoned,
+              validation: {},
+            },
+            world: {},
+            sim: {},
           },
-          world: {},
-          sim: {},
-        },
-      }),
-      save: () => {},
+        }),
+        save: () => {},
+      },
     },
-  },
+  ),
+  /Persisted state failed schema sanitization/,
+  "poisoned persistence boot must fail closed with a createStore throw",
 );
-
-const bootState = bootStore.getState();
-assert.equal(bootState.meta.seed, "life-light", "poisoned persistence must fall back to safe defaults");
-assert.equal(bootState.map.activeSource, "legacy_preset", "poisoned persistence must not preserve mapspec activation");
 
 store.dispatch({
   type: "SET_MAPSPEC",
@@ -111,4 +113,4 @@ assert.equal(afterRecovery.state.map.activeSource, "mapspec", "store must still 
 assert.equal(afterRecovery.state.world.w, 32, "valid recovery path must still compile world width");
 assert.equal(afterRecovery.state.world.h, 32, "valid recovery path must still compile world height");
 
-console.log("REDTEAM_KERNEL_HARDENING_OK blocked=function+cycle+size poison=fallback recovery=clean");
+console.log("REDTEAM_KERNEL_HARDENING_OK blocked=function+cycle+size poison=throw recovery=clean");

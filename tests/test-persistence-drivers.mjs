@@ -2,61 +2,10 @@ import assert from "node:assert/strict";
 
 import { createStore } from "../src/kernel/store/createStore.js";
 import { createMetaOnlyWebDriver, createNullDriver, createWebDriver } from "../src/kernel/store/persistence.js";
-import * as manifest from "../src/game/manifest.js";
+import { manifest } from "../src/game/manifest.js";
 import { reducer, simStepPatch } from "../src/game/runtime/index.js";
-import { BRUSH_MODE } from "../src/game/contracts/ids.js";
 import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
-
-function installWebStubs() {
-  const store = new Map();
-  const localStorage = {
-    getItem(key) {
-      return store.has(key) ? store.get(key) : null;
-    },
-    setItem(key, value) {
-      store.set(key, String(value));
-    },
-    removeItem(key) {
-      store.delete(key);
-    },
-  };
-  const document = {
-    createElement() {
-      return {
-        set href(_value) {},
-        set download(_value) {},
-        click() {},
-      };
-    },
-    body: {
-      appendChild() {},
-      removeChild() {},
-    },
-  };
-  const URL = {
-    createObjectURL() {
-      return "blob:test";
-    },
-    revokeObjectURL() {},
-  };
-  const prev = {
-    localStorage: globalThis.localStorage,
-    document: globalThis.document,
-    URL: globalThis.URL,
-  };
-  Object.assign(globalThis, { localStorage, document, URL });
-  return {
-    map: store,
-    restore() {
-      if (prev.localStorage === undefined) delete globalThis.localStorage;
-      else globalThis.localStorage = prev.localStorage;
-      if (prev.document === undefined) delete globalThis.document;
-      else globalThis.document = prev.document;
-      if (prev.URL === undefined) delete globalThis.URL;
-      else globalThis.URL = prev.URL;
-    },
-  };
-}
+import { installWebStubs } from "./support/installWebStubs.mjs";
 
 function createDeterministicStore(storageDriver) {
   return createStore(
@@ -67,15 +16,14 @@ function createDeterministicStore(storageDriver) {
 }
 
 function bootstrapOneFounder(store) {
-store.dispatch({ type: "SET_SEED", payload: { seed: "persist-seed-main" } });
+  store.dispatch({ type: "SET_SEED", payload: { seed: "persist-seed-main" } });
   store.dispatch({ type: "GEN_WORLD", payload: {} });
-  store.dispatch({ type: "SET_BRUSH", payload: { brushMode: BRUSH_MODE.FOUNDER_PLACE } });
   const state = store.getState();
   const preset = getWorldPreset(state.meta.worldPresetId);
   const range = getStartWindowRange(preset.startWindows.player, state.world.w, state.world.h);
   store.dispatch({ type: "PLACE_WORKER", payload: { x: range.x0, y: range.y0, remove: false } });
-  store.dispatch({ type: "CONFIRM_FOUNDATION", payload: {} });
-  store.dispatch({ type: "CONFIRM_CORE_ZONE", payload: {} });
+  store.dispatch({ type: "SET_UI", payload: { runPhase: "run_active" } });
+  store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
   store.dispatch({ type: "SIM_STEP", payload: {} });
 }
 
@@ -98,9 +46,9 @@ try {
   const metaKey = "persist-meta-key";
   const metaDriver = createMetaOnlyWebDriver(metaKey);
   const metaStore = createDeterministicStore(metaDriver);
-metaStore.dispatch({ type: "SET_SEED", payload: { seed: "persist-meta-seed" } });
+  metaStore.dispatch({ type: "SET_SEED", payload: { seed: "persist-meta-seed" } });
   metaStore.dispatch({ type: "SET_SIZE", payload: { w: 48, h: 48 } });
-metaStore.dispatch({ type: "SET_SPEED", payload: { speed: 30 } });
+  metaStore.dispatch({ type: "SET_SPEED", payload: { speed: 30 } });
   metaStore.dispatch({ type: "GEN_WORLD", payload: {} });
 
   const metaRaw = stubs.map.get(metaKey);
@@ -117,12 +65,24 @@ metaStore.dispatch({ type: "SET_SPEED", payload: { speed: 30 } });
   assert.equal(reloadedState.meta.speed, 30, "meta-only reload must keep speed");
 
   stubs.map.set(metaKey, "{ not-json");
-  const tamperedReload = createDeterministicStore(metaDriver);
-  const tamperedState = tamperedReload.getState();
-  assert.equal(typeof tamperedState.meta.seed, "string", "tampered meta payload must fail closed to default seed string");
-  assert.notEqual(tamperedState.meta.seed, "persist-meta-seed", "tampered payload must not force stale persisted seed");
+  assert.throws(
+    () => createDeterministicStore(metaDriver),
+    /Persistence load failed/,
+    "tampered meta payload must hard-fail on load",
+  );
+
+  const prevGetItem = globalThis.localStorage.getItem;
+  globalThis.localStorage.getItem = () => {
+    throw new Error("storage-offline");
+  };
+  assert.throws(
+    () => createDeterministicStore(metaDriver),
+    /Persistence load failed/,
+    "storage read errors must not downgrade to defaults",
+  );
+  globalThis.localStorage.getItem = prevGetItem;
 } finally {
   stubs.restore();
 }
 
-console.log("PERSISTENCE_DRIVERS_OK null+web+meta-only contracts verified with tamper fallback");
+console.log("PERSISTENCE_DRIVERS_OK null+web+meta-only contracts verified with fail-closed load");

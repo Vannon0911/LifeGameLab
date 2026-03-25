@@ -9,12 +9,15 @@ import { buildSystemPrompt } from "../agents/orchestrator/runtime/agent.mjs";
 import {
   EVIDENCE_POLICY,
   EVIDENCE_SUITES,
+  TESTING_PREFLIGHT_PATHS,
   TRACKED_REGRESSION_REPO_TESTS,
   TRACKED_CLAIMS,
-  TESTING_PREFLIGHT_PATHS,
   TESTING_PREFLIGHT_PATHS_ARG,
   isKnownSuite,
 } from "../devtools/test-suites.mjs";
+import { assertCleanAuditOutput, hasAuditWarnings } from "../devtools/runner-audit.mjs";
+import { resolveAggregateSuite } from "../devtools/run-all-tests.mjs";
+import { verifyReplayAttempts } from "../devtools/evidence-runner.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -30,6 +33,9 @@ const entryText = fs.readFileSync(entryPath, "utf8");
 const ackPath = path.join(root, ".llm/entry-ack.json");
 const sessionPath = path.join(root, ".llm/entry-session.json");
 const proofDir = path.join(root, ".llm/entry-proof");
+const spawnProofPath = path.join(root, ".llm/spawn-proof.json");
+const cacheStatePath = path.join(root, ".llm/cache-state.json");
+const cacheValidatorPath = path.join(root, ".llm/cache-validator.json");
 const llmDir = path.join(root, ".llm");
 
 const testingGateFiles = [
@@ -40,6 +46,18 @@ const testingGateFiles = [
   "tests/support/liveTestKit.mjs",
 ];
 const testingScopePaths = [...TESTING_PREFLIGHT_PATHS];
+
+function normalizeScopePath(value) {
+  const text = String(value || "").replaceAll("\\", "/").trim();
+  return text.length > 1 ? text.replace(/\/+$/, "") : text;
+}
+
+function normalizeScopePathList(list) {
+  return (Array.isArray(list) ? list : [])
+    .map(normalizeScopePath)
+    .filter(Boolean)
+    .sort();
+}
 
 function sha256Text(text) {
   return crypto.createHash("sha256").update(String(text), "utf8").digest("hex");
@@ -137,11 +155,17 @@ try {
   fs.rmSync(ackPath, { force: true });
   fs.rmSync(sessionPath, { force: true });
   fs.rmSync(proofDir, { recursive: true, force: true });
+  fs.rmSync(spawnProofPath, { force: true });
+  fs.rmSync(cacheStatePath, { force: true });
+  fs.rmSync(cacheValidatorPath, { force: true });
 
   assert.equal(String(testingConfig.requiredEntry || ""), "docs/llm/testing/TESTING_TASK_ENTRY.md", "testing matrix must point to testing task entry");
   assert(Array.isArray(matrix.testing.dependsOn), "testing scope must declare dependsOn for multi-scope classification");
   assert(matrix.testing.dependsOn.includes("contracts"), "testing scope must include contracts dependency");
-  assert(entryText.includes("classify -> entry -> ack -> check"), "ENTRY.md must define the preflight chain for writes");
+  assert(
+    entryText.includes("classify -> spawn-proof -> entry -> ack -> check -> cache-sync -> commit"),
+    "ENTRY.md must define the spawn-proof/cache-sync preflight chain for writes",
+  );
 
   for (const file of testingGateFiles) {
     assert(testingEntry.includes(file), `testing task entry must reference ${file}`);
@@ -150,6 +174,7 @@ try {
   }
 
   const triggerPrefixes = Array.isArray(testingConfig.triggerPrefixes) ? testingConfig.triggerPrefixes : [];
+  assert.deepEqual(TESTING_PREFLIGHT_PATHS, triggerPrefixes, "TESTING_PREFLIGHT_PATHS must stay mechanically synced with matrix.testing.triggerPrefixes");
   for (const scopedPath of ["tests/", "tools/llm-preflight.mjs", "devtools/run-test-suite.mjs", "devtools/run-all-tests.mjs", "devtools/test-suites.mjs", "devtools/evidence-runner.mjs", "docs/llm/testing/"]) {
     assert(triggerPrefixes.includes(scopedPath), `testing triggerPrefixes must include ${scopedPath}`);
   }
@@ -205,6 +230,12 @@ try {
   assert(isKnownSuite("full"), "full suite must exist");
   assert.equal(EVIDENCE_POLICY.scope, "w1", "evidence scope must stay on w1");
   assert(TRACKED_CLAIMS.length >= 2, "at least two claim scenarios are required");
+  assert.equal(resolveAggregateSuite(["node", "devtools/run-all-tests.mjs"]), "full", "aggregate runner must default to full");
+  assert.equal(resolveAggregateSuite(["node", "devtools/run-all-tests.mjs", "--claims"]), "claims", "aggregate runner must allow explicit claims-only runs");
+  assert.equal(resolveAggregateSuite(["node", "devtools/run-all-tests.mjs", "--quick"]), "quick", "aggregate runner must allow quick runs");
+  assert.equal(resolveAggregateSuite(["node", "devtools/run-all-tests.mjs", "--regression"]), "regression", "aggregate runner must allow regression-only runs");
+  assert.equal(resolveAggregateSuite(["node", "devtools/run-all-tests.mjs"], "test:truth"), "claims", "test:truth must stay claims");
+  assert.equal(resolveAggregateSuite(["node", "devtools/run-all-tests.mjs"], "test"), "full", "npm test must stay full");
 
   const repoTests = fs.readdirSync(path.join(root, "tests"))
     .filter((name) => /^test-.*\.mjs$/.test(name))
@@ -238,11 +269,25 @@ try {
   const multiClassify = runPreflight(["classify", "--paths", "src/game/ui/ui.js,src/game/sim/step.js"]);
   assert(multiClassify.includes("scope=contracts+gameplay+ui"), "classify must support multi-scope dependency expansion");
 
+  const missingSpawnProofOutput = runPreflightExpectFail(
+    ["entry", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"],
+    /Missing spawn proof/,
+  );
+  assert(missingSpawnProofOutput.includes("Missing spawn proof"), "entry must fail closed without spawn-proof");
+
+  const spawnProofOutput = runPreflight(["spawn-proof", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"]);
+  assert(spawnProofOutput.includes("SPAWN_PROOF_OK scope=contracts+testing"), "spawn-proof must succeed for testing scope");
+  const spawnProofBeforeEntry = JSON.parse(fs.readFileSync(spawnProofPath, "utf8"));
+  assert.equal(spawnProofBeforeEntry.scopeKey, "contracts+testing", "spawn-proof must persist expanded testing scope");
+  assert.equal(spawnProofBeforeEntry.consumedAt, null, "fresh spawn-proof must be unconsumed");
+
   const entryOutput = runPreflight(["entry", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"]);
   assert(entryOutput.includes("ENTRY_OK scope=contracts+testing"), "entry must succeed for expanded testing scope");
   const sessionBeforeCheck = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
   const challengeFileBeforeCheck = path.join(root, sessionBeforeCheck.challengeFile);
   assert(fs.existsSync(challengeFileBeforeCheck), "entry must create hidden proof challenge file");
+  const spawnProofAfterEntry = JSON.parse(fs.readFileSync(spawnProofPath, "utf8"));
+  assert.equal(typeof spawnProofAfterEntry.consumedAt, "string", "entry must consume spawn-proof");
 
   const ackOutput = runPreflight(["ack", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
   assert(ackOutput.includes("ACK_OK scope=contracts+testing"), "ack must succeed for expanded testing scope");
@@ -257,48 +302,115 @@ try {
   const checkOutput = runPreflight(["check", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
   assert(checkOutput.includes("CHECK_OK"), "check must succeed again for full testing scope");
 
-  const lockBackup = fs.readFileSync(path.join(root, "docs/llm/entry/LLM_ENTRY_LOCK.json"), "utf8");
-  const tempProbe = path.join(root, "tmp-guard-precommit-probe.txt");
-  try {
-    fs.writeFileSync(tempProbe, "probe\n", "utf8");
-    const addRes = spawnSync("git", ["add", "tmp-guard-precommit-probe.txt"], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 30_000,
-    });
-    assert.equal(addRes.status, 0, `git add failed:\n${addRes.stdout}\n${addRes.stderr}`);
+  const cacheSyncOutput = runPreflight(["cache-sync", "--paths", TESTING_PREFLIGHT_PATHS_ARG]);
+  assert(cacheSyncOutput.includes("CACHE_SYNC_OK scope=contracts+testing"), "cache-sync must persist the green cycle");
+  const cacheState = JSON.parse(fs.readFileSync(cacheStatePath, "utf8"));
+  assert.equal(cacheState.scopeKey, "contracts+testing", "cache-sync must persist expanded testing scope");
 
-    const driftedLock = JSON.parse(lockBackup);
-    driftedLock.sha256 = "deadbeef";
-    fs.writeFileSync(path.join(root, "docs/llm/entry/LLM_ENTRY_LOCK.json"), `${JSON.stringify(driftedLock, null, 2)}\n`, "utf8");
+  const nextSpawnProofOutput = runPreflight(["spawn-proof", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"]);
+  assert(nextSpawnProofOutput.includes("SPAWN_PROOF_OK scope=contracts+testing"), "follow-up cycle must still require spawn-proof");
 
-    const guardDriftOutput = runGuardExpectFail(["pre-commit"], /entry lock drift detected/i);
-    assert(guardDriftOutput.includes("entry lock drift detected"), "guard must fail closed on lock drift");
-  } finally {
-    fs.writeFileSync(path.join(root, "docs/llm/entry/LLM_ENTRY_LOCK.json"), lockBackup, "utf8");
-    if (fs.existsSync(tempProbe)) fs.rmSync(tempProbe, { force: true });
-    spawnSync("git", ["reset", "HEAD", "--", "tmp-guard-precommit-probe.txt"], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 30_000,
-    });
+  const missingCacheValidateOutput = runPreflightExpectFail(
+    ["entry", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"],
+    /Missing cache validator/,
+  );
+  assert(
+    missingCacheValidateOutput.includes("Missing cache validator"),
+    "entry must fail closed in follow-up cycles without cache-validate",
+  );
+
+  const cacheValidateOutput = runPreflight(["cache-validate"]);
+  assert(cacheValidateOutput.includes("CACHE_VALIDATE_OK"), "cache-validate must succeed after cache-sync");
+  const cacheValidatorBeforeEntry = JSON.parse(fs.readFileSync(cacheValidatorPath, "utf8"));
+  assert.equal(cacheValidatorBeforeEntry.challengeId, cacheState.challengeId, "cache-validate must bind to the synced cycle");
+  assert.equal(cacheValidatorBeforeEntry.consumedAt, null, "fresh cache validator must be unconsumed");
+
+  const secondEntryOutput = runPreflight(["entry", "--paths", TESTING_PREFLIGHT_PATHS_ARG, "--mode", "work"]);
+  assert(
+    secondEntryOutput.includes("ENTRY_OK scope=contracts+testing"),
+    "entry must succeed again after cache-validate in the follow-up cycle",
+  );
+  const cacheValidatorAfterEntry = JSON.parse(fs.readFileSync(cacheValidatorPath, "utf8"));
+  assert.equal(typeof cacheValidatorAfterEntry.consumedAt, "string", "entry must consume cache-validate proof");
+
+  const gitProbe = spawnSync("git", ["rev-parse", "--is-inside-work-tree"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30_000,
+  });
+  const hasGitRepo = gitProbe.status === 0 && String(gitProbe.stdout || "").trim() === "true";
+  if (hasGitRepo) {
+    const lockBackup = fs.readFileSync(path.join(root, "docs/llm/entry/LLM_ENTRY_LOCK.json"), "utf8");
+    const tempProbe = path.join(root, "tmp-guard-precommit-probe.txt");
+    try {
+      fs.writeFileSync(tempProbe, "probe\n", "utf8");
+      const addRes = spawnSync("git", ["add", "tmp-guard-precommit-probe.txt"], {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 30_000,
+      });
+      assert.equal(addRes.status, 0, `git add failed:\n${addRes.stdout}\n${addRes.stderr}`);
+
+      const driftedLock = JSON.parse(lockBackup);
+      driftedLock.sha256 = "deadbeef";
+      fs.writeFileSync(path.join(root, "docs/llm/entry/LLM_ENTRY_LOCK.json"), `${JSON.stringify(driftedLock, null, 2)}\n`, "utf8");
+
+      const guardDriftOutput = runGuardExpectFail(["pre-commit"], /entry lock drift detected/i);
+      assert(guardDriftOutput.includes("entry lock drift detected"), "guard must fail closed on lock drift");
+    } finally {
+      fs.writeFileSync(path.join(root, "docs/llm/entry/LLM_ENTRY_LOCK.json"), lockBackup, "utf8");
+      if (fs.existsSync(tempProbe)) fs.rmSync(tempProbe, { force: true });
+      spawnSync("git", ["reset", "HEAD", "--", "tmp-guard-precommit-probe.txt"], {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 30_000,
+      });
+    }
+  } else {
+    console.log("LLM_CONTRACT_GIT_HOOK_CHECK_SKIPPED no-git-worktree");
   }
 
   const auditOutput = runPreflight(["audit", "--paths", "src/unknown/not-in-matrix.js"]);
   assert(auditOutput.includes("AUDIT_OK"), "audit must never block the caller");
   assert(auditOutput.includes("AUDIT_WARN"), "audit must report warnings for preflight violations");
+  assert.equal(hasAuditWarnings(auditOutput), true, "runner audit helper must detect warnings");
+  assert.throws(() => assertCleanAuditOutput(auditOutput, "contract audit"), /reported warnings/, "runner audit helper must fail on warnings");
+  assert.doesNotThrow(() => assertCleanAuditOutput("[llm-preflight] AUDIT_OK scope=contracts+testing paths=10 entries=2 warnings=0"), "clean audit helper must allow warning-free audit");
+
+  assert.doesNotThrow(
+    () => verifyReplayAttempts([
+      { attempt: 1, truthAnchor: { signature: "sig-a", readModelHash: "rm-a", stateHash: "st-a" } },
+      { attempt: 2, truthAnchor: { signature: "sig-a", readModelHash: "rm-a", stateHash: "st-a" } },
+      { attempt: 3, truthAnchor: { signature: "sig-a", readModelHash: "rm-a", stateHash: "st-a" } },
+    ], "claim.contract.runner"),
+    "multi-attempt replay verification must accept stable anchors",
+  );
+  assert.throws(
+    () => verifyReplayAttempts([
+      { attempt: 1, truthAnchor: { signature: "sig-a", readModelHash: "rm-a", stateHash: "st-a" } },
+      { attempt: 2, truthAnchor: { signature: "sig-a", readModelHash: "rm-a", stateHash: "st-a" } },
+      { attempt: 3, truthAnchor: { signature: "sig-b", readModelHash: "rm-a", stateHash: "st-a" } },
+    ], "claim.contract.runner"),
+    /attempt 3/,
+    "multi-attempt replay verification must fail on later drift",
+  );
 
   const session = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
   const ack = JSON.parse(fs.readFileSync(ackPath, "utf8"));
   assert.equal(session.scopeKey, "contracts+testing", "session scope key must keep expanded testing scope");
   assert.deepEqual((session.taskScope || []).slice().sort(), ["contracts", "testing"], "session taskScope must be multi-scope array");
-  assert.deepEqual((session.classifiedPaths || []).slice().sort(), testingScopePaths.slice().sort(), "session classified paths must match current testing scope");
+  assert.deepEqual(
+    normalizeScopePathList(session.classifiedPaths || []),
+    normalizeScopePathList(testingScopePaths),
+    "session classified paths must match current testing scope",
+  );
   assert.equal(typeof ack.scopes["contracts+testing"].proofHash, "string", "ack must store proof hash per scope key");
   assert(ack.scopes["contracts+testing"].proofHash.length > 20, "proof hash must be non-trivial");
 
-  console.log("LLM_CONTRACT_OK multi-scope classify+dependency expansion+fail-closed drift checks and audit mode keep tests unblocked");
+  console.log("LLM_CONTRACT_OK multi-scope classify+dependency expansion+fail-closed drift checks and runner audit/replay guards stay wired");
 } finally {
   restorePath(llmDir, llmBackup);
 }

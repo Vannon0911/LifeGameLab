@@ -5,13 +5,12 @@ import { createDeterministicStore, getPlayerStartWindowSquare, snapshotStore } f
 function runReadModelReplay(seed) {
   const store = createDeterministicStore({ seed });
   store.dispatch({ type: "GEN_WORLD", payload: {} });
-  store.dispatch({ type: "SET_BRUSH", payload: { brushMode: "founder_place" } });
   for (const tile of getPlayerStartWindowSquare(store.getState(), 1)) {
-store.dispatch({ type: "PLACE_WORKER", payload: { x: tile.x, y: tile.y, remove: false } });
+    store.dispatch({ type: "PLACE_WORKER", payload: { x: tile.x, y: tile.y, remove: false } });
   }
   const afterFounders = snapshotStore(store);
-  store.dispatch({ type: "CONFIRM_FOUNDATION", payload: {} });
-  store.dispatch({ type: "CONFIRM_CORE_ZONE", payload: {} });
+  store.dispatch({ type: "SET_UI", payload: { runPhase: "run_active" } });
+  store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });
   const afterCore = snapshotStore(store);
   store.dispatch({ type: "SIM_STEP", payload: {} });
   const step1 = snapshotStore(store);

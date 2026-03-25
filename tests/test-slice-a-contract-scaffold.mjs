@@ -46,7 +46,7 @@ const scaffoldActions = [
 assert.equal(actionLifecycle.SET_MAPSPEC?.status, ACTION_LIFECYCLE_STATUS.STABLE, "SET_MAPSPEC must graduate from scaffold to active Slice B action");
 assert(Array.isArray(dataflow.actions.SET_MAPSPEC?.plannedWrites), "SET_MAPSPEC must keep declared planned writes after reducer wiring");
 
-const runtimeActions = ["ISSUE_MOVE", "PLACE_WORKER", "SELECT_ENTITY", "PLACE_CORE"];
+const runtimeActions = ["ISSUE_MOVE", "PLACE_WORKER", "SELECT_ENTITY"];
 for (const actionType of runtimeActions) {
   assert.equal(actionLifecycle[actionType]?.status, ACTION_LIFECYCLE_STATUS.STABLE, `${actionType} must be marked as an active runtime action`);
   assert(Array.isArray(dataflow.actions[actionType]?.dispatchSources), `${actionType} must expose dispatch sources`);
@@ -58,17 +58,17 @@ for (const actionType of dispatchWiredActions) {
   assert(dataflow.actions[actionType].dispatchSources.length > 0, `${actionType} must stay wired to at least one live dispatch source`);
 }
 
-assert.deepEqual(dataflow.actions.ISSUE_MOVE?.dispatchSources || [], ["src/game/ui/ui.js"], "ISSUE_MOVE must only dispatch from the live UI runtime path");
+assert.deepEqual(dataflow.actions.ISSUE_MOVE?.dispatchSources || [], ["src/game/ui/ui.orders.js"], "ISSUE_MOVE must only dispatch from the live UI runtime path");
 assert.deepEqual(dataflow.actions.PLACE_WORKER?.dispatchSources || [], ["src/game/ui/ui.js"], "PLACE_WORKER must only dispatch from the live UI runtime path");
 
-for (const removedActionType of ["ISSUE_ORDER", "SET_OVERLAY"]) {
+for (const removedActionType of ["ISSUE_ORDER", "SET_OVERLAY", "CONFIRM_FOUNDATION", "CONFIRM_CORE_ZONE"]) {
   assert.equal(Object.prototype.hasOwnProperty.call(actionSchema, removedActionType), false, `${removedActionType} must be removed from actionSchema`);
   assert.equal(Object.prototype.hasOwnProperty.call(mutationMatrix, removedActionType), false, `${removedActionType} must be removed from mutationMatrix`);
   assert.equal(Object.prototype.hasOwnProperty.call(actionLifecycle, removedActionType), false, `${removedActionType} must be removed from actionLifecycle`);
   assert.equal(Object.prototype.hasOwnProperty.call(dataflow.actions, removedActionType), false, `${removedActionType} must be removed from dataflow`);
 }
 
-for (const actionType of ["CONFIRM_FOUNDATION", "SET_BRUSH"]) {
+for (const actionType of ["SET_BRUSH"]) {
   assert.equal(actionLifecycle[actionType]?.status, ACTION_LIFECYCLE_STATUS.DEPRECATED, `${actionType} must stay disarmed as a deprecated action`);
   assert.deepEqual(dataflow.actions[actionType]?.dispatchSources || [], [], `${actionType} must have no active dispatch sources`);
 }
@@ -82,15 +82,12 @@ for (const actionType of scaffoldActions) {
 assert.equal(stateSchema.shape.meta.shape.contractProfile.default, "lifegamelab_rts_v1_1", "meta.contractProfile must advertise the new SoT");
 assert.equal(stateSchema.shape.meta.shape.migrationSlice.default, "slice_b_mapspec", "meta.migrationSlice must track the active migration slice");
 assert.equal(stateSchema.shape.map.shape.activeSource.default, "legacy_preset", "map scaffold must track the current source");
-assert.equal(stateSchema.shape.sim.shape.phase0PlantsDelivered.default, 0, "Phase 0 plant counter scaffold must exist");
-assert.equal(stateSchema.shape.sim.shape.phase0CorePlaced.default, false, "Phase 0 core flag scaffold must exist");
-assert.equal(stateSchema.shape.sim.shape.deprecatedActionMode.default, true, "legacy coexistence flag must stay explicit");
 
 for (const worldKey of ["cores", "buildings", "workers", "fighters", "belts", "powerLines", "resourceNodes", "mapSpecSnapshot"]) {
   assert.equal(simGate.world.keys[worldKey]?.type, "object", `simGate must reserve world key ${worldKey}`);
 }
 
-for (const simKey of ["phase0PlantsDelivered", "phase0CorePlaced", "queuedWorkerCount", "deprecatedActionMode", "selectedEntity", "mutatorDraft"]) {
+for (const simKey of ["queuedWorkerCount", "selectedEntity", "mutatorDraft"]) {
   assert(simGate.sim.keys.includes(simKey), `simGate must reserve sim key ${simKey}`);
 }
 
@@ -110,9 +107,13 @@ for (const testCase of noopCases) {
   const store = createDeterministicStore({ seed: "slice-a-contract-scaffold" });
   store.dispatch({ type: "GEN_WORLD", payload: {} });
   const before = snapshotStore(store);
-  store.dispatch(testCase);
+  assert.throws(
+    () => store.dispatch(testCase),
+    /ERR_ACTION_NOT_IMPLEMENTED|not implemented/i,
+    `${testCase.type} must fail closed until reducer wiring lands`,
+  );
   const after = snapshotStore(store);
-  assert.equal(after.signature, before.signature, `${testCase.type} must be no-op safe before reducer wiring`);
+  assert.equal(after.signature, before.signature, `${testCase.type} must keep signature stable before reducer wiring`);
   assert.equal(after.signatureMaterialHash, before.signatureMaterialHash, `${testCase.type} must keep signature material stable before reducer wiring`);
   assert.equal(after.readModelHash, before.readModelHash, `${testCase.type} must keep read model stable before reducer wiring`);
 }

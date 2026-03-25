@@ -19,7 +19,7 @@ const simGate = manifest.simGate;
 
 assert.deepEqual(
   simGate.sim.booleanKeys,
-  ["running", "phase0CorePlaced", "deprecatedActionMode", "zone2Unlocked", "dnaZoneCommitted", "infrastructureUnlocked"],
+  ["running", "zone2Unlocked", "dnaZoneCommitted", "infrastructureUnlocked"],
   "simGate boolean key contract must stay explicit and fail closed",
 );
 assert(simGate.sim.objectKeys.includes("cellPatternCounts"), "simGate objectKeys must include cellPatternCounts");
@@ -28,15 +28,12 @@ assert(simGate.sim.objectKeys.includes("selectedEntity"), "simGate objectKeys mu
 assert(simGate.sim.objectKeys.includes("mutatorDraft"), "simGate objectKeys must include mutatorDraft");
 assert(simGate.sim.keys.includes("cellPatternCounts"), "simGate sim.keys must include cellPatternCounts");
 assert(simGate.sim.keys.includes("runSummary"), "simGate sim.keys must include runSummary");
-assert(simGate.sim.keys.includes("phase0PlantsDelivered"), "simGate sim.keys must include phase0PlantsDelivered");
 assert(simGate.sim.keys.includes("queuedWorkerCount"), "simGate sim.keys must include queuedWorkerCount");
 assert.equal(simGate.world.keys.zoneRole.ctor, "Int8Array", "zoneRole gate ctor must stay canonical");
 assert.equal(simGate.world.keys.zoneId.ctor, "Uint16Array", "zoneId gate ctor must stay canonical");
 
 for (const invalidBooleanPatch of [
   { op: "set", path: "/sim/running", value: 1 },
-  { op: "set", path: "/sim/phase0CorePlaced", value: 1 },
-  { op: "set", path: "/sim/deprecatedActionMode", value: 0 },
   { op: "set", path: "/sim/zone2Unlocked", value: 1 },
   { op: "set", path: "/sim/dnaZoneCommitted", value: 0 },
   { op: "set", path: "/sim/infrastructureUnlocked", value: 7 },
@@ -50,12 +47,9 @@ for (const invalidBooleanPatch of [
 
 for (const validPatch of [
   { op: "set", path: "/sim/running", value: true },
-  { op: "set", path: "/sim/phase0CorePlaced", value: false },
-  { op: "set", path: "/sim/deprecatedActionMode", value: true },
   { op: "set", path: "/sim/zone2Unlocked", value: false },
   { op: "set", path: "/sim/dnaZoneCommitted", value: true },
   { op: "set", path: "/sim/infrastructureUnlocked", value: false },
-  { op: "set", path: "/sim/phase0PlantsDelivered", value: 5 },
   { op: "set", path: "/sim/queuedWorkerCount", value: 1 },
   { op: "set", path: "/sim/selectedEntity", value: { entityKind: "worker", entityId: "worker-1" } },
   { op: "set", path: "/sim/mutatorDraft", value: { mutatorId: "mutator-1", topologyClass: "loop", nodeCount: 6, closed: true } },

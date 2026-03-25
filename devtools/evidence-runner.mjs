@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { createStore } from "../src/kernel/store/createStore.js";
 import { createNullDriver } from "../src/kernel/store/persistence.js";
 import { stableStringify } from "../src/kernel/store/signature.js";
-import * as manifest from "../src/game/manifest.js";
+import { manifest as runtimeManifest } from "../src/game/manifest.js";
 import { reducer, simStepPatch } from "../src/game/runtime/index.js";
 import { buildLlmReadModel } from "../tools/llm/readModel.mjs";
 import { getStartWindowRange, getWorldPreset } from "../src/game/sim/worldPresets.js";
@@ -31,6 +31,10 @@ const currentTruthPath = path.join(root, "output", "current-truth.json");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function isDirectExecution() {
+  return path.resolve(process.argv[1] || "") === fileURLToPath(import.meta.url);
 }
 
 function parseArgs(argv) {
@@ -257,7 +261,7 @@ function createRunContext(args) {
 
 function createDispatchHarness() {
   const store = createStore(
-    manifest,
+    runtimeManifest,
     { reducer, simStep: simStepPatch },
     { storageDriver: createNullDriver() },
   );
@@ -491,18 +495,13 @@ async function runDispatchScenario(runCtx, scenario, mode) {
     });
   }
 
-  if (attempts.length === 2) {
-    const left = attempts[0].truthAnchor;
-    const right = attempts[1].truthAnchor;
-    assert(left && right, `${scenario.id}: missing truth anchor for deterministic replay`);
-    assert(left.signature === right.signature, `${scenario.id}: replay signature drift ${left.signature} != ${right.signature}`);
-    assert(left.readModelHash === right.readModelHash, `${scenario.id}: replay read-model hash drift ${left.readModelHash} != ${right.readModelHash}`);
-    assert(left.stateHash === right.stateHash, `${scenario.id}: replay state hash drift ${left.stateHash} != ${right.stateHash}`);
+  verifyReplayAttempts(attempts, scenario.id);
+  if (attempts.length > 1) {
     runCtx.journal.append({
       scenarioId: scenario.id,
       stepId: "replay-compare",
       kind: "replay_compare_ok",
-      payload: left,
+      payload: attempts[0].truthAnchor,
     });
   }
 
@@ -724,6 +723,29 @@ function collectCounterexamplesBlocked(results) {
   return Object.freeze([...items].sort());
 }
 
+export function verifyReplayAttempts(attempts, scenarioId) {
+  if (!Array.isArray(attempts) || attempts.length <= 1) return;
+  const anchor = attempts[0]?.truthAnchor;
+  assert(anchor, `${scenarioId}: missing truth anchor for deterministic replay attempt 1`);
+  for (let index = 1; index < attempts.length; index += 1) {
+    const current = attempts[index]?.truthAnchor;
+    const attemptNo = index + 1;
+    assert(current, `${scenarioId}: missing truth anchor for deterministic replay attempt ${attemptNo}`);
+    assert(
+      anchor.signature === current.signature,
+      `${scenarioId}: replay signature drift at attempt ${attemptNo} ${anchor.signature} != ${current.signature}`,
+    );
+    assert(
+      anchor.readModelHash === current.readModelHash,
+      `${scenarioId}: replay read-model hash drift at attempt ${attemptNo} ${anchor.readModelHash} != ${current.readModelHash}`,
+    );
+    assert(
+      anchor.stateHash === current.stateHash,
+      `${scenarioId}: replay state hash drift at attempt ${attemptNo} ${anchor.stateHash} != ${current.stateHash}`,
+    );
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv);
   const runCtx = createRunContext(args);
@@ -854,8 +876,9 @@ async function main() {
   process.exit(exitCode);
 }
 
-main().catch((error) => {
-  console.error(`EVIDENCE_RUNNER_FAIL ${String(error?.stack || error)}`);
-  process.exit(1);
-});
-
+if (isDirectExecution()) {
+  main().catch((error) => {
+    console.error(`EVIDENCE_RUNNER_FAIL ${String(error?.stack || error)}`);
+    process.exit(1);
+  });
+}

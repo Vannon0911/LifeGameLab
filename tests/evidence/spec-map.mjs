@@ -7,6 +7,17 @@ export const SOT_SOURCES = Object.freeze([
   "docs/STATUS.md",
 ]);
 
+function defineUniqueByKey(entries, label) {
+  const out = {};
+  for (const [key, value] of entries) {
+    if (Object.prototype.hasOwnProperty.call(out, key)) {
+      throw new Error(`Duplicate ${label}: ${key}`);
+    }
+    out[key] = Object.freeze(value);
+  }
+  return Object.freeze(out);
+}
+
 export const CLAIM_SCENARIOS = Object.freeze([
   Object.freeze({
     id: "claim.w1.no_bypass_surface",
@@ -127,177 +138,192 @@ export const CLAIM_SCENARIOS = Object.freeze([
   }),
 ]);
 
-export const CLAIM_SCENARIOS_BY_ID = Object.freeze(
-  Object.fromEntries(CLAIM_SCENARIOS.map((scenario) => [scenario.id, scenario])),
+export const CLAIM_SCENARIOS_BY_ID = defineUniqueByKey(
+  CLAIM_SCENARIOS.map((scenario) => [scenario.id, scenario]),
+  "claim scenario id",
 );
 
 export const CLAIM_SUITES = Object.freeze({
   claims: Object.freeze(CLAIM_SCENARIOS.map((scenario) => scenario.id)),
 });
 
-export const REGRESSION_TEST_STATUS = Object.freeze({
-  "tests/test-active-order-runtime.mjs": Object.freeze({
+const REGRESSION_TEST_ENTRIES = Object.freeze([
+  ["tests/test-active-order-runtime.mjs", {
     status: "verified",
     budgetMs: 90_000,
     purpose: "prove extracted active-order runtime preserves abort, wait, blocked, progress, and completion branches",
     counterProbe: "active-order branch perturbations are caught without relying only on broad replay drift",
-  }),
-  "tests/test-contract-no-bypass.mjs": Object.freeze({
+  }],
+  ["tests/test-contract-no-bypass.mjs", {
     status: "verified",
     budgetMs: 90_000,
     purpose: "prove removed bypass surfaces stay absent and negative dispatch payloads stay state-stable",
     counterProbe: "negative dispatch payload perturbation remains blocked and state-stable",
-  }),
-  "tests/test-dispatch-error-state-stability.mjs": Object.freeze({
+  }],
+  ["tests/test-dispatch-error-state-stability.mjs", {
     status: "verified",
     budgetMs: 90_000,
     purpose: "prove failing dispatches keep state, signature material, read model, and revision stable",
     counterProbe: "error-path perturbations do not mutate state/signature/revision",
-  }),
-  "tests/test-deterministic-genesis.mjs": Object.freeze({
+  }],
+  ["tests/test-deterministic-genesis.mjs", {
     status: "verified",
     budgetMs: 120_000,
     purpose: "prove same-seed replay and cross-seed divergence for worldgen, tick1, and tick4 replay anchors",
     counterProbe: "cross-seed perturbation must diverge while same-seed replay remains identical",
-  }),
-  "tests/test-readmodel-determinism.mjs": Object.freeze({
+  }],
+  ["tests/test-readmodel-determinism.mjs", {
     status: "verified",
     budgetMs: 120_000,
     purpose: "P1 / Artefakt-/Read-Model-Drift: prove read-model hashes stay replay-stable at after-founders, after-core, step-1, and step-4",
     counterProbe: "read-model hash perturbation check across replay attempts",
-  }),
-  "tests/test-kernel-replay-truth.mjs": Object.freeze({
+  }],
+  ["tests/test-kernel-replay-truth.mjs", {
     status: "verified",
     budgetMs: 120_000,
     purpose: "prove seed + action replay yields stable signature chain and cross-seed divergence",
     counterProbe: "signature chain diverges under seed perturbation and matches under identical replay",
-  }),
-  "tests/test-sim-gate-contract.mjs": Object.freeze({
+  }],
+  ["tests/test-sim-gate-contract.mjs", {
     status: "verified",
     budgetMs: 90_000,
     purpose: "prove simGate rejects numeric coercion for boolean sim fields and keeps canonical zone array contracts without duplicate source definitions",
     counterProbe: "boolean coercion perturbation remains rejected by simGate",
-  }),
-  "tests/test-step-chain-determinism.mjs": Object.freeze({
+  }],
+  ["tests/test-step-chain-determinism.mjs", {
     status: "verified",
     budgetMs: 120_000,
     purpose: "P1 / Runtime-Test-Drift: prove per-step signature, signature-material, read-model, and revision anchors stay replay-stable",
     counterProbe: "step-sequence perturbation breaks anchors while replayed sequence stays stable",
-  }),
-  "tests/test-llm-contract.mjs": Object.freeze({
+  }],
+  ["tests/test-llm-contract.mjs", {
     status: "verified",
     budgetMs: 120_000,
     purpose: "prove entry/testing registry, wording contract, path-drift guard, and repeated check rotation stay wired",
     counterProbe: "registry/path perturbation is detected and reported as drift",
-  }),
-  "tests/test-slice-a-contract-scaffold.mjs": Object.freeze({
+  }],
+  ["tests/test-slice-a-contract-scaffold.mjs", {
     status: "verified",
     budgetMs: 120_000,
     purpose: "prove Slice A contract scaffolding is complete, classified, and no-op safe before reducer wiring lands",
     counterProbe: "scaffold action dispatch must keep signature and read model stable before implementation",
-  }),
-  "tests/test-mapspec-gen-world.mjs": Object.freeze({
+  }],
+  ["tests/test-mapspec-gen-world.mjs", {
     status: "verified",
     budgetMs: 120_000,
     purpose: "prove Slice B MapSpec compilation drives SET_MAPSPEC and GEN_WORLD deterministically while legacy preset sync stays intact",
     counterProbe: "different MapSpec inputs diverge while same-seed same-MapSpec replay stays identical",
-  }),
-  "tests/test-mapspec-function-rejection.mjs": Object.freeze({
+  }],
+  ["tests/test-mapspec-function-rejection.mjs", {
     status: "verified",
     budgetMs: 90_000,
     purpose: "prove SET_MAPSPEC rejects function-valued contract fields without state drift",
     counterProbe: "function payload perturbation is blocked before it can enter map.spec",
-  }),
-  "tests/test-mapspec-cycle-rejection.mjs": Object.freeze({
+  }],
+  ["tests/test-mapspec-cycle-rejection.mjs", {
     status: "verified",
     budgetMs: 90_000,
     purpose: "prove SET_MAPSPEC rejects cyclic payloads without stack overflow or state drift",
     counterProbe: "cyclic payload perturbation is rejected by strict schema validation",
-  }),
-  "tests/test-mapspec-dispatch-sources.mjs": Object.freeze({
+  }],
+  ["tests/test-mapspec-dispatch-sources.mjs", {
     status: "verified",
     budgetMs: 90_000,
     purpose: "prove SET_MAPSPEC has a live UI dispatch source and dataflow remains truthful",
     counterProbe: "dispatch source drift between dataflow and UI code is detected as regression",
-  }),
-  "tests/test-mapspec-builder-pipeline.mjs": Object.freeze({
+  }],
+  ["tests/test-whole-repo-dispatch-truth.mjs", {
+    status: "verified",
+    budgetMs: 120_000,
+    purpose: "prove dataflow dispatchSources stay truthful against all dispatch/_dispatch call sites across the whole src tree",
+    counterProbe: "overlooked file dispatch drift is detected even when local slice checks are green",
+  }],
+  ["tests/test-mapspec-builder-pipeline.mjs", {
     status: "verified",
     budgetMs: 120_000,
     purpose: "prove builder flow mutates only map/meta on SET_MAPSPEC and rebuilds world only via GEN_WORLD",
     counterProbe: "world rebuild perturbations are blocked until GEN_WORLD is dispatched",
-  }),
-  "tests/test-mapspec-builder-phase.mjs": Object.freeze({
+  }],
+  ["tests/test-mapspec-builder-phase.mjs", {
     status: "verified",
     budgetMs: 120_000,
     purpose: "prove RUN_PHASE.MAP_BUILDER gates tile edits, forces manual tilePlan writes, and only applies builder overrides on GEN_WORLD",
     counterProbe: "SET_MAP_TILE perturbations stay blocked outside map_builder and become live only after explicit phase entry",
-  }),
-  "tests/test-signature-nonserializable.mjs": Object.freeze({
+  }],
+  ["tests/test-signature-nonserializable.mjs", {
     status: "verified",
     budgetMs: 90_000,
     purpose: "prove signature material generation fails closed on non-serializable and circular values",
     counterProbe: "function and cycle perturbations throw instead of collapsing to the same signature",
-  }),
-  "tests/test-setsize-negative.mjs": Object.freeze({
+  }],
+  ["tests/test-setsize-negative.mjs", {
     status: "verified",
     budgetMs: 90_000,
     purpose: "prove invalid SET_SIZE inputs are rejected without state mutation",
     counterProbe: "negative and zero dimension perturbations stay no-op under the wired gate path",
-  }),
-  "tests/test-persistence-cycle-boot.mjs": Object.freeze({
+  }],
+  ["tests/test-persistence-cycle-boot.mjs", {
     status: "verified",
     budgetMs: 90_000,
     purpose: "prove cyclic persisted payloads fail closed to a safe default state on boot",
     counterProbe: "poisoned persistence perturbation cannot crash store boot or preserve invalid map state",
-  }),
-  "tests/test-redteam-kernel-hardening.mjs": Object.freeze({
+  }],
+  ["tests/test-redteam-kernel-hardening.mjs", {
     status: "verified",
     budgetMs: 120_000,
     purpose: "prove a chained red-team attack set cannot poison MapSpec, signature, SET_SIZE, or persistence and still leaves a valid recovery path",
     counterProbe: "function payload, cycle payload, invalid SET_SIZE, and poisoned persistence perturbations are blocked without preventing later valid world boot",
-  }),
-  "tests/test-longrun-determinism.mjs": Object.freeze({
+  }],
+  ["tests/test-longrun-determinism.mjs", {
     status: "verified",
     budgetMs: 300_000,
     purpose: "prove deterministic stability on long-running step chains and controlled cross-seed divergence",
     counterProbe: "longrun seed perturbation diverges while same-seed longrun remains identical",
-  }),
-  "tests/test-persistence-drivers.mjs": Object.freeze({
+  }],
+  ["tests/test-persistence-drivers.mjs", {
     status: "verified",
     budgetMs: 120_000,
     purpose: "prove null/web/meta-only persistence drivers respect contracts and reject tampered payloads",
     counterProbe: "tampered persistence payload resets to safe defaults and cannot force invalid replay state",
-  }),
-  "tests/test-persistence-map-builder-reload.mjs": Object.freeze({
+  }],
+  ["tests/test-persistence-map-builder-reload.mjs", {
     status: "verified",
     budgetMs: 120_000,
     purpose: "prove default web persistence keeps mapspec tilePlan builder edits across reload and reapplies them on GEN_WORLD",
     counterProbe: "builder tilePlan perturbation is preserved in persisted map state instead of being dropped on reload",
-  }),
-  "tests/test-ui-foundation-e2e.mjs": Object.freeze({
+  }],
+  ["tests/test-ui-foundation-e2e.mjs", {
     status: "verified",
     budgetMs: 360_000,
     purpose: "prove browser UI mainline flow enforces foundation gating and reaches run_active via visible controls",
     counterProbe: "UI foundation_not_ready step blocks confirm before valid founder placement",
-  }),
-  "tests/test-ui-click-placement-e2e.mjs": Object.freeze({
+  }],
+  ["tests/test-ui-click-placement-e2e.mjs", {
     status: "verified",
     budgetMs: 360_000,
     purpose: "prove live canvas click input places a founder tile through the mounted UI modules",
     counterProbe: "runtime click without a valid paint/input bridge does not mutate founder state",
-  }),
-  "tests/test-ui-map-builder-expertmode-e2e.mjs": Object.freeze({
+  }],
+  ["tests/test-ui-map-builder-expertmode-e2e.mjs", {
     status: "verified",
     budgetMs: 360_000,
     purpose: "prove mounted Map Builder controls force expertMode=true on enter and restore the prior expertMode value on exit",
     counterProbe: "expertMode drift after a builder toggle cycle is detected as regression",
-  }),
-  "tests/test-runtime-boundaries.mjs": Object.freeze({
+  }],
+  ["tests/test-runtime-boundaries.mjs", {
     status: "verified",
     budgetMs: 90_000,
     purpose: "prove runtime code stays isolated from deleted project/core facades and dev-only llm tooling",
     counterProbe: "forbidden import boundary regression is detected before removed facades can quietly re-enter runtime",
-  }),
-});
+  }],
+  ["tests/test-legacy-zone-compat-routing.mjs", {
+    status: "verified",
+    budgetMs: 90_000,
+    purpose: "prove legacy zone compatibility routes only legacy actions and does not accept scaffold PLACE_BUILDING routing",
+    counterProbe: "PLACE_BUILDING payload perturbation must not route through legacy compat handlers",
+  }],
+]);
 
-export const REGRESSION_TEST_FILES = Object.freeze(Object.keys(REGRESSION_TEST_STATUS));
+export const REGRESSION_TEST_STATUS = defineUniqueByKey(REGRESSION_TEST_ENTRIES, "regression test");
+
+export const REGRESSION_TEST_FILES = Object.freeze(REGRESSION_TEST_ENTRIES.map(([file]) => file));
