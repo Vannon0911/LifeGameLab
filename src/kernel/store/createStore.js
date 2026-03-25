@@ -8,20 +8,11 @@ import { runWithDeterminismGuard, deepFreeze } from "../determinism/runtimeGuard
 import { getDefaultDriver } from "./persistence.js";
 import { isPlainObject } from "../shared/isPlainObject.js";
 
-const NOT_IMPLEMENTED_ACTIONS = new Set([
-  "PLACE_BUILDING",
-  "PLACE_BELT_SEGMENT",
-  "PLACE_LINE_SEGMENT",
-  "SET_CORE_ROUTING",
-  "QUEUE_WORKER",
-  "SPAWN_FIGHTER",
-  "ASSIGN_REPAIR",
-  "SET_MUTATOR_PATTERN",
-  "COMMIT_MUTATION",
-]);
-
 export function createStore(runtimeManifest, project, options = {}) {
   const { SCHEMA_VERSION, stateSchema, actionSchema, mutationMatrix } = runtimeManifest;
+  const notImplementedActions = resolveNotImplementedActions(runtimeManifest);
+  const simStepActionType = resolveSimStepActionType(runtimeManifest);
+  const simStepMutationAllowed = mutationMatrix[simStepActionType];
   assertManifestContracts(runtimeManifest);
   const driver = options.storageDriver || getDefaultDriver();
   const adaptAction = typeof options.actionAdapter === "function"
@@ -86,7 +77,7 @@ export function createStore(runtimeManifest, project, options = {}) {
   function dispatch(action) {
     const adapted = adaptAction(action);
     const clean = validateActionAgainstSchema(actionSchema, adapted);
-    if (NOT_IMPLEMENTED_ACTIONS.has(clean.type)) {
+    if (notImplementedActions.has(clean.type)) {
       throw createActionNotImplementedError(clean.type);
     }
     const actionAllowed = mutationMatrix[clean.type];
@@ -116,7 +107,7 @@ export function createStore(runtimeManifest, project, options = {}) {
     let nextState = applyPatches(doc.state, safePatches);
     nextState = sanitizeBySchema(nextState, stateSchema);
 
-    if (clean.type === "SIM_STEP" && typeof project.simStep === "function") {
+    if (clean.type === simStepActionType && typeof project.simStep === "function") {
       const simInput = cloneDeep(nextState);
       const simInputSignature = hash32(stableStringify(simInput));
       const simRng = createRngStreamsScoped(doc.state.meta.seed, `simStep:${clean.type}:${doc.revisionCount}`);
@@ -128,12 +119,15 @@ export function createStore(runtimeManifest, project, options = {}) {
         throw new Error("simStep mutated input state");
       }
       if (!Array.isArray(simPatches)) throw new Error("simStep must return patches array");
+      if (!Array.isArray(simStepMutationAllowed)) {
+        throw new Error(`Missing mutationMatrix contract: ${simStepActionType}`);
+      }
       const safeSimPatches = clonePatches(simPatches);
-      assertPatchesAllowed(safeSimPatches, mutationMatrix.SIM_STEP);
+      assertPatchesAllowed(safeSimPatches, simStepMutationAllowed);
       assertDomainPatchesAllowed({
         manifest: runtimeManifest,
         state: nextState,
-        actionType: "SIM_STEP",
+        actionType: simStepActionType,
         patches: safeSimPatches,
       });
       if (safeSimPatches.length) {
@@ -188,6 +182,18 @@ function assertManifestContracts(manifest) {
   if (manifest?.simGate && typeof manifest?.domainPatchGate !== "function") {
     throw new Error("Manifest invalid: runtime manifest with simGate requires domainPatchGate");
   }
+}
+
+function resolveNotImplementedActions(manifest) {
+  const source = manifest?.notImplementedActions;
+  if (!Array.isArray(source)) return new Set();
+  return new Set(source.map((value) => String(value || "").trim()).filter(Boolean));
+}
+
+function resolveSimStepActionType(manifest) {
+  const value = String(manifest?.simStepActionType || "SIM_STEP").trim();
+  if (!value) throw new Error("Manifest invalid: simStepActionType must not be empty");
+  return value;
 }
 
 function cloneDeep(value) {
