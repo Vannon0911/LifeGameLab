@@ -54,7 +54,7 @@ Die kompakten, aufgeteilten Hard-Rules stehen in `docs/llm/SAFE_RULES.md` und si
 - kein `--no-verify`, kein Hook-Bypass, kein Guard-Bypass (`SKIP`, `HUSKY=0` oder aehnlich). Bei Blockade gilt: Scope-/Matrix-Regeln korrigieren, dann erneut `classify -> entry -> ack -> check`.
 - Terminologie: Produkt- und UI-Texte nutzen `worker` als kanonische Einheit; Legacy-`cell` Strings bleiben nur fuer kompatible Action-IDs bis zur vollstaendigen Ablösung.
 
-## Globale Pflichtquellen
+## Globale Referenzquellen (bei Scope-Betroffenheit)
 - `docs/PRODUCT.md`: Produkt- und Scope-Basis
 - `docs/ARCHITECTURE.md`: technische Snapshot-Wahrheit
 - `output/current-truth.json`: maschinenlesbare Truth (`manifest + commit SHA`)

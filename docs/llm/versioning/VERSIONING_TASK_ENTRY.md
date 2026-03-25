@@ -20,10 +20,11 @@ Globale Hard-Rules: `docs/llm/SAFE_RULES.md`.
 - Danach nur VERSIONING-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
-- `node tools/llm-preflight.mjs classify --paths package.json,src/game/contracts/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md`
-- `node tools/llm-preflight.mjs entry --paths package.json,src/game/contracts/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md --mode work`
-- `node tools/llm-preflight.mjs ack --paths package.json,src/game/contracts/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md`
-- `node tools/llm-preflight.mjs check --paths package.json,src/game/contracts/manifest.js,docs/ARCHITECTURE.md,docs/STATUS.md`
+- `node tools/llm-preflight.mjs classify --paths package.json,src/game/contracts/manifest.js`
+- `node tools/llm-preflight.mjs entry --paths package.json,src/game/contracts/manifest.js --mode work`
+- `node tools/llm-preflight.mjs ack --paths package.json,src/game/contracts/manifest.js`
+- `node tools/llm-preflight.mjs check --paths package.json,src/game/contracts/manifest.js`
+- Wenn `docs/ARCHITECTURE.md` oder `docs/STATUS.md` im Task betroffen sind, diese Pfade zusaetzlich in `--paths` aufnehmen.
 
 ## SCHREIBEN (pflicht)
 - Kein Schreiben ohne `docs/llm/ENTRY.md` + passenden Task-Entry.
@@ -46,4 +47,4 @@ Version wird nach Update-Groesse erhoeht und muss in App-Metadaten, Doku und Tes
 
 ## Klassifizierungs-Hinweis
 - Top-Level-Doku und operative LLM-Doku gehoeren zum Versioning-/Governance-Scope.
-- Dazu zaehlen `docs/WORKFLOW.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/STATUS.md` sowie globale Entry-/Protocol-/Matrix-Dokumente.
+- Dazu koennen (wenn betroffen) `docs/WORKFLOW.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/STATUS.md` sowie globale Entry-/Protocol-/Matrix-Dokumente gehoeren.

@@ -5,6 +5,7 @@ Minimale Pflicht-Leselisten pro Task, damit LLMs ohne Repo-Vollscan gate-konform
 Globale Hard-Rules sind komprimiert und aufgeteilt in `docs/llm/SAFE_RULES.md`.
 Reihenfolge: diese Datei kommt erst nach `docs/WORKFLOW.md`, `docs/llm/ENTRY.md` und `docs/llm/TASK_ENTRY_MATRIX.json`.
 Danach werden alle Task-Sets fuer alle klassifizierten Scopes gelesen, nicht nur eins.
+Wichtig: Diese Datei ist ein abgeleiteter Minimal-Index und ersetzt nicht die kanonische Vollreihenfolge aus `docs/llm/ENTRY.md` und `docs/llm/OPERATING_PROTOCOL.md`.
 
 ## Globale Mindest-Gates (immer)
 1. `src/game/contracts/manifest.js` (SoT)
@@ -48,8 +49,8 @@ Danach werden alle Task-Sets fuer alle klassifizierten Scopes gelesen, nicht nur
 ## VERSIONING Task
 1. `package.json`
 2. `src/game/contracts/manifest.js`
-3. `docs/STATUS.md`
-4. `docs/ARCHITECTURE.md`
+3. `docs/STATUS.md` (nur wenn betroffen)
+4. `docs/ARCHITECTURE.md` (nur wenn betroffen)
 
 ## Wichtige Regel
 Wenn ein Task ueber dieses Minimum hinausgeht, dann nur gezielt die betroffenen Dateien nachladen.

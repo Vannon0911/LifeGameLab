@@ -18,6 +18,7 @@ Diese Datei reduziert Regel-Drift zwischen `WORKFLOW`, `ENTRY`, `OPERATING_PROTO
    - `src/game/contracts/manifest.js`
    - `src/kernel/store/createStore.js`
    - `src/kernel/store/applyPatches.js`
+Hinweis: `docs/llm/entry/TASK_GATE_INDEX.md` ist der Minimal-Index in der Reihenfolge und ersetzt nicht die kanonische Vollbeschreibung in `docs/llm/ENTRY.md`/`docs/llm/OPERATING_PROTOCOL.md`.
 
 ## R2 Preflight-Kette (Hard)
 - Pflichtreihenfolge: `classify -> entry -> ack -> check`.

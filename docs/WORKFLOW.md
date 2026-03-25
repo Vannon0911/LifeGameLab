@@ -25,7 +25,7 @@ Kanonische Sicherheitsaufteilung fuer LLM-Arbeit: `docs/llm/SAFE_RULES.md`.
    - `src/kernel/store/createStore.js`
    - `src/kernel/store/applyPatches.js`
 
-Hinweis: `docs/llm/OPERATING_PROTOCOL.md`, `docs/ARCHITECTURE.md` und `docs/STATUS.md` sind keine globalen Pflichtstamm-Dateien und werden nur bei Bedarf scope-spezifisch gelesen. Die Lesereihenfolge in `docs/llm/ENTRY.md`, `docs/llm/OPERATING_PROTOCOL.md` und `docs/llm/entry/TASK_GATE_INDEX.md` muss identisch bleiben.
+Hinweis: `docs/llm/OPERATING_PROTOCOL.md`, `docs/ARCHITECTURE.md` und `docs/STATUS.md` sind keine globalen Pflichtstamm-Dateien und werden nur bei Bedarf scope-spezifisch gelesen. Die kanonische Vollreihenfolge liegt in `docs/llm/ENTRY.md` und `docs/llm/OPERATING_PROTOCOL.md`; `docs/llm/entry/TASK_GATE_INDEX.md` ist der dazu kompatible Minimal-Index und ersetzt die Vollreihenfolge nicht.
 
 ### PRUEFEN
 - Session-Start im Chat mit `entry` ist Pflicht, aber nur als menschlicher Handshake. Der Chat-Trigger ersetzt keinen technischen Preflight.
