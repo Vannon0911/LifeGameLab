@@ -35,9 +35,18 @@ Die kompakten, aufgeteilten Hard-Rules stehen in `docs/llm/SAFE_RULES.md` und si
 - Nach jedem komplett abgeschlossenen Task (inklusive aller waehrenddessen aufgetretenen Nebenfixes) folgt nach `check` ein Commit; der naechste Task startet verpflichtend mit dem Orchestrator-Schritt ueber `agents/orchestrator/orchestrator.mjs` (PARENT ONLY).
 
 ## Red-Team Evidence
-- Open bypass/conflict points (API preflight off-switch, dry-run preflight skip, empty paths, fail-open scan resolution, rebuttal opt-out) and the need for bypass regression tests are captured by the documented subagent runs; see consolidated findings `RT-01`..`RT-07` in `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:115`‑`140` for exact evidence links.
-- Security conflict between the hard Preflight chain requirement and the runtime skips, plus the Rebuttal opt-out gap, is detailed under `RT-01`..`RT-05` with per-agent commands/evidence at `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:20`‑`112`.
-- Prioritized remediation steps S1..S6 map directly to the consolidated TODO list in `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:143`‑`150`.
+- **OPEN-POINT-REFERENZEN**: Die konsolidierten Findings `RT-01`..`RT-07` in `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:115`‑`140` belegen die folgenden bisherigen Blocker:
+  1. API-/CLI-Preflight-Bypass (`preflight:false`) verbleibt in `agents/orchestrator/orchestrator.mjs` und `cli.mjs`: `RT-01` (Zeile 115).  
+  2. Dry-Run-Flow überspringt die Preflight-Kette (`orchestrator.mjs:812-813`): `RT-02` (Zeile 119).  
+  3. Pfadlose Läufe (`paths.length === 0`) erzeugen `completed` ohne Validierung: `RT-03` (Zeile 123) sowie Session-Log `session.mjs:25`.  
+  4. Scan-Target-Resolution fällt bei 0 Targets nicht fail-closed aus `orchestrator.mjs:323-331`: `RT-05` (Zeile 131).  
+  5. Rebuttal/Subagent-Opt-out ist technisch möglich (`orchestrator.mjs:372/414`, `cli.mjs:48`): `RT-04` (Zeile 127).  
+  6. Mode-/Test-Drifts und fehlende Regressionen zeigen sich in `RT-06/RT-07` (Zeilen 135-142) und den MVP-Slices S1–S6 (Zeilen 143-150).  
+- **PER-AGENT-EVIDENCE**: Alle Aussagen wurden gegen die Subagentenberichte geprüft (`docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:20`‑`112`), dort sind die konkret ausgeführten Commands/Scans sowie CLI-/Code-Zeilen für Avicenna, Pasteur, Raman, Plato, Pauli und Arendt dokumentiert. Jeder belegte Diskussionspunkt referenziert den entsprechenden Abschnitt mit Datei und Zeilennummer.  
+- **MVP-SLICES**: Die priorisierten Maßnahmen S1–S6 (API-Preflight, Dry-Run, Path-Handling, File-Scan, Consent, Regressionstests) stehen in `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:143`‑`150` und sind hiermit das verbindliche Umsetzungsziel vor dem nächsten Write-Gate.
+## Nachweisprüfung
+- Alle Nachweise wurden gegen den persistenten Cache (regelmäßig synchronisiert vor/nach jedem Task) abgeglichen und bleiben nur bestehen, wenn die belegt angegebenen Datei/Zeilen in `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md` zu finden sind.  
+- Offene Annahmen, z. B. zu weiterem Drift oder neuen Bypass-Strategien, lösen automatisch die Rebuttal-Abfrage mit einem eigenen Agenten aus; die Ergebnisse der Rebuttal-Runde sind dort ebenfalls dokumentiert und liegen bei `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:1`‑`150`.
 
 ## Kernel- Und Manifest-Pflichtgate (SoT)
 - `src/game/contracts/manifest.js` ist Source of Truth fuer Felder, Actions und Contract-Kette.

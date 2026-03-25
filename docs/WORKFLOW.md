@@ -26,6 +26,7 @@ Kanonische Sicherheitsaufteilung fuer LLM-Arbeit: `docs/llm/SAFE_RULES.md`.
    - `src/kernel/store/applyPatches.js`
 
 Hinweis: `docs/llm/OPERATING_PROTOCOL.md`, `docs/ARCHITECTURE.md` und `docs/STATUS.md` sind keine globalen Pflichtstamm-Dateien und werden nur bei Bedarf scope-spezifisch gelesen. Die kanonische Vollreihenfolge liegt in `docs/llm/ENTRY.md` und `docs/llm/OPERATING_PROTOCOL.md`; `docs/llm/entry/TASK_GATE_INDEX.md` ist der dazu kompatible Minimal-Index und ersetzt die Vollreihenfolge nicht.
+- **Offene Blocker-/Risk-Hinweise**: Die Red-Team-Dokumentation in `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:115`‑`140` liefert die konkreten Nachweise für die aktuellen Gate-Blocker (Preflight-Bypass, Dry-Run-Skip, pathlose Runs, fail-open Scan-Resolution, Rebuttal-Opt-out) und wird vor jedem Write als Referenz geprüft.
 
 ### PRUEFEN
 - Session-Start im Chat mit `entry` ist Pflicht, aber nur als menschlicher Handshake. Der Chat-Trigger ersetzt keinen technischen Preflight.

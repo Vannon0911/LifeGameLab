@@ -19,6 +19,7 @@ Diese Datei reduziert Regel-Drift zwischen `WORKFLOW`, `ENTRY`, `OPERATING_PROTO
    - `src/kernel/store/createStore.js`
    - `src/kernel/store/applyPatches.js`
 Hinweis: `docs/llm/entry/TASK_GATE_INDEX.md` ist der Minimal-Index in der Reihenfolge und ersetzt nicht die kanonische Vollbeschreibung in `docs/llm/ENTRY.md`/`docs/llm/OPERATING_PROTOCOL.md`.
+- **Durch Red-Team belegte Risiken**: Die laufenden Open Points (Preflight-Bypass, Dry-Run-Skip, pathless Runs, fail-open Scan-Resolution, Rebuttal-Opt-out, fehlende Regressionen) sind in `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:115`‑`150` dokumentiert und bilden den Belegkanon für diese Regeln.
 
 ## R2 Preflight-Kette (Hard)
 - Pflichtreihenfolge: `classify -> entry -> ack -> check`.

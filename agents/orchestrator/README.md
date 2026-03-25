@@ -131,7 +131,7 @@ Zusatzregel (Default): Rebuttal-Subagents sind verpflichtend **an** und werden p
 Ein Deaktivieren ist nur per explizitem User-Opt-out erlaubt (`--no-subagents`).
 
 Preflight ist im CLI fest aktiviert und kann nicht per Flag deaktiviert werden.
-Fuer governance-konforme operative Runs muessen sinnvolle `--paths` gesetzt werden, damit `classify -> entry -> ack -> check` auf dem betroffenen Scope ausgefuehrt wird.
+Fuer governance-konforme operative Runs muessen sinnvolle `--paths` gesetzt werden, damit `classify -> entry -> ack -> check` auf dem betroffenen Scope ausgefuehrt wird (belegt durch `docs/llm reports/REDTEAM_SUBAGENTS_2026-03-25.md:65`ff.).
 
 ## CLI-Referenz
 
