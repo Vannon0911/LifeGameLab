@@ -77,7 +77,8 @@
       "docs/llm/ENTRY.md",
       "docs/llm/OPERATING_PROTOCOL.md",
       "docs/llm/entry/",
-      "docs/llm/versioning/"
+      "docs/llm/versioning/",
+      "docs/llm reports/"
     ],
     "requiredEntry": "docs/llm/versioning/VERSIONING_TASK_ENTRY.md"
   }

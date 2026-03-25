@@ -16,3 +16,7 @@ Diese Ablage haelt nur die kleinstmoeglichen Repo-internen Nachweise, die fuer R
 ## Aktueller Runtime-Archivbeleg
 - Dokument: `docs/traceability/sim-runtime-archive-2026-03-18.md`
 - Zweck: dokumentiert die explizite Sim-Runtime-Isolation (App/UI/Render) inklusive Begründung und Guardrails.
+
+## Orchestrator-Nachtrag (Aenderungen + Konflikte)
+- Dokument: `docs/traceability/orchestrator-implementation-report-2026-03-25.md`
+- Zweck: vollstaendige Nachdokumentation der Orchestrator-Implementierung inkl. a) aenderungsinventar und b) konflikt-/abweichungsprotokoll mit Testnachweisen.

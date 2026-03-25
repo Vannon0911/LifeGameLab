@@ -14,6 +14,8 @@ Danach werden alle Task-Sets fuer alle klassifizierten Scopes gelesen, nicht nur
 1. Vor jedem Commit betroffene Dokuquellen, Stringmatrix und Inventar auf aktuellen Stand nachziehen.
 2. Am Ende jedes Arbeitsschritts Aktualitaet von Code, Gates, Doku und Traceability explizit pruefen.
 3. Jeder abgeschlossene Slice erhoeht die Version um `0.0.1`; Teilstufen `a/b/c/d` bleiben nur Dokument-Anhaenge.
+4. Vor `entry` ist `spawn-proof` Pflicht; ohne passenden Spawn-Proof blockiert `entry` fail-closed.
+5. Nach gruenem `check` ist `cache-sync` Pflicht; vor dem naechsten Write-Cycle ist `cache-validate` Pflicht.
 
 ## UI Task
 1. `src/game/ui/ui.js`

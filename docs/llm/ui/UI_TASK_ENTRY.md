@@ -24,16 +24,20 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 - Danach nur UI-Task-Set laden und weitere Dateien ausschliesslich nach betroffenen Pfaden.
 
 ## PRUEFEN (pflicht, vor Schreiben/Test)
+- `node tools/llm-preflight.mjs cache-validate`
 - `node tools/llm-preflight.mjs classify --paths src/app/,src/game/ui/,src/game/render/,src/game/ui/ui.js`
+- `node tools/llm-preflight.mjs spawn-proof --paths src/app/,src/game/ui/,src/game/render/,src/game/ui/ui.js --mode work`
 - `node tools/llm-preflight.mjs entry --paths src/app/,src/game/ui/,src/game/render/,src/game/ui/ui.js --mode work`
 - `node tools/llm-preflight.mjs ack --paths src/app/,src/game/ui/,src/game/render/,src/game/ui/ui.js`
 - `node tools/llm-preflight.mjs check --paths src/app/,src/game/ui/,src/game/render/,src/game/ui/ui.js`
+- `node tools/llm-preflight.mjs cache-sync --paths src/app/,src/game/ui/,src/game/render/,src/game/ui/ui.js`
 
 ## SCHREIBEN (pflicht)
 - Kein Schreiben ohne `docs/llm/ENTRY.md` + passenden Task-Entry.
 - Kein Schreiben ohne vollstaendige Pflicht-Lesereihenfolge.
 - Kein Test ohne passendes Ack.
 - Kein Taskwechsel ohne neue Klassifikation + neues Ack.
+- Nach gruenem `check` ist `cache-sync` Pflicht; ohne `cache-validate` startet kein Folge-Cycle.
 - UI/Renderer-Scope inklusive `src/app/`-Boot-/Caller-Orchestrierung.
 - Bei Multi-Scope alle passenden Task-Entries lesen und einen gemeinsamen Preflight fahren.
 - Vor jedem Commit muessen UI-Doku, betroffene Top-Level-Doku und relevante Stringmatrix-/Inventar-Dateien nachgezogen werden.
@@ -46,3 +50,4 @@ LESEN -> PRUEFEN -> SCHREIBEN -> DOKU
 ## Taskregel
 Main-Run bleibt auf `lage/eingriffe/evolution/welt`; Labor kapselt Diagnose-/Legacy-Pfade.
 - Pro abgeschlossenem Slice ist die Version um `0.0.1` zu erhoehen; Teilstufen `a/b/c/d` werden nur als Dokumentanhang gefuehrt.
+
