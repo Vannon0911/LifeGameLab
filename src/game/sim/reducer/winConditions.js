@@ -6,7 +6,7 @@ import {
   WIN_MODE,
   deriveGoalCode,
 } from "../../contracts/ids.js";
-import { countAlivePlayerRoleCells, countMaskOnes } from "../../runtime/stateCounts.js";
+import { countAlivePlayerRoleCells, countMaskOnes } from "../runtime/stateCounts.js";
 import { deriveGoalCodeWithPresetBias } from "./progression.js";
 
 function deriveDominantTopology(cellPatternCounts) {
