@@ -31,6 +31,8 @@ const runtimeFiles = [
   ...collectJsFiles("src/app"),
   ...collectJsFiles("src/game"),
 ];
+const simFiles = collectJsFiles("src/game/sim");
+const uiFiles = collectJsFiles("src/game/ui");
 
 const kernelFiles = collectJsFiles("src/kernel");
 
@@ -59,6 +61,24 @@ for (const relPath of runtimeFiles) {
   }
 }
 
+for (const relPath of simFiles) {
+  const text = fs.readFileSync(path.join(root, relPath), "utf8");
+  assert.equal(
+    /from\s+["']\.\.\/\.\.\/runtime\//.test(text) || text.includes("/game/runtime/"),
+    false,
+    `${relPath} must not import game/runtime from sim`,
+  );
+}
+
+for (const relPath of uiFiles) {
+  const text = fs.readFileSync(path.join(root, relPath), "utf8");
+  assert.equal(
+    /from\s+["']\.\.\/sim\//.test(text) || text.includes("/game/sim/"),
+    false,
+    `${relPath} must not import sim modules directly from UI`,
+  );
+}
+
 for (const relPath of kernelFiles) {
   const text = fs.readFileSync(path.join(root, relPath), "utf8");
   assert.equal(
@@ -73,6 +93,16 @@ for (const relPath of kernelFiles) {
       `${relPath} must not reference llm/orchestrator boundary '${needle}'`,
     );
   }
+  const browserGlobalRef =
+    /typeof\s+localStorage\b/.test(text)
+    || /localStorage\./.test(text)
+    || /typeof\s+document\b/.test(text)
+    || /document\./.test(text);
+  assert.equal(
+    browserGlobalRef,
+    false,
+    `${relPath} must stay platform-neutral and avoid browser globals`,
+  );
 }
 
 assert.equal(fs.existsSync(path.join(root, "src", "project")), false, "src/project must be removed after canonical game migration");

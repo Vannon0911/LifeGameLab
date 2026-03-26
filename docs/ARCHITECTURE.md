@@ -26,6 +26,10 @@
 - `tools/llm/*`: dev-only LLM adapters, read models and gate tooling. Runtime code must not import them.
 
 ## Current Cleanup Slice
+- Sim runtime extraction continued: active-order execution, navigation, infra helper logic and shared state counters now live under `src/game/sim/runtime/*`; `src/game/runtime/*` keeps compatibility re-export facades only.
+- UI/sim decoupling continued: UI no longer imports `src/game/sim/*` directly; read decisions for builder tiles, seed display and tile interaction now flow through `src/game/viewmodel/*` selectors.
+- UI state access consolidation started: run-phase/running/grid/brush context reads now route through `src/game/viewmodel/uiStateSelectors.js` instead of ad-hoc inline state field access.
+- Kernel/platform split continued: browser persistence drivers moved to `src/platform/persistence/webDriver.js`; kernel persistence now stays platform-neutral and app/test callsites inject storage drivers explicitly.
 - Foundation eligibility now belongs to `src/game/runtime/foundationEligibility.js`; `src/game/sim/foundationEligibility.js` is compatibility-only.
 - Fog read-model shaping now belongs to `src/game/viewmodel/fogIntel.js`; `src/game/render/fogOfWar.js` is render-only again.
 - Lage-panel read helpers now belong to `src/game/viewmodel/lageStats.js` instead of being embedded inside the UI renderer.
@@ -64,6 +68,7 @@
 - Operative reducer path remains `src/game/sim/reducer/index.js`.
 - `src/game/sim/reducer.js` remains the compatibility facade.
 - `src/game/runtime/index.js` remains the stable public sim-step surface even though active order execution now delegates into runtime helper modules.
+- `src/game/runtime/*` helper modules are now compatibility facades that re-export canonical implementations from `src/game/sim/runtime/*`.
 - `src/game/sim/worldPresets.js`, `src/game/sim/mapspec.js`, and `src/game/sim/worldgen.js` remain the stable path-pinned surfaces consumed by runtime and tests.
 - Boot still dispatches `GEN_WORLD`, but world boot now compiles through `map.spec`.
 - Renderer orchestration in `src/app/main.js` and `src/game/render/renderer.js` remains canonical and reusable.

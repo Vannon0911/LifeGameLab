@@ -184,6 +184,12 @@ const REGRESSION_TEST_ENTRIES = Object.freeze([
     purpose: "prove seed + action replay yields stable signature chain and cross-seed divergence",
     counterProbe: "signature chain diverges under seed perturbation and matches under identical replay",
   }],
+  ["tests/test-deterministic-patch-chain.mjs", {
+    status: "verified",
+    budgetMs: 120_000,
+    purpose: "prove same-seed action replay yields an identical reducer/simStep patch sequence and stable final signature material",
+    counterProbe: "patch-sequence perturbation is detected even when coarse final-state checks would pass",
+  }],
   ["tests/test-sim-gate-contract.mjs", {
     status: "verified",
     budgetMs: 90_000,
