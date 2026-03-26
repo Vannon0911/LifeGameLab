@@ -1,6 +1,18 @@
 import { BRUSH_MODE, RUN_PHASE, isBuilderBrushMode } from "../contracts/ids.js";
-import { getBrushTiles } from "../sim/brushShapes.js";
-import { selectAreAllTilesFilled, formatSeedDisplay } from "../sim/mapSeedGen.js";
+import {
+  selectBuilderBrushTiles,
+  selectCanGenerateMapSeed,
+  selectSeedDisplay,
+} from "../viewmodel/builderSelectors.js";
+import { selectTileInteraction } from "../viewmodel/tileInteractionSelectors.js";
+import {
+  selectBrushContext,
+  selectGridSize,
+  selectIsMapBuilder,
+  selectIsRunning,
+  selectRunPhase,
+  selectUiMeta,
+} from "../viewmodel/uiStateSelectors.js";
 
 export function installUiInput(UI) {
   Object.assign(UI.prototype, {
@@ -17,9 +29,9 @@ export function installUiInput(UI) {
 
     const toggleMapBuilder = () => {
       const state = this._store.getState();
-      const runPhase = String(state?.sim?.runPhase || "");
+      const runPhase = selectRunPhase(state);
       const entering = runPhase !== RUN_PHASE.MAP_BUILDER;
-      const ui = state?.meta?.ui || {};
+      const ui = selectUiMeta(state);
       if (entering) {
         this._builderPrevUi = {
           activeTab: String(ui.activeTab || "lage"),
@@ -70,13 +82,13 @@ export function installUiInput(UI) {
 
     const togglePlay = () => {
       const state = this._store.getState();
-      const running = !!state.sim.running;
+      const running = selectIsRunning(state);
       this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:!running } });
     };
 
     const openBuilder = () => {
       const state = this._store.getState();
-      const runPhase = String(state?.sim?.runPhase || "");
+      const runPhase = selectRunPhase(state);
       if (runPhase === RUN_PHASE.MAP_BUILDER) {
         this._setActionFeedback({
           ok: true,
@@ -90,7 +102,7 @@ export function installUiInput(UI) {
 
     this._btnPlay?.addEventListener("click", togglePlay);
     this._btnStep?.addEventListener("click", () => {
-      if (this._store.getState().sim.running)
+      if (selectIsRunning(this._store.getState()))
         this._dispatch({ type:"TOGGLE_RUNNING", payload:{ running:false } });
       this._dispatch({ type:"SIM_STEP", payload:{} });
     });
@@ -135,15 +147,15 @@ export function installUiInput(UI) {
     // Seed generation button
     this._builderSeedGenBtn?.addEventListener("click", () => {
       const state = this._store.getState();
-      if (!selectAreAllTilesFilled(state)) {
+      if (!selectCanGenerateMapSeed(state)) {
         this._setActionFeedback({ ok: false, message: "Nicht alle Tiles belegt.", hint: "Alle Tiles muessen belegt sein." });
         return;
       }
       this._dispatch({ type: "GENERATE_MAP_SEED", payload: {} });
       const nextState = this._store.getState();
       const seed = nextState?.map?.spec?.generatedSeed || "";
-      if (this._builderSeedLabel) this._builderSeedLabel.textContent = `Seed: ${seed ? formatSeedDisplay(seed) : "\u2014"}`;
-      this._setActionFeedback({ ok: true, message: `Seed: ${seed ? formatSeedDisplay(seed) : "\u2014"}`, hint: "" });
+      if (this._builderSeedLabel) this._builderSeedLabel.textContent = `Seed: ${seed ? selectSeedDisplay(seed) : "\u2014"}`;
+      this._setActionFeedback({ ok: true, message: `Seed: ${seed ? selectSeedDisplay(seed) : "\u2014"}`, hint: "" });
     });
 
     if (this._dockPlayBtn) this._dockPlayBtn.addEventListener("click", togglePlay);
@@ -175,7 +187,7 @@ export function installUiInput(UI) {
     window.addEventListener("keydown", (e) => {
       if (e.target && ["INPUT","SELECT","TEXTAREA"].includes(e.target.tagName)) return;
       const state = this._store.getState();
-      const isBuilder = String(state?.sim?.runPhase || "") === RUN_PHASE.MAP_BUILDER;
+      const isBuilder = selectIsMapBuilder(state);
       if (e.code === "Space") {
         e.preventDefault();
         this._btnPlay?.click?.();
@@ -249,19 +261,14 @@ export function installUiInput(UI) {
     const sx = clientX - rect.left, sy = clientY - rect.top;
     const wx = Math.floor((sx*dpr - offX) / tilePx);
     const wy = Math.floor((sy*dpr - offY) / tilePx);
-    if (wx<0||wy<0||wx>=state.meta.gridW||wy>=state.meta.gridH) return;
-    const runPhase = String(state.sim?.runPhase || "");
+    const { gridW, gridH } = selectGridSize(state);
+    if (wx<0||wy<0||wx>=gridW||wy>=gridH) return;
+    const { runPhase, isBuilder: builderActive, mode, radius } = selectBrushContext(state, this._builderMode);
     const shiftRemove = !!pointerEvent?.shiftKey;
-    const builderActive = runPhase === RUN_PHASE.MAP_BUILDER;
-    const mode = builderActive ? this._builderMode : state.meta.brushMode;
-    const radius = state.meta.brushRadius || 3;
-    const idx = wy * state.meta.gridW + wx;
-    const playerLineageId = Number(state.meta.playerLineageId || 1) | 0;
-    const isOwnAliveTile =
-      (Number(state.world?.alive?.[idx] || 0) | 0) === 1 &&
-      (Number(state.world?.lineageId?.[idx] || 0) | 0) === playerLineageId;
-    const resourceValue = Number(state.world?.R?.[idx] || 0);
-    const isResourceTile = resourceValue > 0.05;
+    const tileInteraction = selectTileInteraction(state, wx, wy);
+    const idx = tileInteraction.idx;
+    const isOwnAliveTile = tileInteraction.isOwnAliveTile;
+    const isResourceTile = tileInteraction.isResourceTile;
 
     if (this._isLabOnlyBrushMode(mode) && !this._isLaborPanelActive(state)) {
       this._ensureLabBrushIsolation(this._activeContext || "lage", state);
@@ -386,9 +393,9 @@ export function installUiInput(UI) {
       // Handle new builder brush modes (surface, resource, eraser)
       if (isBuilderBrushMode(mode)) {
         const brushSize = this._builderBrushSize || 1;
-        const gridW = state.meta.gridW || 16;
-        const gridH = state.meta.gridH || 16;
-        const tiles = getBrushTiles(wx, wy, brushSize, gridW, gridH);
+        const gridW = Number(state?.meta?.gridW || 16) | 0;
+        const gridH = Number(state?.meta?.gridH || 16) | 0;
+        const tiles = selectBuilderBrushTiles(gridW, gridH, wx, wy, brushSize);
         if (!tiles.length) return;
         const spec = state.map?.spec || {};
         const prevSurfacePlan = spec.surfacePlan && typeof spec.surfacePlan === "object" ? { ...spec.surfacePlan } : {};
@@ -457,7 +464,7 @@ export function installUiInput(UI) {
     const updateHover = (e) => {
       if (!this._rInfo) return;
       const state = this._store.getState();
-      if (String(state?.sim?.runPhase || "") !== RUN_PHASE.MAP_BUILDER) {
+      if (!selectIsMapBuilder(state)) {
         this._setBuilderHover(null);
         return;
       }
@@ -467,7 +474,8 @@ export function installUiInput(UI) {
       const sy = e.clientY - rect.top;
       const wx = Math.floor((sx * dpr - offX) / tilePx);
       const wy = Math.floor((sy * dpr - offY) / tilePx);
-      if (wx < 0 || wy < 0 || wx >= state.meta.gridW || wy >= state.meta.gridH) {
+      const { gridW, gridH } = selectGridSize(state);
+      if (wx < 0 || wy < 0 || wx >= gridW || wy >= gridH) {
         this._setBuilderHover(null);
         return;
       }

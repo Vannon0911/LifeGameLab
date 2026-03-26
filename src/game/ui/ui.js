@@ -8,7 +8,7 @@ import { createBuilderHistory } from "./ui.history.js";
 import { createCircleMenu } from "./ui.circleMenu.js";
 import { createViewportController } from "./ui.viewport.js";
 import { getCursorStyle } from "./ui.cursors.js";
-import { getBrushTiles } from "../sim/brushShapes.js";
+import { selectIsMapBuilder, selectRunPhase, selectUiMeta } from "../viewmodel/uiStateSelectors.js";
 import {
   SURFACE_TYPE,
   SURFACE_TYPE_VALUES,
@@ -17,8 +17,7 @@ import {
   RESOURCE_STAGE,
   SURFACE_TYPE_LABEL,
   RESOURCE_KIND_BUILDER_LABEL,
-} from "../sim/mapBuilderResources.js";
-import { selectAreAllTilesFilled, generateMapSeed, formatSeedDisplay } from "../sim/mapSeedGen.js";
+} from "../viewmodel/builderResources.js";
 
 const BUILDER_TILE_OPTIONS = Object.freeze([
   Object.freeze({ mode: "light", label: "Licht", hint: "Lichtwert setzen", value: 0.92, accent: "#ffd47a" }),
@@ -122,8 +121,7 @@ export class UI {
     if (this._timer) {
       this._timer.textContent = `Timer ${this._formatTimer(tick)}`;
     }
-    const runPhase = String(current?.sim?.runPhase || "");
-    const isBuilder = runPhase === RUN_PHASE.MAP_BUILDER;
+    const isBuilder = selectIsMapBuilder(current);
     this._syncBuilderPhaseUi?.(current, isBuilder);
     this._syncBuilderHoverOverlay?.(current, isBuilder);
     this._refreshActionFeedbackView?.(current, isBuilder);
@@ -210,7 +208,7 @@ export class UI {
   }
 
   _syncBuilderPhaseUi(state = this._store?.getState?.(), isBuilder = String(state?.sim?.runPhase || "") === RUN_PHASE.MAP_BUILDER) {
-    const ui = state?.meta?.ui || {};
+    const ui = selectUiMeta(state);
     const cfg = this._getBuilderModeConfig(this._builderMode);
     const modeLabel = cfg ? cfg.label : "Licht";
     const running = !!state?.sim?.running;
@@ -244,7 +242,7 @@ export class UI {
       this._builderPanel.setAttribute("aria-hidden", isBuilder ? "false" : "true");
     }
     if (this._builderPanelState) {
-      this._builderPanelState.textContent = isBuilder ? `Phase: ${String(state?.sim?.runPhase || "").replace(/_/g, " ")}` : "Phase: inaktiv";
+      this._builderPanelState.textContent = isBuilder ? `Phase: ${selectRunPhase(state).replace(/_/g, " ")}` : "Phase: inaktiv";
     }
     if (this._builderPanelMode) {
       this._builderPanelMode.textContent = `Aktives Werkzeug: ${modeLabel}`;
