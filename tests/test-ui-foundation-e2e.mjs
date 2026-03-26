@@ -42,14 +42,19 @@ try {
   assert.equal(canvasExists, 1, "main app must bootstrap canvas#cv");
 
   const e2e = await page.evaluate(async () => {
-    const [{ createStore }, manifestMod, logicMod] = await Promise.all([
+    const [{ createStore }, webDriverMod, manifestMod, logicMod] = await Promise.all([
       import("/src/kernel/store/createStore.js"),
+      import("/src/platform/persistence/webDriver.js"),
       import("/src/game/manifest.js"),
       import("/src/game/runtime/index.js"),
     ]);
 
-    const store = createStore(manifestMod.manifest, { reducer: logicMod.reducer, simStep: logicMod.simStepPatch });
-store.dispatch({ type: "SET_SEED", payload: { seed: "ui-e2e-seed-main" } });
+    const store = createStore(
+      manifestMod.manifest,
+      { reducer: logicMod.reducer, simStep: logicMod.simStepPatch },
+      { storageDriver: webDriverMod.getDefaultWebDriver() },
+    );
+    store.dispatch({ type: "SET_SEED", payload: { seed: "ui-e2e-seed-main" } });
     store.dispatch({ type: "GEN_WORLD", payload: {} });
     store.dispatch({ type: "SET_UI", payload: { runPhase: "run_active" } });
     store.dispatch({ type: "TOGGLE_RUNNING", payload: { running: true } });

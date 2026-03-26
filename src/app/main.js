@@ -8,6 +8,7 @@ import { reducer, simStepPatch, shouldAdvanceSimulation } from "../game/runtime/
 import { render }            from "../game/render/renderer.js";
 import { UI }                from "../game/ui/ui.js";
 import { hashString }        from "../kernel/determinism/rng.js";
+import { getDefaultWebDriver } from "../platform/persistence/webDriver.js";
 import { createWorldStateLog } from "./runtime/worldStateLog.js";
 import { bindBootStatusErrorHooks, setBootStatus } from "./runtime/bootStatus.js";
 
@@ -66,6 +67,8 @@ const DebugRuntime = {
 const store = createStore(runtimeManifest, {
   reducer,
   simStep: simStepPatch,
+}, {
+  storageDriver: getDefaultWebDriver(),
 });
 globalThis.__LIFEGAMELAB_STORE__ = store;
 // Initialize Log with Seed from Store

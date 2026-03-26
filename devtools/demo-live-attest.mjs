@@ -154,8 +154,9 @@ try {
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
 
   await page.evaluate(async () => {
-    const [{ createStore }, manifestMod, logicMod, rendererMod, uiMod, idsMod, presetsMod] = await Promise.all([
+    const [{ createStore }, webDriverMod, manifestMod, logicMod, rendererMod, uiMod, idsMod, presetsMod] = await Promise.all([
       import("/src/kernel/store/createStore.js"),
+      import("/src/platform/persistence/webDriver.js"),
       import("/src/game/manifest.js"),
       import("/src/game/runtime/index.js"),
       import("/src/game/render/renderer.js"),
@@ -176,7 +177,11 @@ try {
     canvas.width = Math.floor(1200 * dpr);
     canvas.height = Math.floor(800 * dpr);
 
-    const store = createStore(manifestMod.manifest, { reducer: logicMod.reducer, simStep: logicMod.simStepPatch });
+    const store = createStore(
+      manifestMod.manifest,
+      { reducer: logicMod.reducer, simStep: logicMod.simStepPatch },
+      { storageDriver: webDriverMod.getDefaultWebDriver() },
+    );
     const render = rendererMod.render;
     const ui = new uiMod.UI(store, canvas);
 
