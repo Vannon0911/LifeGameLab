@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0.0",
+  "task_id": "ARC-001",
+  "title": "SeedWorld Engine V3 Implementation",
+  "status": "open",
+  "track": "runtime-stability",
+  "source_docs": ["MASTER_PLAN__SeedWorld_Engine_V3.md"],
+  "description": "Initial implementation of SeedWorld Engine V3 in LifeGameLab.",
+  "evidence": "tem/evidence/latest-evidence.json",
+  "scope_paths": ["src/kernel/", "src/game/contracts/", "tem/"],
+  "match_policy": "all_scope_paths_touched"
+}

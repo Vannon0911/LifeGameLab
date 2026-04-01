@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0.0",
+  "task_id": "GOV-001",
+  "title": "Governance Structure Setup",
+  "status": "open",
+  "track": "governance",
+  "source_docs": ["MASTER_PLAN__SeedWorld_Engine_V3.md"],
+  "description": "Setup of governance structure and entry documents.",
+  "evidence": "tem/evidence/latest-evidence.json",
+  "scope_paths": ["docs/llm/entry/", "tem/"],
+  "match_policy": "all_scope_paths_touched"
+}
