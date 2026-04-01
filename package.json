@@ -6,9 +6,10 @@
   "scripts": {
     "serve": "python3 -m http.server 8080",
     "hooks:install": "node devtools/install-git-hooks.mjs",
-    "llm:preflight:start": "node tools/llm-preflight.mjs entry --paths tests/,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs --mode work",
-    "llm:preflight:ack": "node tools/llm-preflight.mjs ack --paths tests/,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs",
-    "llm:preflight:check": "node tools/llm-preflight.mjs check --paths tests/,tools/llm-preflight.mjs,devtools/run-test-suite.mjs,devtools/run-all-tests.mjs,devtools/test-suites.mjs,devtools/evidence-runner.mjs",
+    "llm:preflight": "node dev/llm-preflight.mjs classify",
+    "llm:preflight:entry": "node dev/llm-preflight.mjs entry",
+    "llm:preflight:spawn-proof": "node dev/llm-preflight.mjs spawn-proof",
+    "llm:preflight:check": "node dev/llm-preflight.mjs check",
     "llm:pipeline:check": "node tools/check-llm-pipeline.mjs",
     "gate:blocking": "node devtools/run-blocking-gates.mjs",
     "test": "node devtools/run-all-tests.mjs",
