@@ -58,11 +58,11 @@ import { derivePatternBonuses, derivePatternCatalog } from "../patterns.js";
 import {
   getInfraCandidateMask,
   touchesCommittedInfraAnchor,
-} from "../../runtime/infraRuntime.js";
+} from "../runtime/infraRuntime.js";
 import {
   countAlivePlayerMaskedCells,
   countAlivePlayerRoleCells,
-} from "../../runtime/stateCounts.js";
+} from "../runtime/stateCounts.js";
 import {
   collectMaskIndices,
   hasAdjacentMarkedTile,
@@ -79,7 +79,7 @@ import {
   HARVEST_TICKS,
   parseWorkerEntityId,
 } from "../commands/orderCommands.js";
-import { processActiveOrderRuntime } from "../../runtime/processActiveOrderRuntime.js";
+import { processActiveOrderRuntime } from "../runtime/processActiveOrderRuntime.js";
 import { reduceEconomyActions } from "./economy.js";
 import { reduceRunActions } from "./run.js";
 import { reduceZoneActions } from "./zones.js";

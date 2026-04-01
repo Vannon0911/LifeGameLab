@@ -5,7 +5,7 @@ import { validateActionAgainstSchema } from "../validation/validateAction.js";
 import { assertDomainPatchesAllowed } from "../validation/assertDomainPatchesAllowed.js";
 import { createRngStreamsScoped } from "../determinism/rng.js";
 import { runWithDeterminismGuard, deepFreeze } from "../determinism/runtimeGuards.js";
-import { getDefaultDriver } from "./persistence.js";
+import { createNullDriver } from "./persistence.js";
 import { isPlainObject } from "../shared/isPlainObject.js";
 
 export function createStore(runtimeManifest, project, options = {}) {
@@ -14,7 +14,7 @@ export function createStore(runtimeManifest, project, options = {}) {
   const simStepActionType = resolveSimStepActionType(runtimeManifest);
   const simStepMutationAllowed = mutationMatrix[simStepActionType];
   assertManifestContracts(runtimeManifest);
-  const driver = options.storageDriver || getDefaultDriver();
+  const driver = options.storageDriver || createNullDriver();
   const adaptAction = typeof options.actionAdapter === "function"
     ? options.actionAdapter
     : (typeof project.adaptAction === "function" ? project.adaptAction : (a) => a);

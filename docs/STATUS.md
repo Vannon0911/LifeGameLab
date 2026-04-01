@@ -1,6 +1,10 @@
 # STATUS - Current Head
 
 ## Snapshot (2026-03-20)
+- Runtime/sim boundary cleanup continued (2026-03-26): active-order execution, order navigation, infra helpers and shared state counters moved from `src/game/runtime/*` into canonical `src/game/sim/runtime/*`; runtime paths remain compatibility re-exports.
+- UI decoupling continued (2026-03-26): direct `ui -> sim` imports were removed in favor of `src/game/viewmodel/*` selector surfaces (`builderSelectors`, `tileInteractionSelectors`, `uiStateSelectors`).
+- Kernel/platform split continued (2026-03-26): browser persistence moved to `src/platform/persistence/webDriver.js`; kernel store now defaults to explicit neutral driver behavior and app/tests inject web drivers where needed.
+- Determinism guard coverage expanded (2026-03-26): new `tests/test-deterministic-patch-chain.mjs` verifies same-seed/same-action replay emits identical reducer/simStep patch chains and signature-material hashes.
 - Runtime now boots directly against canonical `src/game/*` and `src/kernel/*` modules; legacy `src/project/*` and `src/core/kernel/*` facades were removed.
 - Dev-only LLM helpers now live under `tools/llm/*`, and runtime/UI imports no longer depend on LLM modules.
 - Sim cleanup follow-up landed: foundation eligibility moved to `src/game/runtime/foundationEligibility.js`, fog intel moved to `src/game/viewmodel/fogIntel.js`, and Lage-panel stat helpers moved to `src/game/viewmodel/lageStats.js`.
@@ -56,11 +60,16 @@
 - `src/game/render/fogOfWar.js` now contains render-only fog logic; advisor fog shaping moved into `src/game/viewmodel/fogIntel.js`.
 - `src/game/sim/reducer/index.js` now re-exports `shouldAdvanceSimulation` while consuming extracted gate and order command modules instead of defining them inline.
 - `src/game/sim/reducer/index.js` now delegates active order execution through `src/game/runtime/processActiveOrderRuntime.js` while keeping the runtime/public export surface stable.
+- `src/game/sim/reducer/core.js` now consumes canonical simulation runtime helpers from `src/game/sim/runtime/*` and no longer imports helper logic from `src/game/runtime/*`.
 - `src/game/runtime/stateCounts.js` now owns shared role/mask counting helpers used by both `src/game/sim/reducer/index.js` and `src/game/sim/reducer/winConditions.js`.
 - `src/game/runtime/infraRuntime.js` now owns shared infra staging helpers used by `src/game/sim/reducer/index.js` for candidate-mask cloning and committed-anchor checks.
+- `src/game/runtime/infraRuntime.js`, `src/game/runtime/stateCounts.js`, `src/game/runtime/orderNavigation.js`, and `src/game/runtime/processActiveOrderRuntime.js` now act as compatibility re-export facades to `src/game/sim/runtime/*`.
+- `src/game/viewmodel/uiStateSelectors.js` now centralizes run-phase/running/grid/brush-context reads for UI modules.
+- `src/platform/persistence/webDriver.js` now owns browser persistence drivers; `src/kernel/store/persistence.js` stays platform-neutral.
 - `src/game/sim/world/presetCatalog.js`, `src/game/sim/world/presetRuntime.js`, `src/game/sim/world/generationRuntime.js`, and `src/game/sim/mapspec/runtime.js` now own the moved preset/worldgen/MapSpec logic while the old top-level sim paths remain stable facades.
 - `src/game/sim/grid/index.js` now owns shared 8-neighbor founder connectivity checks used by `src/game/runtime/foundationEligibility.js` and `src/game/sim/gates/phaseGates.js`.
 - `tests/test-active-order-runtime.mjs` now hardens blocked, wait, harvest-progress, and harvest-complete branches for the extracted active-order runtime.
+- `tests/test-deterministic-patch-chain.mjs` now verifies same-seed action replay patch-chain equivalence (reducer + simStep phases) and signature-material stability.
 
 ## Traceability Added
 - `docs/traceability/rebuild-preparation-inventory.md`

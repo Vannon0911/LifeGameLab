@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 import { createEmptyActiveOrder, HARVEST_TICKS } from "../src/game/sim/commands/orderCommands.js";
-import { processActiveOrderRuntime } from "../src/game/runtime/processActiveOrderRuntime.js";
+import { processActiveOrderRuntime } from "../src/game/sim/runtime/processActiveOrderRuntime.js";
 
 function makeWorld({ w = 4, h = 1, alive = [], lineageId = [], R = [] } = {}) {
   const size = w * h;
